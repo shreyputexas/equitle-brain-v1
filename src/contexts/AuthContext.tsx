@@ -30,51 +30,35 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Mock user for development - bypass authentication
+  const mockUser: User = {
+    id: '1',
+    email: 'admin@equitle.com',
+    name: 'Admin User',
+    role: 'admin',
+    firm: 'Equitle',
+    avatar: undefined
+  };
+
+  const [user, setUser] = useState<User | null>(mockUser);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkAuth();
+    // Skip authentication check - user is already set to mock user
+    setLoading(false);
   }, []);
 
-  const checkAuth = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const response = await axios.get('/api/auth/me');
-        setUser((response.data as any).user);
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const login = async (email: string, password: string) => {
-    try {
-      const response = await axios.post('/api/auth/login', { email, password });
-      const { token, user } = response.data as any;
-      
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    }
+    // Mock login - just set the user and navigate
+    setUser(mockUser);
+    navigate('/deals/relationships');
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
+    // Mock logout - just set user to null
     setUser(null);
-    navigate('/login');
+    navigate('/deals/relationships');
   };
 
   const updateUser = (userData: Partial<User>) => {
