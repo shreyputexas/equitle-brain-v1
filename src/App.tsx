@@ -6,6 +6,7 @@ import { BrainProvider } from './contexts/BrainContext';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
@@ -25,14 +26,15 @@ function App() {
       <BrainProvider>
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             
-            <Route path="/" element={
+            <Route path="/app" element={
               <PrivateRoute>
                 <Layout />
               </PrivateRoute>
             }>
-              <Route index element={<Navigate to="/deals/relationships" />} />
+              <Route index element={<Navigate to="/app/deals/relationships" />} />
               
               {/* Deals Routes */}
               <Route path="deals">
