@@ -7,6 +7,10 @@ import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 
 import Landing from './pages/Landing';
+import Product from './pages/Product';
+import Solutions from './pages/Solutions';
+import Pricing from './pages/Pricing';
+import Resources from './pages/Resources';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
@@ -27,6 +31,10 @@ function App() {
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/product" element={<Product />} />
+            <Route path="/solutions" element={<Solutions />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/resources" element={<Resources />} />
             <Route path="/login" element={<Login />} />
             
             <Route path="/app" element={
