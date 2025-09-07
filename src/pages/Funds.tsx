@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -59,101 +60,251 @@ import {
   Clear as ClearIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
+  AccountBalance as BankIcon,
   Description as DocumentIcon,
+  Assessment as ChartIcon,
+  Visibility as VisibilityIcon,
   Download as DownloadIcon,
-  Visibility as ViewIcon,
-  BusinessCenter as CompanyIcon,
-  CalendarToday as CalendarIcon,
-  Percent as PercentIcon,
-  AttachFile as AttachFileIcon
+  CheckCircle as CheckCircleIcon,
+  Schedule as ScheduleIcon,
+  Group as GroupIcon,
+  AttachFile as AttachFileIcon,
+  PlayArrow as PlayIcon,
+  Stop as StopIcon,
+  Pause as PauseIcon
 } from '@mui/icons-material';
 
 // Mock data for funds and their investors
 const funds = [
   {
-    id: 1,
-    name: 'Equitle Growth Fund I',
-    vintage: 2022,
+    id: 'fund-1',
+    name: 'Equitle Fund I',
+    vintage: 2023,
     targetSize: 100000000,
     raisedAmount: 85000000,
     status: 'Active',
     investorCount: 12,
-    description: 'A growth equity fund focused on technology and healthcare companies with strong fundamentals and scalable business models.',
-    fundManager: 'Sarah Johnson',
-    launchDate: '2022-03-15',
-    firstClose: '2022-06-30',
-    finalClose: '2022-12-15',
-    managementFee: 2.0,
-    carriedInterest: 20.0,
-    keyTerms: [
-      '2% management fee on committed capital',
-      '20% carried interest with 8% preferred return',
-      '10-year fund life with 2-year extension option',
-      'Key person provision for Sarah Johnson'
-    ],
+    size: 100000000,
+    fundraisingData: {
+      emails: [
+        {
+          id: 1,
+          subject: 'Q4 2023 Fund Performance Update',
+          date: '2024-01-15',
+          recipients: 12,
+          readBy: ['Goldman Sachs', 'JP Morgan Chase', 'BlackRock', 'Smith Family Office'],
+          status: 'sent'
+        },
+        {
+          id: 2,
+          subject: 'Capital Call Notice #3 - $5M',
+          date: '2024-01-10',
+          recipients: 12,
+          readBy: ['Goldman Sachs', 'JP Morgan Chase', 'BlackRock'],
+          status: 'sent'
+        },
+        {
+          id: 3,
+          subject: 'Portfolio Company Update: TechCorp Acquisition',
+          date: '2024-01-05',
+          recipients: 12,
+          readBy: ['Goldman Sachs', 'Smith Family Office', 'Tech Ventures LP'],
+          status: 'sent'
+        }
+      ],
+      callTranscripts: [
+        {
+          id: 1,
+          title: 'Goldman Sachs - Fund Performance Review',
+          date: '2024-01-12',
+          duration: '45 minutes',
+          participants: ['John Smith (Equitle)', 'Sarah Johnson (Goldman Sachs)'],
+          summary: 'Discussed Q4 performance, upcoming capital calls, and portfolio company updates',
+          status: 'completed'
+        },
+        {
+          id: 2,
+          title: 'JP Morgan Chase - Investment Committee Call',
+          date: '2024-01-08',
+          duration: '30 minutes',
+          participants: ['John Smith (Equitle)', 'Mike Chen (JPM)', 'Lisa Wang (JPM)'],
+          summary: 'Reviewed fund performance metrics and discussed co-investment opportunities',
+          status: 'completed'
+        }
+      ],
+      bankAccounts: [
+        {
+          id: 1,
+          name: 'Equitle Fund I - Main Account',
+          bank: 'JPMorgan Chase',
+          accountNumber: '****1234',
+          balance: 45000000,
+          currency: 'USD',
+          status: 'active'
+        },
+        {
+          id: 2,
+          name: 'Equitle Fund I - Capital Call Account',
+          bank: 'Goldman Sachs',
+          accountNumber: '****5678',
+          balance: 15000000,
+          currency: 'USD',
+          status: 'active'
+        }
+      ],
+      subscriptionAgreements: [
+        {
+          id: 1,
+          entityName: 'Goldman Sachs Asset Management',
+          date: '2023-01-15',
+          amount: 20000000,
+          status: 'signed',
+          version: 'v2.1'
+        },
+        {
+          id: 2,
+          entityName: 'JP Morgan Private Bank',
+          date: '2023-01-20',
+          amount: 18000000,
+          status: 'signed',
+          version: 'v2.1'
+        }
+      ],
+      capitalCalls: [
+        {
+          id: 1,
+          callNumber: 'CC-001',
+          date: '2023-03-15',
+          amount: 25000000,
+          dueDate: '2023-04-15',
+          status: 'completed',
+          collected: 25000000
+        },
+        {
+          id: 2,
+          callNumber: 'CC-002',
+          date: '2023-06-15',
+          amount: 20000000,
+          dueDate: '2023-07-15',
+          status: 'completed',
+          collected: 20000000
+        },
+        {
+          id: 3,
+          callNumber: 'CC-003',
+          date: '2024-01-10',
+          amount: 15000000,
+          dueDate: '2024-02-10',
+          status: 'pending',
+          collected: 10000000
+        }
+      ],
+      commitmentTimeline: [
+        { date: '2023-01-15', amount: 20000000, cumulative: 20000000 },
+        { date: '2023-01-20', amount: 18000000, cumulative: 38000000 },
+        { date: '2023-01-25', amount: 25000000, cumulative: 63000000 },
+        { date: '2023-02-01', amount: 10000000, cumulative: 73000000 },
+        { date: '2023-02-15', amount: 12000000, cumulative: 85000000 }
+      ]
+    },
     investments: [
       {
         investor: 'Goldman Sachs',
-        contactPerson: 'Michael Chen',
-        email: 'michael.chen@gs.com',
-        phone: '+1-212-902-1000',
-        commitmentDate: '2022-04-15',
         entities: [
-          { name: 'Goldman Sachs Asset Management', amount: 25000000, type: 'Direct', called: 17500000, status: 'Active' },
-          { name: 'GS Private Wealth Solutions', amount: 15000000, type: 'Client Account', called: 10500000, status: 'Active' }
-        ]
-      },
-      {
-        investor: 'Smith Family Office',
-        contactPerson: 'Robert Smith',
-        email: 'robert@smithfamilyoffice.com',
-        phone: '+1-415-555-0123',
-        commitmentDate: '2022-05-20',
-        entities: [
-          { name: 'Smith Holdings LLC', amount: 10000000, type: 'Family LLC', called: 7000000, status: 'Active' },
-          { name: 'Smith Investment Trust', amount: 5000000, type: 'Trust', called: 3500000, status: 'Active' }
+          { name: 'Goldman Sachs Asset Management', amount: 20000000, type: 'Direct Investment', investmentType: 'Corporation' },
+          { name: 'GS Private Wealth Solutions', amount: 15000000, type: 'Client Account', investmentType: 'LLC' }
         ]
       },
       {
         investor: 'JP Morgan Chase',
-        contactPerson: 'Jennifer Martinez',
-        email: 'jennifer.martinez@jpmorgan.com',
-        phone: '+1-212-270-6000',
-        commitmentDate: '2022-06-10',
         entities: [
-          { name: 'JPM Private Bank', amount: 20000000, type: 'Private Banking', called: 14000000, status: 'Active' },
-          { name: 'Chase Investment Services', amount: 10000000, type: 'Investment Services', called: 7000000, status: 'Active' }
+          { name: 'JPM Private Bank', amount: 18000000, type: 'Private Banking', investmentType: 'Corporation' },
+          { name: 'Chase Investment Services', amount: 10000000, type: 'Investment Services', investmentType: 'Partnership' }
+        ]
+      },
+      {
+        investor: 'BlackRock',
+        entities: [
+          { name: 'BlackRock Alternative Investments', amount: 25000000, type: 'Direct Investment', investmentType: 'Corporation' }
+        ]
+      },
+      {
+        investor: 'Smith Family Office',
+        entities: [
+          { name: 'Smith Holdings LLC', amount: 6000000, type: 'Family LLC', investmentType: 'LLC' },
+          { name: 'Smith Investment Trust', amount: 3000000, type: 'Trust', investmentType: 'Trust' }
+        ]
+      },
+      {
+        investor: 'Tech Ventures LP',
+        entities: [
+          { name: 'Tech Ventures Main Fund', amount: 10000000, type: 'Fund of Funds', investmentType: 'Partnership' },
+          { name: 'Tech Ventures Co-Investment', amount: 6000000, type: 'Co-Investment Vehicle', investmentType: 'LLC' }
         ]
       }
-    ],
-    documents: [
-      { id: 1, name: 'Limited Partnership Agreement', type: 'Legal', date: '2022-03-15', size: '2.4 MB', status: 'Final' },
-      { id: 2, name: 'Private Placement Memorandum', type: 'Marketing', date: '2022-02-28', size: '1.8 MB', status: 'Final' },
-      { id: 3, name: 'Subscription Agreement Template', type: 'Legal', date: '2022-03-01', size: '856 KB', status: 'Final' },
-      { id: 4, name: 'Q4 2023 Quarterly Report', type: 'Reporting', date: '2024-01-15', size: '3.2 MB', status: 'Final' },
-      { id: 5, name: 'Capital Call Notice #8', type: 'Administrative', date: '2024-01-05', size: '245 KB', status: 'Final' },
-      { id: 6, name: 'Annual Meeting Presentation', type: 'Presentation', date: '2024-02-15', size: '5.1 MB', status: 'Final' }
-    ],
-    portfolioCompanies: [
-      { name: 'TechCorp Inc.', sector: 'Technology', investmentDate: '2022-08-15', amount: 15000000, status: 'Active' },
-      { name: 'HealthTech Solutions', sector: 'Healthcare', investmentDate: '2022-11-20', amount: 12000000, status: 'Active' },
-      { name: 'DataFlow Systems', sector: 'Technology', investmentDate: '2023-03-10', amount: 8000000, status: 'Active' }
     ]
   },
   {
-    id: 2,
+    id: 'fund-2',
+    name: 'Equitle Growth Fund',
+    vintage: 2024,
+    targetSize: 150000000,
+    raisedAmount: 120000000,
+    status: 'Fundraising',
+    investorCount: 8,
+    size: 150000000,
+    investments: [
+      {
+        investor: 'Goldman Sachs',
+        entities: [
+          { name: 'Goldman Sachs Asset Management', amount: 10000000, type: 'Direct Investment', investmentType: 'Corporation' },
+          { name: 'GS Private Wealth Solutions', amount: 5000000, type: 'Client Account', investmentType: 'LLC' }
+        ]
+      },
+      {
+        investor: 'JP Morgan Chase',
+        entities: [
+          { name: 'JPM Private Bank', amount: 7000000, type: 'Private Banking', investmentType: 'Corporation' },
+          { name: 'Chase Investment Services', amount: 5000000, type: 'Investment Services', investmentType: 'Partnership' }
+        ]
+      },
+      {
+        investor: 'BlackRock',
+        entities: [
+          { name: 'BlackRock Alternative Investments', amount: 10000000, type: 'Direct Investment', investmentType: 'Corporation' }
+        ]
+      },
+      {
+        investor: 'Smith Family Office',
+        entities: [
+          { name: 'Smith Holdings LLC', amount: 4000000, type: 'Family LLC', investmentType: 'LLC' },
+          { name: 'Smith Investment Trust', amount: 2000000, type: 'Trust', investmentType: 'Trust' }
+        ]
+      },
+      {
+        investor: 'Tech Ventures LP',
+        entities: [
+          { name: 'Tech Ventures Main Fund', amount: 5000000, type: 'Fund of Funds', investmentType: 'Partnership' },
+          { name: 'Tech Ventures Co-Investment', amount: 4000000, type: 'Co-Investment Vehicle', investmentType: 'LLC' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'fund-3',
     name: 'Equitle Opportunity Fund',
     vintage: 2023,
     targetSize: 150000000,
     raisedAmount: 120000000,
     status: 'Fundraising',
     investorCount: 8,
+    size: 150000000,
     investments: [
       {
         investor: 'BlackRock',
         entities: [
-          { name: 'BlackRock Alternative Investments', amount: 40000000, type: 'Direct' },
-          { name: 'iShares Private Markets', amount: 20000000, type: 'Fund Vehicle' }
+          { name: 'BlackRock Alternative Investments', amount: 40000000, type: 'Direct Investment', investmentType: 'Corporation' },
+          { name: 'iShares Private Markets', amount: 20000000, type: 'Fund Vehicle', investmentType: 'Corporation' }
         ]
       },
       {
@@ -224,11 +375,30 @@ const CapitalProgressBar = ({ raised, target, height = 8 }: { raised: number; ta
 };
 
 export default function Funds() {
+  const [searchParams] = useSearchParams();
   const [tabValue, setTabValue] = useState(0);
   const [selectedFund, setSelectedFund] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [dialogTabValue, setDialogTabValue] = useState(0);
+  const [highlightedEntity, setHighlightedEntity] = useState<string | null>(null);
+  const [fundDetailsOpen, setFundDetailsOpen] = useState(false);
+  const [selectedFundDetails, setSelectedFundDetails] = useState<any>(null);
+  
+  // Handle URL parameters for navigation from Investor Relations
+  useEffect(() => {
+    const highlight = searchParams.get('highlight');
+    const entity = searchParams.get('entity');
+    
+    if (highlight && entity) {
+      setHighlightedEntity(decodeURIComponent(entity));
+      // Find and open the corresponding fund
+      const fund = funds.find(f => f.id === highlight);
+      if (fund) {
+        setSelectedFund(fund);
+        setDialogOpen(true);
+      }
+    }
+  }, [searchParams]);
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -260,6 +430,11 @@ export default function Funds() {
   const handleViewFundDetails = (fund: any) => {
     setSelectedFund(fund);
     setDialogOpen(true);
+  };
+
+  const handleViewComprehensiveDetails = (fund: any) => {
+    setSelectedFundDetails(fund);
+    setFundDetailsOpen(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -409,7 +584,7 @@ export default function Funds() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                   <MoneyIcon />
                 </Avatar>
                 <Box>
@@ -429,7 +604,7 @@ export default function Funds() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                   <FundIcon />
                 </Avatar>
                 <Box>
@@ -472,7 +647,7 @@ export default function Funds() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                   <TrendingUpIcon />
                 </Avatar>
                 <Box>
@@ -516,7 +691,7 @@ export default function Funds() {
                   <TableCell align="center">Capital Progress</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="center">Investors</TableCell>
-                  <TableCell></TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -566,9 +741,31 @@ export default function Funds() {
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <IconButton size="small">
-                          <MoreVertIcon fontSize="small" />
-                        </IconButton>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            onClick={() => handleViewComprehensiveDetails(fund)}
+                            startIcon={<AddIcon />}
+                            sx={{ 
+                              minWidth: 'auto',
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              bgcolor: 'primary.main',
+                              '&:hover': { 
+                                bgcolor: 'primary.dark',
+                                transform: 'scale(1.05)'
+                              },
+                              transition: 'all 0.2s ease-in-out'
+                            }}
+                          >
+                            Details
+                          </Button>
+                          <IconButton size="small">
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   );
@@ -579,348 +776,433 @@ export default function Funds() {
         )}
       </Paper>
 
-      {/* Comprehensive Fund Insights Dialog */}
+      {/* Fund Details Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        maxWidth="lg"
+        maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: { height: '90vh' }
-        }}
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <FundIcon sx={{ mr: 2 }} />
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {selectedFund?.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {selectedFund?.description}
-                </Typography>
-              </Box>
-            </Box>
-            <Button onClick={() => setDialogOpen(false)}>Close</Button>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <FundIcon sx={{ mr: 2 }} />
+            {selectedFund?.name} - Investor Details
           </Box>
         </DialogTitle>
-        
-        <DialogContent sx={{ p: 0 }}>
+        <DialogContent>
           {selectedFund && (
             <Box>
-              {/* Fund Overview Cards */}
-              <Box sx={{ p: 3, borderBottom: 1, borderColor: 'divider' }}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          ${(selectedFund.targetSize / 1000000).toFixed(0)}M
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">Target Size</Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
-                          ${(selectedFund.raisedAmount / 1000000).toFixed(0)}M
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">Raised Amount</Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 600, color: 'info.main' }}>
-                          {selectedFund.investorCount}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">Investors</Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent sx={{ textAlign: 'center' }}>
-                        <Typography variant="h4" sx={{ fontWeight: 600, color: 'warning.main' }}>
-                          {selectedFund.managementFee}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">Management Fee</Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Target Size</Typography>
+                  <Typography variant="h6">${(selectedFund.targetSize / 1000000).toFixed(0)}M</Typography>
                 </Grid>
-              </Box>
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">Raised Amount</Typography>
+                  <Typography variant="h6">${(selectedFund.raisedAmount / 1000000).toFixed(0)}M</Typography>
+                </Grid>
+              </Grid>
 
-              {/* Tabs for different sections */}
-              <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={dialogTabValue} onChange={(_, newValue) => setDialogTabValue(newValue)}>
-                  <Tab label="Investors & Entities" />
-                  <Tab label="Fund Details" />
-                  <Tab label="Documents" />
-                  <Tab label="Portfolio" />
-                </Tabs>
-              </Box>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Investors & Their Entities
+              </Typography>
 
-              {/* Tab Content */}
-              <Box sx={{ p: 3, maxHeight: '50vh', overflow: 'auto' }}>
-                {dialogTabValue === 0 && (
-                  <Box>
-                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                      Investors & Their Investment Entities
-                    </Typography>
-                    {selectedFund.investments.map((investment: any, index: number) => (
-                      <Accordion key={index} sx={{ mb: 2 }}>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            <Avatar sx={{ mr: 2, width: 40, height: 40 }}>
-                              {investment.investor.split(' ').map((n: string) => n[0]).join('')}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                {investment.investor}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {investment.entities.length} entities • $
-                                {(investment.entities.reduce((sum: number, entity: any) => sum + entity.amount, 0) / 1000000).toFixed(1)}M total
-                              </Typography>
-                              <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <PersonIcon fontSize="small" sx={{ mr: 0.5 }} />
-                                  <Typography variant="caption">{investment.contactPerson}</Typography>
+              {selectedFund.investments.map((investment: any, index: number) => (
+                <Accordion key={index} sx={{ mb: 1 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <Avatar sx={{ mr: 2, width: 32, height: 32 }}>
+                        {investment.investor.split(' ').map((n: string) => n[0]).join('')}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {investment.investor}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {investment.entities.length} entities • $
+                          {(investment.entities.reduce((sum: number, entity: any) => sum + entity.amount, 0) / 1000000).toFixed(1)}M total
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <List dense>
+                      {investment.entities.map((entity: any, entityIndex: number) => {
+                        const isHighlighted = highlightedEntity === entity.name;
+                        return (
+                          <ListItem 
+                            key={entityIndex}
+                            sx={{
+                              bgcolor: isHighlighted ? 'primary.light' : 'transparent',
+                              border: isHighlighted ? '2px solid' : '1px solid transparent',
+                              borderColor: isHighlighted ? 'primary.main' : 'transparent',
+                              borderRadius: 1,
+                              mb: 1,
+                              transition: 'all 0.3s ease-in-out',
+                              animation: isHighlighted ? 'pulse 2s infinite' : 'none',
+                              '@keyframes pulse': {
+                                '0%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.7)' },
+                                '70%': { boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)' },
+                                '100%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)' }
+                              }
+                            }}
+                          >
+                            <ListItemAvatar>
+                              <Avatar sx={{ 
+                                width: 24, 
+                                height: 24, 
+                                bgcolor: isHighlighted ? 'primary.main' : 'secondary.main' 
+                              }}>
+                                <BusinessIcon fontSize="small" />
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {entity.name}
+                                  </Typography>
+                                  {isHighlighted && (
+                                    <Chip 
+                                      label="Selected" 
+                                      size="small" 
+                                      color="primary" 
+                                      variant="filled"
+                                    />
+                                  )}
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <EmailIcon fontSize="small" sx={{ mr: 0.5 }} />
-                                  <Typography variant="caption">{investment.email}</Typography>
+                              }
+                              secondary={
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {entity.type}
+                                  </Typography>
+                                  {entity.investmentType && (
+                                    <Chip 
+                                      label={entity.investmentType} 
+                                      size="small" 
+                                      color="info" 
+                                      variant="outlined"
+                                      sx={{ ml: 1 }}
+                                    />
+                                  )}
                                 </Box>
-                              </Box>
-                            </Box>
-                          </Box>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <List>
-                            {investment.entities.map((entity: any, entityIndex: number) => (
-                              <ListItem key={entityIndex} sx={{ pl: 4 }}>
-                                <ListItemAvatar>
-                                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                                    <BusinessIcon fontSize="small" />
-                                  </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                  primary={
-                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                      {entity.name}
-                                    </Typography>
-                                  }
-                                  secondary={
-                                    <Box>
-                                      <Typography variant="body2" color="text.secondary">
-                                        {entity.type} • Committed: ${(entity.amount / 1000000).toFixed(1)}M • Called: ${(entity.called / 1000000).toFixed(1)}M
-                                      </Typography>
-                                      <Box sx={{ mt: 1 }}>
-                                        <CapitalProgressBar 
-                                          raised={entity.called} 
-                                          target={entity.amount}
-                                          height={4}
-                                        />
-                                      </Box>
-                                    </Box>
-                                  }
-                                />
-                                <ListItemSecondaryAction>
-                                  <Chip 
-                                    label={entity.status} 
-                                    size="small" 
-                                    color="success" 
-                                    variant="outlined"
-                                  />
-                                </ListItemSecondaryAction>
-                              </ListItem>
-                            ))}
-                          </List>
-                        </AccordionDetails>
-                      </Accordion>
-                    ))}
-                  </Box>
-                )}
-
-                {dialogTabValue === 1 && (
-                  <Box>
-                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                      Fund Details & Terms
-                    </Typography>
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} md={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                            Fund Information
-                          </Typography>
-                          <List dense>
-                            <ListItem>
-                              <ListItemText 
-                                primary="Fund Manager" 
-                                secondary={selectedFund.fundManager}
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemText 
-                                primary="Launch Date" 
-                                secondary={selectedFund.launchDate}
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemText 
-                                primary="First Close" 
-                                secondary={selectedFund.firstClose}
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemText 
-                                primary="Final Close" 
-                                secondary={selectedFund.finalClose}
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemText 
-                                primary="Management Fee" 
-                                secondary={`${selectedFund.managementFee}%`}
-                              />
-                            </ListItem>
-                            <ListItem>
-                              <ListItemText 
-                                primary="Carried Interest" 
-                                secondary={`${selectedFund.carriedInterest}%`}
-                              />
-                            </ListItem>
-                          </List>
-                        </Paper>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Paper sx={{ p: 2 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                            Key Terms
-                          </Typography>
-                          <List dense>
-                            {selectedFund.keyTerms.map((term: string, index: number) => (
-                              <ListItem key={index}>
-                                <ListItemText primary={term} />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </Paper>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                )}
-
-                {dialogTabValue === 2 && (
-                  <Box>
-                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                      Fund Documents
-                    </Typography>
-                    <List>
-                      {selectedFund.documents.map((doc: any) => (
-                        <ListItem key={doc.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: 'primary.main' }}>
-                              <DocumentIcon />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                {doc.name}
-                              </Typography>
-                            }
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="text.secondary">
-                                  {doc.type} • {doc.date} • {doc.size}
-                                </Typography>
-                                <Chip 
-                                  label={doc.status} 
-                                  size="small" 
-                                  color="success" 
-                                  variant="outlined"
-                                  sx={{ mt: 0.5 }}
-                                />
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton size="small">
-                                <ViewIcon />
-                              </IconButton>
-                              <IconButton size="small">
-                                <DownloadIcon />
-                              </IconButton>
-                            </Box>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-
-                {dialogTabValue === 3 && (
-                  <Box>
-                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                      Portfolio Companies
-                    </Typography>
-                    <List>
-                      {selectedFund.portfolioCompanies.map((company: any, index: number) => (
-                        <ListItem key={index} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ bgcolor: 'success.main' }}>
-                              <CompanyIcon />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                {company.name}
-                              </Typography>
-                            }
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="text.secondary">
-                                  {company.sector} • Investment Date: {company.investmentDate}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5 }}>
-                                  Investment Amount: ${(company.amount / 1000000).toFixed(1)}M
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <Chip 
-                              label={company.status} 
-                              size="small" 
-                              color="success" 
-                              variant="outlined"
+                              }
                             />
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
+                            <ListItemSecondaryAction>
+                              <Box sx={{ textAlign: 'right' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  ${(entity.amount / 1000000).toFixed(1)}M
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {((entity.amount / selectedFund.size) * 100).toFixed(1)}% of fund
+                                </Typography>
+                              </Box>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        );
+                      })}
                     </List>
-                  </Box>
-                )}
-              </Box>
+                  </AccordionDetails>
+                </Accordion>
+              ))}
             </Box>
           )}
         </DialogContent>
-        
-        <DialogActions sx={{ p: 3, borderTop: 1, borderColor: 'divider' }}>
-          <Button variant="outlined" startIcon={<DownloadIcon />}>
-            Export All Data
-          </Button>
-          <Button variant="contained" startIcon={<EmailIcon />}>
-            Send Update to LPs
-          </Button>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>Close</Button>
+          <Button variant="contained">Export Details</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Comprehensive Fund Details Dialog */}
+      <Dialog
+        open={fundDetailsOpen}
+        onClose={() => setFundDetailsOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'primary.main' }}>
+              <FundIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {selectedFundDetails?.name} - Comprehensive Fundraising Details
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Complete fundraising overview and activity
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedFundDetails && (
+            <Box>
+              {/* Fund Overview */}
+              <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">Target Size</Typography>
+                    <Typography variant="h6">${(selectedFundDetails.targetSize / 1000000).toFixed(0)}M</Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">Raised Amount</Typography>
+                    <Typography variant="h6">${(selectedFundDetails.raisedAmount / 1000000).toFixed(0)}M</Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">Progress</Typography>
+                    <Typography variant="h6">{((selectedFundDetails.raisedAmount / selectedFundDetails.targetSize) * 100).toFixed(1)}%</Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="body2">Investors</Typography>
+                    <Typography variant="h6">{selectedFundDetails.investorCount}</Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Commitment Timeline Chart */}
+              <Paper sx={{ p: 2, mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ChartIcon sx={{ color: '#000000' }} />
+                  Commitment Timeline
+                </Typography>
+                <Box sx={{ height: 200, display: 'flex', alignItems: 'end', gap: 1, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                  {selectedFundDetails.fundraisingData?.commitmentTimeline?.map((point: any, index: number) => (
+                    <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: `${(point.cumulative / selectedFundDetails.targetSize) * 150}px`,
+                          bgcolor: 'primary.main',
+                          borderRadius: '4px 4px 0 0',
+                          mb: 1,
+                          transition: 'all 0.3s ease'
+                        }}
+                      />
+                      <Typography variant="caption" sx={{ textAlign: 'center', fontSize: '0.7rem' }}>
+                        {new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </Typography>
+                      <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
+                        ${(point.amount / 1000000).toFixed(0)}M
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
+
+              {/* Tabs for different sections */}
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+                  <Tab label="Emails" icon={<EmailIcon />} />
+                  <Tab label="Call Transcripts" icon={<PhoneIcon />} />
+                  <Tab label="Bank Accounts" icon={<BankIcon />} />
+                  <Tab label="Capital Calls" icon={<MoneyIcon />} />
+                  <Tab label="Agreements" icon={<DocumentIcon />} />
+                </Tabs>
+              </Box>
+
+              {/* Emails Tab */}
+              {tabValue === 0 && (
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Recent Emails ({selectedFundDetails.fundraisingData?.emails?.length || 0})
+                  </Typography>
+                  {selectedFundDetails.fundraisingData?.emails?.map((email: any) => (
+                    <Paper key={email.id} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {email.subject}
+                        </Typography>
+                        <Chip label={email.status} size="small" color="primary" variant="outlined" />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Sent: {new Date(email.date).toLocaleDateString()} • {email.recipients} recipients
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Read by:
+                        </Typography>
+                        {email.readBy.map((reader: string, index: number) => (
+                          <Chip key={index} label={reader} size="small" color="success" variant="outlined" />
+                        ))}
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+
+              {/* Call Transcripts Tab */}
+              {tabValue === 1 && (
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Call Transcripts ({selectedFundDetails.fundraisingData?.callTranscripts?.length || 0})
+                  </Typography>
+                  {selectedFundDetails.fundraisingData?.callTranscripts?.map((call: any) => (
+                    <Paper key={call.id} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {call.title}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip label={call.duration} size="small" color="info" variant="outlined" />
+                          <Chip label={call.status} size="small" color="success" variant="outlined" />
+                        </Box>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {new Date(call.date).toLocaleDateString()}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        {call.summary}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Participants:
+                        </Typography>
+                        {call.participants.map((participant: string, index: number) => (
+                          <Chip key={index} label={participant} size="small" color="primary" variant="outlined" />
+                        ))}
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+
+              {/* Bank Accounts Tab */}
+              {tabValue === 2 && (
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Bank Accounts ({selectedFundDetails.fundraisingData?.bankAccounts?.length || 0})
+                  </Typography>
+                  {selectedFundDetails.fundraisingData?.bankAccounts?.map((account: any) => (
+                    <Paper key={account.id} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {account.name}
+                        </Typography>
+                        <Chip label={account.status} size="small" color="success" variant="outlined" />
+                      </Box>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Bank</Typography>
+                          <Typography variant="body2">{account.bank}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Account Number</Typography>
+                          <Typography variant="body2">{account.accountNumber}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Balance</Typography>
+                          <Typography variant="h6" color="success.main">
+                            ${(account.balance / 1000000).toFixed(1)}M
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Currency</Typography>
+                          <Typography variant="body2">{account.currency}</Typography>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+
+              {/* Capital Calls Tab */}
+              {tabValue === 3 && (
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Capital Calls ({selectedFundDetails.fundraisingData?.capitalCalls?.length || 0})
+                  </Typography>
+                  {selectedFundDetails.fundraisingData?.capitalCalls?.map((call: any) => (
+                    <Paper key={call.id} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {call.callNumber}
+                        </Typography>
+                        <Chip 
+                          label={call.status} 
+                          size="small" 
+                          color={call.status === 'completed' ? 'success' : 'warning'} 
+                          variant="outlined" 
+                        />
+                      </Box>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Call Date</Typography>
+                          <Typography variant="body2">{new Date(call.date).toLocaleDateString()}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Due Date</Typography>
+                          <Typography variant="body2">{new Date(call.dueDate).toLocaleDateString()}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Amount</Typography>
+                          <Typography variant="h6" color="primary.main">
+                            ${(call.amount / 1000000).toFixed(1)}M
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Collected</Typography>
+                          <Typography variant="h6" color="success.main">
+                            ${(call.collected / 1000000).toFixed(1)}M
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                      <Box sx={{ mt: 1 }}>
+                        <LinearProgress
+                          variant="determinate"
+                          value={(call.collected / call.amount) * 100}
+                          sx={{ height: 8, borderRadius: 4 }}
+                        />
+                        <Typography variant="caption" color="text.secondary">
+                          {((call.collected / call.amount) * 100).toFixed(1)}% collected
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+
+              {/* Subscription Agreements Tab */}
+              {tabValue === 4 && (
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                    Subscription Agreements ({selectedFundDetails.fundraisingData?.subscriptionAgreements?.length || 0})
+                  </Typography>
+                  {selectedFundDetails.fundraisingData?.subscriptionAgreements?.map((agreement: any) => (
+                    <Paper key={agreement.id} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {agreement.entityName}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Chip label={agreement.status} size="small" color="success" variant="outlined" />
+                          <Chip label={agreement.version} size="small" color="info" variant="outlined" />
+                        </Box>
+                      </Box>
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Date</Typography>
+                          <Typography variant="body2">{new Date(agreement.date).toLocaleDateString()}</Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" color="text.secondary">Amount</Typography>
+                          <Typography variant="h6" color="primary.main">
+                            ${(agreement.amount / 1000000).toFixed(1)}M
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFundDetailsOpen(false)}>Close</Button>
+          <Button variant="contained" startIcon={<DownloadIcon />}>Export All Data</Button>
         </DialogActions>
       </Dialog>
     </Box>

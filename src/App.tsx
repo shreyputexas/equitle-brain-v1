@@ -6,7 +6,6 @@ import { BrainProvider } from './contexts/BrainContext';
 import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 
-import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
 import DealDetail from './pages/DealDetail';
@@ -25,8 +24,6 @@ function App() {
       <BrainProvider>
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            
             <Route path="/" element={
               <PrivateRoute>
                 <Layout />
