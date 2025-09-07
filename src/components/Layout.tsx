@@ -345,7 +345,7 @@ export default function Layout() {
           </IconButton>
 
           {/* Logo/Brand */}
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', mr: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'black', mr: 4 }}>
             Equitle
           </Typography>
 
