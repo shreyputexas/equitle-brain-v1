@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -62,7 +63,13 @@ import {
   Clear as ClearIcon,
   AttachMoney as MoneyIcon,
   PieChart as PieChartIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  OpenInNew as OpenInNewIcon,
+  Folder as FolderIcon,
+  Gavel as GavelIcon,
+  Security as SecurityIcon,
+  Assignment as AssignmentIcon,
+  ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
@@ -87,22 +94,36 @@ const investors = [
         id: 1, 
         name: 'Goldman Sachs Asset Management', 
         type: 'Direct Investment', 
+        investmentType: 'Corporation',
         commitment: 30000000, 
         called: 21000000,
+        documents: [
+          { id: 1, name: 'Subscription Agreement', type: 'Legal', date: '2023-01-15', size: '2.3 MB', status: 'Signed' },
+          { id: 2, name: 'Side Letter - Co-Investment Rights', type: 'Legal', date: '2023-01-20', size: '1.8 MB', status: 'Signed' },
+          { id: 3, name: 'KYC Documentation', type: 'Compliance', date: '2023-01-10', size: '5.2 MB', status: 'Approved' },
+          { id: 4, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-03-15', size: '0.5 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 20000000, percentage: 66.7, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 10000000, percentage: 33.3, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 20000000, percentage: 66.7, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 10000000, percentage: 33.3, vintage: '2024', fundId: 'fund-2' }
         ]
       },
       { 
         id: 2, 
         name: 'GS Private Wealth Solutions', 
         type: 'Client Account', 
+        investmentType: 'LLC',
         commitment: 20000000, 
         called: 14000000,
+        documents: [
+          { id: 5, name: 'Subscription Agreement', type: 'Legal', date: '2023-02-01', size: '2.1 MB', status: 'Signed' },
+          { id: 6, name: 'Operating Agreement', type: 'Legal', date: '2023-01-25', size: '3.4 MB', status: 'Signed' },
+          { id: 7, name: 'KYC Documentation', type: 'Compliance', date: '2023-01-28', size: '4.8 MB', status: 'Approved' },
+          { id: 8, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-04-01', size: '0.6 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 15000000, percentage: 75.0, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 5000000, percentage: 25.0, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 15000000, percentage: 75.0, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 5000000, percentage: 25.0, vintage: '2024', fundId: 'fund-2' }
         ]
       }
     ]
@@ -119,22 +140,36 @@ const investors = [
         id: 3, 
         name: 'JPM Private Bank', 
         type: 'Private Banking', 
+        investmentType: 'Corporation',
         commitment: 25000000, 
         called: 17500000,
+        documents: [
+          { id: 9, name: 'Subscription Agreement', type: 'Legal', date: '2023-01-30', size: '2.5 MB', status: 'Signed' },
+          { id: 10, name: 'Side Letter - Reporting Rights', type: 'Legal', date: '2023-02-05', size: '1.2 MB', status: 'Signed' },
+          { id: 11, name: 'KYC Documentation', type: 'Compliance', date: '2023-01-28', size: '6.1 MB', status: 'Approved' },
+          { id: 12, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-03-20', size: '0.7 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 18000000, percentage: 72.0, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 7000000, percentage: 28.0, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 18000000, percentage: 72.0, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 7000000, percentage: 28.0, vintage: '2024', fundId: 'fund-2' }
         ]
       },
       { 
         id: 4, 
         name: 'Chase Investment Services', 
         type: 'Investment Services', 
+        investmentType: 'Partnership',
         commitment: 15000000, 
         called: 10500000,
+        documents: [
+          { id: 13, name: 'Subscription Agreement', type: 'Legal', date: '2023-02-10', size: '2.2 MB', status: 'Signed' },
+          { id: 14, name: 'Partnership Agreement', type: 'Legal', date: '2023-02-05', size: '4.1 MB', status: 'Signed' },
+          { id: 15, name: 'KYC Documentation', type: 'Compliance', date: '2023-02-08', size: '3.9 MB', status: 'Approved' },
+          { id: 16, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-04-10', size: '0.5 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 10000000, percentage: 66.7, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 5000000, percentage: 33.3, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 10000000, percentage: 66.7, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 5000000, percentage: 33.3, vintage: '2024', fundId: 'fund-2' }
         ]
       }
     ]
@@ -151,11 +186,18 @@ const investors = [
         id: 5, 
         name: 'BlackRock Alternative Investments', 
         type: 'Direct Investment', 
+        investmentType: 'Corporation',
         commitment: 35000000, 
         called: 24500000,
+        documents: [
+          { id: 17, name: 'Subscription Agreement', type: 'Legal', date: '2023-01-20', size: '2.8 MB', status: 'Signed' },
+          { id: 18, name: 'Side Letter - Co-Investment Rights', type: 'Legal', date: '2023-01-25', size: '1.5 MB', status: 'Signed' },
+          { id: 19, name: 'KYC Documentation', type: 'Compliance', date: '2023-01-18', size: '7.2 MB', status: 'Approved' },
+          { id: 20, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-03-10', size: '0.8 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 25000000, percentage: 71.4, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 10000000, percentage: 28.6, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 25000000, percentage: 71.4, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 10000000, percentage: 28.6, vintage: '2024', fundId: 'fund-2' }
         ]
       }
     ]
@@ -172,22 +214,36 @@ const investors = [
         id: 6, 
         name: 'Smith Holdings LLC', 
         type: 'Family LLC', 
+        investmentType: 'LLC',
         commitment: 10000000, 
         called: 7000000,
+        documents: [
+          { id: 21, name: 'Subscription Agreement', type: 'Legal', date: '2023-02-15', size: '1.9 MB', status: 'Signed' },
+          { id: 22, name: 'Operating Agreement', type: 'Legal', date: '2023-02-10', size: '2.8 MB', status: 'Signed' },
+          { id: 23, name: 'KYC Documentation', type: 'Compliance', date: '2023-02-12', size: '3.5 MB', status: 'Approved' },
+          { id: 24, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-04-15', size: '0.4 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 6000000, percentage: 60.0, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 4000000, percentage: 40.0, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 6000000, percentage: 60.0, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 4000000, percentage: 40.0, vintage: '2024', fundId: 'fund-2' }
         ]
       },
       { 
         id: 7, 
         name: 'Smith Investment Trust', 
         type: 'Trust', 
+        investmentType: 'Trust',
         commitment: 5000000, 
         called: 3500000,
+        documents: [
+          { id: 25, name: 'Subscription Agreement', type: 'Legal', date: '2023-02-20', size: '1.7 MB', status: 'Signed' },
+          { id: 26, name: 'Trust Agreement', type: 'Legal', date: '2023-02-15', size: '3.2 MB', status: 'Signed' },
+          { id: 27, name: 'KYC Documentation', type: 'Compliance', date: '2023-02-18', size: '2.9 MB', status: 'Approved' },
+          { id: 28, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-04-20', size: '0.3 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 3000000, percentage: 60.0, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 2000000, percentage: 40.0, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 3000000, percentage: 60.0, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 2000000, percentage: 40.0, vintage: '2024', fundId: 'fund-2' }
         ]
       }
     ]
@@ -204,22 +260,36 @@ const investors = [
         id: 8, 
         name: 'Tech Ventures Main Fund', 
         type: 'Fund of Funds', 
+        investmentType: 'Partnership',
         commitment: 15000000, 
         called: 10500000,
+        documents: [
+          { id: 29, name: 'Subscription Agreement', type: 'Legal', date: '2023-03-01', size: '2.4 MB', status: 'Signed' },
+          { id: 30, name: 'Partnership Agreement', type: 'Legal', date: '2023-02-25', size: '4.5 MB', status: 'Signed' },
+          { id: 31, name: 'KYC Documentation', type: 'Compliance', date: '2023-02-28', size: '5.8 MB', status: 'Approved' },
+          { id: 32, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-05-01', size: '0.6 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 10000000, percentage: 66.7, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 5000000, percentage: 33.3, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 10000000, percentage: 66.7, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 5000000, percentage: 33.3, vintage: '2024', fundId: 'fund-2' }
         ]
       },
       { 
         id: 9, 
         name: 'Tech Ventures Co-Investment', 
         type: 'Co-Investment Vehicle', 
+        investmentType: 'LLC',
         commitment: 10000000, 
         called: 7000000,
+        documents: [
+          { id: 33, name: 'Subscription Agreement', type: 'Legal', date: '2023-03-05', size: '2.1 MB', status: 'Signed' },
+          { id: 34, name: 'Operating Agreement', type: 'Legal', date: '2023-03-01', size: '3.7 MB', status: 'Signed' },
+          { id: 35, name: 'KYC Documentation', type: 'Compliance', date: '2023-03-03', size: '4.2 MB', status: 'Approved' },
+          { id: 36, name: 'Capital Call Notice #1', type: 'Administrative', date: '2023-05-05', size: '0.5 MB', status: 'Sent' }
+        ],
         fundInvestments: [
-          { fundName: 'Equitle Fund I', amount: 6000000, percentage: 60.0, vintage: '2023' },
-          { fundName: 'Equitle Growth Fund', amount: 4000000, percentage: 40.0, vintage: '2024' }
+          { fundName: 'Equitle Fund I', amount: 6000000, percentage: 60.0, vintage: '2023', fundId: 'fund-1' },
+          { fundName: 'Equitle Growth Fund', amount: 4000000, percentage: 40.0, vintage: '2024', fundId: 'fund-2' }
         ]
       }
     ]
@@ -273,6 +343,7 @@ const CapitalProgressBar = ({ raised, target, height = 8 }: { raised: number; ta
 };
 
 export default function InvestorRelations() {
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -312,6 +383,39 @@ export default function InvestorRelations() {
   const handleViewEntities = (investor: any) => {
     setSelectedInvestor(investor);
     setEntityDialogOpen(true);
+  };
+
+  const handleNavigateToFund = (fundId: string, entityName: string) => {
+    // Navigate to funds page with the specific fund and entity highlighted
+    navigate(`/funds?highlight=${fundId}&entity=${encodeURIComponent(entityName)}`);
+  };
+
+  const getDocumentIcon = (type: string) => {
+    switch (type) {
+      case 'Legal': return <GavelIcon />;
+      case 'Compliance': return <SecurityIcon />;
+      case 'Administrative': return <AssignmentIcon />;
+      default: return <DocumentIcon />;
+    }
+  };
+
+  const getDocumentColor = (type: string) => {
+    switch (type) {
+      case 'Legal': return 'primary';
+      case 'Compliance': return 'success';
+      case 'Administrative': return 'info';
+      default: return 'default';
+    }
+  };
+
+  const getInvestmentTypeColor = (type: string) => {
+    switch (type) {
+      case 'Corporation': return 'primary';
+      case 'LLC': return 'success';
+      case 'Partnership': return 'info';
+      case 'Trust': return 'warning';
+      default: return 'default';
+    }
   };
 
   const clearFilters = () => {
@@ -930,9 +1034,17 @@ export default function InvestorRelations() {
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             {entity.name}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {entity.type}
-                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {entity.type}
+                            </Typography>
+                            <Chip 
+                              label={entity.investmentType} 
+                              size="small" 
+                              color={getInvestmentTypeColor(entity.investmentType) as any}
+                              variant="outlined"
+                            />
+                          </Box>
                         </Box>
                         <LinearProgress
                           variant="determinate"
@@ -952,23 +1064,23 @@ export default function InvestorRelations() {
                       <Box sx={{ display: 'flex', gap: 3, mb: 2, flexWrap: 'wrap' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <MoneyIcon color="primary" fontSize="small" />
-                          <Typography variant="body2">
-                            <strong>Commitment:</strong> ${(entity.commitment / 1000000).toFixed(1)}M
-                          </Typography>
+                              <Typography variant="body2">
+                                <strong>Commitment:</strong> ${(entity.commitment / 1000000).toFixed(1)}M
+                              </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <TrendingUpIcon color="success" fontSize="small" />
-                          <Typography variant="body2">
-                            <strong>Called:</strong> ${(entity.called / 1000000).toFixed(1)}M
-                          </Typography>
+                              <Typography variant="body2">
+                                <strong>Called:</strong> ${(entity.called / 1000000).toFixed(1)}M
+                              </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <PieChartIcon color="info" fontSize="small" />
-                          <Typography variant="body2">
-                            <strong>% Called:</strong> {((entity.called / entity.commitment) * 100).toFixed(1)}%
-                          </Typography>
-                        </Box>
-                      </Box>
+                              <Typography variant="body2">
+                                <strong>% Called:</strong> {((entity.called / entity.commitment) * 100).toFixed(1)}%
+                              </Typography>
+                            </Box>
+                          </Box>
 
                       {/* Fund Investments */}
                       <Box sx={{ bgcolor: 'background.default', borderRadius: 2, p: 2 }}>
@@ -980,13 +1092,25 @@ export default function InvestorRelations() {
                         {entity.fundInvestments && entity.fundInvestments.length > 0 ? (
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {entity.fundInvestments.map((fund: any, index: number) => (
-                              <Box key={index} sx={{ 
-                                border: '1px solid', 
-                                borderColor: 'divider', 
-                                borderRadius: 2, 
-                                p: 2,
-                                bgcolor: 'background.paper'
-                              }}>
+                              <Box 
+                                key={index} 
+                                sx={{ 
+                                  border: '1px solid', 
+                                  borderColor: 'divider', 
+                                  borderRadius: 2, 
+                                  p: 2,
+                                  bgcolor: 'background.paper',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease-in-out',
+                                  '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'primary.light',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: 2
+                                  }
+                                }}
+                                onClick={() => handleNavigateToFund(fund.fundId, entity.name)}
+                              >
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                                   <Box>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
@@ -996,39 +1120,125 @@ export default function InvestorRelations() {
                                       Vintage: {fund.vintage}
                                     </Typography>
                                   </Box>
-                                  <Chip 
-                                    label={`${fund.percentage}%`} 
-                                    size="small" 
-                                    color="primary" 
-                                    variant="outlined"
-                                  />
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Chip 
+                                      label={`${fund.percentage}%`} 
+                                      size="small" 
+                                      color="primary" 
+                                      variant="outlined"
+                                    />
+                                    <OpenInNewIcon fontSize="small" color="primary" />
+                                  </Box>
                                 </Box>
                                 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
                                     ${(fund.amount / 1000000).toFixed(1)}M
                                   </Typography>
-                                  <LinearProgress
-                                    variant="determinate"
+                        <LinearProgress
+                          variant="determinate"
                                     value={fund.percentage}
-                                    sx={{
+                          sx={{ 
                                       width: 100,
-                                      height: 6,
-                                      borderRadius: 3,
+                            height: 6,
+                            borderRadius: 3,
                                       bgcolor: 'rgba(0,0,0,0.1)',
-                                      '& .MuiLinearProgress-bar': {
+                            '& .MuiLinearProgress-bar': {
                                         borderRadius: 3,
                                         bgcolor: 'primary.main'
-                                      }
-                                    }}
-                                  />
+                            }
+                          }}
+                        />
                                 </Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <ArrowForwardIcon fontSize="small" />
+                                  Click to view fund details
+                                </Typography>
                               </Box>
                             ))}
                           </Box>
                         ) : (
                           <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                             No fund investments recorded
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {/* Documents Section */}
+                      <Box sx={{ bgcolor: 'background.default', borderRadius: 2, p: 2, mt: 2 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FolderIcon color="primary" />
+                          Documents & Agreements
+                        </Typography>
+                        
+                        {entity.documents && entity.documents.length > 0 ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {entity.documents.map((doc: any) => (
+                              <Box 
+                                key={doc.id} 
+                                sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  p: 1.5, 
+                                  border: '1px solid', 
+                                  borderColor: 'divider', 
+                                  borderRadius: 1,
+                                  bgcolor: 'background.paper',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease-in-out',
+                                  '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'primary.light'
+                                  }
+                                }}
+                              >
+                                <Avatar 
+                                  sx={{ 
+                                    bgcolor: `${getDocumentColor(doc.type)}.light`, 
+                                    color: `${getDocumentColor(doc.type)}.contrastText`,
+                                    mr: 2,
+                                    width: 32,
+                                    height: 32
+                                  }}
+                                >
+                                  {getDocumentIcon(doc.type)}
+                                </Avatar>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {doc.name}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                                    <Chip 
+                                      label={doc.type} 
+                                      size="small" 
+                                      color={getDocumentColor(doc.type) as any}
+                                      variant="outlined"
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                      {doc.date}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {doc.size}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Chip 
+                                    label={doc.status} 
+                                    size="small" 
+                                    color={doc.status === 'Signed' || doc.status === 'Approved' ? 'success' : 'default'}
+                                    variant="outlined"
+                                  />
+                                  <IconButton size="small">
+                                    <DownloadIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            No documents available
                           </Typography>
                         )}
                       </Box>

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -62,51 +63,112 @@ import {
 // Mock data for funds and their investors
 const funds = [
   {
-    id: 1,
-    name: 'Equitle Growth Fund I',
-    vintage: 2022,
+    id: 'fund-1',
+    name: 'Equitle Fund I',
+    vintage: 2023,
     targetSize: 100000000,
     raisedAmount: 85000000,
     status: 'Active',
     investorCount: 12,
+    size: 100000000,
     investments: [
       {
         investor: 'Goldman Sachs',
         entities: [
-          { name: 'Goldman Sachs Asset Management', amount: 25000000, type: 'Direct' },
-          { name: 'GS Private Wealth Solutions', amount: 15000000, type: 'Client Account' }
-        ]
-      },
-      {
-        investor: 'Smith Family Office',
-        entities: [
-          { name: 'Smith Holdings LLC', amount: 10000000, type: 'Family LLC' },
-          { name: 'Smith Investment Trust', amount: 5000000, type: 'Trust' }
+          { name: 'Goldman Sachs Asset Management', amount: 20000000, type: 'Direct Investment', investmentType: 'Corporation' },
+          { name: 'GS Private Wealth Solutions', amount: 15000000, type: 'Client Account', investmentType: 'LLC' }
         ]
       },
       {
         investor: 'JP Morgan Chase',
         entities: [
-          { name: 'JPM Private Bank', amount: 20000000, type: 'Private Banking' },
-          { name: 'Chase Investment Services', amount: 10000000, type: 'Investment Services' }
+          { name: 'JPM Private Bank', amount: 18000000, type: 'Private Banking', investmentType: 'Corporation' },
+          { name: 'Chase Investment Services', amount: 10000000, type: 'Investment Services', investmentType: 'Partnership' }
+        ]
+      },
+      {
+        investor: 'BlackRock',
+        entities: [
+          { name: 'BlackRock Alternative Investments', amount: 25000000, type: 'Direct Investment', investmentType: 'Corporation' }
+        ]
+      },
+      {
+        investor: 'Smith Family Office',
+        entities: [
+          { name: 'Smith Holdings LLC', amount: 6000000, type: 'Family LLC', investmentType: 'LLC' },
+          { name: 'Smith Investment Trust', amount: 3000000, type: 'Trust', investmentType: 'Trust' }
+        ]
+      },
+      {
+        investor: 'Tech Ventures LP',
+        entities: [
+          { name: 'Tech Ventures Main Fund', amount: 10000000, type: 'Fund of Funds', investmentType: 'Partnership' },
+          { name: 'Tech Ventures Co-Investment', amount: 6000000, type: 'Co-Investment Vehicle', investmentType: 'LLC' }
         ]
       }
     ]
   },
   {
-    id: 2,
+    id: 'fund-2',
+    name: 'Equitle Growth Fund',
+    vintage: 2024,
+    targetSize: 150000000,
+    raisedAmount: 120000000,
+    status: 'Fundraising',
+    investorCount: 8,
+    size: 150000000,
+    investments: [
+      {
+        investor: 'Goldman Sachs',
+        entities: [
+          { name: 'Goldman Sachs Asset Management', amount: 10000000, type: 'Direct Investment', investmentType: 'Corporation' },
+          { name: 'GS Private Wealth Solutions', amount: 5000000, type: 'Client Account', investmentType: 'LLC' }
+        ]
+      },
+      {
+        investor: 'JP Morgan Chase',
+        entities: [
+          { name: 'JPM Private Bank', amount: 7000000, type: 'Private Banking', investmentType: 'Corporation' },
+          { name: 'Chase Investment Services', amount: 5000000, type: 'Investment Services', investmentType: 'Partnership' }
+        ]
+      },
+      {
+        investor: 'BlackRock',
+        entities: [
+          { name: 'BlackRock Alternative Investments', amount: 10000000, type: 'Direct Investment', investmentType: 'Corporation' }
+        ]
+      },
+      {
+        investor: 'Smith Family Office',
+        entities: [
+          { name: 'Smith Holdings LLC', amount: 4000000, type: 'Family LLC', investmentType: 'LLC' },
+          { name: 'Smith Investment Trust', amount: 2000000, type: 'Trust', investmentType: 'Trust' }
+        ]
+      },
+      {
+        investor: 'Tech Ventures LP',
+        entities: [
+          { name: 'Tech Ventures Main Fund', amount: 5000000, type: 'Fund of Funds', investmentType: 'Partnership' },
+          { name: 'Tech Ventures Co-Investment', amount: 4000000, type: 'Co-Investment Vehicle', investmentType: 'LLC' }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'fund-3',
     name: 'Equitle Opportunity Fund',
     vintage: 2023,
     targetSize: 150000000,
     raisedAmount: 120000000,
     status: 'Fundraising',
     investorCount: 8,
+    size: 150000000,
     investments: [
       {
         investor: 'BlackRock',
         entities: [
-          { name: 'BlackRock Alternative Investments', amount: 40000000, type: 'Direct' },
-          { name: 'iShares Private Markets', amount: 20000000, type: 'Fund Vehicle' }
+          { name: 'BlackRock Alternative Investments', amount: 40000000, type: 'Direct Investment', investmentType: 'Corporation' },
+          { name: 'iShares Private Markets', amount: 20000000, type: 'Fund Vehicle', investmentType: 'Corporation' }
         ]
       },
       {
@@ -177,10 +239,28 @@ const CapitalProgressBar = ({ raised, target, height = 8 }: { raised: number; ta
 };
 
 export default function Funds() {
+  const [searchParams] = useSearchParams();
   const [tabValue, setTabValue] = useState(0);
   const [selectedFund, setSelectedFund] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [highlightedEntity, setHighlightedEntity] = useState<string | null>(null);
+  
+  // Handle URL parameters for navigation from Investor Relations
+  useEffect(() => {
+    const highlight = searchParams.get('highlight');
+    const entity = searchParams.get('entity');
+    
+    if (highlight && entity) {
+      setHighlightedEntity(decodeURIComponent(entity));
+      // Find and open the corresponding fund
+      const fund = funds.find(f => f.id === highlight);
+      if (fund) {
+        setSelectedFund(fund);
+        setDialogOpen(true);
+      }
+    }
+  }, [searchParams]);
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -582,24 +662,81 @@ export default function Funds() {
                   </AccordionSummary>
                   <AccordionDetails>
                     <List dense>
-                      {investment.entities.map((entity: any, entityIndex: number) => (
-                        <ListItem key={entityIndex}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ width: 24, height: 24, bgcolor: 'secondary.main' }}>
-                              <BusinessIcon fontSize="small" />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={entity.name}
-                            secondary={entity.type}
-                          />
-                          <ListItemSecondaryAction>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              ${(entity.amount / 1000000).toFixed(1)}M
-                            </Typography>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
+                      {investment.entities.map((entity: any, entityIndex: number) => {
+                        const isHighlighted = highlightedEntity === entity.name;
+                        return (
+                          <ListItem 
+                            key={entityIndex}
+                            sx={{
+                              bgcolor: isHighlighted ? 'primary.light' : 'transparent',
+                              border: isHighlighted ? '2px solid' : '1px solid transparent',
+                              borderColor: isHighlighted ? 'primary.main' : 'transparent',
+                              borderRadius: 1,
+                              mb: 1,
+                              transition: 'all 0.3s ease-in-out',
+                              animation: isHighlighted ? 'pulse 2s infinite' : 'none',
+                              '@keyframes pulse': {
+                                '0%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.7)' },
+                                '70%': { boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)' },
+                                '100%': { boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)' }
+                              }
+                            }}
+                          >
+                            <ListItemAvatar>
+                              <Avatar sx={{ 
+                                width: 24, 
+                                height: 24, 
+                                bgcolor: isHighlighted ? 'primary.main' : 'secondary.main' 
+                              }}>
+                                <BusinessIcon fontSize="small" />
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {entity.name}
+                                  </Typography>
+                                  {isHighlighted && (
+                                    <Chip 
+                                      label="Selected" 
+                                      size="small" 
+                                      color="primary" 
+                                      variant="filled"
+                                    />
+                                  )}
+                                </Box>
+                              }
+                              secondary={
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {entity.type}
+                                  </Typography>
+                                  {entity.investmentType && (
+                                    <Chip 
+                                      label={entity.investmentType} 
+                                      size="small" 
+                                      color="info" 
+                                      variant="outlined"
+                                      sx={{ ml: 1 }}
+                                    />
+                                  )}
+                                </Box>
+                              }
+                            />
+                            <ListItemSecondaryAction>
+                              <Box sx={{ textAlign: 'right' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  ${(entity.amount / 1000000).toFixed(1)}M
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {((entity.amount / selectedFund.size) * 100).toFixed(1)}% of fund
+                                </Typography>
+                              </Box>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        );
+                      })}
                     </List>
                   </AccordionDetails>
                 </Accordion>
