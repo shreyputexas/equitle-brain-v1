@@ -136,10 +136,11 @@ export default function Layout() {
       <AppBar
         position="fixed"
         sx={{
-          bgcolor: 'background.paper',
-          boxShadow: 'none',
-          borderBottom: '1px solid',
-          borderColor: 'divider'
+          bgcolor: 'rgba(0, 0, 0, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 4px 32px rgba(0, 0, 0, 0.1)',
+          zIndex: 1300
         }}
       >
         <Toolbar>
@@ -155,7 +156,7 @@ export default function Layout() {
           </IconButton>
 
           {/* Logo/Brand */}
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main', mr: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: 'white', mr: 4 }}>
             Equitle
           </Typography>
 
@@ -170,12 +171,17 @@ export default function Layout() {
                       endIcon={<ArrowDownIcon />}
                       onClick={(e) => handleNavMenuOpen(e, item.text)}
                       sx={{
-                        color: 'text.primary',
+                        color: 'white',
                         textTransform: 'none',
                         fontWeight: 500,
+                        borderRadius: '8px',
+                        px: 2,
+                        py: 1,
                         '&:hover': {
-                          bgcolor: 'action.hover'
-                        }
+                          bgcolor: 'rgba(255, 255, 255, 0.1)',
+                          transform: 'translateY(-1px)'
+                        },
+                        transition: 'all 0.2s ease-in-out'
                       }}
                     >
                       {item.text}
@@ -186,12 +192,32 @@ export default function Layout() {
                       onClose={() => handleNavMenuClose(item.text)}
                       transformOrigin={{ horizontal: 'left', vertical: 'top' }}
                       anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+                      PaperProps={{
+                        sx: {
+                          mt: 1,
+                          minWidth: 200,
+                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          bgcolor: 'rgba(0, 0, 0, 0.9)',
+                          backdropFilter: 'blur(20px)',
+                          borderRadius: '12px'
+                        }
+                      }}
                     >
                       {item.subItems.map((subItem) => (
                         <MenuItem
                           key={subItem.text}
                           onClick={() => handleNavigation(subItem.path, item.text)}
                           selected={location.pathname === subItem.path}
+                          sx={{
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            '&.Mui-selected': {
+                              bgcolor: 'rgba(255, 255, 255, 0.2)'
+                            }
+                          }}
                         >
                           {subItem.text}
                         </MenuItem>
@@ -228,17 +254,29 @@ export default function Layout() {
               display: { xs: 'none', md: 'flex' },
               alignItems: 'center',
               width: 300,
-              bgcolor: 'background.default',
-              border: '1px solid',
-              borderColor: 'divider',
-              mr: 2
+              bgcolor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '8px',
+              mr: 2,
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.3)'
+              },
+              transition: 'all 0.2s ease-in-out'
             }}
           >
-            <IconButton sx={{ p: '10px' }}>
+            <IconButton sx={{ p: '10px', color: 'white' }}>
               <SearchIcon />
             </IconButton>
             <InputBase
-              sx={{ ml: 1, flex: 1 }}
+              sx={{ 
+                ml: 1, 
+                flex: 1,
+                color: 'white',
+                '&::placeholder': {
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }
+              }}
               placeholder="Ask Brain anything..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -249,7 +287,18 @@ export default function Layout() {
           {/* Right side - Notifications and Profile */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Tooltip title="Notifications">
-              <IconButton color="inherit" sx={{ mr: 1 }}>
+              <IconButton 
+                color="inherit" 
+                sx={{ 
+                  mr: 1,
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
+              >
                 <Badge badgeContent={4} color="error">
                   <NotificationsIcon />
                 </Badge>
@@ -257,7 +306,16 @@ export default function Layout() {
             </Tooltip>
 
             <Tooltip title="Profile">
-              <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0 }}>
+              <IconButton 
+                onClick={handleProfileMenuOpen} 
+                sx={{ 
+                  p: 0,
+                  '&:hover': {
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
+              >
                 <Avatar sx={{ bgcolor: 'primary.main' }}>
                   {user?.name?.charAt(0).toUpperCase()}
                 </Avatar>
@@ -274,16 +332,43 @@ export default function Layout() {
         onClose={handleProfileMenuClose}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 200,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            bgcolor: 'rgba(0, 0, 0, 0.9)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '12px'
+          }
+        }}
       >
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/profile'); }}>
-          <ListItemIcon>
+        <MenuItem 
+          onClick={() => { handleProfileMenuClose(); navigate('/profile'); }}
+          sx={{
+            color: 'white',
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
+          <ListItemIcon sx={{ color: 'white' }}>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
           Profile
         </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
+        <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
+        <MenuItem 
+          onClick={handleLogout}
+          sx={{
+            color: 'white',
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
+          <ListItemIcon sx={{ color: 'white' }}>
             <LogoutIcon fontSize="small" />
           </ListItemIcon>
           Logout
