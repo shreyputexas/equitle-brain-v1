@@ -37,7 +37,9 @@ import {
   KeyboardArrowDown as ArrowDownIcon,
   Menu as MenuIcon,
   ExpandLess,
-  ExpandMore
+  ExpandMore,
+  Mic as MicIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -71,6 +73,7 @@ export default function Layout() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [mobileExpandedMenus, setMobileExpandedMenus] = useState<{ [key: string]: boolean }>({});
+  const [brainChatOpen, setBrainChatOpen] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -129,6 +132,10 @@ export default function Layout() {
       ...prev,
       [menuKey]: !prev[menuKey]
     }));
+  };
+
+  const handleBrainChatToggle = () => {
+    setBrainChatOpen(!brainChatOpen);
   };
 
   return (
@@ -376,6 +383,176 @@ export default function Layout() {
         }}
       >
         <Outlet />
+      </Box>
+
+      {/* Floating Brain Chat Button */}
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          zIndex: 1000
+        }}
+      >
+        {!brainChatOpen ? (
+          <Tooltip title="Ask Brain anything" placement="left">
+            <IconButton
+              onClick={handleBrainChatToggle}
+              sx={{
+                width: 64,
+                height: 64,
+                bgcolor: 'primary.main',
+                color: 'white',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                '&:hover': {
+                  bgcolor: 'primary.dark',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.4)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <MicIcon sx={{ fontSize: 28 }} />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Paper
+            sx={{
+              width: 400,
+              height: 500,
+              borderRadius: 3,
+              boxShadow: '0 16px 64px rgba(0,0,0,0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Chat Header */}
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: 'primary.main',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 2, width: 32, height: 32 }}>
+                  <MicIcon fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Brain Assistant
+                </Typography>
+              </Box>
+              <IconButton
+                onClick={handleBrainChatToggle}
+                sx={{ color: 'white' }}
+                size="small"
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            {/* Chat Messages */}
+            <Box
+              sx={{
+                flex: 1,
+                p: 2,
+                overflow: 'auto',
+                bgcolor: 'background.default'
+              }}
+            >
+              <Box
+                sx={{
+                  p: 2,
+                  mb: 2,
+                  bgcolor: 'primary.light',
+                  borderRadius: 2,
+                  color: 'primary.contrastText'
+                }}
+              >
+                <Typography variant="body2">
+                  👋 Hi! I'm your Brain assistant. Ask me anything about your deals, relationships, or portfolio companies.
+                </Typography>
+              </Box>
+              
+              {/* Example suggestions */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                  Try asking:
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {[
+                    "Show me deals in due diligence",
+                    "What's the status of TechCorp?",
+                    "Who are my key contacts at HealthTech?",
+                    "Generate a portfolio report"
+                  ].map((suggestion, index) => (
+                    <Button
+                      key={index}
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setSearchQuery(suggestion);
+                        handleSearch({ key: 'Enter' } as React.KeyboardEvent);
+                        setBrainChatOpen(false);
+                      }}
+                      sx={{
+                        textAlign: 'left',
+                        justifyContent: 'flex-start',
+                        textTransform: 'none',
+                        fontSize: '0.75rem'
+                      }}
+                    >
+                      {suggestion}
+                    </Button>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Chat Input */}
+            <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Paper
+                sx={{
+                  p: '2px 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: 'background.paper'
+                }}
+              >
+                <IconButton sx={{ p: '10px' }}>
+                  <SearchIcon />
+                </IconButton>
+                <InputBase
+                  sx={{ ml: 1, flex: 1 }}
+                  placeholder="Ask Brain anything..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      handleSearch(e);
+                      setBrainChatOpen(false);
+                    }
+                  }}
+                />
+                <IconButton
+                  onClick={() => {
+                    if (searchQuery.trim()) {
+                      handleSearch({ key: 'Enter' } as React.KeyboardEvent);
+                      setBrainChatOpen(false);
+                    }
+                  }}
+                  sx={{ p: '10px' }}
+                >
+                  <MicIcon />
+                </IconButton>
+              </Paper>
+            </Box>
+          </Paper>
+        )}
       </Box>
     </Box>
   );
