@@ -263,11 +263,11 @@ const mockDeals: Deal[] = [
 
 const stages = ['Initial Review', 'Due Diligence', 'Term Sheet', 'Closing', 'Closed'];
 const stageColors: Record<string, string> = {
-  'Initial Review': '#6B7280',
-  'Due Diligence': '#3B82F6',
-  'Term Sheet': '#F59E0B',
-  'Closing': '#10B981',
-  'Closed': '#6366F1'
+  'Initial Review': '#000000',
+  'Due Diligence': '#000000',
+  'Term Sheet': '#000000',
+  'Closing': '#000000',
+  'Closed': '#000000'
 };
 
 export default function Deals() {
@@ -339,7 +339,7 @@ export default function Deals() {
       width: 200,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar sx={{ width: 32, height: 32, mr: 2, bgcolor: 'primary.main' }}>
+          <Avatar sx={{ width: 32, height: 32, mr: 2, bgcolor: '#000000' }}>
             {params.value.charAt(0)}
           </Avatar>
           <Box>
@@ -358,7 +358,15 @@ export default function Deals() {
       headerName: 'Sector',
       width: 130,
       renderCell: (params: GridRenderCellParams) => (
-        <Chip label={params.value} size="small" variant="outlined" />
+        <Chip 
+          label={params.value} 
+          size="small" 
+          sx={{ 
+            bgcolor: '#f5f5f5', 
+            color: '#000000',
+            border: '1px solid #e0e0e0'
+          }} 
+        />
       )
     },
     {
@@ -370,9 +378,9 @@ export default function Deals() {
           label={params.value}
           size="small"
           sx={{
-            bgcolor: `${stageColors[params.value]}20`,
-            color: stageColors[params.value],
-            border: `1px solid ${stageColors[params.value]}`
+            bgcolor: '#f5f5f5',
+            color: '#000000',
+            border: '1px solid #e0e0e0'
           }}
         />
       )
@@ -405,7 +413,7 @@ export default function Deals() {
               bgcolor: 'rgba(255,255,255,0.05)',
               '& .MuiLinearProgress-bar': {
                 borderRadius: 2,
-                bgcolor: params.value > 60 ? 'success.main' : params.value > 30 ? 'warning.main' : 'error.main'
+                background: 'linear-gradient(90deg, #9e9e9e 0%, #000000 100%)'
               }
             }}
           />
@@ -485,7 +493,7 @@ export default function Deals() {
         
         return (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'primary.main' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: '#000000' }}>
               {topContact.name} ({topContact.relationshipScore}/100)
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ 
@@ -645,7 +653,7 @@ export default function Deals() {
       >
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Avatar sx={{ bgcolor: 'primary.main' }}>
+            <Avatar sx={{ bgcolor: '#000000' }}>
               {deal.company.charAt(0)}
             </Avatar>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -653,9 +661,9 @@ export default function Deals() {
                 label={deal.stage}
                 size="small"
                 sx={{
-                  bgcolor: `${stageColors[deal.stage]}20`,
-                  color: stageColors[deal.stage],
-                  border: `1px solid ${stageColors[deal.stage]}`
+                  bgcolor: '#f5f5f5',
+                  color: '#000000',
+                  border: '1px solid #e0e0e0'
                 }}
               />
               <Tooltip title={isExpanded ? "Hide contacts" : "Show contacts"}>
@@ -667,10 +675,10 @@ export default function Deals() {
                   }}
                   sx={{ 
                     ml: 1,
-                    bgcolor: isExpanded ? 'primary.main' : 'transparent',
+                    bgcolor: isExpanded ? '#000000' : 'transparent',
                     color: isExpanded ? 'white' : 'text.secondary',
                     '&:hover': {
-                      bgcolor: isExpanded ? 'primary.dark' : 'action.hover'
+                      bgcolor: isExpanded ? '#333333' : 'action.hover'
                     }
                   }}
                 >
@@ -711,7 +719,7 @@ export default function Deals() {
                 bgcolor: 'rgba(255,255,255,0.05)',
                 '& .MuiLinearProgress-bar': {
                   borderRadius: 3,
-                  bgcolor: deal.probability > 60 ? 'success.main' : deal.probability > 30 ? 'warning.main' : 'error.main'
+                  background: 'linear-gradient(90deg, #9e9e9e 0%, #000000 100%)'
                 }
               }}
             />
@@ -752,10 +760,10 @@ export default function Deals() {
             <Box sx={{ 
               mt: 3, 
               p: 2, 
-              bgcolor: 'primary.light', 
+              bgcolor: '#f5f5f5', 
               borderRadius: 2,
               border: '1px solid',
-              borderColor: 'primary.main'
+              borderColor: '#e0e0e0'
             }}>
               <Typography variant="subtitle1" sx={{ 
                 fontWeight: 600, 
@@ -882,10 +890,10 @@ export default function Deals() {
                         clickable
                         onClick={() => handleOpenInteractionModal(person, deal)}
                         sx={{ 
-                          bgcolor: 'primary.light', 
-                          color: 'primary.contrastText',
+              bgcolor: '#f5f5f5', 
+              color: '#000000',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'primary.main' }
+                          '&:hover': { bgcolor: '#e0e0e0' }
                         }}
                       />
                       <Chip
@@ -896,10 +904,10 @@ export default function Deals() {
                         clickable
                         onClick={() => handleOpenInteractionModal(person, deal)}
                         sx={{ 
-                          bgcolor: 'success.light', 
-                          color: 'success.contrastText',
+                          bgcolor: '#f5f5f5', 
+                          color: '#000000',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'success.main' }
+                          '&:hover': { bgcolor: '#e0e0e0' }
                         }}
                       />
                       <Chip
@@ -910,10 +918,10 @@ export default function Deals() {
                         clickable
                         onClick={() => handleOpenInteractionModal(person, deal)}
                         sx={{ 
-                          bgcolor: 'warning.light', 
-                          color: 'warning.contrastText',
+                          bgcolor: '#f5f5f5', 
+                          color: '#000000',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'warning.main' }
+                          '&:hover': { bgcolor: '#e0e0e0' }
                         }}
                       />
                       <Chip
@@ -968,16 +976,17 @@ export default function Deals() {
             alignItems: 'center',
             gap: 1
           }}>
-            💡 List view shows contact details, relationship scores, and interaction history. Card view: click expand (▼) for full details.
+            List view shows contact details, relationship scores, and interaction history. Card view: click expand for full details.
           </Typography>
         </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           sx={{
-            background: 'linear-gradient(135deg, #6366F1 0%, #EC4899 100%)',
+            bgcolor: '#000000',
+            color: 'white',
             '&:hover': {
-              background: 'linear-gradient(135deg, #818CF8 0%, #F472B6 100%)'
+              bgcolor: '#333333'
             }
           }}
         >
@@ -989,7 +998,7 @@ export default function Deals() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+              <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                 <MoneyIcon />
               </Avatar>
               <Box>
@@ -1006,7 +1015,7 @@ export default function Deals() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+              <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                 <TrendingUpIcon />
               </Avatar>
               <Box>
@@ -1023,7 +1032,7 @@ export default function Deals() {
         <Grid item xs={12} sm={6} md={3}>
           <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+              <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                 <ScheduleIcon />
               </Avatar>
               <Box>
@@ -1080,7 +1089,7 @@ export default function Deals() {
               onClick={() => setViewMode('list')}
               sx={{
                 borderRadius: 1,
-                bgcolor: viewMode === 'list' ? 'primary.main' : 'transparent',
+                bgcolor: viewMode === 'list' ? '#000000' : 'transparent',
                 color: viewMode === 'list' ? 'white' : 'text.secondary'
               }}
             >
@@ -1091,7 +1100,7 @@ export default function Deals() {
               onClick={() => setViewMode('grid')}
               sx={{
                 borderRadius: 1,
-                bgcolor: viewMode === 'grid' ? 'primary.main' : 'transparent',
+                bgcolor: viewMode === 'grid' ? '#000000' : 'transparent',
                 color: viewMode === 'grid' ? 'white' : 'text.secondary'
               }}
             >
@@ -1139,7 +1148,7 @@ export default function Deals() {
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: 'background.paper',
                 borderBottom: '2px solid',
-                borderColor: 'primary.main'
+                borderColor: '#e0e0e0'
               },
               '& .MuiDataGrid-columnHeaderTitle': {
                 fontWeight: 600
@@ -1204,7 +1213,7 @@ export default function Deals() {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
-          bgcolor: 'primary.main',
+          bgcolor: '#000000',
           color: 'white',
           py: 2
         }}>
@@ -1234,7 +1243,7 @@ export default function Deals() {
                 <Grid container spacing={3}>
                   <Grid item xs={12} md={6}>
                     <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon color="primary" />
+                      <PersonIcon sx={{ color: '#000000' }} />
                       Contact Information
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -1256,7 +1265,7 @@ export default function Deals() {
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <StarIcon color="primary" />
+                      <StarIcon sx={{ color: '#000000' }} />
                       Relationship Status
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1305,8 +1314,8 @@ export default function Deals() {
                 <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.emails} color="primary">
-                        <EmailIcon color="primary" />
+                      <Badge badgeContent={selectedPerson.citations.emails} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
+                        <EmailIcon sx={{ color: '#000000' }} />
                       </Badge>
                       <Typography variant="h6">Email Threads</Typography>
                     </Box>
@@ -1320,7 +1329,7 @@ export default function Deals() {
                       ].map((email, index) => (
                         <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
                           <ListItemIcon>
-                            <EmailIcon color="primary" />
+                            <EmailIcon sx={{ color: '#000000' }} />
                           </ListItemIcon>
                           <ListItemText
                             primary={email.subject}
@@ -1350,8 +1359,8 @@ export default function Deals() {
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.calls} color="success">
-                        <PhoneIcon color="success" />
+                      <Badge badgeContent={selectedPerson.citations.calls} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
+                        <PhoneIcon sx={{ color: '#000000' }} />
                       </Badge>
                       <Typography variant="h6">Call Transcripts</Typography>
                     </Box>
@@ -1364,7 +1373,7 @@ export default function Deals() {
                       ].map((call, index) => (
                         <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
                           <ListItemIcon>
-                            <PhoneIcon color="success" />
+                            <PhoneIcon sx={{ color: '#000000' }} />
                           </ListItemIcon>
                           <ListItemText
                             primary={call.title}
@@ -1399,8 +1408,8 @@ export default function Deals() {
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.meetings} color="warning">
-                        <VideoCallIcon color="warning" />
+                      <Badge badgeContent={selectedPerson.citations.meetings} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
+                        <VideoCallIcon sx={{ color: '#000000' }} />
                       </Badge>
                       <Typography variant="h6">Meeting Notes</Typography>
                     </Box>
@@ -1413,7 +1422,7 @@ export default function Deals() {
                       ].map((meeting, index) => (
                         <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
                           <ListItemIcon>
-                            <VideoCallIcon color="warning" />
+                            <VideoCallIcon sx={{ color: '#000000' }} />
                           </ListItemIcon>
                           <ListItemText
                             primary={meeting.title}
@@ -1476,7 +1485,15 @@ export default function Deals() {
                                 <Typography variant="caption" color="text.secondary">
                                   {doc.date}
                                 </Typography>
-                                <Chip label={doc.type} size="small" variant="outlined" />
+                                <Chip 
+                                  label={doc.type} 
+                                  size="small" 
+                                  sx={{ 
+                                    bgcolor: '#f5f5f5', 
+                                    color: '#000000',
+                                    border: '1px solid #e0e0e0'
+                                  }} 
+                                />
                               </Box>
                             }
                           />
@@ -1504,7 +1521,17 @@ export default function Deals() {
           <Button onClick={handleCloseInteractionModal} variant="outlined">
             Close
           </Button>
-          <Button variant="contained" startIcon={<EmailIcon />}>
+          <Button 
+            variant="contained" 
+            startIcon={<EmailIcon />}
+            sx={{
+              bgcolor: '#000000',
+              color: 'white',
+              '&:hover': {
+                bgcolor: '#333333'
+              }
+            }}
+          >
             Send Email
           </Button>
         </DialogActions>

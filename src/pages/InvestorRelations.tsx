@@ -374,10 +374,10 @@ export default function InvestorRelations() {
   const callPercentage = (totalCalled / totalCommitment) * 100;
 
   const investorTypeDistribution = [
-    { name: 'Institutional', value: 60, color: '#6366F1' },
-    { name: 'Family Office', value: 20, color: '#EC4899' },
-    { name: 'Fund of Funds', value: 15, color: '#10B981' },
-    { name: 'Others', value: 5, color: '#F59E0B' }
+    { name: 'Institutional', value: 60, color: '#000000' },
+    { name: 'Family Office', value: 20, color: '#666666' },
+    { name: 'Fund of Funds', value: 15, color: '#999999' },
+    { name: 'Others', value: 5, color: '#cccccc' }
   ];
 
   const handleViewEntities = (investor: any) => {
@@ -554,7 +554,7 @@ export default function InvestorRelations() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                   <FundIcon />
                 </Avatar>
                 <Box>
@@ -575,7 +575,7 @@ export default function InvestorRelations() {
                   bgcolor: 'rgba(255,255,255,0.05)',
                   '& .MuiLinearProgress-bar': {
                     borderRadius: 3,
-                    bgcolor: 'primary.main'
+                    bgcolor: '#000000'
                   }
                 }}
               />
@@ -590,7 +590,7 @@ export default function InvestorRelations() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                   <TrendingUpIcon />
                 </Avatar>
                 <Box>
@@ -605,7 +605,7 @@ export default function InvestorRelations() {
               <Chip
                 label="+8.3% QoQ"
                 size="small"
-                sx={{ bgcolor: 'success.main', color: 'white' }}
+                sx={{ bgcolor: '#000000', color: 'white' }}
               />
             </CardContent>
           </Card>
@@ -642,7 +642,7 @@ export default function InvestorRelations() {
           <Card>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
                   <EventIcon />
                 </Avatar>
                 <Box>
@@ -672,8 +672,8 @@ export default function InvestorRelations() {
               <AreaChart data={fundPerformance}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#9e9e9e" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#000000" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -689,7 +689,7 @@ export default function InvestorRelations() {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#6366F1"
+                  stroke="#000000"
                   fillOpacity={1}
                   fill="url(#colorValue)"
                   strokeWidth={2}
@@ -805,7 +805,7 @@ export default function InvestorRelations() {
                 {recentCommunications.map((comm) => (
                   <ListItem key={comm.id}>
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      <Avatar sx={{ bgcolor: '#000000' }}>
                         {comm.type === 'report' && <DocumentIcon />}
                         {comm.type === 'update' && <EmailIcon />}
                         {comm.type === 'capital_call' && <FundIcon />}
@@ -829,7 +829,7 @@ export default function InvestorRelations() {
                 {upcomingEvents.map((event) => (
                   <ListItem key={event.id}>
                     <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'warning.main' }}>
+                      <Avatar sx={{ bgcolor: '#000000' }}>
                         <EventIcon />
                       </Avatar>
                     </ListItemAvatar>
@@ -977,7 +977,7 @@ export default function InvestorRelations() {
               </Grid>
 
               {/* Fund Investment Summary */}
-              <Paper sx={{ p: 2, mb: 3, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+              <Paper sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5', color: '#000000' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                   <FundIcon />
                   Fund Investment Summary
@@ -1075,7 +1075,7 @@ export default function InvestorRelations() {
                               </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <PieChartIcon color="info" fontSize="small" />
+                          <PieChartIcon sx={{ color: '#000000' }} fontSize="small" />
                               <Typography variant="body2">
                                 <strong>% Called:</strong> {((entity.called / entity.commitment) * 100).toFixed(1)}%
                               </Typography>
@@ -1104,7 +1104,7 @@ export default function InvestorRelations() {
                                   transition: 'all 0.2s ease-in-out',
                                   '&:hover': {
                                     borderColor: 'primary.main',
-                                    bgcolor: 'primary.light',
+                                    bgcolor: '#f5f5f5',
                                     transform: 'translateY(-2px)',
                                     boxShadow: 2
                                   }
@@ -1145,7 +1145,7 @@ export default function InvestorRelations() {
                                       bgcolor: 'rgba(0,0,0,0.1)',
                             '& .MuiLinearProgress-bar': {
                                         borderRadius: 3,
-                                        bgcolor: 'primary.main'
+                                        bgcolor: '#000000'
                             }
                           }}
                         />
