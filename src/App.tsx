@@ -17,6 +17,7 @@ import Reports from './pages/Reports';
 import Funds from './pages/Funds';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import OAuthCallback from './pages/OAuthCallback';
 
 function App() {
   return (
@@ -24,6 +25,9 @@ function App() {
       <BrainProvider>
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
+            {/* OAuth callback route - outside of Layout */}
+            <Route path="/app/oauth/callback" element={<OAuthCallback />} />
+            
             <Route path="/" element={
               <PrivateRoute>
                 <Layout />

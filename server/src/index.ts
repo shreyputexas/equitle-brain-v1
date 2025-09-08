@@ -14,6 +14,7 @@ import investorRoutes from './routes/investors';
 import companyRoutes from './routes/companies';
 import contactRoutes from './routes/contacts';
 import reportRoutes from './routes/reports';
+import integrationRoutes from './routes/integrations';
 
 import { errorHandler } from './middleware/errorHandler';
 import { authMiddleware } from './middleware/auth';
@@ -59,6 +60,7 @@ app.use('/api/investors', authMiddleware, investorRoutes);
 app.use('/api/companies', authMiddleware, companyRoutes);
 app.use('/api/contacts', authMiddleware, contactRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
+app.use('/api/integrations', authMiddleware, integrationRoutes);
 
 app.use(errorHandler);
 

@@ -1,32 +1,213 @@
-import React from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText, Switch } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  List, 
+  ListItem, 
+  ListItemText, 
+  Switch,
+  Button,
+  Grid,
+  Alert,
+  CircularProgress,
+  Divider
+} from '@mui/material';
+import { Add as AddIcon } from '@mui/icons-material';
+import integrationService, { Integration } from '../services/integrationService';
+import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
+import IntegrationCard from '../components/integrations/IntegrationCard';
 
 export default function Settings() {
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check for integration callback status first
+    const urlParams = new URLSearchParams(window.location.search);
+    const integrationStatus = urlParams.get('integration');
+    
+    if (integrationStatus === 'success') {
+      setSuccess('Google integration connected successfully!');
+      setConnectDialogOpen(false); // Close the dialog
+      // Remove query param
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setTimeout(() => {
+        loadIntegrations();
+      }, 1000);
+    } else if (integrationStatus === 'error') {
+      setError('Failed to connect Google integration. Please try again.');
+      setConnectDialogOpen(false); // Close the dialog
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      // Only load integrations if we're not handling a callback
+      loadIntegrations();
+    }
+  }, []);
+
+  const loadIntegrations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await integrationService.getIntegrations();
+      setIntegrations(data);
+    } catch (err) {
+      console.error('Failed to load integrations:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load integrations');
+      // Don't let API errors break the page - just show empty state
+      setIntegrations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnect = async (integrationId: string) => {
+    try {
+      await integrationService.disconnectIntegration(integrationId);
+      setSuccess('Integration disconnected successfully');
+      await loadIntegrations();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to disconnect integration');
+    }
+  };
+
+  const handleConnectSuccess = () => {
+    setConnectDialogOpen(false);
+    setSuccess('Integration connected successfully!');
+    setTimeout(() => {
+      loadIntegrations();
+    }, 500);
+  };
+
+  const clearMessages = () => {
+    setSuccess(null);
+    setError(null);
+  };
+
   return (
     <Box>
       <Typography variant="h4" sx={{ fontWeight: 600, mb: 4 }}>
         Settings
       </Typography>
 
+      {/* Success/Error Messages */}
+      {success && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3 }} 
+          onClose={clearMessages}
+        >
+          {success}
+        </Alert>
+      )}
+
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3 }} 
+          onClose={clearMessages}
+        >
+          {error}
+        </Alert>
+      )}
+
+      {/* Integrations Section */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              Connected Services
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Connect external services to enhance your workflow
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setConnectDialogOpen(true)}
+            sx={{ bgcolor: 'secondary.main' }}
+          >
+            Add Integration
+          </Button>
+        </Box>
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : integrations.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No integrations connected
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Connect Google services to access your files, calendar, and more
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => setConnectDialogOpen(true)}
+            >
+              Connect Your First Service
+            </Button>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {integrations.map((integration) => (
+              <Grid item xs={12} md={6} lg={4} key={integration.id}>
+                <IntegrationCard
+                  integration={integration}
+                  onDisconnect={handleDisconnect}
+                  onReconnect={() => setConnectDialogOpen(true)}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Paper>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Preferences Section */}
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
           Preferences
         </Typography>
         <List>
           <ListItem>
-            <ListItemText primary="Email Notifications" />
+            <ListItemText 
+              primary="Email Notifications" 
+              secondary="Receive email updates about deals and activities"
+            />
             <Switch defaultChecked />
           </ListItem>
           <ListItem>
-            <ListItemText primary="Dark Mode" />
+            <ListItemText 
+              primary="Dark Mode" 
+              secondary="Use dark theme for the interface"
+            />
             <Switch defaultChecked />
           </ListItem>
           <ListItem>
-            <ListItemText primary="Auto-save" />
+            <ListItemText 
+              primary="Auto-save" 
+              secondary="Automatically save changes as you work"
+            />
             <Switch defaultChecked />
           </ListItem>
         </List>
       </Paper>
+
+      {/* Google Connect Dialog */}
+      <GoogleConnectDialog
+        open={connectDialogOpen}
+        onClose={() => setConnectDialogOpen(false)}
+        onSuccess={handleConnectSuccess}
+      />
     </Box>
   );
 }

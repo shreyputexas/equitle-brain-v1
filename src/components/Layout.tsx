@@ -345,9 +345,20 @@ export default function Layout() {
           </IconButton>
 
           {/* Logo/Brand */}
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'black', mr: 4 }}>
-            Equitle
-          </Typography>
+          <Box
+            component="img"
+            src="/assets/images/extended_logo_black_white.png"
+            alt="Equitle"
+            sx={{
+              height: { xs: '2rem', md: '2.5rem' },
+              filter: 'brightness(0)',
+              opacity: 0.95,
+              objectFit: 'contain',
+              mr: 4,
+              cursor: 'pointer'
+            }}
+            onClick={() => navigate('/')}
+          />
 
           {/* Desktop Navigation Menu */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1 }}>
@@ -438,7 +449,7 @@ export default function Layout() {
 
           {/* Right side - Profile with Notifications */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Tooltip title="Profile">
+          <Tooltip title="Profile">
               <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0, position: 'relative' }}>
                 <Badge 
                   badgeContent={4} 
@@ -455,11 +466,11 @@ export default function Layout() {
                   }}
                 >
                   <Avatar sx={{ bgcolor: '#000000' }}>
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </Avatar>
+                {user?.name?.charAt(0).toUpperCase()}
+              </Avatar>
                 </Badge>
-              </IconButton>
-            </Tooltip>
+            </IconButton>
+          </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>
@@ -488,30 +499,40 @@ export default function Layout() {
       </Menu>
 
       {/* Mobile Navigation Drawer */}
-      <Drawer
-        variant="temporary"
+        <Drawer
+          variant="temporary"
         anchor="left"
         open={mobileDrawerOpen}
         onClose={handleMobileDrawerToggle}
-        ModalProps={{
+          ModalProps={{
           keepMounted: true, // Better open performance on mobile
-        }}
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          }}
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
             width: 280,
-            bgcolor: 'background.paper',
-            borderRight: '1px solid',
-            borderColor: 'divider'
-          }
-        }}
-      >
+              bgcolor: 'background.paper',
+              borderRight: '1px solid',
+              borderColor: 'divider'
+            }
+          }}
+        >
         <Box sx={{ overflow: 'auto' }}>
           <Toolbar>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
-              Equitle
-            </Typography>
+            <Box
+              component="img"
+              src="/assets/images/extended_logo_black_white.png"
+              alt="Equitle"
+          sx={{
+                height: '2rem',
+                filter: 'brightness(0) invert(1)',
+                opacity: 0.95,
+                objectFit: 'contain',
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate('/')}
+            />
           </Toolbar>
           <Divider />
           <List>
@@ -560,7 +581,7 @@ export default function Layout() {
             ))}
           </List>
         </Box>
-      </Drawer>
+        </Drawer>
 
       {/* Main Content */}
       <Box

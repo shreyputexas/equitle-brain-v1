@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { JWTPayload } from '../models/User';
 import logger from '../utils/logger';
 
 interface AuthRequest extends Request {
-  user?: any;
+  user?: JWTPayload;
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -14,7 +15,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JWTPayload;
     req.user = decoded;
     next();
     return;
