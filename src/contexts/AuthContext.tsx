@@ -6,9 +6,35 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'manager' | 'analyst' | 'viewer';
-  firm: string;
+  role?: string;
+  firm?: string;
+  phone?: string;
+  location?: string;
   avatar?: string;
+  profile?: {
+    title?: string;
+    bio?: string;
+    timezone?: string;
+    language?: string;
+  };
+  preferences?: {
+    emailNotify: boolean;
+    pushNotify: boolean;
+    calendarNotify: boolean;
+    dealNotify: boolean;
+    autoSave: boolean;
+    darkMode: boolean;
+  };
+}
+
+interface AuthResponse {
+  user: User;
+}
+
+interface LoginResponse {
+  token: string;
+  refreshToken: string;
+  user: User;
 }
 
 interface AuthContextType {
@@ -30,33 +56,49 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Mock user for development - bypass authentication
-  const mockUser: User = {
-    id: '1',
-    email: 'admin@equitle.com',
-    name: 'Admin User',
-    role: 'admin',
-    firm: 'Equitle',
-    avatar: undefined
-  };
-
-  const [user, setUser] = useState<User | null>(mockUser);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Configure axios base URL
+  axios.defaults.baseURL = 'http://localhost:4000/api';
+  axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
+
   useEffect(() => {
-    // Skip authentication check - user is already set to mock user
-    setLoading(false);
+    fetchUserProfile();
   }, []);
 
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get<AuthResponse>('/auth/me');
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+      // Fallback to default user if API fails
+      const fallbackUser: User = {
+        id: 'default-user-id',
+        email: 'demo@equitle.com',
+        name: 'Demo User',
+        role: 'admin',
+        firm: 'Equitle',
+        phone: '+1 (555) 123-4567',
+        location: 'San Francisco, CA',
+        avatar: undefined
+      };
+      setUser(fallbackUser);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const login = async (email: string, password: string) => {
-    // Mock login - just set the user and navigate
-    setUser(mockUser);
+    // For demo purposes - would normally authenticate
+    await fetchUserProfile();
     navigate('/deals/relationships');
   };
 
   const logout = () => {
-    // Mock logout - just set user to null
     setUser(null);
     navigate('/deals/relationships');
   };

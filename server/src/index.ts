@@ -11,13 +11,17 @@ import authRoutes from './routes/auth';
 import dealRoutes from './routes/deals';
 import brainRoutes from './routes/brain';
 import investorRoutes from './routes/investors';
+import fundsRoutes from './routes/funds';
 import companyRoutes from './routes/companies';
 import contactRoutes from './routes/contacts';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
+import dashboardRoutes from './routes/dashboard';
+import gmailRoutes from './routes/gmail';
 
 import { errorHandler } from './middleware/errorHandler';
-import { authMiddleware } from './middleware/auth';
+import { authMiddleware, AuthRequest } from './middleware/auth';
+import { connectDatabase } from './lib/database';
 import logger from './utils/logger';
 
 dotenv.config();
@@ -26,7 +30,11 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002"
+    ],
     methods: ["GET", "POST"]
   }
 });
@@ -42,7 +50,11 @@ const limiter = rateLimit({
 app.use(helmet());
 app.use(compression());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: [
+    process.env.FRONTEND_URL || "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002"
+  ],
   credentials: true
 }));
 app.use(limiter);
@@ -54,13 +66,16 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/deals', authMiddleware, dealRoutes);
+app.use('/api/deals', dealRoutes);
 app.use('/api/brain', authMiddleware, brainRoutes);
-app.use('/api/investors', authMiddleware, investorRoutes);
+app.use('/api/investors', investorRoutes);
+app.use('/api/funds', fundsRoutes);
 app.use('/api/companies', authMiddleware, companyRoutes);
-app.use('/api/contacts', authMiddleware, contactRoutes);
+app.use('/api/contacts', contactRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
 app.use('/api/integrations', authMiddleware, integrationRoutes);
+app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);
 
@@ -77,9 +92,12 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Connect to database
+  await connectDatabase();
 });
 
 export { io };

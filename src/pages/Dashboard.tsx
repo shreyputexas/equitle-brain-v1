@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -11,7 +11,8 @@ import {
   Chip,
   IconButton,
   Avatar,
-  AvatarGroup
+  AvatarGroup,
+  CircularProgress
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -24,44 +25,92 @@ import {
   MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const performanceData = [
-  { month: 'Jan', deals: 12, value: 45 },
-  { month: 'Feb', deals: 15, value: 52 },
-  { month: 'Mar', deals: 18, value: 61 },
-  { month: 'Apr', deals: 14, value: 48 },
-  { month: 'May', deals: 22, value: 73 },
-  { month: 'Jun', deals: 25, value: 82 }
-];
-
-const portfolioData = [
-  { name: 'Technology', value: 35, color: '#5E5CE6' },
-  { name: 'Healthcare', value: 25, color: '#7C7AED' },
-  { name: 'Finance', value: 20, color: '#10B981' },
-  { name: 'Energy', value: 12, color: '#F59E0B' },
-  { name: 'Others', value: 8, color: '#6B7280' }
-];
-
-const recentDeals = [
-  { id: 1, company: 'TechCorp Inc.', stage: 'Due Diligence', value: '$12.5M', status: 'active', progress: 65 },
-  { id: 2, company: 'HealthTech Solutions', stage: 'Term Sheet', value: '$8.2M', status: 'pending', progress: 40 },
-  { id: 3, company: 'FinanceAI', stage: 'Closing', value: '$15.0M', status: 'active', progress: 85 },
-  { id: 4, company: 'GreenEnergy Co.', stage: 'Initial Review', value: '$6.7M', status: 'review', progress: 20 }
-];
-
-const metrics = [
-  { title: 'Total Portfolio Value', value: '$847M', change: '+12.5%', icon: <MoneyIcon />, trend: 'up', color: '#5E5CE6' },
-  { title: 'Active Deals', value: '24', change: '+4', icon: <BusinessIcon />, trend: 'up', color: '#10B981' },
-  { title: 'Portfolio Companies', value: '67', change: '+2', icon: <AssessmentIcon />, trend: 'up', color: '#F59E0B' },
-  { title: 'Total Contacts', value: '1,284', change: '+48', icon: <PeopleIcon />, trend: 'up', color: '#3B82F6' }
-];
+import DashboardApiService, { DashboardData } from '../services/dashboardApi';
 
 export default function Dashboard() {
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const data = await DashboardApiService.getDashboardData();
+        setDashboardData(data);
+        setError(null);
+      } catch (err: any) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <CircularProgress size={40} />
+      </Box>
+    );
+  }
+
+  if (error || !dashboardData) {
+    return (
+      <Box sx={{ textAlign: 'center', py: 8 }}>
+        <Typography variant="h6" color="error" gutterBottom>
+          {error || 'Failed to load dashboard data'}
+        </Typography>
+        <Button onClick={() => window.location.reload()} variant="contained">
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
+  const metrics = [
+    {
+      title: 'Total Portfolio Value',
+      value: dashboardData.metrics.totalPortfolioValue,
+      change: dashboardData.metrics.totalPortfolioValueChange,
+      icon: <MoneyIcon />,
+      trend: 'up',
+      color: '#5E5CE6'
+    },
+    {
+      title: 'Active Deals',
+      value: dashboardData.metrics.activeDeals.toString(),
+      change: `+${dashboardData.metrics.activeDealsChange}`,
+      icon: <BusinessIcon />,
+      trend: 'up',
+      color: '#10B981'
+    },
+    {
+      title: 'Portfolio Companies',
+      value: dashboardData.metrics.portfolioCompanies.toString(),
+      change: `+${dashboardData.metrics.portfolioCompaniesChange}`,
+      icon: <AssessmentIcon />,
+      trend: 'up',
+      color: '#F59E0B'
+    },
+    {
+      title: 'Total Contacts',
+      value: dashboardData.metrics.totalContacts.toString(),
+      change: `+${dashboardData.metrics.totalContactsChange}`,
+      icon: <PeopleIcon />,
+      trend: 'up',
+      color: '#3B82F6'
+    }
+  ];
+
   return (
     <Box className="fade-in">
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontFamily: '"Space Grotesk", sans-serif' }}>
-          Welcome back, John
+          Welcome back, {dashboardData.userName}
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.05rem' }}>
           Here's what's happening with your portfolio today.
@@ -133,7 +182,7 @@ export default function Dashboard() {
               </Button>
             </Box>
             <ResponsiveContainer width="100%" height={320}>
-              <AreaChart data={performanceData}>
+              <AreaChart data={dashboardData.dealFlow}>
                 <defs>
                   <linearGradient id="colorDeals" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#5E5CE6" stopOpacity={0.3} />
@@ -183,7 +232,7 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height={320}>
               <PieChart>
                 <Pie
-                  data={portfolioData}
+                  data={dashboardData.portfolioDistribution}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -191,7 +240,7 @@ export default function Dashboard() {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {portfolioData.map((entry, index) => (
+                  {dashboardData.portfolioDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -205,7 +254,7 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
             <Box sx={{ mt: 2 }}>
-              {portfolioData.map((item, index) => (
+              {dashboardData.portfolioDistribution.map((item, index) => (
                 <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                   <Box
                     sx={{
@@ -239,7 +288,7 @@ export default function Dashboard() {
               </Button>
             </Box>
             <Box sx={{ overflow: 'auto' }}>
-              {recentDeals.map((deal) => (
+              {dashboardData.recentDeals.map((deal) => (
                 <Box
                   key={deal.id}
                   sx={{

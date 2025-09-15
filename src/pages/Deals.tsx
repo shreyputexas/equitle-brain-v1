@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -33,7 +33,9 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Badge
+  Badge,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import {
@@ -68,6 +70,10 @@ import {
   Description as DescriptionIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useDeals } from '../hooks/useDeals';
+import { Deal as ApiDeal } from '../services/dealsApi';
+import NewDealModal from '../components/NewDealModal';
+import EditDealModal from '../components/EditDealModal';
 
 interface Person {
   id: string;
@@ -90,184 +96,50 @@ interface Person {
 interface Deal {
   id: string;
   company: string;
-  sector: string;
+  sector?: string;
   stage: string;
-  value: number;
-  probability: number;
+  value?: number;
+  probability?: number;
   leadPartner: string;
   team: string[];
   lastActivity: Date;
   nextStep: string;
-  status: 'active' | 'on-hold' | 'closed-won' | 'closed-lost';
+  status: 'active' | 'paused' | 'closed' | 'lost';
   people: Person[];
 }
 
-const mockDeals: Deal[] = [
+interface DealWithContacts extends ApiDeal {
+  people: Person[];
+}
+
+const mockPeople: Person[] = [
   {
     id: '1',
-    company: 'TechCorp Inc.',
-    sector: 'Technology',
-    stage: 'Due Diligence',
-    value: 12500000,
-    probability: 65,
-    leadPartner: 'John Smith',
-    team: ['Alice Johnson', 'Bob Williams'],
-    lastActivity: new Date('2024-01-15'),
-    nextStep: 'Management meeting scheduled',
-    status: 'active',
-    people: [
-      {
-        id: '1-1',
-        name: 'Michael Chen',
-        role: 'CEO & Founder',
-        email: 'michael@techcorp.com',
-        phone: '+1 (555) 123-4567',
-        relationshipScore: 85,
-        lastContact: new Date('2024-01-14'),
-        status: 'hot',
-        summary: 'Very engaged CEO, responds quickly to emails. Interested in strategic partnership beyond just funding.',
-        citations: { emails: 12, calls: 3, meetings: 2, documents: 8 }
-      },
-      {
-        id: '1-2',
-        name: 'Sarah Johnson',
-        role: 'CFO',
-        email: 'sarah@techcorp.com',
-        phone: '+1 (555) 234-5678',
-        relationshipScore: 70,
-        lastContact: new Date('2024-01-12'),
-        status: 'warm',
-        summary: 'Professional and detail-oriented. Handles all financial discussions and due diligence requests.',
-        citations: { emails: 8, calls: 2, meetings: 1, documents: 15 }
-      },
-      {
-        id: '1-3',
-        name: 'David Lee',
-        role: 'VP Sales',
-        email: 'david@techcorp.com',
-        phone: '+1 (555) 345-6789',
-        relationshipScore: 45,
-        lastContact: new Date('2024-01-08'),
-        status: 'cold',
-        summary: 'Limited interaction. Focused on sales metrics and customer acquisition.',
-        citations: { emails: 3, calls: 1, meetings: 0, documents: 2 }
-      }
-    ]
-  },
-  {
-    id: '2',
-    company: 'HealthTech Solutions',
-    sector: 'Healthcare',
-    stage: 'Term Sheet',
-    value: 8200000,
-    probability: 40,
-    leadPartner: 'Sarah Davis',
-    team: ['Charlie Brown', 'Diana Prince'],
-    lastActivity: new Date('2024-01-14'),
-    nextStep: 'Awaiting counter-proposal',
-    status: 'active',
-    people: [
-      {
-        id: '2-1',
-        name: 'Dr. Emily Rodriguez',
-        role: 'CEO & Co-Founder',
-        email: 'emily@healthtech.com',
-        phone: '+1 (555) 456-7890',
-        relationshipScore: 60,
-        lastContact: new Date('2024-01-13'),
-        status: 'warm',
-        summary: 'Medical background brings credibility. Cautious about investor terms, prefers strategic investors.',
-        citations: { emails: 6, calls: 2, meetings: 1, documents: 5 }
-      },
-      {
-        id: '2-2',
-        name: 'James Wilson',
-        role: 'CTO',
-        email: 'james@healthtech.com',
-        phone: '+1 (555) 567-8901',
-        relationshipScore: 75,
-        lastContact: new Date('2024-01-11'),
-        status: 'warm',
-        summary: 'Technical co-founder, very knowledgeable about product. Open to discussing technology roadmap.',
-        citations: { emails: 9, calls: 1, meetings: 1, documents: 7 }
-      }
-    ]
-  },
-  {
-    id: '3',
-    company: 'FinanceAI',
-    sector: 'Fintech',
-    stage: 'Closing',
-    value: 15000000,
-    probability: 85,
-    leadPartner: 'Michael Chen',
-    team: ['Eve Adams', 'Frank Miller'],
-    lastActivity: new Date('2024-01-16'),
-    nextStep: 'Final documentation',
-    status: 'active',
-    people: [
-      {
-        id: '3-1',
-        name: 'Alex Thompson',
-        role: 'CEO',
-        email: 'alex@financeai.com',
-        phone: '+1 (555) 678-9012',
-        relationshipScore: 95,
-        lastContact: new Date('2024-01-16'),
-        status: 'hot',
-        summary: 'Excellent relationship, deal is almost closed. Very responsive and professional throughout process.',
-        citations: { emails: 25, calls: 8, meetings: 5, documents: 20 }
-      },
-      {
-        id: '3-2',
-        name: 'Maria Garcia',
-        role: 'CFO',
-        email: 'maria@financeai.com',
-        phone: '+1 (555) 789-0123',
-        relationshipScore: 80,
-        lastContact: new Date('2024-01-15'),
-        status: 'hot',
-        summary: 'Handled all financial due diligence efficiently. Very organized and transparent.',
-        citations: { emails: 15, calls: 4, meetings: 3, documents: 18 }
-      }
-    ]
-  },
-  {
-    id: '4',
-    company: 'GreenEnergy Co.',
-    sector: 'CleanTech',
-    stage: 'Initial Review',
-    value: 6700000,
-    probability: 20,
-    leadPartner: 'Lisa Wang',
-    team: ['George Wilson'],
-    lastActivity: new Date('2024-01-10'),
-    nextStep: 'Initial pitch review',
-    status: 'on-hold',
-    people: [
-      {
-        id: '4-1',
-        name: 'Robert Kim',
-        role: 'Founder & CEO',
-        email: 'robert@greenenergy.com',
-        phone: '+1 (555) 890-1234',
-        relationshipScore: 30,
-        lastContact: new Date('2024-01-09'),
-        status: 'cold',
-        summary: 'Early stage company, limited interaction. Focus on sustainability and impact investing.',
-        citations: { emails: 2, calls: 1, meetings: 0, documents: 1 }
-      }
-    ]
+    name: 'Contact Person',
+    role: 'To be updated',
+    email: 'contact@company.com',
+    phone: '',
+    relationshipScore: 0,
+    lastContact: new Date(),
+    status: 'cold',
+    summary: 'No interaction history available. Connect to view relationship details.',
+    citations: { emails: 0, calls: 0, meetings: 0, documents: 0 }
   }
 ];
 
-const stages = ['Initial Review', 'Due Diligence', 'Term Sheet', 'Closing', 'Closed'];
+const stages = [
+  { value: 'prospect', label: 'Initial Review' },
+  { value: 'due-diligence', label: 'Due Diligence' },
+  { value: 'term-sheet', label: 'Term Sheet' },
+  { value: 'closing', label: 'Closing' },
+  { value: 'closed', label: 'Closed' }
+];
 const stageColors: Record<string, string> = {
-  'Initial Review': '#000000',
-  'Due Diligence': '#000000',
-  'Term Sheet': '#000000',
-  'Closing': '#000000',
-  'Closed': '#000000'
+  'prospect': '#000000',
+  'due-diligence': '#000000',
+  'term-sheet': '#000000',
+  'closing': '#000000',
+  'closed': '#000000'
 };
 
 export default function Deals() {
@@ -282,6 +154,18 @@ export default function Deals() {
   const [interactionModalOpen, setInteractionModalOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [newDealModalOpen, setNewDealModalOpen] = useState(false);
+  const [editDealModalOpen, setEditDealModalOpen] = useState(false);
+  const [dealToEdit, setDealToEdit] = useState<ApiDeal | null>(null);
+
+  // Use real API for deals data
+  const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
+
+  // Transform API deals to include mock people data for now
+  const deals: DealWithContacts[] = apiDeals.map(deal => ({
+    ...deal,
+    people: mockPeople // This will be replaced with real contact data later
+  }));
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, dealId: string) => {
     setAnchorEl(event.currentTarget);
@@ -332,6 +216,16 @@ export default function Deals() {
     setSelectedDeal(null);
   };
 
+  const handleEditDeal = (deal: ApiDeal) => {
+    setDealToEdit(deal);
+    setEditDealModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setEditDealModalOpen(false);
+    setDealToEdit(null);
+  };
+
   const columns: GridColDef[] = [
     {
       field: 'company',
@@ -373,17 +267,20 @@ export default function Deals() {
       field: 'stage',
       headerName: 'Stage',
       width: 140,
-      renderCell: (params: GridRenderCellParams) => (
-        <Chip
-          label={params.value}
-          size="small"
-          sx={{
-            bgcolor: '#f5f5f5',
-            color: '#000000',
-            border: '1px solid #e0e0e0'
-          }}
-        />
-      )
+      renderCell: (params: GridRenderCellParams) => {
+        const stage = stages.find(s => s.value === params.value);
+        return (
+          <Chip
+            label={stage?.label || params.value}
+            size="small"
+            sx={{
+              bgcolor: '#f5f5f5',
+              color: '#000000',
+              border: '1px solid #e0e0e0'
+            }}
+          />
+        );
+      }
     },
     {
       field: 'value',
@@ -610,8 +507,7 @@ export default function Deals() {
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-                // Handle edit action
-                console.log('Edit deal:', params.row.id);
+                handleEditDeal(params.row);
               }}
             >
               <EditIcon fontSize="small" />
@@ -630,14 +526,26 @@ export default function Deals() {
     }
   ];
 
-  const filteredDeals = mockDeals.filter(deal => {
+  const filteredDeals = deals.filter(deal => {
+    const matchesSearch = searchTerm === '' ||
+      deal.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (deal.sector && deal.sector.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      deal.stage.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
     if (activeTab === 1) return deal.status === 'active';
-    if (activeTab === 2) return deal.stage === 'Due Diligence';
-    if (activeTab === 3) return deal.status === 'closed-won';
+    if (activeTab === 2) return deal.stage === 'due-diligence';
+    if (activeTab === 3) return deal.status === 'closed';
     return true;
   });
 
-  const DealCard = ({ deal }: { deal: Deal }) => {
+  // Calculate summary statistics from real data
+  const totalPipelineValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
+  const avgProbability = deals.length > 0 ? Math.round(deals.reduce((sum, deal) => sum + (deal.probability || 0), 0) / deals.length) : 0;
+  const activeDealCount = deals.filter(d => d.status === 'active').length;
+
+  const DealCard = ({ deal }: { deal: DealWithContacts }) => {
     const isExpanded = expandedDeals.has(deal.id);
     
     return (
@@ -658,7 +566,7 @@ export default function Deals() {
             </Avatar>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <Chip
-                label={deal.stage}
+                label={stages.find(s => s.value === deal.stage)?.label || deal.stage}
                 size="small"
                 sx={{
                   bgcolor: '#f5f5f5',
@@ -698,7 +606,7 @@ export default function Deals() {
           
           <Box sx={{ mb: 2 }}>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              ${(deal.value / 1000000).toFixed(1)}M
+              ${((deal.value || 0) / 1000000).toFixed(1)}M
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Deal Value
@@ -888,7 +796,7 @@ export default function Deals() {
                         size="small"
                         variant="outlined"
                         clickable
-                        onClick={() => handleOpenInteractionModal(person, deal)}
+                        onClick={() => handleOpenInteractionModal(person, deal as Deal)}
                         sx={{ 
               bgcolor: '#f5f5f5', 
               color: '#000000',
@@ -902,7 +810,7 @@ export default function Deals() {
                         size="small"
                         variant="outlined"
                         clickable
-                        onClick={() => handleOpenInteractionModal(person, deal)}
+                        onClick={() => handleOpenInteractionModal(person, deal as Deal)}
                         sx={{ 
                           bgcolor: '#f5f5f5', 
                           color: '#000000',
@@ -916,7 +824,7 @@ export default function Deals() {
                         size="small"
                         variant="outlined"
                         clickable
-                        onClick={() => handleOpenInteractionModal(person, deal)}
+                        onClick={() => handleOpenInteractionModal(person, deal as Deal)}
                         sx={{ 
                           bgcolor: '#f5f5f5', 
                           color: '#000000',
@@ -930,7 +838,7 @@ export default function Deals() {
                         size="small"
                         variant="outlined"
                         clickable
-                        onClick={() => handleOpenInteractionModal(person, deal)}
+                        onClick={() => handleOpenInteractionModal(person, deal as Deal)}
                         sx={{ 
                           bgcolor: 'info.light', 
                           color: 'info.contrastText',
@@ -948,7 +856,7 @@ export default function Deals() {
         
         <CardActions sx={{ px: 2, pb: 2 }}>
           <AvatarGroup max={3} sx={{ flexGrow: 1, '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 10 } }}>
-            {deal.team.map((member, index) => (
+            {deal.team?.map((member, index) => (
               <Avatar key={index}>{member.split(' ').map(n => n[0]).join('')}</Avatar>
             ))}
           </AvatarGroup>
@@ -982,6 +890,7 @@ export default function Deals() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
+          onClick={() => setNewDealModalOpen(true)}
           sx={{
             bgcolor: '#000000',
             color: 'white',
@@ -1003,7 +912,7 @@ export default function Deals() {
               </Avatar>
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  $42.4M
+                  ${(totalPipelineValue / 1000000).toFixed(1)}M
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Total Pipeline Value
@@ -1020,7 +929,7 @@ export default function Deals() {
               </Avatar>
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  52%
+                  {avgProbability}%
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Avg. Probability
@@ -1054,7 +963,7 @@ export default function Deals() {
               </Avatar>
               <Box>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {mockDeals.length}
+                  {activeDealCount}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Active Deals
@@ -1114,13 +1023,45 @@ export default function Deals() {
           onChange={(_, newValue) => setActiveTab(newValue)}
           sx={{ mb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
         >
-          <Tab label={`All Deals (${mockDeals.length})`} />
-          <Tab label={`Active (${mockDeals.filter(d => d.status === 'active').length})`} />
-          <Tab label="Due Diligence (2)" />
-          <Tab label="Closed Won (0)" />
+          <Tab label={`All Deals (${deals.length})`} />
+          <Tab label={`Active (${activeDealCount})`} />
+          <Tab label={`Due Diligence (${deals.filter(d => d.stage === 'due-diligence').length})`} />
+          <Tab label={`Closed Won (${deals.filter(d => d.status === 'closed').length})`} />
         </Tabs>
 
-        {viewMode === 'list' ? (
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        ) : filteredDeals.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <BusinessIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No deals found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {searchTerm ? 'Try adjusting your search criteria' : 'Create your first deal to get started'}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setNewDealModalOpen(true)}
+              sx={{
+                bgcolor: '#000000',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: '#333333'
+                }
+              }}
+            >
+              New Deal
+            </Button>
+          </Box>
+        ) : viewMode === 'list' ? (
           <DataGrid
             rows={filteredDeals}
             columns={columns}
@@ -1173,10 +1114,14 @@ export default function Deals() {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={() => { navigate(`/deals/${selectedDeal}`); handleMenuClose(); }}>
+        <MenuItem onClick={() => { navigate(`/deals/${selectedDealId}`); handleMenuClose(); }}>
           View Details
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={() => {
+          const deal = deals.find(d => d.id === selectedDealId);
+          if (deal) handleEditDeal(deal);
+          handleMenuClose();
+        }}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Edit Deal
         </MenuItem>
@@ -1304,212 +1249,124 @@ export default function Deals() {
                 </Grid>
               </Box>
 
-              {/* Interaction History Sections */}
+              {/* Interaction History - Real Data Only */}
               <Box sx={{ p: 3 }}>
                 <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
                   Interaction History
                 </Typography>
 
-                {/* Email Threads */}
+                {/* Email Threads - Empty State */}
                 <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.emails} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
+                      <Badge badgeContent={0} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
                         <EmailIcon sx={{ color: '#000000' }} />
                       </Badge>
                       <Typography variant="h6">Email Threads</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <List>
-                      {[
-                        { subject: "Follow-up on Q4 Financials", date: "2024-01-14", preview: "Thanks for sending the Q4 financials. I've reviewed them and have a few questions..." },
-                        { subject: "Meeting Request - Due Diligence", date: "2024-01-12", preview: "Hi Michael, I'd like to schedule a call to discuss the due diligence process..." },
-                        { subject: "NDA Execution Confirmation", date: "2024-01-10", preview: "Great news! The NDA has been executed on both sides. We can now proceed..." }
-                      ].map((email, index) => (
-                        <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemIcon>
-                            <EmailIcon sx={{ color: '#000000' }} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={email.subject}
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                  {email.preview}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {email.date}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <IconButton size="small">
-                              <VisibilityIcon />
-                            </IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Call Transcripts */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.calls} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
-                        <PhoneIcon sx={{ color: '#000000' }} />
-                      </Badge>
-                      <Typography variant="h6">Call Transcripts</Typography>
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <EmailIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No email history found
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Email history will appear here once Gmail integration is connected and synchronized.
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<EmailIcon />}
+                        onClick={() => {
+                          if (selectedPerson) {
+                            window.open(`mailto:${selectedPerson.email}?subject=Follow-up regarding ${selectedDeal?.company}`, '_blank');
+                          }
+                        }}
+                        sx={{
+                          bgcolor: '#000000',
+                          color: 'white',
+                          '&:hover': {
+                            bgcolor: '#333333'
+                          }
+                        }}
+                      >
+                        Send Email
+                      </Button>
                     </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <List>
-                      {[
-                        { title: "Initial Discovery Call", date: "2024-01-13", duration: "45 min", summary: "Discussed company vision, market opportunity, and growth plans. Michael was very engaged and answered all questions thoroughly." },
-                        { title: "Financial Review Call", date: "2024-01-11", duration: "30 min", summary: "Went through Q4 financials in detail. CFO Sarah joined for the second half to discuss operational metrics." }
-                      ].map((call, index) => (
-                        <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemIcon>
-                            <PhoneIcon sx={{ color: '#000000' }} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={call.title}
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                  {call.summary}
-                                </Typography>
-                                <Box sx={{ display: 'flex', gap: 2 }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {call.date}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Duration: {call.duration}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <IconButton size="small">
-                              <VisibilityIcon />
-                            </IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </List>
                   </AccordionDetails>
                 </Accordion>
 
-                {/* Meeting Notes */}
+                {/* Meeting Notes - Empty State */}
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.meetings} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
+                      <Badge badgeContent={0} sx={{ '& .MuiBadge-badge': { bgcolor: '#000000' } }}>
                         <VideoCallIcon sx={{ color: '#000000' }} />
                       </Badge>
                       <Typography variant="h6">Meeting Notes</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <List>
-                      {[
-                        { title: "Management Presentation", date: "2024-01-15", attendees: "Michael Chen, Sarah Johnson, John Smith", notes: "Excellent presentation covering Q4 results, 2024 roadmap, and market expansion plans. Strong team chemistry and clear vision." },
-                        { title: "Due Diligence Kickoff", date: "2024-01-12", attendees: "Michael Chen, John Smith", notes: "Established timeline and process for due diligence. Michael committed to providing all requested materials by end of week." }
-                      ].map((meeting, index) => (
-                        <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemIcon>
-                            <VideoCallIcon sx={{ color: '#000000' }} />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={meeting.title}
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                  {meeting.notes}
-                                </Typography>
-                                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {meeting.date}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Attendees: {meeting.attendees}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <IconButton size="small">
-                              <VisibilityIcon />
-                            </IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </List>
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <VideoCallIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No meeting notes found
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Meeting notes will appear here once calendar integration is connected or manually uploaded.
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<VideoCallIcon />}
+                        sx={{
+                          borderColor: '#000000',
+                          color: '#000000',
+                          '&:hover': {
+                            borderColor: '#333333',
+                            bgcolor: 'rgba(0,0,0,0.04)'
+                          }
+                        }}
+                      >
+                        Schedule Meeting
+                      </Button>
+                    </Box>
                   </AccordionDetails>
                 </Accordion>
 
-                {/* Documents */}
+                {/* Documents - Empty State */}
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Badge badgeContent={selectedPerson.citations.documents} color="info">
+                      <Badge badgeContent={0} color="info">
                         <DescriptionIcon color="info" />
                       </Badge>
                       <Typography variant="h6">Documents</Typography>
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <List>
-                      {[
-                        { name: "Q4 2023 Financial Statements.pdf", size: "2.4 MB", date: "2024-01-14", type: "Financial" },
-                        { name: "Pitch Deck v3.1.pptx", size: "4.2 MB", date: "2024-01-13", type: "Presentation" },
-                        { name: "Market Analysis Report.pdf", size: "1.8 MB", date: "2024-01-12", type: "Research" },
-                        { name: "NDA Agreement.pdf", size: "245 KB", date: "2024-01-10", type: "Legal" }
-                      ].map((doc, index) => (
-                        <ListItem key={index} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
-                          <ListItemIcon>
-                            <DescriptionIcon color="info" />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={doc.name}
-                            secondary={
-                              <Box sx={{ display: 'flex', gap: 2 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                  {doc.size}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {doc.date}
-                                </Typography>
-                                <Chip 
-                                  label={doc.type} 
-                                  size="small" 
-                                  sx={{ 
-                                    bgcolor: '#f5f5f5', 
-                                    color: '#000000',
-                                    border: '1px solid #e0e0e0'
-                                  }} 
-                                />
-                              </Box>
-                            }
-                          />
-                          <ListItemSecondaryAction>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <IconButton size="small">
-                                <VisibilityIcon />
-                              </IconButton>
-                              <IconButton size="small">
-                                <DownloadIcon />
-                              </IconButton>
-                            </Box>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))}
-                    </List>
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <DescriptionIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No documents uploaded
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Upload documents related to this contact to keep all information organized.
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AttachFileIcon />}
+                        sx={{
+                          borderColor: '#000000',
+                          color: '#000000',
+                          '&:hover': {
+                            borderColor: '#333333',
+                            bgcolor: 'rgba(0,0,0,0.04)'
+                          }
+                        }}
+                      >
+                        Upload Document
+                      </Button>
+                    </Box>
                   </AccordionDetails>
                 </Accordion>
               </Box>
@@ -1521,9 +1378,14 @@ export default function Deals() {
           <Button onClick={handleCloseInteractionModal} variant="outlined">
             Close
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             startIcon={<EmailIcon />}
+            onClick={() => {
+              if (selectedPerson) {
+                window.open(`mailto:${selectedPerson.email}?subject=Follow-up regarding ${selectedDeal?.company}`, '_blank');
+              }
+            }}
             sx={{
               bgcolor: '#000000',
               color: 'white',
@@ -1536,6 +1398,24 @@ export default function Deals() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* New Deal Modal */}
+      <NewDealModal
+        open={newDealModalOpen}
+        onClose={() => setNewDealModalOpen(false)}
+        onSuccess={refreshDeals}
+      />
+
+      {/* Edit Deal Modal */}
+      <EditDealModal
+        open={editDealModalOpen}
+        deal={dealToEdit}
+        onClose={handleCloseEditModal}
+        onSuccess={() => {
+          refreshDeals();
+          handleCloseEditModal();
+        }}
+      />
     </Box>
   );
 }

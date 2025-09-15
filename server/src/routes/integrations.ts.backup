@@ -1,0 +1,1790 @@
+import express from 'express';
+import GoogleAuthService from '../services/googleAuth';
+import GoogleDriveService from '../services/googleDrive';
+import GoogleCalendarService from '../services/googleCalendar';
+import GmailService from '../services/gmail';
+import MicrosoftAuthService from '../services/microsoftAuth';
+import MicrosoftCalendarService from '../services/microsoftCalendar';
+import MicrosoftTeamsService from '../services/microsoftTeams';
+import SlackAuthService from '../services/slackAuth';
+import SlackChannelsService from '../services/slackChannels';
+import SalesforceAuthService from '../services/salesforceAuth';
+import SalesforceApiService from '../services/salesforceApi';
+import ZoomAuthService from '../services/zoomAuth';
+import ZoomMeetingsService from '../services/zoomMeetings';
+import DataSyncService from '../services/dataSync.service';
+import { authMiddleware as auth } from '../middleware/auth';
+import logger from '../utils/logger';
+
+const router = express.Router();
+
+import prisma from '../lib/database';
+
+// Get user's integrations
+router.get('/', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const userIntegrations = await prisma.integration.findMany({
+      where: { userId }
+    });
+
+    res.json({
+      success: true,
+      data: userIntegrations.map(integration => ({
+        id: integration.id,
+        provider: integration.provider,
+        type: integration.type,
+        isActive: integration.isActive,
+        profile: integration.profile,
+        scope: integration.scope,
+        createdAt: integration.createdAt,
+        updatedAt: integration.updatedAt
+      }))
+    });
+  } catch (error) {
+    logger.error('Error fetching integrations:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch integrations' });
+  }
+});
+
+// Initiate Google OAuth flow
+router.post('/google/connect', auth, async (req, res) => {
+  try {
+    const { types } = req.body; // ['profile', 'drive', 'calendar']
+    const userId = (req.user as any)?.id || 'demo-user';
+    
+    if (!types || !Array.isArray(types)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Types array is required' 
+      });
+    }
+
+    const scopes = GoogleAuthService.getScopes(types);
+    const authUrl = GoogleAuthService.getAuthUrl(scopes, userId!);
+    
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes,
+        types
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Google OAuth:', error);
+    res.status(500).json({ success: false, error: 'Failed to initiate OAuth flow' });
+  }
+});
+
+// Handle Google OAuth callback
+router.get('/google/callback', async (req, res) => {
+  try {
+    const { code, state: userId } = req.query;
+    
+    if (!code || !userId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Authorization code and state are required' 
+      });
+    }
+
+    // Exchange code for tokens
+    const tokens = await GoogleAuthService.exchangeCodeForTokens(code as string);
+    
+    // Get user profile
+    const profile = await GoogleAuthService.getUserProfile(tokens.access_token);
+    
+    // Determine integration types based on scopes
+    const scopes = tokens.scope.split(' ');
+    const types = [];
+    
+    if (scopes.some(s => s.includes('userinfo'))) types.push('profile');
+    if (scopes.some(s => s.includes('drive'))) types.push('drive');
+    if (scopes.some(s => s.includes('calendar'))) types.push('calendar');
+    if (scopes.some(s => s.includes('gmail'))) types.push('gmail');
+
+    // Create integrations for each type
+    for (const type of types) {
+      // Remove existing integration of same type
+      await prisma.integration.deleteMany({
+        where: {
+          userId: userId as string,
+          provider: 'google',
+          type: type
+        }
+      });
+
+      // Create new integration
+      await prisma.integration.create({
+        data: {
+          userId: userId as string,
+          provider: 'google',
+          type: type,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+          scope: scopes,
+          profile: {
+            email: profile.email,
+            name: profile.name,
+            picture: profile.picture as string | undefined
+          },
+          isActive: true
+        }
+      });
+    }
+    
+    // Redirect to OAuth callback page
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=success');
+  } catch (error) {
+    logger.error('Error handling Google OAuth callback:', error);
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=error');
+  }
+});
+
+// Disconnect integration
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req.user as any)?.id || 'demo-user';
+    
+    const integration = await prisma.integration.findFirst({
+      where: {
+        id: id,
+        userId: userId
+      }
+    });
+
+    if (!integration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Integration not found'
+      });
+    }
+
+    await prisma.integration.delete({
+      where: {
+        id: id
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Integration disconnected successfully'
+    });
+  } catch (error) {
+    logger.error('Error disconnecting integration:', error);
+    res.status(500).json({ success: false, error: 'Failed to disconnect integration' });
+  }
+});
+
+// Get Google Drive files
+router.get('/google/drive/files', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const driveIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'drive',
+        isActive: true
+      }
+    });
+    
+    if (!driveIntegration) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Google Drive integration not found' 
+      });
+    }
+
+    const files = await GoogleDriveService.listFiles(driveIntegration.accessToken);
+    
+    res.json({
+      success: true,
+      data: files
+    });
+  } catch (error) {
+    logger.error('Error fetching Drive files:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Drive files' });
+  }
+});
+
+// Get Google Calendar events
+router.get('/google/calendar/events', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { timeMin, timeMax } = req.query;
+    
+    const calendarIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'calendar',
+        isActive: true
+      }
+    });
+    
+    if (!calendarIntegration) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Google Calendar integration not found' 
+      });
+    }
+
+    const events = await GoogleCalendarService.listEvents(
+      calendarIntegration.accessToken,
+      {
+        timeMin: timeMin as string,
+        timeMax: timeMax as string
+      }
+    );
+    
+    res.json({
+      success: true,
+      data: events
+    });
+  } catch (error) {
+    logger.error('Error fetching Calendar events:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Calendar events' });
+  }
+});
+
+// Create Google Calendar event
+router.post('/google/calendar/events', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const eventData = req.body;
+
+    const calendarIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'calendar',
+        isActive: true
+      }
+    });
+
+    if (!calendarIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Google Calendar integration not found'
+      });
+    }
+
+    const event = await GoogleCalendarService.createEvent(
+      calendarIntegration.accessToken,
+      eventData
+    );
+
+    res.json({
+      success: true,
+      data: event
+    });
+  } catch (error) {
+    logger.error('Error creating Calendar event:', error);
+    res.status(500).json({ success: false, error: 'Failed to create Calendar event' });
+  }
+});
+
+// Get Gmail messages
+router.get('/google/gmail/messages', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { q, labelIds, maxResults = 50, pageToken, includeSpamTrash } = req.query;
+
+    const gmailIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'gmail',
+        isActive: true
+      }
+    });
+
+    if (!gmailIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Gmail integration not found'
+      });
+    }
+
+    const options: any = {};
+    if (q) options.q = q as string;
+    if (labelIds) options.labelIds = (labelIds as string).split(',');
+    if (maxResults) options.maxResults = parseInt(maxResults as string, 10);
+    if (pageToken) options.pageToken = pageToken as string;
+    if (includeSpamTrash) options.includeSpamTrash = includeSpamTrash === 'true';
+
+    const messages = await GmailService.listMessages(gmailIntegration.accessToken, options);
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (error) {
+    logger.error('Error fetching Gmail messages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Gmail messages' });
+  }
+});
+
+// Send Gmail email
+router.post('/google/gmail/send', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const emailData = req.body;
+
+    const gmailIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'gmail',
+        isActive: true
+      }
+    });
+
+    if (!gmailIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Gmail integration not found'
+      });
+    }
+
+    const sentMessage = await GmailService.sendEmail(gmailIntegration.accessToken, emailData);
+
+    res.json({
+      success: true,
+      data: sentMessage
+    });
+  } catch (error) {
+    logger.error('Error sending Gmail email:', error);
+    res.status(500).json({ success: false, error: 'Failed to send Gmail email' });
+  }
+});
+
+// Reply to Gmail email
+router.post('/google/gmail/messages/:messageId/reply', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { messageId } = req.params;
+    const replyData = req.body;
+
+    const gmailIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'gmail',
+        isActive: true
+      }
+    });
+
+    if (!gmailIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Gmail integration not found'
+      });
+    }
+
+    const reply = await GmailService.replyToEmail(
+      gmailIntegration.accessToken,
+      messageId,
+      replyData
+    );
+
+    res.json({
+      success: true,
+      data: reply
+    });
+  } catch (error) {
+    logger.error('Error replying to Gmail email:', error);
+    res.status(500).json({ success: false, error: 'Failed to reply to Gmail email' });
+  }
+});
+
+// Get Gmail threads
+router.get('/google/gmail/threads', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { q, labelIds, maxResults = 20, pageToken, includeSpamTrash } = req.query;
+
+    const gmailIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'gmail',
+        isActive: true
+      }
+    });
+
+    if (!gmailIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Gmail integration not found'
+      });
+    }
+
+    const options: any = {};
+    if (q) options.q = q as string;
+    if (labelIds) options.labelIds = (labelIds as string).split(',');
+    if (maxResults) options.maxResults = parseInt(maxResults as string, 10);
+    if (pageToken) options.pageToken = pageToken as string;
+    if (includeSpamTrash) options.includeSpamTrash = includeSpamTrash === 'true';
+
+    const threads = await GmailService.listThreads(gmailIntegration.accessToken, options);
+
+    res.json({
+      success: true,
+      data: threads
+    });
+  } catch (error) {
+    logger.error('Error fetching Gmail threads:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Gmail threads' });
+  }
+});
+
+// Get Gmail labels
+router.get('/google/gmail/labels', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    const gmailIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'google',
+        type: 'gmail',
+        isActive: true
+      }
+    });
+
+    if (!gmailIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Gmail integration not found'
+      });
+    }
+
+    const labels = await GmailService.listLabels(gmailIntegration.accessToken);
+
+    res.json({
+      success: true,
+      data: labels
+    });
+  } catch (error) {
+    logger.error('Error fetching Gmail labels:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Gmail labels' });
+  }
+});
+
+// Initiate Microsoft OAuth flow
+router.post('/microsoft/connect', auth, async (req, res) => {
+  try {
+    const { types } = req.body; // ['profile', 'calendar', 'teams', 'mail']
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    if (!types || !Array.isArray(types)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Types array is required'
+      });
+    }
+
+    const scopes = MicrosoftAuthService.getScopes(types);
+    const authUrl = MicrosoftAuthService.getAuthUrl(scopes, userId!);
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes,
+        types
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Microsoft OAuth:', error);
+    res.status(500).json({ success: false, error: 'Failed to initiate OAuth flow' });
+  }
+});
+
+// Handle Microsoft OAuth callback
+router.get('/microsoft/callback', async (req, res) => {
+  try {
+    const { code, state: userId } = req.query;
+
+    if (!code || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authorization code and state are required'
+      });
+    }
+
+    // Exchange code for tokens
+    const tokens = await MicrosoftAuthService.exchangeCodeForTokens(code as string);
+
+    // Get user profile
+    const profile = await MicrosoftAuthService.getUserProfile(tokens.access_token);
+
+    // Determine integration types based on scopes
+    const scopes = tokens.scope.split(' ');
+    const types = [];
+
+    if (scopes.some(s => s.includes('User.Read'))) types.push('profile');
+    if (scopes.some(s => s.includes('Calendars'))) types.push('calendar');
+    if (scopes.some(s => s.includes('Mail'))) types.push('mail');
+    if (scopes.some(s => s.includes('Chat') || s.includes('Team'))) types.push('teams');
+
+    // Create integrations for each type
+    for (const type of types) {
+      // Remove existing integration of same type
+      await prisma.integration.deleteMany({
+        where: {
+          userId: userId as string,
+          provider: 'microsoft',
+          type: type
+        }
+      });
+
+      // Create new integration
+      await prisma.integration.create({
+        data: {
+          userId: userId as string,
+          provider: 'microsoft',
+          type: type,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: new Date(Date.now() + (tokens.expires_in * 1000)),
+          scope: scopes,
+          profile: {
+            email: profile.userPrincipalName || profile.mail || '',
+            name: profile.displayName,
+            id: profile.id
+          },
+          isActive: true
+        }
+      });
+    }
+
+    // Redirect to OAuth callback page
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=success');
+  } catch (error) {
+    logger.error('Error handling Microsoft OAuth callback:', error);
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=error');
+  }
+});
+
+// Get Microsoft Calendar events
+router.get('/microsoft/calendar/events', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { timeMin, timeMax } = req.query;
+
+    const calendarIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'microsoft',
+        type: 'calendar',
+        isActive: true
+      }
+    });
+
+    if (!calendarIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft Calendar integration not found'
+      });
+    }
+
+    const events = await MicrosoftCalendarService.listEvents(
+      calendarIntegration.accessToken,
+      {
+        timeMin: timeMin as string,
+        timeMax: timeMax as string
+      }
+    );
+
+    res.json({
+      success: true,
+      data: events
+    });
+  } catch (error) {
+    logger.error('Error fetching Microsoft Calendar events:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Calendar events' });
+  }
+});
+
+// Create Microsoft Calendar event
+router.post('/microsoft/calendar/events', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const eventData = req.body;
+
+    const calendarIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'microsoft',
+        type: 'calendar',
+        isActive: true
+      }
+    });
+
+    if (!calendarIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft Calendar integration not found'
+      });
+    }
+
+    const event = await MicrosoftCalendarService.createEvent(
+      calendarIntegration.accessToken,
+      eventData
+    );
+
+    res.json({
+      success: true,
+      data: event
+    });
+  } catch (error) {
+    logger.error('Error creating Microsoft Calendar event:', error);
+    res.status(500).json({ success: false, error: 'Failed to create Calendar event' });
+  }
+});
+
+// Get Microsoft Teams chats
+router.get('/microsoft/teams/chats', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { top = 50 } = req.query;
+
+    const teamsIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'microsoft',
+        type: 'teams',
+        isActive: true
+      }
+    });
+
+    if (!teamsIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft Teams integration not found'
+      });
+    }
+
+    const chats = await MicrosoftTeamsService.listChats(
+      teamsIntegration.accessToken,
+      parseInt(top as string, 10)
+    );
+
+    res.json({
+      success: true,
+      data: chats
+    });
+  } catch (error) {
+    logger.error('Error fetching Microsoft Teams chats:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Teams chats' });
+  }
+});
+
+// Get Microsoft Teams chat messages
+router.get('/microsoft/teams/chats/:chatId/messages', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { chatId } = req.params;
+    const { top = 50 } = req.query;
+
+    const teamsIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'microsoft',
+        type: 'teams',
+        isActive: true
+      }
+    });
+
+    if (!teamsIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft Teams integration not found'
+      });
+    }
+
+    const messages = await MicrosoftTeamsService.listChatMessages(
+      teamsIntegration.accessToken,
+      chatId,
+      parseInt(top as string, 10)
+    );
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (error) {
+    logger.error('Error fetching Microsoft Teams chat messages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Teams chat messages' });
+  }
+});
+
+// Send Microsoft Teams chat message
+router.post('/microsoft/teams/chats/:chatId/messages', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { chatId } = req.params;
+    const messageData = req.body;
+
+    const teamsIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'microsoft',
+        type: 'teams',
+        isActive: true
+      }
+    });
+
+    if (!teamsIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft Teams integration not found'
+      });
+    }
+
+    const message = await MicrosoftTeamsService.sendChatMessage(
+      teamsIntegration.accessToken,
+      chatId,
+      messageData
+    );
+
+    res.json({
+      success: true,
+      data: message
+    });
+  } catch (error) {
+    logger.error('Error sending Microsoft Teams chat message:', error);
+    res.status(500).json({ success: false, error: 'Failed to send Teams chat message' });
+  }
+});
+
+// Initiate Slack OAuth flow
+router.post('/slack/connect', auth, async (req, res) => {
+  try {
+    const { types } = req.body; // ['basic', 'channels', 'messages', 'files']
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    if (!types || !Array.isArray(types)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Types array is required'
+      });
+    }
+
+    const scopes = SlackAuthService.getScopes(types);
+    const authUrl = SlackAuthService.getAuthUrl(scopes, userId!);
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes,
+        types
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Slack OAuth:', error);
+    res.status(500).json({ success: false, error: 'Failed to initiate OAuth flow' });
+  }
+});
+
+// Handle Slack OAuth callback
+router.get('/slack/callback', async (req, res) => {
+  try {
+    const { code, state: userId } = req.query;
+
+    if (!code || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authorization code and state are required'
+      });
+    }
+
+    // Exchange code for tokens
+    const tokens = await SlackAuthService.exchangeCodeForTokens(code as string);
+
+    // Get user profile
+    const profile = await SlackAuthService.getUserProfile(tokens.authed_user.access_token);
+
+    // Remove existing Slack integration
+    await prisma.integration.deleteMany({
+      where: {
+        userId: userId as string,
+        provider: 'slack'
+      }
+    });
+
+    // Create Slack integration
+    await prisma.integration.create({
+      data: {
+        userId: userId as string,
+        provider: 'slack',
+        type: 'workspace',
+        accessToken: tokens.authed_user.access_token,
+        refreshToken: undefined, // Slack doesn't use refresh tokens
+        expiresAt: undefined, // Slack tokens don't expire
+        scope: tokens.authed_user.scope ? [tokens.authed_user.scope] : [],
+        profile: {
+          email: profile.profile?.email || '',
+          name: profile.real_name || profile.name,
+          id: profile.id,
+          team_id: profile.team_id,
+          team_name: tokens.team.name
+        },
+        isActive: true
+      }
+    });
+
+    // Redirect to OAuth callback page
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=success');
+  } catch (error) {
+    logger.error('Error handling Slack OAuth callback:', error);
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=error');
+  }
+});
+
+// Get Slack channels
+router.get('/slack/channels', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { types = 'public_channel,private_channel', limit = 100 } = req.query;
+
+    const slackIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'slack',
+        isActive: true
+      }
+    });
+
+    if (!slackIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Slack integration not found'
+      });
+    }
+
+    const channels = await SlackChannelsService.listChannels(
+      slackIntegration.accessToken,
+      types as string,
+      parseInt(limit as string, 10)
+    );
+
+    res.json({
+      success: true,
+      data: channels
+    });
+  } catch (error) {
+    logger.error('Error fetching Slack channels:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Slack channels' });
+  }
+});
+
+// Get Slack channel messages
+router.get('/slack/channels/:channelId/messages', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { channelId } = req.params;
+    const { limit = 100, oldest, latest } = req.query;
+
+    const slackIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'slack',
+        isActive: true
+      }
+    });
+
+    if (!slackIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Slack integration not found'
+      });
+    }
+
+    const messages = await SlackChannelsService.listChannelMessages(
+      slackIntegration.accessToken,
+      channelId,
+      parseInt(limit as string, 10),
+      oldest as string,
+      latest as string
+    );
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (error) {
+    logger.error('Error fetching Slack channel messages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Slack messages' });
+  }
+});
+
+// Send Slack message
+router.post('/slack/channels/:channelId/messages', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { channelId } = req.params;
+    const messageData = {
+      ...req.body,
+      channel: channelId
+    };
+
+    const slackIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'slack',
+        isActive: true
+      }
+    });
+
+    if (!slackIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Slack integration not found'
+      });
+    }
+
+    const message = await SlackChannelsService.sendMessage(
+      slackIntegration.accessToken,
+      messageData
+    );
+
+    res.json({
+      success: true,
+      data: message
+    });
+  } catch (error) {
+    logger.error('Error sending Slack message:', error);
+    res.status(500).json({ success: false, error: 'Failed to send Slack message' });
+  }
+});
+
+// Get Slack users
+router.get('/slack/users', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { limit = 100 } = req.query;
+
+    const slackIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'slack',
+        isActive: true
+      }
+    });
+
+    if (!slackIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Slack integration not found'
+      });
+    }
+
+    const users = await SlackChannelsService.listUsers(
+      slackIntegration.accessToken,
+      parseInt(limit as string, 10)
+    );
+
+    res.json({
+      success: true,
+      data: users
+    });
+  } catch (error) {
+    logger.error('Error fetching Slack users:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Slack users' });
+  }
+});
+
+// Create Slack direct message
+router.post('/slack/dm', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { user_id } = req.body;
+
+    const slackIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'slack',
+        isActive: true
+      }
+    });
+
+    if (!slackIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Slack integration not found'
+      });
+    }
+
+    const channel = await SlackChannelsService.createDirectMessage(
+      slackIntegration.accessToken,
+      user_id
+    );
+
+    res.json({
+      success: true,
+      data: channel
+    });
+  } catch (error) {
+    logger.error('Error creating Slack DM:', error);
+    res.status(500).json({ success: false, error: 'Failed to create Slack direct message' });
+  }
+});
+
+// Initiate Salesforce OAuth flow
+router.post('/salesforce/connect', auth, async (req, res) => {
+  try {
+    const { types } = req.body; // ['basic', 'api', 'full']
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    if (!types || !Array.isArray(types)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Types array is required'
+      });
+    }
+
+    const scopes = SalesforceAuthService.getScopes(types);
+    const authUrl = SalesforceAuthService.getAuthUrl(scopes, userId!);
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes,
+        types
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Salesforce OAuth:', error);
+    res.status(500).json({ success: false, error: 'Failed to initiate OAuth flow' });
+  }
+});
+
+// Handle Salesforce OAuth callback
+router.get('/salesforce/callback', async (req, res) => {
+  try {
+    const { code, state: userId } = req.query;
+
+    if (!code || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authorization code and state are required'
+      });
+    }
+
+    // Exchange code for tokens
+    const tokens = await SalesforceAuthService.exchangeCodeForTokens(code as string);
+
+    // Get user info
+    const userInfo = await SalesforceAuthService.getUserInfo(tokens.access_token, tokens.id);
+
+    // Remove existing Salesforce integration
+    await prisma.integration.deleteMany({
+      where: {
+        userId: userId as string,
+        provider: 'salesforce'
+      }
+    });
+
+    // Create Salesforce integration
+    await prisma.integration.create({
+      data: {
+        userId: userId as string,
+        provider: 'salesforce',
+        type: 'crm',
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiresAt: undefined, // Salesforce tokens don't have explicit expiry
+        scope: tokens.scope ? tokens.scope.split(' ') : [],
+        profile: {
+          email: userInfo.email,
+          name: userInfo.name,
+          id: userInfo.user_id,
+          username: userInfo.username,
+          organization_id: userInfo.organization_id,
+          instance_url: tokens.instance_url
+        },
+        isActive: true
+      }
+    });
+
+    // Redirect to OAuth callback page
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=success');
+  } catch (error) {
+    logger.error('Error handling Salesforce OAuth callback:', error);
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=error');
+  }
+});
+
+// Get Salesforce accounts
+router.get('/salesforce/accounts', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { limit = 100, offset = 0, where } = req.query;
+
+    const salesforceIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'salesforce',
+        isActive: true
+      }
+    });
+
+    if (!salesforceIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Salesforce integration not found'
+      });
+    }
+
+    const instanceUrl = salesforceIntegration.profile?.instance_url;
+    if (!instanceUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Salesforce instance URL not found'
+      });
+    }
+
+    const accounts = await SalesforceApiService.getAccounts(
+      instanceUrl,
+      salesforceIntegration.accessToken,
+      {
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+        where: where as string
+      }
+    );
+
+    res.json({
+      success: true,
+      data: accounts
+    });
+  } catch (error) {
+    logger.error('Error fetching Salesforce accounts:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Salesforce accounts' });
+  }
+});
+
+// Get Salesforce contacts
+router.get('/salesforce/contacts', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { limit = 100, offset = 0, where } = req.query;
+
+    const salesforceIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'salesforce',
+        isActive: true
+      }
+    });
+
+    if (!salesforceIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Salesforce integration not found'
+      });
+    }
+
+    const instanceUrl = salesforceIntegration.profile?.instance_url;
+    if (!instanceUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Salesforce instance URL not found'
+      });
+    }
+
+    const contacts = await SalesforceApiService.getContacts(
+      instanceUrl,
+      salesforceIntegration.accessToken,
+      {
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+        where: where as string
+      }
+    );
+
+    res.json({
+      success: true,
+      data: contacts
+    });
+  } catch (error) {
+    logger.error('Error fetching Salesforce contacts:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Salesforce contacts' });
+  }
+});
+
+// Get Salesforce opportunities
+router.get('/salesforce/opportunities', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { limit = 100, offset = 0, where } = req.query;
+
+    const salesforceIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'salesforce',
+        isActive: true
+      }
+    });
+
+    if (!salesforceIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Salesforce integration not found'
+      });
+    }
+
+    const instanceUrl = salesforceIntegration.profile?.instance_url;
+    if (!instanceUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Salesforce instance URL not found'
+      });
+    }
+
+    const opportunities = await SalesforceApiService.getOpportunities(
+      instanceUrl,
+      salesforceIntegration.accessToken,
+      {
+        limit: parseInt(limit as string, 10),
+        offset: parseInt(offset as string, 10),
+        where: where as string
+      }
+    );
+
+    res.json({
+      success: true,
+      data: opportunities
+    });
+  } catch (error) {
+    logger.error('Error fetching Salesforce opportunities:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Salesforce opportunities' });
+  }
+});
+
+// Create Salesforce record
+router.post('/salesforce/:sobjectType', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { sobjectType } = req.params;
+    const data = req.body;
+
+    const salesforceIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'salesforce',
+        isActive: true
+      }
+    });
+
+    if (!salesforceIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Salesforce integration not found'
+      });
+    }
+
+    const instanceUrl = salesforceIntegration.profile?.instance_url;
+    if (!instanceUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Salesforce instance URL not found'
+      });
+    }
+
+    const result = await SalesforceApiService.createRecord(
+      instanceUrl,
+      salesforceIntegration.accessToken,
+      sobjectType,
+      data
+    );
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error creating Salesforce record:', error);
+    res.status(500).json({ success: false, error: 'Failed to create Salesforce record' });
+  }
+});
+
+// Update Salesforce record
+router.patch('/salesforce/:sobjectType/:recordId', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { sobjectType, recordId } = req.params;
+    const data = req.body;
+
+    const salesforceIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'salesforce',
+        isActive: true
+      }
+    });
+
+    if (!salesforceIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Salesforce integration not found'
+      });
+    }
+
+    const instanceUrl = salesforceIntegration.profile?.instance_url;
+    if (!instanceUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Salesforce instance URL not found'
+      });
+    }
+
+    await SalesforceApiService.updateRecord(
+      instanceUrl,
+      salesforceIntegration.accessToken,
+      sobjectType,
+      recordId,
+      data
+    );
+
+    res.json({
+      success: true,
+      message: 'Record updated successfully'
+    });
+  } catch (error) {
+    logger.error('Error updating Salesforce record:', error);
+    res.status(500).json({ success: false, error: 'Failed to update Salesforce record' });
+  }
+});
+
+// Initiate Zoom OAuth flow
+router.post('/zoom/connect', auth, async (req, res) => {
+  try {
+    const { types } = req.body; // ['meeting', 'recording', 'webinar', 'chat']
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    if (!types || !Array.isArray(types)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Types array is required'
+      });
+    }
+
+    const scopes = ZoomAuthService.getScopes(types);
+    const authUrl = ZoomAuthService.getAuthUrl(scopes, userId!);
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes,
+        types
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Zoom OAuth:', error);
+    res.status(500).json({ success: false, error: 'Failed to initiate OAuth flow' });
+  }
+});
+
+// Handle Zoom OAuth callback
+router.get('/zoom/callback', async (req, res) => {
+  try {
+    const { code, state: userId } = req.query;
+
+    if (!code || !userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Authorization code and state are required'
+      });
+    }
+
+    // Exchange code for tokens
+    const tokens = await ZoomAuthService.exchangeCodeForTokens(code as string);
+
+    // Get user profile
+    const profile = await ZoomAuthService.getUserProfile(tokens.access_token);
+
+    // Remove existing Zoom integration
+    await prisma.integration.deleteMany({
+      where: {
+        userId: userId as string,
+        provider: 'zoom'
+      }
+    });
+
+    // Create Zoom integration
+    await prisma.integration.create({
+      data: {
+        userId: userId as string,
+        provider: 'zoom',
+        type: 'video',
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiresAt: new Date(Date.now() + (tokens.expires_in * 1000)),
+        scope: tokens.scope ? tokens.scope.split(' ') : [],
+        profile: {
+          email: profile.email,
+          name: `${profile.first_name} ${profile.last_name}`,
+          id: profile.id,
+          pmi: profile.pmi,
+          personal_meeting_url: profile.personal_meeting_url,
+          timezone: profile.timezone,
+          account_id: profile.account_id
+        },
+        isActive: true
+      }
+    });
+
+    // Redirect to OAuth callback page
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=success');
+  } catch (error) {
+    logger.error('Error handling Zoom OAuth callback:', error);
+    res.redirect('http://localhost:3000/app/oauth/callback?integration=error');
+  }
+});
+
+// Get Zoom meetings
+router.get('/zoom/meetings', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { type = 'scheduled', page_size = 30, from, to, next_page_token } = req.query;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    const meetings = await ZoomMeetingsService.listMeetings(
+      zoomIntegration.accessToken,
+      'me',
+      {
+        type: type as any,
+        page_size: parseInt(page_size as string, 10),
+        from: from as string,
+        to: to as string,
+        next_page_token: next_page_token as string
+      }
+    );
+
+    res.json({
+      success: true,
+      data: meetings
+    });
+  } catch (error) {
+    logger.error('Error fetching Zoom meetings:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Zoom meetings' });
+  }
+});
+
+// Get Zoom meeting details
+router.get('/zoom/meetings/:meetingId', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { meetingId } = req.params;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    const meeting = await ZoomMeetingsService.getMeeting(
+      zoomIntegration.accessToken,
+      meetingId
+    );
+
+    res.json({
+      success: true,
+      data: meeting
+    });
+  } catch (error) {
+    logger.error('Error fetching Zoom meeting:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Zoom meeting' });
+  }
+});
+
+// Create Zoom meeting
+router.post('/zoom/meetings', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const meetingData = req.body;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    const meeting = await ZoomMeetingsService.createMeeting(
+      zoomIntegration.accessToken,
+      meetingData
+    );
+
+    res.json({
+      success: true,
+      data: meeting
+    });
+  } catch (error) {
+    logger.error('Error creating Zoom meeting:', error);
+    res.status(500).json({ success: false, error: 'Failed to create Zoom meeting' });
+  }
+});
+
+// Update Zoom meeting
+router.patch('/zoom/meetings/:meetingId', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { meetingId } = req.params;
+    const meetingData = req.body;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    await ZoomMeetingsService.updateMeeting(
+      zoomIntegration.accessToken,
+      meetingId,
+      meetingData
+    );
+
+    res.json({
+      success: true,
+      message: 'Meeting updated successfully'
+    });
+  } catch (error) {
+    logger.error('Error updating Zoom meeting:', error);
+    res.status(500).json({ success: false, error: 'Failed to update Zoom meeting' });
+  }
+});
+
+// Delete Zoom meeting
+router.delete('/zoom/meetings/:meetingId', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { meetingId } = req.params;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    await ZoomMeetingsService.deleteMeeting(
+      zoomIntegration.accessToken,
+      meetingId
+    );
+
+    res.json({
+      success: true,
+      message: 'Meeting deleted successfully'
+    });
+  } catch (error) {
+    logger.error('Error deleting Zoom meeting:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete Zoom meeting' });
+  }
+});
+
+// Get Zoom recordings
+router.get('/zoom/recordings', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { from, to, page_size = 30, next_page_token } = req.query;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    const recordings = await ZoomMeetingsService.listRecordings(
+      zoomIntegration.accessToken,
+      'me',
+      from as string,
+      to as string,
+      parseInt(page_size as string, 10),
+      next_page_token as string
+    );
+
+    res.json({
+      success: true,
+      data: recordings
+    });
+  } catch (error) {
+    logger.error('Error fetching Zoom recordings:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Zoom recordings' });
+  }
+});
+
+// Get meeting participants
+router.get('/zoom/meetings/:meetingUuid/participants', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { meetingUuid } = req.params;
+    const { page_size = 30, next_page_token } = req.query;
+
+    const zoomIntegration = await prisma.integration.findFirst({
+      where: {
+        userId: userId,
+        provider: 'zoom',
+        isActive: true
+      }
+    });
+
+    if (!zoomIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Zoom integration not found'
+      });
+    }
+
+    const participants = await ZoomMeetingsService.getMeetingParticipants(
+      zoomIntegration.accessToken,
+      meetingUuid,
+      parseInt(page_size as string, 10),
+      next_page_token as string
+    );
+
+    res.json({
+      success: true,
+      data: participants
+    });
+  } catch (error) {
+    logger.error('Error fetching Zoom meeting participants:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Zoom meeting participants' });
+  }
+});
+
+// Data synchronization endpoints
+
+// Sync specific integration data
+router.post('/sync/:type', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+    const { type } = req.params;
+    const { fullSync = false, limit = 100 } = req.body;
+
+    const result = await DataSyncService.syncUserData({
+      userId,
+      integrationType: type,
+      fullSync,
+      limit
+    });
+
+    res.json({
+      success: result.success,
+      message: result.message,
+      itemsProcessed: result.itemsProcessed
+    });
+  } catch (error) {
+    logger.error('Error syncing data:', error);
+    res.status(500).json({ success: false, error: 'Failed to sync data' });
+  }
+});
+
+// Sync all user integrations
+router.post('/sync-all', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    const results = await DataSyncService.syncAllUserIntegrations(userId);
+
+    res.json({
+      success: results.success,
+      data: results.results
+    });
+  } catch (error) {
+    logger.error('Error syncing all integrations:', error);
+    res.status(500).json({ success: false, error: 'Failed to sync all integrations' });
+  }
+});
+
+// Get sync job status
+router.get('/sync/status', auth, async (req, res) => {
+  try {
+    const userId = (req.user as any)?.id || 'demo-user';
+
+    // This would require importing Prisma, which the file doesn't currently have
+    // For now, return a simple status
+    res.json({
+      success: true,
+      message: 'Sync status endpoint - implementation needed'
+    });
+  } catch (error) {
+    logger.error('Error fetching sync status:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch sync status' });
+  }
+});
+
+export default router;

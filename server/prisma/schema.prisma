@@ -1,0 +1,610 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and profile
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  firm          String?
+  role          String?
+  phone         String?
+  location      String?
+  avatar        String?
+  emailVerified Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  profile       Profile?
+  integrations  Integration[]
+  deals         Deal[]
+  activities    Activity[]
+  ownedContacts Contact[]
+  communications Communication[]
+  documents     Document[]
+  preferences   UserPreference?
+
+  // New integration relationships
+  teamsMessages     TeamsMessage[]
+  teamsChannels     TeamsChannel[]
+  slackMessages     SlackMessage[]
+  slackChannels     SlackChannel[]
+  zoomMeetings      ZoomMeeting[]
+  zoomParticipants  ZoomParticipant[]
+  salesforceAccounts     SalesforceAccount[]
+  salesforceContacts     SalesforceContact[]
+  salesforceOpportunities SalesforceOpportunity[]
+
+  @@map("users")
+}
+
+// User profile and preferences
+model Profile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  title         String?
+  bio           String?
+  joinDate      DateTime @default(now())
+  timezone      String   @default("UTC")
+  language      String   @default("en")
+  theme         String   @default("light")
+  notifications Json?    // Store notification preferences
+  settings      Json?    // Store user settings
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// User preferences
+model UserPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  emailNotify     Boolean  @default(true)
+  pushNotify      Boolean  @default(true)
+  smsNotify       Boolean  @default(false)
+  calendarNotify  Boolean  @default(true)
+  dealNotify      Boolean  @default(true)
+  autoSave        Boolean  @default(true)
+  darkMode        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// Google and other integrations
+model Integration {
+  id            String    @id @default(uuid())
+  userId        String
+  provider      String    // 'google', 'microsoft', etc.
+  type          String    // 'gmail', 'calendar', 'drive', 'meet', etc.
+  isActive      Boolean   @default(true)
+  accessToken   String?
+  refreshToken  String?
+  expiresAt     DateTime?
+  scope         String?
+  profile       Json?     // Store provider profile info
+  settings      Json?     // Store integration settings
+  lastSync      DateTime?
+  syncStatus    String    @default("active") // active, error, disconnected
+  errorMessage  String?
+  metadata      Json?     // Store additional metadata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider, type])
+  @@map("integrations")
+}
+
+// Deals and opportunities
+model Deal {
+  id             String    @id @default(uuid())
+  userId         String
+  company        String
+  description    String?
+  sector         String?
+  stage          String    // 'prospect', 'due-diligence', 'term-sheet', 'closing', 'closed'
+  status         String    @default("active") // active, paused, closed, lost
+  value          Float?
+  probability    Float?    // 0-100
+  leadPartner    String?
+  team           String[]  // Array of team member names
+  tags           String[]  // Array of tags
+  priority       String    @default("medium") // low, medium, high, critical
+  targetClose    DateTime?
+  actualClose    DateTime?
+  nextStep       String?
+  lastActivity   DateTime?
+  source         String?   // referral, inbound, outbound, etc.
+  geography      String?
+  dealSize       String?   // seed, series-a, etc.
+  metrics        Json?     // Store deal metrics
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts      Contact[]
+  documents     Document[]
+  activities    Activity[]
+  communications Communication[]
+
+  // New integration relationships
+  teamsMessages     TeamsMessage[]
+  slackMessages     SlackMessage[]
+  zoomMeetings      ZoomMeeting[]
+  salesforceAccounts     SalesforceAccount[]
+  salesforceOpportunities SalesforceOpportunity[]
+
+  @@map("deals")
+}
+
+// Contacts and people
+model Contact {
+  id                String    @id @default(uuid())
+  userId            String
+  dealId            String?
+  googleContactId   String?   // For Google Contacts sync
+  name              String
+  email             String?
+  phone             String?
+  company           String?
+  title             String?
+  role              String?
+  linkedinUrl       String?
+  avatar            String?
+  notes             String?
+  tags              String[]
+  relationshipScore Float?    // 0-100
+  lastContact       DateTime?
+  status            String    @default("active") // hot, warm, cold, inactive
+  isKeyContact      Boolean   @default(false)
+  source            String?   // google, manual, imported, etc.
+  metadata          Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relationships
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal          Deal?          @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  activities    Activity[]
+  communications Communication[]
+
+  // New integration relationships
+  teamsMessages     TeamsMessage[]
+  slackMessages     SlackMessage[]
+
+  @@unique([userId, email])
+  @@map("contacts")
+}
+
+// Activities (meetings, calls, emails, etc.)
+model Activity {
+  id          String    @id @default(uuid())
+  userId      String
+  dealId      String?
+  contactId   String?
+  type        String    // 'email', 'meeting', 'call', 'document', 'note', 'task'
+  title       String
+  description String?
+  content     String?   // Full content for notes, email body, etc.
+  date        DateTime
+  duration    Int?      // Duration in minutes
+  location    String?
+  attendees   String[]  // Array of attendee emails/names
+  status      String    @default("completed") // scheduled, completed, cancelled
+  priority    String    @default("medium")
+  outcome     String?
+  nextSteps   String?
+  metadata    Json?     // Store provider-specific data (Gmail messageId, Calendar eventId, etc.)
+  externalId  String?   // ID from external system (Gmail, Calendar, etc.)
+  syncedFrom  String?   // Source: gmail, calendar, manual, etc.
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relationships
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal    Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@map("activities")
+}
+
+// Documents and files
+model Document {
+  id             String    @id @default(uuid())
+  userId         String
+  dealId         String?
+  name           String
+  description    String?
+  type           String    // 'pdf', 'doc', 'xls', 'ppt', 'image', etc.
+  category       String?   // 'pitch-deck', 'financials', 'legal', 'dd', etc.
+  size           Int?      // Size in bytes
+  url            String?   // URL if stored in cloud
+  googleDriveId  String?   // Google Drive file ID
+  path           String?   // Local path if stored locally
+  version        String    @default("1.0")
+  isConfidential Boolean   @default(false)
+  uploadedBy     String?
+  tags           String[]
+  metadata       Json?     // Store file metadata
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal Deal? @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+// Email threads and communications
+model Communication {
+  id             String    @id @default(uuid())
+  userId         String
+  dealId         String?
+  contactId      String?
+  type           String    // 'email', 'sms', 'call', 'meeting'
+  subject        String?
+  content        String?
+  htmlContent    String?
+  fromEmail      String?
+  toEmails       String[]
+  ccEmails       String[]
+  bccEmails      String[]
+  threadId       String?   // Gmail thread ID
+  messageId      String?   // Gmail message ID
+  status         String    @default("sent") // draft, sent, received, failed
+  direction      String    // inbound, outbound
+  isRead         Boolean   @default(false)
+  isImportant    Boolean   @default(false)
+  labels         String[]  // Gmail labels
+  attachments    Json?     // Store attachment info
+  metadata       Json?
+  sentAt         DateTime?
+  receivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal    Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@map("communications")
+}
+
+// Investors and LPs
+model Investor {
+  id             String           @id @default(uuid())
+  userId         String
+  name           String
+  type           String           // 'institutional', 'family-office', 'fund-of-funds', 'individual'
+  status         String           @default("active")
+  totalCommitment Float?
+  totalCalled    Float?
+  description    String?
+  website        String?
+  location       String?
+  founded        DateTime?
+  aum            Float?          // Assets under management
+  tags           String[]
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relationships
+  entities       InvestorEntity[]
+
+  @@map("investors")
+}
+
+// Investor entities (LLCs, corporations, etc.)
+model InvestorEntity {
+  id              String    @id @default(uuid())
+  investorId      String
+  name            String
+  type            String    // 'direct-investment', 'private-banking', 'family-llc', etc.
+  investmentType  String    // 'corporation', 'llc', 'partnership', 'trust'
+  commitment      Float?
+  called          Float?
+  status          String    @default("active")
+  documents       Json?     // Store document references
+  fundInvestments Json?     // Store fund investment details
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  investor Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+
+  @@map("investor_entities")
+}
+
+// Reports and generated documents
+model Report {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  type        String    // 'quarterly', 'annual', 'deal-summary', 'lp-update'
+  format      String    @default("pdf") // pdf, excel, word
+  content     String?   // Generated content
+  data        Json?     // Data used to generate report
+  url         String?   // URL if stored in cloud
+  status      String    @default("draft") // draft, generating, completed, failed
+  recipients  String[]  // Email addresses of recipients
+  sentAt      DateTime?
+  generatedAt DateTime?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("reports")
+}
+
+// Sync jobs and background tasks
+model SyncJob {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String    // 'gmail', 'calendar', 'contacts', 'drive', 'teams', 'slack', 'zoom', 'salesforce'
+  status      String    // 'pending', 'running', 'completed', 'failed'
+  startedAt   DateTime?
+  completedAt DateTime?
+  errorMessage String?
+  itemsProcessed Int?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("sync_jobs")
+}
+
+// Microsoft Teams data
+model TeamsMessage {
+  id           String    @id @default(uuid())
+  userId       String
+  dealId       String?
+  contactId    String?
+  messageId    String    @unique // Teams message ID
+  chatId       String?   // Teams chat ID
+  channelId    String?   // Teams channel ID
+  teamId       String?   // Teams team ID
+  fromEmail    String
+  fromName     String
+  content      String
+  contentType  String    @default("text") // text, html
+  importance   String    @default("normal") // normal, high, urgent
+  messageType  String    // message, reply, reaction
+  attachments  Json?     // Store attachment info
+  mentions     String[]  // Array of mentioned user emails
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sentAt       DateTime
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal    Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@map("teams_messages")
+}
+
+model TeamsChannel {
+  id          String    @id @default(uuid())
+  userId      String
+  channelId   String    @unique // Teams channel ID
+  teamId      String    // Teams team ID
+  name        String
+  description String?
+  type        String    // standard, private, shared
+  webUrl      String?
+  memberCount Int?
+  isArchived  Boolean   @default(false)
+  metadata    Json?     // Store additional Teams data
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("teams_channels")
+}
+
+// Slack data
+model SlackMessage {
+  id          String    @id @default(uuid())
+  userId      String
+  dealId      String?
+  contactId   String?
+  messageId   String    @unique // Slack message timestamp
+  channelId   String    // Slack channel ID
+  channelName String?
+  fromUserId  String    // Slack user ID
+  fromName    String
+  text        String
+  messageType String    @default("message") // message, reply, thread
+  threadTs    String?   // Thread timestamp for replies
+  attachments Json?     // Store attachment info
+  reactions   Json?     // Store reaction data
+  mentions    String[]  // Array of mentioned users
+  sentAt      DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal    Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@map("slack_messages")
+}
+
+model SlackChannel {
+  id          String    @id @default(uuid())
+  userId      String
+  channelId   String    @unique // Slack channel ID
+  name        String
+  purpose     String?
+  topic       String?
+  isPrivate   Boolean   @default(false)
+  isArchived  Boolean   @default(false)
+  memberCount Int?
+  metadata    Json?     // Store additional Slack data
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("slack_channels")
+}
+
+// Zoom data
+model ZoomMeeting {
+  id            String    @id @default(uuid())
+  userId        String
+  dealId        String?
+  meetingId     String    @unique // Zoom meeting ID
+  uuid          String?   // Zoom meeting UUID
+  topic         String
+  agenda        String?
+  startTime     DateTime
+  duration      Int       // Duration in minutes
+  timezone      String
+  status        String    // waiting, started, finished
+  meetingType   String    // instant, scheduled, recurring
+  joinUrl       String?
+  startUrl      String?
+  password      String?
+  hostEmail     String?
+  participantCount Int?
+  hasRecording  Boolean   @default(false)
+  recordingUrl  String?
+  metadata      Json?     // Store additional Zoom data
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal         Deal?               @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  participants ZoomParticipant[]
+
+  @@map("zoom_meetings")
+}
+
+model ZoomParticipant {
+  id          String    @id @default(uuid())
+  meetingId   String
+  userId      String?   // Our user ID if this participant is a user
+  zoomUserId  String?   // Zoom user ID
+  name        String
+  email       String?
+  joinTime    DateTime
+  leaveTime   DateTime?
+  duration    Int?      // Duration in minutes
+  status      String    // joined, left
+  metadata    Json?     // Store additional participant data
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  meeting ZoomMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("zoom_participants")
+}
+
+// Salesforce data
+model SalesforceAccount {
+  id          String    @id @default(uuid())
+  userId      String
+  dealId      String?
+  accountId   String    @unique // Salesforce Account ID
+  name        String
+  type        String?   // Customer, Partner, Prospect, etc.
+  industry    String?
+  website     String?
+  phone       String?
+  billingCity String?
+  billingState String?
+  billingCountry String?
+  description String?
+  revenue     Float?
+  employees   Int?
+  ownerId     String?   // Salesforce Owner ID
+  metadata    Json?     // Store additional Salesforce data
+  lastSync    DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal         Deal?                 @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  contacts     SalesforceContact[]
+  opportunities SalesforceOpportunity[]
+
+  @@map("salesforce_accounts")
+}
+
+model SalesforceContact {
+  id          String    @id @default(uuid())
+  userId      String
+  contactId   String    @unique // Salesforce Contact ID
+  accountId   String?   // Our SalesforceAccount ID
+  name        String
+  email       String?
+  phone       String?
+  title       String?
+  department  String?
+  leadSource  String?
+  description String?
+  ownerId     String?   // Salesforce Owner ID
+  metadata    Json?     // Store additional Salesforce data
+  lastSync    DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account SalesforceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@map("salesforce_contacts")
+}
+
+model SalesforceOpportunity {
+  id          String    @id @default(uuid())
+  userId      String
+  dealId      String?
+  opportunityId String  @unique // Salesforce Opportunity ID
+  accountId   String?   // Our SalesforceAccount ID
+  name        String
+  amount      Float?
+  stage       String
+  probability Float?    // 0-100
+  closeDate   DateTime?
+  type        String?
+  leadSource  String?
+  description String?
+  ownerId     String?   // Salesforce Owner ID
+  metadata    Json?     // Store additional Salesforce data
+  lastSync    DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal    Deal?              @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  account SalesforceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@map("salesforce_opportunities")
+}

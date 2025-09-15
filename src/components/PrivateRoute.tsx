@@ -8,6 +8,27 @@ interface PrivateRouteProps {
 }
 
 export default function PrivateRoute({ children }: PrivateRouteProps) {
-  // Bypass authentication - always allow access
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          bgcolor: 'background.default'
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 }

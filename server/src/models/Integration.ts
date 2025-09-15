@@ -1,16 +1,22 @@
 export interface Integration {
   id: string;
   userId: string;
-  provider: 'google';
-  type: 'drive' | 'calendar' | 'profile';
+  provider: 'google' | 'microsoft' | 'slack' | 'salesforce' | 'zoom';
+  type: 'drive' | 'calendar' | 'profile' | 'gmail' | 'mail' | 'teams' | 'workspace' | 'crm' | 'video';
   accessToken: string;
-  refreshToken: string;
-  expiresAt: Date;
+  refreshToken: string | undefined;
+  expiresAt: Date | undefined;
   scope: string[];
   profile: {
     email: string;
     name: string;
     picture?: string;
+    id?: string;
+    instance_url?: string;
+    username?: string;
+    pmi?: string;
+    team_id?: string;
+    team_name?: string;
   };
   isActive: boolean;
   createdAt: Date;

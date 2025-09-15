@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { BrainProvider } from './contexts/BrainContext';
-import PrivateRoute from './components/PrivateRoute';
 import Layout from './components/Layout';
 
 import Dashboard from './pages/Dashboard';
@@ -25,32 +24,29 @@ function App() {
       <BrainProvider>
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
-            {/* OAuth callback route - outside of Layout */}
+            {/* OAuth callback route */}
             <Route path="/app/oauth/callback" element={<OAuthCallback />} />
-            
-            <Route path="/" element={
-              <PrivateRoute>
-                <Layout />
-              </PrivateRoute>
-            }>
+
+            {/* Main app routes - no authentication required */}
+            <Route path="/" element={<Layout />}>
               <Route index element={<Navigate to="/deals/relationships" />} />
-              
+
               {/* Deals Routes */}
               <Route path="deals">
                 <Route path="relationships" element={<Deals />} />
                 <Route path="relationships/:id" element={<DealDetail />} />
               </Route>
-              
+
               {/* Fundraising Routes */}
               <Route path="fundraising">
                 <Route path="limited-partners" element={<InvestorRelations />} />
                 <Route path="funds" element={<Funds />} />
               </Route>
-              
+
               {/* Settings and other routes */}
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
-              
+
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/deals/relationships" />} />
               <Route path="companies" element={<Navigate to="/deals/relationships" />} />

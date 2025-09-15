@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -18,19 +18,30 @@ import {
   Lock as LockIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check for success message from signup
+    if (location.state?.message) {
+      setSuccess(location.state.message);
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
@@ -99,6 +110,12 @@ export default function Login() {
             Enterprise Deal Intelligence Platform
           </Typography>
         </Box>
+
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {success}
+          </Alert>
+        )}
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -212,12 +229,10 @@ export default function Login() {
             <Link
               component="button"
               variant="body2"
-              onClick={(e) => {
-                e.preventDefault();
-              }}
+              onClick={() => window.location.href = '/signup'}
               sx={{ color: 'primary.main', textDecoration: 'none' }}
             >
-              Contact sales
+              Sign up here
             </Link>
           </Typography>
         </Box>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import NewFundModal from '../components/NewFundModal';
+import { downloadFundsPDF } from '../services/pdfGenerator';
 import {
   Box,
   Paper,
@@ -74,272 +76,8 @@ import {
   Pause as PauseIcon
 } from '@mui/icons-material';
 
-// Mock data for funds and their investors
-const funds = [
-  {
-    id: 'fund-1',
-    name: 'Equitle Fund I',
-    vintage: 2023,
-    targetSize: 100000000,
-    raisedAmount: 85000000,
-    status: 'Active',
-    investorCount: 12,
-    size: 100000000,
-    fundraisingData: {
-      emails: [
-        {
-          id: 1,
-          subject: 'Q4 2023 Fund Performance Update',
-          date: '2024-01-15',
-          recipients: 12,
-          readBy: ['Goldman Sachs', 'JP Morgan Chase', 'BlackRock', 'Smith Family Office'],
-          status: 'sent'
-        },
-        {
-          id: 2,
-          subject: 'Capital Call Notice #3 - $5M',
-          date: '2024-01-10',
-          recipients: 12,
-          readBy: ['Goldman Sachs', 'JP Morgan Chase', 'BlackRock'],
-          status: 'sent'
-        },
-        {
-          id: 3,
-          subject: 'Portfolio Company Update: TechCorp Acquisition',
-          date: '2024-01-05',
-          recipients: 12,
-          readBy: ['Goldman Sachs', 'Smith Family Office', 'Tech Ventures LP'],
-          status: 'sent'
-        }
-      ],
-      callTranscripts: [
-        {
-          id: 1,
-          title: 'Goldman Sachs - Fund Performance Review',
-          date: '2024-01-12',
-          duration: '45 minutes',
-          participants: ['John Smith (Equitle)', 'Sarah Johnson (Goldman Sachs)'],
-          summary: 'Discussed Q4 performance, upcoming capital calls, and portfolio company updates',
-          status: 'completed'
-        },
-        {
-          id: 2,
-          title: 'JP Morgan Chase - Investment Committee Call',
-          date: '2024-01-08',
-          duration: '30 minutes',
-          participants: ['John Smith (Equitle)', 'Mike Chen (JPM)', 'Lisa Wang (JPM)'],
-          summary: 'Reviewed fund performance metrics and discussed co-investment opportunities',
-          status: 'completed'
-        }
-      ],
-      bankAccounts: [
-        {
-          id: 1,
-          name: 'Equitle Fund I - Main Account',
-          bank: 'JPMorgan Chase',
-          accountNumber: '****1234',
-          balance: 45000000,
-          currency: 'USD',
-          status: 'active'
-        },
-        {
-          id: 2,
-          name: 'Equitle Fund I - Capital Call Account',
-          bank: 'Goldman Sachs',
-          accountNumber: '****5678',
-          balance: 15000000,
-          currency: 'USD',
-          status: 'active'
-        }
-      ],
-      subscriptionAgreements: [
-        {
-          id: 1,
-          entityName: 'Goldman Sachs Asset Management',
-          date: '2023-01-15',
-          amount: 20000000,
-          status: 'signed',
-          version: 'v2.1'
-        },
-        {
-          id: 2,
-          entityName: 'JP Morgan Private Bank',
-          date: '2023-01-20',
-          amount: 18000000,
-          status: 'signed',
-          version: 'v2.1'
-        }
-      ],
-      capitalCalls: [
-        {
-          id: 1,
-          callNumber: 'CC-001',
-          date: '2023-03-15',
-          amount: 25000000,
-          dueDate: '2023-04-15',
-          status: 'completed',
-          collected: 25000000
-        },
-        {
-          id: 2,
-          callNumber: 'CC-002',
-          date: '2023-06-15',
-          amount: 20000000,
-          dueDate: '2023-07-15',
-          status: 'completed',
-          collected: 20000000
-        },
-        {
-          id: 3,
-          callNumber: 'CC-003',
-          date: '2024-01-10',
-          amount: 15000000,
-          dueDate: '2024-02-10',
-          status: 'pending',
-          collected: 10000000
-        }
-      ],
-      commitmentTimeline: [
-        { date: '2023-01-15', amount: 20000000, cumulative: 20000000 },
-        { date: '2023-01-20', amount: 18000000, cumulative: 38000000 },
-        { date: '2023-01-25', amount: 25000000, cumulative: 63000000 },
-        { date: '2023-02-01', amount: 10000000, cumulative: 73000000 },
-        { date: '2023-02-15', amount: 12000000, cumulative: 85000000 }
-      ]
-    },
-    investments: [
-      {
-        investor: 'Goldman Sachs',
-        entities: [
-          { name: 'Goldman Sachs Asset Management', amount: 20000000, type: 'Direct Investment', investmentType: 'Corporation' },
-          { name: 'GS Private Wealth Solutions', amount: 15000000, type: 'Client Account', investmentType: 'LLC' }
-        ]
-      },
-      {
-        investor: 'JP Morgan Chase',
-        entities: [
-          { name: 'JPM Private Bank', amount: 18000000, type: 'Private Banking', investmentType: 'Corporation' },
-          { name: 'Chase Investment Services', amount: 10000000, type: 'Investment Services', investmentType: 'Partnership' }
-        ]
-      },
-      {
-        investor: 'BlackRock',
-        entities: [
-          { name: 'BlackRock Alternative Investments', amount: 25000000, type: 'Direct Investment', investmentType: 'Corporation' }
-        ]
-      },
-      {
-        investor: 'Smith Family Office',
-        entities: [
-          { name: 'Smith Holdings LLC', amount: 6000000, type: 'Family LLC', investmentType: 'LLC' },
-          { name: 'Smith Investment Trust', amount: 3000000, type: 'Trust', investmentType: 'Trust' }
-        ]
-      },
-      {
-        investor: 'Tech Ventures LP',
-        entities: [
-          { name: 'Tech Ventures Main Fund', amount: 10000000, type: 'Fund of Funds', investmentType: 'Partnership' },
-          { name: 'Tech Ventures Co-Investment', amount: 6000000, type: 'Co-Investment Vehicle', investmentType: 'LLC' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'fund-2',
-    name: 'Equitle Growth Fund',
-    vintage: 2024,
-    targetSize: 150000000,
-    raisedAmount: 120000000,
-    status: 'Fundraising',
-    investorCount: 8,
-    size: 150000000,
-    investments: [
-      {
-        investor: 'Goldman Sachs',
-        entities: [
-          { name: 'Goldman Sachs Asset Management', amount: 10000000, type: 'Direct Investment', investmentType: 'Corporation' },
-          { name: 'GS Private Wealth Solutions', amount: 5000000, type: 'Client Account', investmentType: 'LLC' }
-        ]
-      },
-      {
-        investor: 'JP Morgan Chase',
-        entities: [
-          { name: 'JPM Private Bank', amount: 7000000, type: 'Private Banking', investmentType: 'Corporation' },
-          { name: 'Chase Investment Services', amount: 5000000, type: 'Investment Services', investmentType: 'Partnership' }
-        ]
-      },
-      {
-        investor: 'BlackRock',
-        entities: [
-          { name: 'BlackRock Alternative Investments', amount: 10000000, type: 'Direct Investment', investmentType: 'Corporation' }
-        ]
-      },
-      {
-        investor: 'Smith Family Office',
-        entities: [
-          { name: 'Smith Holdings LLC', amount: 4000000, type: 'Family LLC', investmentType: 'LLC' },
-          { name: 'Smith Investment Trust', amount: 2000000, type: 'Trust', investmentType: 'Trust' }
-        ]
-      },
-      {
-        investor: 'Tech Ventures LP',
-        entities: [
-          { name: 'Tech Ventures Main Fund', amount: 5000000, type: 'Fund of Funds', investmentType: 'Partnership' },
-          { name: 'Tech Ventures Co-Investment', amount: 4000000, type: 'Co-Investment Vehicle', investmentType: 'LLC' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'fund-3',
-    name: 'Equitle Opportunity Fund',
-    vintage: 2023,
-    targetSize: 150000000,
-    raisedAmount: 120000000,
-    status: 'Fundraising',
-    investorCount: 8,
-    size: 150000000,
-    investments: [
-      {
-        investor: 'BlackRock',
-        entities: [
-          { name: 'BlackRock Alternative Investments', amount: 40000000, type: 'Direct Investment', investmentType: 'Corporation' },
-          { name: 'iShares Private Markets', amount: 20000000, type: 'Fund Vehicle', investmentType: 'Corporation' }
-        ]
-      },
-      {
-        investor: 'Tech Ventures LP',
-        entities: [
-          { name: 'Tech Ventures Main Fund', amount: 35000000, type: 'Fund of Funds' },
-          { name: 'Tech Ventures Co-Investment', amount: 15000000, type: 'Co-Investment Vehicle' }
-        ]
-      }
-    ]
-  },
-  {
-    id: 3,
-    name: 'Equitle Seed Fund',
-    vintage: 2024,
-    targetSize: 50000000,
-    raisedAmount: 12000000,
-    status: 'Pre-Launch',
-    investorCount: 3,
-    investments: [
-      {
-        investor: 'Wilson Family Trust',
-        entities: [
-          { name: 'Wilson Investment LLC', amount: 8000000, type: 'Family LLC' }
-        ]
-      },
-      {
-        investor: 'Angel Syndicate Group',
-        entities: [
-          { name: 'Angel Syndicate Fund I', amount: 4000000, type: 'Syndicate Vehicle' }
-        ]
-      }
-    ]
-  }
-];
+// Real funds data - will be fetched from database when available
+const funds: any[] = [];
 
 // Custom Progress Bar Component
 const CapitalProgressBar = ({ raised, target, height = 8 }: { raised: number; target: number; height?: number }) => {
@@ -383,6 +121,7 @@ export default function Funds() {
   const [highlightedEntity, setHighlightedEntity] = useState<string | null>(null);
   const [fundDetailsOpen, setFundDetailsOpen] = useState(false);
   const [selectedFundDetails, setSelectedFundDetails] = useState<any>(null);
+  const [newFundModalOpen, setNewFundModalOpen] = useState(false);
   
   // Handle URL parameters for navigation from Investor Relations
   useEffect(() => {
@@ -455,6 +194,20 @@ export default function Funds() {
 
   const hasActiveFilters = statusFilter !== 'all' || vintageFilter !== 'all' || searchQuery !== '' || sizeFilter !== 'all';
 
+  const handleNewFundSuccess = () => {
+    // Refresh funds data or show success message
+    console.log('New fund created successfully');
+  };
+
+  const handleExportData = () => {
+    if (filteredFunds.length === 0) {
+      // If no funds, show a message or download empty report
+      downloadFundsPDF([], 'Empty_Funds_Portfolio_Report');
+    } else {
+      downloadFundsPDF(filteredFunds, 'Funds_Portfolio_Report');
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
@@ -467,11 +220,19 @@ export default function Funds() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined">
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={handleExportData}
+          >
             Export Data
           </Button>
-          <Button variant="contained" startIcon={<AddIcon />}>
-            Create Fund
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setNewFundModalOpen(true)}
+          >
+            Add New Fund
           </Button>
         </Box>
       </Box>
@@ -1205,6 +966,13 @@ export default function Funds() {
           <Button variant="contained" startIcon={<DownloadIcon />}>Export All Data</Button>
         </DialogActions>
       </Dialog>
+
+      {/* New Fund Modal */}
+      <NewFundModal
+        open={newFundModalOpen}
+        onClose={() => setNewFundModalOpen(false)}
+        onSuccess={handleNewFundSuccess}
+      />
     </Box>
   );
 }
