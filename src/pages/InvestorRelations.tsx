@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReportModal from '../components/ReportModal';
 import EmailUpdateModal from '../components/EmailUpdateModal';
 import NewLPModal from '../components/NewLPModal';
 import ManageGroupsModal from '../components/ManageGroupsModal';
+import InvestorsApiService, { Investor } from '../services/investorsApi';
 import {
   Box,
   Paper,
@@ -45,7 +46,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem as SelectMenuItem
+  MenuItem as SelectMenuItem,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -73,16 +76,14 @@ import {
   Gavel as GavelIcon,
   Security as SecurityIcon,
   Assignment as AssignmentIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 const fundPerformance: any[] = [];
-
-const investors: any[] = [];
-
 const recentCommunications: any[] = [];
-
 const upcomingEvents: any[] = [];
 
 // Custom Progress Bar Component (same as Funds page)
@@ -129,11 +130,52 @@ export default function InvestorRelations() {
   const [emailUpdateModalOpen, setEmailUpdateModalOpen] = useState(false);
   const [newLPModalOpen, setNewLPModalOpen] = useState(false);
   const [manageGroupsModalOpen, setManageGroupsModalOpen] = useState(false);
+  const [investors, setInvestors] = useState<Investor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   
   // Filter states
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [commitmentFilter, setCommitmentFilter] = useState<string>('all');
+
+  // Fetch investors data
+  const fetchInvestors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const investorsData = await InvestorsApiService.getInvestors();
+
+      // Transform API data to match UI expectations
+      const transformedInvestors = investorsData.map(investor => ({
+        ...investor,
+        commitment: investor.totalCommitment || 0,
+        called: investor.totalCalled || 0,
+        // Map database fields to UI expectations
+        name: investor.name,
+        type: investor.type.replace('_', ' '),
+        status: investor.status
+      }));
+
+      setInvestors(transformedInvestors);
+    } catch (err: any) {
+      console.error('Error fetching investors:', err);
+      setError(err.message || 'Failed to fetch investors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvestors();
+  }, []);
+
+  // Handle successful investor creation
+  const handleInvestorCreated = () => {
+    fetchInvestors(); // Refresh the investors list
+  };
 
   // Filter logic
   const filteredInvestors = investors.filter(investor => {
@@ -141,16 +183,16 @@ export default function InvestorRelations() {
     const matchesStatus = statusFilter === 'all' || investor.status === statusFilter;
     const matchesSearch = searchTerm === '' || investor.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCommitment = commitmentFilter === 'all' ||
-      (commitmentFilter === 'small' && investor.commitment <= 20000000) ||
-      (commitmentFilter === 'medium' && investor.commitment > 20000000 && investor.commitment <= 40000000) ||
-      (commitmentFilter === 'large' && investor.commitment > 40000000);
+      (commitmentFilter === 'small' && (investor.totalCommitment || 0) <= 20000000) ||
+      (commitmentFilter === 'medium' && (investor.totalCommitment || 0) > 20000000 && (investor.totalCommitment || 0) <= 40000000) ||
+      (commitmentFilter === 'large' && (investor.totalCommitment || 0) > 40000000);
     
     return matchesType && matchesStatus && matchesSearch && matchesCommitment;
   });
 
   // Calculate metrics based on filtered investors
-  const totalCommitment = filteredInvestors.reduce((sum, inv) => sum + (inv.commitment || 0), 0);
-  const totalCalled = filteredInvestors.reduce((sum, inv) => sum + (inv.called || 0), 0);
+  const totalCommitment = filteredInvestors.reduce((sum, inv) => sum + (inv.totalCommitment || 0), 0);
+  const totalCalled = filteredInvestors.reduce((sum, inv) => sum + (inv.totalCalled || 0), 0);
   const callPercentage = totalCommitment > 0 ? (totalCalled / totalCommitment) * 100 : 0;
 
   // Calculate real investor type distribution from actual data
@@ -267,10 +309,44 @@ export default function InvestorRelations() {
 
   const handleNewLPSuccess = () => {
     console.log('New LP added successfully');
+    handleInvestorCreated(); // Refresh the data
   };
 
   const handleManageGroupsSuccess = () => {
     console.log('LP groups updated successfully');
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, investorId: string) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedInvestorId(investorId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedInvestorId(null);
+  };
+
+  const handleDeleteInvestor = () => {
+    setDeleteConfirmOpen(true);
+    setAnchorEl(null); // Close menu but keep selectedInvestorId
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedInvestorId) {
+      try {
+        await InvestorsApiService.deleteInvestor(selectedInvestorId);
+        fetchInvestors(); // Refresh the investors list
+        setDeleteConfirmOpen(false);
+        setSelectedInvestorId(null); // Reset selected investor
+      } catch (error) {
+        console.error('Error deleting investor:', error);
+      }
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setSelectedInvestorId(null); // Reset selected investor
   };
 
   return (
@@ -576,14 +652,41 @@ export default function InvestorRelations() {
                   Investor Portfolio {hasActiveFilters && `(${filteredInvestors.length} investors)`}
                 </Typography>
                 
-                {filteredInvestors.length === 0 ? (
+{loading ? (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <CircularProgress size={48} sx={{ mb: 2 }} />
+                    <Typography variant="body1" color="text.secondary">
+                      Loading investors...
+                    </Typography>
+                  </Box>
+                ) : error ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Alert severity="error" sx={{ mb: 2, maxWidth: 600 }}>
+                      {error}
+                    </Alert>
+                    <Button variant="outlined" onClick={fetchInvestors}>
+                      Retry
+                    </Button>
+                  </Box>
+                ) : filteredInvestors.length === 0 ? (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
-                      No investors match the current filters
+                      {investors.length === 0 ? 'No investors found. Add your first LP to get started!' : 'No investors match the current filters'}
                     </Typography>
-                    <Button onClick={clearFilters} sx={{ mt: 2 }}>
-                      Clear Filters
-                    </Button>
+                    {investors.length === 0 ? (
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => setNewLPModalOpen(true)}
+                        sx={{ mt: 2 }}
+                      >
+                        Add New LP
+                      </Button>
+                    ) : (
+                      <Button onClick={clearFilters} sx={{ mt: 2 }}>
+                        Clear Filters
+                      </Button>
+                    )}
                   </Box>
                 ) : (
                   <TableContainer>
@@ -617,16 +720,16 @@ export default function InvestorRelations() {
                               <Chip label={investor?.type || 'Unknown'} size="small" variant="outlined" />
                             </TableCell>
                             <TableCell align="right">
-                              ${((investor?.commitment || 0) / 1000000).toFixed(1)}M
+                              ${((investor?.totalCommitment || 0) / 1000000).toFixed(1)}M
                             </TableCell>
                             <TableCell align="right">
-                              ${((investor?.called || 0) / 1000000).toFixed(1)}M
+                              ${((investor?.totalCalled || 0) / 1000000).toFixed(1)}M
                             </TableCell>
                             <TableCell>
                               <Box sx={{ minWidth: 150 }}>
                                 <CapitalProgressBar
-                                  raised={investor?.called || 0}
-                                  target={investor?.commitment || 1}
+                                  raised={investor?.totalCalled || 0}
+                                  target={investor?.totalCommitment || 1}
                                   height={6}
                                 />
                               </Box>
@@ -649,7 +752,7 @@ export default function InvestorRelations() {
                               </Button>
                             </TableCell>
                             <TableCell>
-                              <IconButton size="small">
+                              <IconButton size="small" onClick={(e) => handleMenuOpen(e, investor.id)}>
                                 <MoreVertIcon fontSize="small" />
                               </IconButton>
                             </TableCell>
@@ -1185,6 +1288,52 @@ export default function InvestorRelations() {
         onClose={() => setNewLPModalOpen(false)}
         onSuccess={handleNewLPSuccess}
       />
+
+      {/* Investors Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleMenuClose}>
+          <EditIcon fontSize="small" sx={{ mr: 1 }} />
+          Edit Investor
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+          <VisibilityIcon fontSize="small" sx={{ mr: 1 }} />
+          View Details
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+          <EmailIcon fontSize="small" sx={{ mr: 1 }} />
+          Send Email
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleDeleteInvestor} sx={{ color: 'error.main' }}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Investor
+        </MenuItem>
+      </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this investor? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Manage Groups Modal */}
       <ManageGroupsModal

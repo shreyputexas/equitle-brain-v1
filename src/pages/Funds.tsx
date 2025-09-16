@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import NewFundModal from '../components/NewFundModal';
 import { downloadFundsPDF } from '../services/pdfGenerator';
+import FundsApiService, { Fund } from '../services/fundsApi';
 import {
   Box,
   Paper,
@@ -45,7 +46,9 @@ import {
   InputAdornment,
   Stack,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -73,11 +76,12 @@ import {
   AttachFile as AttachFileIcon,
   PlayArrow as PlayIcon,
   Stop as StopIcon,
-  Pause as PauseIcon
+  Pause as PauseIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 
-// Real funds data - will be fetched from database when available
-const funds: any[] = [];
+// Funds data will be fetched from API
 
 // Custom Progress Bar Component
 const CapitalProgressBar = ({ raised, target, height = 8 }: { raised: number; target: number; height?: number }) => {
@@ -122,7 +126,36 @@ export default function Funds() {
   const [fundDetailsOpen, setFundDetailsOpen] = useState(false);
   const [selectedFundDetails, setSelectedFundDetails] = useState<any>(null);
   const [newFundModalOpen, setNewFundModalOpen] = useState(false);
-  
+  const [funds, setFunds] = useState<Fund[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFundId, setSelectedFundId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  // Fetch funds data
+  const fetchFunds = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const fundsData = await FundsApiService.getFunds();
+      setFunds(fundsData);
+    } catch (err: any) {
+      console.error('Error fetching funds:', err);
+      setError(err.message || 'Failed to fetch funds');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFunds();
+  }, []);
+
+  // Handle successful fund creation
+  const handleFundCreated = () => {
+    fetchFunds(); // Refresh the funds list
+  };
+
   // Handle URL parameters for navigation from Investor Relations
   useEffect(() => {
     const highlight = searchParams.get('highlight');
@@ -176,6 +209,44 @@ export default function Funds() {
     setFundDetailsOpen(true);
   };
 
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, fundId: string) => {
+    console.log('Menu opened for fund:', fundId);
+    setAnchorEl(event.currentTarget);
+    setSelectedFundId(fundId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedFundId(null);
+  };
+
+  const handleDeleteFund = () => {
+    console.log('Delete fund clicked for:', selectedFundId);
+    setDeleteConfirmOpen(true);
+    setAnchorEl(null); // Close menu but keep selectedFundId
+  };
+
+  const handleConfirmDelete = async () => {
+    console.log('Confirm delete clicked for fund:', selectedFundId);
+    if (selectedFundId) {
+      try {
+        console.log('Calling delete API for fund:', selectedFundId);
+        await FundsApiService.deleteFund(selectedFundId);
+        console.log('Delete API call successful');
+        fetchFunds(); // Refresh the funds list
+        setDeleteConfirmOpen(false);
+        setSelectedFundId(null); // Reset selected fund
+      } catch (error) {
+        console.error('Error deleting fund:', error);
+      }
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setSelectedFundId(null); // Reset selected fund
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active': return 'success';
@@ -195,8 +266,8 @@ export default function Funds() {
   const hasActiveFilters = statusFilter !== 'all' || vintageFilter !== 'all' || searchQuery !== '' || sizeFilter !== 'all';
 
   const handleNewFundSuccess = () => {
-    // Refresh funds data or show success message
-    console.log('New fund created successfully');
+    // Refresh funds data after successful creation
+    fetchFunds();
   };
 
   const handleExportData = () => {
@@ -431,14 +502,56 @@ export default function Funds() {
           Fund Portfolio {hasActiveFilters && `(${filteredFunds.length} funds)`}
         </Typography>
         
-        {filteredFunds.length === 0 ? (
+        {loading ? (
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: 8
+          }}>
+            <CircularProgress size={48} sx={{ mb: 2 }} />
+            <Typography variant="body1" color="text.secondary">
+              Loading funds...
+            </Typography>
+          </Box>
+        ) : error ? (
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            py: 4
+          }}>
+            <Alert severity="error" sx={{ mb: 2, maxWidth: 600 }}>
+              {error}
+            </Alert>
+            <Button
+              variant="outlined"
+              onClick={fetchFunds}
+            >
+              Retry
+            </Button>
+          </Box>
+        ) : filteredFunds.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="body1" color="text.secondary">
-              No funds match the current filters
+              {hasActiveFilters ? 'No funds match the current filters' : 'No funds found. Create your first fund to get started!'}
             </Typography>
-            <Button onClick={clearFilters} sx={{ mt: 2 }}>
-              Clear Filters
-            </Button>
+            {hasActiveFilters ? (
+              <Button onClick={clearFilters} sx={{ mt: 2 }}>
+                Clear Filters
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setNewFundModalOpen(true)}
+                sx={{ mt: 2 }}
+              >
+                Add New Fund
+              </Button>
+            )}
           </Box>
         ) : (
           <TableContainer>
@@ -523,7 +636,7 @@ export default function Funds() {
                           >
                             Details
                           </Button>
-                          <IconButton size="small">
+                          <IconButton size="small" onClick={(e) => handleMenuOpen(e, fund.id)}>
                             <MoreVertIcon fontSize="small" />
                           </IconButton>
                         </Box>
@@ -964,6 +1077,55 @@ export default function Funds() {
         <DialogActions>
           <Button onClick={() => setFundDetailsOpen(false)}>Close</Button>
           <Button variant="contained" startIcon={<DownloadIcon />}>Export All Data</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Funds Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleMenuClose}>
+          <EditIcon fontSize="small" sx={{ mr: 1 }} />
+          Edit Fund
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+          <VisibilityIcon fontSize="small" sx={{ mr: 1 }} />
+          View Details
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+          <DownloadIcon fontSize="small" sx={{ mr: 1 }} />
+          Export Data
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => {
+          console.log('Delete menu item clicked!');
+          handleDeleteFund();
+        }} sx={{ color: 'error.main' }}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Fund
+        </MenuItem>
+      </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this fund? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
 

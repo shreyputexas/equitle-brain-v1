@@ -12,6 +12,7 @@ import dealRoutes from './routes/deals';
 import brainRoutes from './routes/brain';
 import investorRoutes from './routes/investors';
 import fundsRoutes from './routes/funds';
+import lpGroupsRoutes from './routes/lp-groups';
 import companyRoutes from './routes/companies';
 import contactRoutes from './routes/contacts';
 import reportRoutes from './routes/reports';
@@ -39,7 +40,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), 
@@ -68,8 +69,9 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/deals', dealRoutes);
 app.use('/api/brain', authMiddleware, brainRoutes);
-app.use('/api/investors', investorRoutes);
-app.use('/api/funds', fundsRoutes);
+app.use('/api/investors', authMiddleware, investorRoutes);
+app.use('/api/funds', authMiddleware, fundsRoutes);
+app.use('/api/lp-groups', authMiddleware, lpGroupsRoutes);
 app.use('/api/companies', authMiddleware, companyRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);

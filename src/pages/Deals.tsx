@@ -67,11 +67,13 @@ import {
   Reply as ReplyIcon,
   Forward as ForwardIcon,
   VideoCall as VideoCallIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDeals } from '../hooks/useDeals';
 import { Deal as ApiDeal } from '../services/dealsApi';
+import dealsApi from '../services/dealsApi';
 import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 
@@ -153,6 +155,7 @@ export default function Deals() {
   const [editingPerson, setEditingPerson] = useState<string | null>(null);
   const [interactionModalOpen, setInteractionModalOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [newDealModalOpen, setNewDealModalOpen] = useState(false);
   const [editDealModalOpen, setEditDealModalOpen] = useState(false);
@@ -175,6 +178,27 @@ export default function Deals() {
   const handleMenuClose = () => {
     setAnchorEl(null);
     setSelectedDealId(null);
+  };
+
+  const handleDeleteDeal = () => {
+    setDeleteConfirmOpen(true);
+    handleMenuClose();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedDealId) {
+      try {
+        await dealsApi.deleteDeal(selectedDealId);
+        refreshDeals();
+        setDeleteConfirmOpen(false);
+      } catch (error) {
+        console.error('Error deleting deal:', error);
+      }
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmOpen(false);
   };
 
   const toggleDealExpansion = (dealId: string) => {
@@ -1138,8 +1162,32 @@ export default function Deals() {
           Generate Report
         </MenuItem>
         <Divider />
-        <MenuItem onClick={handleMenuClose}>Archive Deal</MenuItem>
+        <MenuItem onClick={handleDeleteDeal} sx={{ color: 'error.main' }}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Deal
+        </MenuItem>
       </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this deal? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Interaction Details Modal */}
       <Dialog

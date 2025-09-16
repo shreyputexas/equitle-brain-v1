@@ -129,7 +129,17 @@ class DealsApiService {
   constructor() {
     // Configure axios defaults
     axios.defaults.baseURL = this.baseURL;
-    axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
+  }
+
+  private getAuthToken() {
+    return localStorage.getItem('token');
+  }
+
+  private getAuthHeaders() {
+    const token = this.getAuthToken();
+    // For development, use mock token if no real token exists
+    const authToken = token || 'mock-token';
+    return { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' };
   }
 
   /**
@@ -146,7 +156,9 @@ class DealsApiService {
       if (filters.limit) params.append('limit', filters.limit.toString());
       if (filters.offset) params.append('offset', filters.offset.toString());
 
-      const response = await axios.get(`/deals?${params.toString()}`);
+      const response = await axios.get(`/deals?${params.toString()}`, {
+        headers: this.getAuthHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching deals:', error);
@@ -159,7 +171,9 @@ class DealsApiService {
    */
   async getDeal(id: string): Promise<DealResponse> {
     try {
-      const response = await axios.get(`/deals/${id}`);
+      const response = await axios.get(`/deals/${id}`, {
+        headers: this.getAuthHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error(`Error fetching deal ${id}:`, error);
@@ -172,7 +186,9 @@ class DealsApiService {
    */
   async createDeal(dealData: CreateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.post('/deals', dealData);
+      const response = await axios.post('/deals', dealData, {
+        headers: this.getAuthHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error('Error creating deal:', error);
@@ -185,7 +201,9 @@ class DealsApiService {
    */
   async updateDeal(id: string, dealData: UpdateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.put(`/deals/${id}`, dealData);
+      const response = await axios.put(`/deals/${id}`, dealData, {
+        headers: this.getAuthHeaders()
+      });
       return response.data;
     } catch (error) {
       console.error(`Error updating deal ${id}:`, error);
@@ -198,7 +216,9 @@ class DealsApiService {
    */
   async deleteDeal(id: string): Promise<void> {
     try {
-      await axios.delete(`/deals/${id}`);
+      await axios.delete(`/deals/${id}`, {
+        headers: this.getAuthHeaders()
+      });
     } catch (error) {
       console.error(`Error deleting deal ${id}:`, error);
       throw error;
@@ -210,7 +230,9 @@ class DealsApiService {
    */
   async addContactToDeal(dealId: string, contactId: string): Promise<void> {
     try {
-      await axios.post(`/deals/${dealId}/contacts`, { contactId });
+      await axios.post(`/deals/${dealId}/contacts`, { contactId }, {
+        headers: this.getAuthHeaders()
+      });
     } catch (error) {
       console.error(`Error adding contact to deal ${dealId}:`, error);
       throw error;

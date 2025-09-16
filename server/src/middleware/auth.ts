@@ -17,11 +17,22 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
-    // For development: use default user from database
-    if (token === 'mock-token' || process.env.NODE_ENV === 'development') {
+    // For development: use specific mock tokens
+    if (token === 'mock-token') {
       (req as any).user = {
-        id: 'default-user-id',
+        id: 'mock-user-id',
         email: 'demo@equitle.com',
+        role: 'admin',
+        type: 'access'
+      };
+      next();
+      return;
+    }
+
+    if (token === 'user2-token') {
+      (req as any).user = {
+        id: 'user2-id',
+        email: 'user2@equitle.com',
         role: 'admin',
         type: 'access'
       };
