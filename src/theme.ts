@@ -10,9 +10,9 @@ const theme = createTheme({
       contrastText: '#FFFFFF'
     },
     secondary: {
-      main: '#5E5CE6',
-      light: '#7C7AED',
-      dark: '#4A48C7',
+      main: '#9CA3AF',
+      light: '#D1D5DB',
+      dark: '#374151',
       contrastText: '#FFFFFF'
     },
     background: {
@@ -107,7 +107,7 @@ const theme = createTheme({
           boxShadow: 'none',
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 8px 20px rgba(94, 92, 230, 0.25)'
+            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)'
           }
         },
         contained: {
@@ -152,7 +152,7 @@ const theme = createTheme({
           '&:hover': {
             transform: 'translateY(-4px)',
             boxShadow: '0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)',
-            border: '1px solid rgba(94, 92, 230, 0.15)'
+            border: '1px solid rgba(156, 163, 175, 0.15)'
           }
         }
       }
@@ -169,12 +169,12 @@ const theme = createTheme({
               borderWidth: '1.5px'
             },
             '&:hover fieldset': {
-              borderColor: 'rgba(94, 92, 230, 0.3)'
+              borderColor: 'rgba(156, 163, 175, 0.3)'
             },
             '&.Mui-focused': {
               backgroundColor: '#FFFFFF',
               '& fieldset': {
-                borderColor: '#5E5CE6',
+                borderColor: '#9CA3AF',
                 borderWidth: '2px'
               }
             }
@@ -186,13 +186,13 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
-          backgroundColor: 'rgba(94, 92, 230, 0.08)',
-          border: '1px solid rgba(94, 92, 230, 0.2)',
+          backgroundColor: 'rgba(156, 163, 175, 0.08)',
+          border: '1px solid rgba(156, 163, 175, 0.2)',
           color: '#0A0A0A',
           fontWeight: 500,
           transition: 'all 0.2s ease-in-out',
           '&:hover': {
-            backgroundColor: 'rgba(94, 92, 230, 0.15)',
+            backgroundColor: 'rgba(156, 163, 175, 0.15)',
             transform: 'scale(1.05)'
           }
         }
@@ -201,7 +201,7 @@ const theme = createTheme({
     MuiAvatar: {
       styleOverrides: {
         root: {
-          backgroundColor: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          backgroundColor: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           fontWeight: 600
         }
       }
@@ -211,11 +211,11 @@ const theme = createTheme({
         root: {
           height: 8,
           borderRadius: 4,
-          backgroundColor: 'rgba(94, 92, 230, 0.1)'
+          backgroundColor: 'rgba(156, 163, 175, 0.1)'
         },
         bar: {
           borderRadius: 4,
-          background: 'linear-gradient(90deg, #5E5CE6 0%, #7C7AED 100%)'
+          background: 'linear-gradient(90deg, #9CA3AF 0%, #374151 100%)'
         }
       }
     }

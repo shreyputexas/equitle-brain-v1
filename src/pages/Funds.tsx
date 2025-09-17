@@ -585,7 +585,7 @@ export default function Funds() {
                       {investment.entities.map((entity: any, entityIndex: number) => (
                         <ListItem key={entityIndex}>
                           <ListItemAvatar>
-                            <Avatar sx={{ width: 24, height: 24, bgcolor: 'secondary.main' }}>
+                            <Avatar sx={{ width: 24, height: 24, bgcolor: '#9CA3AF' }}>
                               <BusinessIcon fontSize="small" />
                             </Avatar>
                           </ListItemAvatar>

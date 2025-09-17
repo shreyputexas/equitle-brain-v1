@@ -195,7 +195,7 @@ export default function Brain() {
                 >
                   <Avatar
                     sx={{
-                      bgcolor: message.type === 'user' ? 'secondary.main' : 'primary.main',
+                      bgcolor: message.type === 'user' ? '#9CA3AF' : 'primary.main',
                       mx: 1
                     }}
                   >
@@ -205,7 +205,7 @@ export default function Brain() {
                     sx={{
                       bgcolor: message.type === 'user' ? 'background.paper' : 'background.default',
                       border: '1px solid',
-                      borderColor: message.type === 'user' ? 'secondary.main' : 'primary.main',
+                      borderColor: message.type === 'user' ? '#9CA3AF' : 'primary.main',
                       borderRadius: 2
                     }}
                   >

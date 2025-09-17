@@ -335,7 +335,7 @@ export default function Resources() {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-        <Avatar sx={{ bgcolor: 'secondary.main' }}>
+        <Avatar sx={{ bgcolor: '#9CA3AF' }}>
           {resource.icon}
         </Avatar>
         <Box sx={{ flex: 1 }}>
@@ -344,8 +344,8 @@ export default function Resources() {
               label={resource.type} 
               size="small"
               sx={{ 
-                bgcolor: 'rgba(94, 92, 230, 0.1)',
-                color: 'secondary.main',
+                bgcolor: 'rgba(156, 163, 175, 0.1)',
+                  color: '#374151',
                 fontWeight: 500
               }}
             />
@@ -451,7 +451,7 @@ export default function Resources() {
               <Box 
                 component="span" 
                 sx={{ 
-                  background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                  background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}
@@ -632,15 +632,15 @@ export default function Resources() {
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                    <Avatar sx={{ bgcolor: '#9CA3AF' }}>
                       <CalendarIcon />
                     </Avatar>
                     <Chip 
                       label={event.type}
                       size="small"
                       sx={{
-                        bgcolor: 'rgba(94, 92, 230, 0.1)',
-                        color: 'secondary.main'
+                        bgcolor: 'rgba(156, 163, 175, 0.1)',
+                        color: '#374151'
                       }}
                     />
                   </Box>
@@ -703,7 +703,7 @@ export default function Resources() {
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  <Avatar sx={{ bgcolor: 'secondary.main', width: 56, height: 56, mx: 'auto', mb: 2 }}>
+                  <Avatar sx={{ bgcolor: '#9CA3AF', width: 56, height: 56, mx: 'auto', mb: 2 }}>
                     {option.icon}
                   </Avatar>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -715,7 +715,7 @@ export default function Resources() {
                   <Button
                     variant="contained"
                     sx={{
-                      background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)'
+                      background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)'
                     }}
                   >
                     {option.action}
@@ -731,7 +731,7 @@ export default function Resources() {
       <Box 
         sx={{ 
           py: 12, 
-          background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           color: 'white'
         }}
       >

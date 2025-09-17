@@ -53,74 +53,74 @@ export default function Pricing() {
 
   const plans = [
     {
-      name: 'Starter',
-      description: 'Perfect for emerging managers and small funds',
+      name: 'Searcher',
+      description: 'Perfect for individual search funders and small teams',
       icon: <SpeedIcon />,
-      monthlyPrice: 2500,
-      annualPrice: 2000,
+      monthlyPrice: 1500,
+      annualPrice: 1200,
       popular: false,
       color: '#6B7280',
       features: [
-        { name: 'Up to 50 deals in pipeline', included: true },
-        { name: 'Basic deal tracking & management', included: true },
-        { name: 'Standard portfolio dashboard', included: true },
+        { name: 'Up to 100 target companies', included: true },
+        { name: 'Basic relationship tracking', included: true },
+        { name: 'Email automation & templates', included: true },
         { name: 'Email & chat support', included: true },
-        { name: 'Basic reporting templates', included: true },
-        { name: 'Up to 5 team members', included: true },
+        { name: 'Basic deal pipeline management', included: true },
+        { name: 'Up to 2 team members', included: true },
         { name: 'Data export capabilities', included: true },
         { name: 'Mobile app access', included: true },
-        { name: 'AI-powered insights', included: false },
-        { name: 'Custom workflows', included: false },
-        { name: 'Advanced analytics', included: false },
+        { name: 'AI-powered deal scoring', included: false },
+        { name: 'Advanced relationship analytics', included: false },
+        { name: 'Custom outreach campaigns', included: false },
         { name: 'API access', included: false },
-        { name: 'White-label reports', included: false },
+        { name: 'Investor reporting tools', included: false },
         { name: 'Dedicated support', included: false }
       ]
     },
     {
-      name: 'Professional',
-      description: 'Ideal for growing mid-market funds',
+      name: 'Search Fund',
+      description: 'Ideal for established search funds with multiple team members',
       icon: <BusinessIcon />,
-      monthlyPrice: 4500,
-      annualPrice: 3600,
+      monthlyPrice: 3000,
+      annualPrice: 2400,
       popular: true,
-      color: '#5E5CE6',
+      color: '#9CA3AF',
       features: [
-        { name: 'Up to 200 deals in pipeline', included: true },
-        { name: 'Advanced deal management', included: true },
-        { name: 'Custom portfolio dashboards', included: true },
+        { name: 'Up to 500 target companies', included: true },
+        { name: 'Advanced relationship management', included: true },
+        { name: 'Custom deal pipeline dashboards', included: true },
         { name: 'Priority support + phone', included: true },
-        { name: 'Custom reporting & white-label', included: true },
-        { name: 'Up to 15 team members', included: true },
+        { name: 'Custom investor reporting', included: true },
+        { name: 'Up to 5 team members', included: true },
         { name: 'Advanced data integration', included: true },
         { name: 'Mobile app + offline access', included: true },
-        { name: 'AI-powered insights & scoring', included: true },
-        { name: 'Custom workflows & automation', included: true },
-        { name: 'Advanced analytics & forecasting', included: true },
+        { name: 'AI-powered deal scoring & insights', included: true },
+        { name: 'Custom outreach campaigns', included: true },
+        { name: 'Advanced relationship analytics', included: true },
         { name: 'Standard API access', included: true },
-        { name: 'White-label reports', included: true },
+        { name: 'White-label investor reports', included: true },
         { name: 'Dedicated success manager', included: false }
       ]
     },
     {
       name: 'Enterprise',
-      description: 'For large-cap funds and institutional investors',
+      description: 'For large search funds and multi-fund platforms',
       icon: <RocketIcon />,
       monthlyPrice: null,
       annualPrice: null,
       popular: false,
       color: '#10B981',
       features: [
-        { name: 'Unlimited deals & portfolio companies', included: true },
-        { name: 'Full-featured deal & portfolio management', included: true },
+        { name: 'Unlimited target companies', included: true },
+        { name: 'Full-featured relationship & deal management', included: true },
         { name: 'Unlimited custom dashboards', included: true },
         { name: '24/7 dedicated support', included: true },
-        { name: 'Unlimited custom reports', included: true },
+        { name: 'Unlimited custom investor reports', included: true },
         { name: 'Unlimited team members', included: true },
         { name: 'Enterprise integrations', included: true },
         { name: 'White-label mobile apps', included: true },
         { name: 'Advanced AI & machine learning', included: true },
-        { name: 'Enterprise workflow engine', included: true },
+        { name: 'Enterprise workflow automation', included: true },
         { name: 'Predictive analytics & modeling', included: true },
         { name: 'Full API access & webhooks', included: true },
         { name: 'Fully branded platform', included: true },
@@ -240,8 +240,8 @@ export default function Pricing() {
               label="TRANSPARENT PRICING" 
               sx={{ 
                 mb: 3,
-                background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                border: '1px solid rgba(94, 92, 230, 0.2)',
+                background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(55, 65, 81, 0.1) 100%)',
+                border: '1px solid rgba(156, 163, 175, 0.2)',
                 fontWeight: 600
               }}
             />
@@ -259,7 +259,7 @@ export default function Pricing() {
               <Box 
                 component="span" 
                 sx={{ 
-                  background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                  background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}
@@ -313,7 +313,7 @@ export default function Pricing() {
                     p: 4,
                     height: '100%',
                     position: 'relative',
-                    border: plan.popular ? `2px solid ${plan.color}` : '1px solid rgba(94, 92, 230, 0.08)',
+                    border: plan.popular ? `2px solid ${plan.color}` : '1px solid rgba(156, 163, 175, 0.08)',
                     transform: plan.popular ? 'scale(1.05)' : 'scale(1)',
                     '&:hover': {
                       boxShadow: `0 12px 32px ${plan.color}20`
@@ -475,21 +475,21 @@ export default function Pricing() {
                   sx={{
                     p: 3,
                     height: '100%',
-                    border: '1px solid rgba(94, 92, 230, 0.08)',
+                    border: '1px solid rgba(156, 163, 175, 0.08)',
                     '&:hover': {
                       boxShadow: '0 8px 24px rgba(94, 92, 230, 0.1)'
                     }
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                    <Avatar sx={{ bgcolor: '#9CA3AF' }}>
                       {addOn.icon}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {addOn.name}
                       </Typography>
-                      <Typography variant="h5" sx={{ fontWeight: 700, color: 'secondary.main' }}>
+                      <Typography variant="h5" sx={{ fontWeight: 700, color: '#374151' }}>
                         ${addOn.price}/month
                       </Typography>
                     </Box>
@@ -626,7 +626,7 @@ export default function Pricing() {
             </Grid>
             <Grid item xs={12} md={4}>
               <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <Avatar sx={{ bgcolor: '#5E5CE6', width: 56, height: 56, mx: 'auto', mb: 2 }}>
+                <Avatar sx={{ bgcolor: '#9CA3AF', width: 56, height: 56, mx: 'auto', mb: 2 }}>
                   <SupportIcon />
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -635,7 +635,7 @@ export default function Pricing() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Personal advisor to help optimize your investment process
                 </Typography>
-                <Chip label="Enterprise Only" size="small" sx={{ bgcolor: 'secondary.main', color: 'white' }} />
+                <Chip label="Enterprise Only" size="small" sx={{ bgcolor: '#9CA3AF', color: 'white' }} />
               </Card>
             </Grid>
           </Grid>
@@ -711,7 +711,7 @@ export default function Pricing() {
       <Box 
         sx={{ 
           py: 12, 
-          background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           color: 'white'
         }}
       >
@@ -736,7 +736,7 @@ export default function Pricing() {
                 size="large"
                 sx={{
                   background: 'white',
-                  color: 'secondary.main',
+                  color: '#374151',
                   py: 1.5,
                   px: 4,
                   '&:hover': {

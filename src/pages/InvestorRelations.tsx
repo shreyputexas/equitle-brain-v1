@@ -778,7 +778,7 @@ export default function InvestorRelations() {
                   <React.Fragment key={entity.id}>
                     <ListItem>
                       <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                        <Avatar sx={{ bgcolor: '#9CA3AF' }}>
                           <BusinessIcon />
                         </Avatar>
                       </ListItemAvatar>

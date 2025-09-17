@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
   Typography,
   Button,
   IconButton
@@ -32,41 +31,47 @@ export default function MarketingHeader() {
         left: 0,
         right: 0,
         zIndex: 1300,
-        padding: { xs: '1rem 12px', md: '12px 16px' },
-        pointerEvents: 'none'
+        padding: 0,
+        pointerEvents: 'none',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
-      <Container maxWidth="lg">
-        <Box
-          sx={{
-            pointerEvents: 'auto',
-            margin: '0 auto',
-            maxWidth: '1200px',
-            padding: { xs: '1rem 1.25rem', md: '1.25rem 1.5rem' },
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'saturate(180%) blur(20px)',
-            border: '1px solid rgba(94, 92, 230, 0.08)',
-            borderRadius: { xs: '12px', md: '14px' },
-            boxShadow: scrolled 
-              ? '0 8px 32px rgba(0, 0, 0, 0.12)' 
-              : '0 4px 24px rgba(0, 0, 0, 0.08)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
+      <Box
+        sx={{
+          pointerEvents: 'auto',
+          width: '100%',
+          padding: scrolled 
+            ? { xs: '0.75rem 1.25rem', md: '1rem 2rem' }
+            : { xs: '1rem 2rem', md: '1.5rem 3rem' },
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'saturate(180%) blur(20px)',
+          border: scrolled ? '1px solid rgba(0, 0, 0, 0.08)' : 'none',
+          borderRadius: scrolled ? { xs: '12px', md: '14px' } : 0,
+          boxShadow: scrolled 
+            ? '0 8px 32px rgba(0, 0, 0, 0.12)' 
+            : '0 4px 24px rgba(0, 0, 0, 0.08)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          maxWidth: scrolled ? '1200px' : '100%',
+          margin: scrolled ? '0 auto' : '0'
+        }}
+      >
           <Box
             component="img"
             src="/assets/images/extended_logo_black_white.png"
             alt="Equitle"
             sx={{
-              height: { xs: '2.25rem', md: '2.75rem' },
+              height: scrolled 
+                ? { xs: '2rem', md: '2.25rem' }
+                : { xs: '2.5rem', md: '3rem' },
               filter: 'brightness(0)',
               opacity: 0.95,
               objectFit: 'contain',
               mr: { xs: '2rem', md: '4rem' },
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
             onClick={() => navigate('/')}
           />
@@ -80,8 +85,8 @@ export default function MarketingHeader() {
                 fontSize: '0.9rem',
                 textTransform: 'none',
                 '&:hover': {
-                  color: 'secondary.main',
-                  bgcolor: 'rgba(94, 92, 230, 0.04)'
+                  color: 'text.primary',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
                 }
               }}
             >
@@ -95,12 +100,27 @@ export default function MarketingHeader() {
                 fontSize: '0.9rem',
                 textTransform: 'none',
                 '&:hover': {
-                  color: 'secondary.main',
-                  bgcolor: 'rgba(94, 92, 230, 0.04)'
+                  color: 'text.primary',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
                 }
               }}
             >
               Solutions
+            </Button>
+            <Button 
+              onClick={() => navigate('/manifesto')}
+              sx={{ 
+                color: 'text.primary',
+                fontWeight: 500,
+                fontSize: '0.9rem',
+                textTransform: 'none',
+                '&:hover': {
+                  color: 'text.primary',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
+                }
+              }}
+            >
+              Manifesto
             </Button>
             <Button 
               onClick={() => navigate('/pricing')}
@@ -110,8 +130,8 @@ export default function MarketingHeader() {
                 fontSize: '0.9rem',
                 textTransform: 'none',
                 '&:hover': {
-                  color: 'secondary.main',
-                  bgcolor: 'rgba(94, 92, 230, 0.04)'
+                  color: 'text.primary',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
                 }
               }}
             >
@@ -125,8 +145,8 @@ export default function MarketingHeader() {
                 fontSize: '0.9rem',
                 textTransform: 'none',
                 '&:hover': {
-                  color: 'secondary.main',
-                  bgcolor: 'rgba(94, 92, 230, 0.04)'
+                  color: 'text.primary',
+                  bgcolor: 'rgba(0, 0, 0, 0.04)'
                 }
               }}
             >
@@ -150,10 +170,13 @@ export default function MarketingHeader() {
               variant="contained"
               onClick={() => navigate('/login')}
               sx={{
-                background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
-                boxShadow: '0 4px 14px rgba(94, 92, 230, 0.3)',
+                background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
                 fontWeight: 600,
-                px: 3
+                px: scrolled ? 2.5 : 3,
+                py: scrolled ? 0.75 : 1,
+                fontSize: scrolled ? '0.875rem' : '0.9rem',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               Book Demo
@@ -163,7 +186,6 @@ export default function MarketingHeader() {
             </IconButton>
           </Box>
         </Box>
-      </Container>
     </Box>
   );
 }

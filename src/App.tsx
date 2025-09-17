@@ -9,6 +9,7 @@ import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Product from './pages/Product';
 import Solutions from './pages/Solutions';
+import Manifesto from './pages/Manifesto';
 import Pricing from './pages/Pricing';
 import Resources from './pages/Resources';
 import Login from './pages/Login';
@@ -33,6 +34,7 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/product" element={<Product />} />
             <Route path="/solutions" element={<Solutions />} />
+            <Route path="/manifesto" element={<Manifesto />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/login" element={<Login />} />

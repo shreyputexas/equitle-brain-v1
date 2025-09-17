@@ -63,99 +63,99 @@ export default function Solutions() {
 
   const solutions = [
     {
-      title: 'Deal Sourcing & Origination',
+      title: 'Search Fund Sourcing',
       icon: <SearchIcon sx={{ fontSize: 40 }} />,
-      description: 'Find and evaluate investment opportunities faster with AI-powered deal matching',
-      color: '#5E5CE6',
+      description: 'Find and connect with business owners who are ready to sell their companies',
+      color: '#9CA3AF',
       features: [
-        'AI-powered deal matching based on your investment criteria',
-        'Market intelligence and competitive landscape analysis',
-        'Automated deal flow tracking and pipeline management',
-        'Integration with data providers and deal networks',
-        'Predictive scoring and opportunity assessment'
+        'AI-powered identification of potential acquisition targets',
+        'Automated outreach to business owners',
+        'Relationship tracking and nurturing tools',
+        'Integration with industry databases and networks',
+        'Predictive scoring for acquisition likelihood'
       ],
       benefits: [
-        '3x faster deal discovery',
-        '40% more qualified opportunities',
-        '25% reduction in sourcing costs'
+        '5x faster target identification',
+        '60% higher response rates',
+        '40% reduction in sourcing time'
       ],
       useCase: {
-        title: 'Mid-Market Growth Fund',
-        challenge: 'Struggling to identify high-quality growth opportunities in competitive markets',
-        solution: 'Equitle\'s AI identifies deals matching specific criteria across multiple sources',
-        result: 'Increased deal flow by 300% and closed 2 additional investments per quarter'
+        title: 'Tech Services Search Fund',
+        challenge: 'Spending 80% of time on administrative tasks instead of relationship building',
+        solution: 'Equitle automates outreach and relationship management, freeing time for strategic work',
+        result: 'Reduced admin time to 20% and increased meaningful owner conversations by 400%'
       }
     },
     {
-      title: 'Due Diligence & Analysis',
+      title: 'Owner Relationship Management',
       icon: <GavelIcon sx={{ fontSize: 40 }} />,
-      description: 'Streamline your due diligence process with automated workflows and AI insights',
+      description: 'Build and maintain strong relationships with business owners throughout the acquisition process',
       color: '#10B981',
       features: [
-        'Automated due diligence checklists and workflows',
-        'AI-powered document analysis and risk identification',
-        'Financial model validation and scenario analysis',
-        'Management team assessment and reference checks',
-        'Market and competitive analysis automation'
+        'Automated relationship tracking and follow-up reminders',
+        'Communication history and preference management',
+        'Meeting scheduling and preparation tools',
+        'Personalized outreach templates and messaging',
+        'Relationship scoring and engagement analytics'
       ],
       benefits: [
-        '50% faster DD completion',
-        '90% reduction in manual tasks',
-        '60% improvement in risk identification'
+        '70% better relationship outcomes',
+        '50% reduction in missed follow-ups',
+        '3x more meaningful conversations'
       ],
       useCase: {
-        title: 'Large-Cap Buyout Fund',
-        challenge: 'Complex DD processes taking 12+ weeks and requiring extensive manual work',
-        solution: 'Automated workflows and AI analysis reduce manual effort and accelerate timelines',
-        result: 'Reduced DD time to 6 weeks while improving analysis quality and risk detection'
+        title: 'Manufacturing Search Fund',
+        challenge: 'Losing track of owner conversations and missing critical follow-up opportunities',
+        solution: 'Automated relationship management ensures consistent, personalized communication',
+        result: 'Improved owner engagement by 200% and closed 3 deals that were previously stalled'
       }
     },
     {
-      title: 'Portfolio Management',
+      title: 'Post-Acquisition Management',
       icon: <TimelineIcon sx={{ fontSize: 40 }} />,
-      description: 'Monitor and optimize your portfolio performance with real-time insights',
+      description: 'Manage and grow your acquired companies with comprehensive operational tools',
       color: '#F59E0B',
       features: [
-        'Real-time portfolio performance tracking and analytics',
-        'KPI monitoring and automated reporting',
-        'Value creation planning and milestone tracking',
-        'Board package automation and distribution',
+        'Real-time performance tracking and KPI monitoring',
+        'Value creation plan execution and milestone tracking',
+        'Board package automation and investor reporting',
+        'Operational improvement identification and tracking',
         'Exit planning and readiness assessment'
       ],
       benefits: [
-        '35% better portfolio visibility',
-        '80% reduction in reporting time',
-        '15% higher portfolio returns'
+        '40% better operational visibility',
+        '60% reduction in reporting time',
+        '25% higher portfolio returns'
       ],
       useCase: {
-        title: 'Growth Equity Fund',
-        challenge: 'Limited visibility into 30+ portfolio companies and manual reporting processes',
-        solution: 'Automated data collection and real-time dashboards provide comprehensive insights',
-        result: 'Improved portfolio oversight and identified value creation opportunities worth $50M+'
+        title: 'Services Search Fund',
+        challenge: 'Manual tracking of portfolio company performance and value creation initiatives',
+        solution: 'Automated dashboards and tracking tools provide real-time insights into operations',
+        result: 'Improved portfolio performance by 30% and accelerated value creation timeline by 18 months'
       }
     },
     {
-      title: 'LP Reporting & Relations',
+      title: 'Investor Relations',
       icon: <BarChartIcon sx={{ fontSize: 40 }} />,
-      description: 'Automate investor reporting and enhance LP communications',
+      description: 'Manage relationships with your search fund investors and provide transparent reporting',
       color: '#3B82F6',
       features: [
-        'Automated LP report generation and distribution',
-        'Interactive investor portal with real-time data',
+        'Automated investor report generation and distribution',
+        'Interactive investor portal with real-time fund performance',
         'Custom reporting templates and branding',
         'Performance benchmarking and peer analysis',
-        'Fundraising support and investor tracking'
+        'Fundraising support and investor communication tracking'
       ],
       benefits: [
-        '70% faster report creation',
-        '95% LP satisfaction rate',
-        '50% reduction in queries'
+        '80% faster report creation',
+        '95% investor satisfaction rate',
+        '60% reduction in investor queries'
       ],
       useCase: {
-        title: 'Infrastructure Fund',
-        challenge: 'Quarterly LP reports taking 3 weeks to prepare and distribute',
-        solution: 'Automated report generation and investor portal provide real-time access',
-        result: 'Reduced reporting time to 2 days and increased LP engagement by 60%'
+        title: 'Technology Search Fund',
+        challenge: 'Manual investor reporting taking weeks and lacking transparency',
+        solution: 'Automated reporting and investor portal provide real-time transparency',
+        result: 'Reduced reporting time to 1 day and improved investor confidence by 40%'
       }
     }
   ];
@@ -257,8 +257,8 @@ export default function Solutions() {
               label="SOLUTIONS OVERVIEW" 
               sx={{ 
                 mb: 3,
-                background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                border: '1px solid rgba(94, 92, 230, 0.2)',
+                background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(55, 65, 81, 0.1) 100%)',
+                border: '1px solid rgba(156, 163, 175, 0.2)',
                 fontWeight: 600
               }}
             />
@@ -276,7 +276,7 @@ export default function Solutions() {
               <Box 
                 component="span" 
                 sx={{ 
-                  background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                  background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent'
                 }}
@@ -466,16 +466,16 @@ export default function Solutions() {
                     sx={{
                       p: 4,
                       height: '100%',
-                      border: '1px solid rgba(94, 92, 230, 0.08)',
+                      border: '1px solid rgba(156, 163, 175, 0.08)',
                       '&:hover': {
                         transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 32px rgba(94, 92, 230, 0.15)'
+                        boxShadow: '0 12px 32px rgba(156, 163, 175, 0.15)'
                       },
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>
+                      <Avatar sx={{ bgcolor: '#9CA3AF', mr: 2 }}>
                         {industry.icon}
                       </Avatar>
                       <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -492,7 +492,7 @@ export default function Solutions() {
                       {industry.specializations.map((spec, idx) => (
                         <ListItem key={idx} sx={{ px: 0 }}>
                           <ListItemIcon sx={{ minWidth: 28 }}>
-                            <CheckIcon sx={{ fontSize: 16, color: 'secondary.main' }} />
+                            <CheckIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
                           </ListItemIcon>
                           <ListItemText 
                             primary={spec}
@@ -538,10 +538,10 @@ export default function Solutions() {
                     p: 4,
                     height: '100%',
                     textAlign: 'center',
-                    border: index === 1 ? '2px solid #5E5CE6' : '1px solid rgba(94, 92, 230, 0.08)',
+                    border: index === 1 ? '2px solid #9CA3AF' : '1px solid rgba(156, 163, 175, 0.08)',
                     position: 'relative',
                     '&:hover': {
-                      boxShadow: '0 12px 32px rgba(94, 92, 230, 0.15)'
+                      boxShadow: '0 12px 32px rgba(156, 163, 175, 0.15)'
                     }
                   }}
                 >
@@ -554,13 +554,13 @@ export default function Solutions() {
                         top: -10,
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        bgcolor: 'secondary.main',
+                        bgcolor: '#9CA3AF',
                         color: 'white',
                         fontWeight: 600
                       }}
                     />
                   )}
-                  <Avatar sx={{ bgcolor: 'secondary.main', width: 64, height: 64, mx: 'auto', mb: 2 }}>
+                  <Avatar sx={{ bgcolor: '#9CA3AF', width: 64, height: 64, mx: 'auto', mb: 2 }}>
                     {firm.icon}
                   </Avatar>
                   <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
@@ -573,7 +573,7 @@ export default function Solutions() {
                     {firm.features.map((feature, idx) => (
                       <ListItem key={idx} sx={{ px: 0, justifyContent: 'center' }}>
                         <ListItemIcon sx={{ minWidth: 28, justifyContent: 'center' }}>
-                          <CheckIcon sx={{ fontSize: 16, color: 'secondary.main' }} />
+                          <CheckIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
                         </ListItemIcon>
                         <ListItemText 
                           primary={feature}
@@ -621,7 +621,7 @@ export default function Solutions() {
                   sx={{
                     p: 4,
                     height: '100%',
-                    border: '1px solid rgba(94, 92, 230, 0.08)',
+                    border: '1px solid rgba(156, 163, 175, 0.08)',
                     '&:hover': {
                       boxShadow: '0 12px 32px rgba(94, 92, 230, 0.1)'
                     }
@@ -632,7 +632,7 @@ export default function Solutions() {
                     size="small"
                     sx={{ 
                       mb: 2,
-                      bgcolor: 'secondary.main',
+                      bgcolor: '#9CA3AF',
                       color: 'white',
                       fontWeight: 500
                     }}
@@ -641,7 +641,7 @@ export default function Solutions() {
                     "{testimonial.quote}"
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                    <Avatar sx={{ bgcolor: '#9CA3AF' }}>
                       {testimonial.avatar}
                     </Avatar>
                     <Box>
@@ -712,7 +712,7 @@ export default function Solutions() {
                     p: 3,
                     textAlign: 'center',
                     height: '100%',
-                    border: '1px solid rgba(94, 92, 230, 0.08)',
+                    border: '1px solid rgba(156, 163, 175, 0.08)',
                     position: 'relative'
                   }}
                 >
@@ -721,7 +721,7 @@ export default function Solutions() {
                     sx={{ 
                       fontFamily: '"Space Grotesk", sans-serif',
                       fontWeight: 700,
-                      color: 'secondary.main',
+                      color: '#374151',
                       mb: 2
                     }}
                   >
@@ -738,7 +738,7 @@ export default function Solutions() {
                     size="small"
                     sx={{
                       bgcolor: 'rgba(94, 92, 230, 0.1)',
-                      color: 'secondary.main',
+                      color: '#374151',
                       fontWeight: 500
                     }}
                   />
@@ -752,7 +752,7 @@ export default function Solutions() {
                         width: 4,
                         height: 4,
                         borderRadius: '50%',
-                        bgcolor: 'secondary.main',
+                        bgcolor: '#9CA3AF',
                         display: { xs: 'none', md: 'block' }
                       }}
                     />
@@ -768,7 +768,7 @@ export default function Solutions() {
       <Box 
         sx={{ 
           py: 12, 
-          background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           color: 'white'
         }}
       >
@@ -793,7 +793,7 @@ export default function Solutions() {
                 size="large"
                 sx={{
                   background: 'white',
-                  color: 'secondary.main',
+                  color: '#374151',
                   py: 1.5,
                   px: 4,
                   '&:hover': {

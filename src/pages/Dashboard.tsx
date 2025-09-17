@@ -35,8 +35,8 @@ const performanceData = [
 ];
 
 const portfolioData = [
-  { name: 'Technology', value: 35, color: '#5E5CE6' },
-  { name: 'Healthcare', value: 25, color: '#7C7AED' },
+  { name: 'Technology', value: 35, color: '#9CA3AF' },
+  { name: 'Healthcare', value: 25, color: '#D1D5DB' },
   { name: 'Finance', value: 20, color: '#10B981' },
   { name: 'Energy', value: 12, color: '#F59E0B' },
   { name: 'Others', value: 8, color: '#6B7280' }
@@ -50,7 +50,7 @@ const recentDeals = [
 ];
 
 const metrics = [
-  { title: 'Total Portfolio Value', value: '$847M', change: '+12.5%', icon: <MoneyIcon />, trend: 'up', color: '#5E5CE6' },
+  { title: 'Total Portfolio Value', value: '$847M', change: '+12.5%', icon: <MoneyIcon />, trend: 'up', color: '#9CA3AF' },
   { title: 'Active Deals', value: '24', change: '+4', icon: <BusinessIcon />, trend: 'up', color: '#10B981' },
   { title: 'Portfolio Companies', value: '67', change: '+2', icon: <AssessmentIcon />, trend: 'up', color: '#F59E0B' },
   { title: 'Total Contacts', value: '1,284', change: '+48', icon: <PeopleIcon />, trend: 'up', color: '#3B82F6' }
@@ -136,12 +136,12 @@ export default function Dashboard() {
               <AreaChart data={performanceData}>
                 <defs>
                   <linearGradient id="colorDeals" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#5E5CE6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#5E5CE6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#9CA3AF" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#9CA3AF" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7C7AED" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#7C7AED" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#D1D5DB" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#D1D5DB" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -157,7 +157,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="deals"
-                  stroke="#5E5CE6"
+                  stroke="#9CA3AF"
                   fillOpacity={1}
                   fill="url(#colorDeals)"
                   strokeWidth={2}
@@ -165,7 +165,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#7C7AED"
+                  stroke="#D1D5DB"
                   fillOpacity={1}
                   fill="url(#colorValue)"
                   strokeWidth={2}
@@ -288,7 +288,7 @@ export default function Dashboard() {
                         bgcolor: 'rgba(255,255,255,0.05)',
                         '& .MuiLinearProgress-bar': {
                           borderRadius: 4,
-                          background: 'linear-gradient(90deg, #5E5CE6 0%, #7C7AED 100%)'
+                          background: 'linear-gradient(90deg, #9CA3AF 0%, #374151 100%)'
                         }
                       }}
                     />

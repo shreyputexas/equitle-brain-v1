@@ -47,7 +47,10 @@ import {
   Timeline as TimelineIcon,
   WorkspacePremium as PremiumIcon,
   EmojiEvents as TrophyIcon,
-  Rocket as RocketIcon
+  Rocket as RocketIcon,
+  AccountBalance as FundraisingIcon,
+  Search as SourcingIcon,
+  Assessment as PortfolioIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -108,27 +111,9 @@ export default function Landing() {
   const features = [
     {
       icon: <AIIcon sx={{ fontSize: 40 }} />,
-      title: 'AI-Powered Deal Intelligence',
-      description: 'Leverage advanced AI to analyze deals, predict outcomes, and identify opportunities faster than ever before.',
-      benefits: ['Automated due diligence', 'Risk assessment', 'Market analysis']
-    },
-    {
-      icon: <DashboardIcon sx={{ fontSize: 40 }} />,
-      title: 'Unified Deal Platform',
-      description: 'Manage your entire deal lifecycle in one integrated platform designed specifically for private equity.',
-      benefits: ['Pipeline management', 'Document management', 'Collaboration tools']
-    },
-    {
-      icon: <AnalyticsIcon sx={{ fontSize: 40 }} />,
-      title: 'Advanced Analytics',
-      description: 'Get deep insights into portfolio performance with real-time analytics and customizable dashboards.',
-      benefits: ['Performance tracking', 'Custom reports', 'Predictive analytics']
-    },
-    {
-      icon: <IntegrationIcon sx={{ fontSize: 40 }} />,
-      title: 'Seamless Integrations',
-      description: 'Connect with your existing tools and data sources for a truly unified workflow.',
-      benefits: ['CRM integration', 'Data room sync', 'API access']
+      title: 'The Brain',
+      description: 'A central LLM that knows your entire pipeline and information, providing intelligent insights and recommendations.',
+      benefits: ['Centralized intelligence', 'Pipeline awareness', 'Smart recommendations']
     },
     {
       icon: <SecurityIcon sx={{ fontSize: 40 }} />,
@@ -137,36 +122,30 @@ export default function Landing() {
       benefits: ['Data encryption', 'Access controls', 'Audit trails']
     },
     {
-      icon: <GroupsIcon sx={{ fontSize: 40 }} />,
-      title: 'Team Collaboration',
-      description: 'Work seamlessly with your team with built-in collaboration tools and workflow automation.',
-      benefits: ['Real-time collaboration', 'Task management', 'Communication hub']
+      icon: <IntegrationIcon sx={{ fontSize: 40 }} />,
+      title: 'Seamless Integrations',
+      description: 'Connect with your existing tools and data sources for a truly unified workflow.',
+      benefits: ['CRM integration', 'Data room sync', 'API access']
     }
   ];
 
-  const stats = [
-    { value: '$2.4T', label: 'Assets Analyzed' },
-    { value: '150+', label: 'PE Firms' },
-    { value: '10,000+', label: 'Deals Processed' },
-    { value: '99.9%', label: 'Uptime' }
-  ];
 
   const useCases = [
     {
-      title: 'Deal Sourcing',
-      icon: <BusinessIcon />,
-      description: 'Find and evaluate the best opportunities faster',
-      features: ['AI-powered deal matching', 'Market intelligence', 'Competitor analysis']
+      title: 'Fundraising',
+      icon: <FundraisingIcon />,
+      description: 'Manage LPs, quarterly reports, and communication',
+      features: ['LP management', 'Quarterly reports', 'Communication management']
     },
     {
-      title: 'Due Diligence',
-      icon: <AssessmentIcon />,
-      description: 'Streamline your diligence process with AI assistance',
-      features: ['Automated document review', 'Risk identification', 'Data room management']
+      title: 'Sourcing',
+      icon: <SourcingIcon />,
+      description: 'Outreach, agentic calls, and relationship management',
+      features: ['Outreach automation', 'Agentic calls', 'Relationship management']
     },
     {
       title: 'Portfolio Management',
-      icon: <TimelineIcon />,
+      icon: <PortfolioIcon />,
       description: 'Monitor and optimize portfolio performance',
       features: ['KPI tracking', 'Value creation planning', 'Exit planning']
     }
@@ -254,8 +233,8 @@ export default function Landing() {
                   fontSize: '0.9rem',
                   textTransform: 'none',
                   '&:hover': {
-                    color: 'secondary.main',
-                    bgcolor: 'rgba(94, 92, 230, 0.04)'
+                    color: 'text.primary',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
               >
@@ -269,8 +248,8 @@ export default function Landing() {
                   fontSize: '0.9rem',
                   textTransform: 'none',
                   '&:hover': {
-                    color: 'secondary.main',
-                    bgcolor: 'rgba(94, 92, 230, 0.04)'
+                    color: 'text.primary',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
               >
@@ -284,8 +263,8 @@ export default function Landing() {
                   fontSize: '0.9rem',
                   textTransform: 'none',
                   '&:hover': {
-                    color: 'secondary.main',
-                    bgcolor: 'rgba(94, 92, 230, 0.04)'
+                    color: 'text.primary',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
               >
@@ -299,8 +278,8 @@ export default function Landing() {
                   fontSize: '0.9rem',
                   textTransform: 'none',
                   '&:hover': {
-                    color: 'secondary.main',
-                    bgcolor: 'rgba(94, 92, 230, 0.04)'
+                    color: 'text.primary',
+                    bgcolor: 'rgba(0, 0, 0, 0.04)'
                   }
                 }}
               >
@@ -324,8 +303,8 @@ export default function Landing() {
                 variant="contained" 
                 onClick={handleOpenDemo}
                 sx={{
-                  background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
-                  boxShadow: '0 4px 14px rgba(94, 92, 230, 0.3)',
+                  background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
                   fontWeight: 600,
                   px: 3
                 }}
@@ -359,7 +338,7 @@ export default function Landing() {
                 <Box>
                   <Chip 
                     icon={<RocketIcon sx={{ fontSize: 16 }} />}
-                    label="Backed by Y Combinator" 
+                    label="Built for Search Funders" 
                     sx={{ 
                       mb: 3,
                       background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
@@ -377,20 +356,20 @@ export default function Landing() {
                       mb: 3
                     }}
                   >
-                    The AI-Powered Platform for
+                    The CRM Built for
                     <Box 
                       component="span" 
                       sx={{ 
-                        background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent'
                       }}
                     >
-                      {' '}Private Equity Excellence
+                      {' '}Search Funders
                     </Box>
                   </Typography>
                   <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6 }}>
-                    Transform your deal flow with intelligent automation. From sourcing to exit, Equitle delivers the insights and efficiency you need to win.
+                    Focus on relationships and deal analysis, not administrative tasks. The only CRM designed specifically for search funders who want to build great companies.
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
                     <Button 
@@ -399,7 +378,7 @@ export default function Landing() {
                       endIcon={<ArrowForwardIcon />}
                       onClick={handleOpenDemo}
                       sx={{
-                        background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                         py: 1.8,
                         px: 4,
                         fontSize: '1.1rem'
@@ -472,70 +451,7 @@ export default function Landing() {
         </Container>
       </Box>
 
-      {/* Trusted By Section */}
-      <Box sx={{ py: 8, background: '#FAFAFA', borderTop: '1px solid rgba(0, 0, 0, 0.05)' }}>
-        <Container maxWidth="lg">
-          <Typography 
-            variant="body1" 
-            align="center" 
-            sx={{ mb: 4, color: 'text.secondary', fontWeight: 500 }}
-          >
-            TRUSTED BY LEADING PRIVATE EQUITY FIRMS
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {['KKR', 'Blackstone', 'Apollo', 'Carlyle', 'TPG'].map((firm) => (
-              <Typography 
-                key={firm} 
-                variant="h5" 
-                sx={{ 
-                  fontWeight: 600, 
-                  color: 'text.secondary',
-                  opacity: 0.6,
-                  '&:hover': {
-                    opacity: 1,
-                    color: 'secondary.main'
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                {firm}
-              </Typography>
-            ))}
-          </Box>
-        </Container>
-      </Box>
 
-      {/* Stats Section */}
-      <Box sx={{ py: 12, background: 'white' }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            {stats.map((stat, index) => (
-              <Grid item xs={6} md={3} key={index}>
-                <Fade in timeout={1000 + index * 200}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography 
-                      variant="h2" 
-                      sx={{ 
-                        fontFamily: '"Space Grotesk", sans-serif',
-                        fontWeight: 700,
-                        background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        mb: 1
-                      }}
-                    >
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
-                      {stat.label}
-                    </Typography>
-                  </Box>
-                </Fade>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
 
       {/* Use Cases Section */}
       <Box sx={{ py: 12, background: '#FAFAFA' }}>
@@ -626,7 +542,15 @@ export default function Landing() {
                         justifyContent: 'center'
                       }}
                     >
-                      {useCase.icon}
+                      <Box
+                        sx={{
+                          fontSize: 120,
+                          color: '#9CA3AF',
+                          opacity: 0.8
+                        }}
+                      >
+                        {useCase.icon}
+                      </Box>
                     </Box>
                   </Grid>
                 </Grid>
@@ -671,7 +595,7 @@ export default function Landing() {
                         border: '1px solid rgba(94, 92, 230, 0.2)',
                         '& .feature-icon': {
                           transform: 'scale(1.1) rotate(5deg)',
-                          color: 'secondary.main'
+                          color: '#9CA3AF'
                         }
                       }
                     }}
@@ -759,7 +683,7 @@ export default function Landing() {
                       "{testimonial.quote}"
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                      <Avatar sx={{ bgcolor: '#9CA3AF' }}>
                         {testimonial.avatar}
                       </Avatar>
                       <Box>
@@ -801,7 +725,7 @@ export default function Landing() {
                 {['Salesforce & HubSpot CRM', 'Datasite & Intralinks', 'PitchBook & Preqin', 'Microsoft 365 & Google Workspace'].map((integration, index) => (
                   <ListItem key={index} sx={{ px: 0 }}>
                     <ListItemIcon>
-                      <IntegrationIcon sx={{ color: 'secondary.main' }} />
+                      <IntegrationIcon sx={{ color: '#9CA3AF' }} />
                     </ListItemIcon>
                     <ListItemText primary={integration} />
                   </ListItem>
@@ -855,7 +779,7 @@ export default function Landing() {
       <Box 
         sx={{ 
           py: 12, 
-          background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           position: 'relative',
           overflow: 'hidden'
         }}
@@ -927,7 +851,7 @@ export default function Landing() {
             </Box>
             <AvatarGroup max={5} sx={{ justifyContent: 'center', mb: 2 }}>
               {[...Array(8)].map((_, i) => (
-                <Avatar key={i} sx={{ bgcolor: 'white', color: 'secondary.main' }}>
+                <Avatar key={i} sx={{ bgcolor: 'white', color: '#9CA3AF' }}>
                   {String.fromCharCode(65 + i)}
                 </Avatar>
               ))}
@@ -1222,7 +1146,7 @@ export default function Landing() {
               size="large"
               sx={{
                 mt: 3,
-                background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                 py: 1.5,
                 fontWeight: 600,
                 fontSize: '1.05rem'

@@ -68,24 +68,24 @@ export default function Product() {
 
   const features = [
     {
-      category: 'AI & Intelligence',
+      category: 'Search Fund CRM',
       icon: <AIIcon sx={{ fontSize: 40 }} />,
-      color: '#5E5CE6',
+      color: '#9CA3AF',
       items: [
         {
-          title: 'AI-Powered Deal Matching',
-          description: 'Intelligent algorithms identify deals matching your investment criteria',
-          benefits: ['Automated sourcing', 'Smart filtering', 'Predictive scoring']
+          title: 'Relationship-First Design',
+          description: 'Built specifically for search funders who prioritize relationship building over administrative tasks',
+          benefits: ['Automated follow-ups', 'Relationship scoring', 'Conversation insights']
         },
         {
-          title: 'Risk Assessment Engine',
-          description: 'Advanced AI analyzes financial, market, and operational risks',
-          benefits: ['Real-time analysis', 'Risk scoring', 'Mitigation suggestions']
+          title: 'Deal Sourcing Intelligence',
+          description: 'AI-powered tools to identify and prioritize the best acquisition opportunities',
+          benefits: ['Smart deal matching', 'Market intelligence', 'Predictive scoring']
         },
         {
-          title: 'Market Intelligence',
-          description: 'Comprehensive market data and competitive landscape analysis',
-          benefits: ['Industry insights', 'Competitor tracking', 'Market trends']
+          title: 'Owner Relationship Management',
+          description: 'Track and nurture relationships with business owners throughout the search process',
+          benefits: ['Interaction history', 'Communication preferences', 'Relationship timeline']
         }
       ]
     },
@@ -265,7 +265,7 @@ export default function Product() {
                 <Box 
                   component="span" 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                    background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}
@@ -282,7 +282,7 @@ export default function Product() {
                   size="large"
                   endIcon={<ArrowForwardIcon />}
                   sx={{
-                    background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+                    background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                     py: 1.5,
                     px: 4
                   }}
@@ -313,7 +313,7 @@ export default function Product() {
                   overflow: 'hidden'
                 }}
               >
-                <DashboardIcon sx={{ fontSize: 120, color: 'secondary.main', opacity: 0.3 }} />
+                <DashboardIcon sx={{ fontSize: 120, color: '#9CA3AF', opacity: 0.3 }} />
               </Box>
             </Grid>
           </Grid>
@@ -448,7 +448,7 @@ export default function Product() {
                     }
                   }}
                 >
-                  <Box sx={{ mb: 2, color: 'secondary.main' }}>
+                  <Box sx={{ mb: 2, color: '#9CA3AF' }}>
                     {integration.icon}
                   </Box>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -505,7 +505,7 @@ export default function Product() {
                 {securityFeatures.map((feature, index) => (
                   <Grid item xs={12} sm={6} key={index}>
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Avatar sx={{ bgcolor: 'secondary.main', width: 40, height: 40 }}>
+                      <Avatar sx={{ bgcolor: '#9CA3AF', width: 40, height: 40 }}>
                         {feature.icon}
                       </Avatar>
                       <Box>
@@ -530,7 +530,7 @@ export default function Product() {
                   textAlign: 'center'
                 }}
               >
-                <SecurityIcon sx={{ fontSize: 80, color: 'secondary.main', mb: 2 }} />
+                <SecurityIcon sx={{ fontSize: 80, color: '#9CA3AF', mb: 2 }} />
                 <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
                   Trusted by 150+ PE Firms
                 </Typography>
@@ -578,7 +578,7 @@ export default function Product() {
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
               <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <CloudIcon sx={{ fontSize: 48, color: 'secondary.main', mb: 2 }} />
+                <CloudIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                   Cloud-Native
                 </Typography>
@@ -589,7 +589,7 @@ export default function Product() {
             </Grid>
             <Grid item xs={12} md={4}>
               <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <MobileIcon sx={{ fontSize: 48, color: 'secondary.main', mb: 2 }} />
+                <MobileIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                   Mobile Ready
                 </Typography>
@@ -600,7 +600,7 @@ export default function Product() {
             </Grid>
             <Grid item xs={12} md={4}>
               <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <ApiIcon sx={{ fontSize: 48, color: 'secondary.main', mb: 2 }} />
+                <ApiIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                   API-First
                 </Typography>
@@ -670,7 +670,7 @@ export default function Product() {
       <Box 
         sx={{ 
           py: 12, 
-          background: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           color: 'white'
         }}
       >
@@ -695,7 +695,7 @@ export default function Product() {
                 size="large"
                 sx={{
                   background: 'white',
-                  color: 'secondary.main',
+                  color: '#374151',
                   py: 1.5,
                   px: 4,
                   '&:hover': {
