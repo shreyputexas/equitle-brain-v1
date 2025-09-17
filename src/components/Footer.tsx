@@ -29,7 +29,7 @@ export default function Footer() {
               Equitle
             </Typography>
             <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
-              The AI-powered platform transforming private equity deal management.
+              The AI-powered platform transforming search fund deal management.
             </Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
               <IconButton
