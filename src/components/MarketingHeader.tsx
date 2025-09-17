@@ -93,21 +93,6 @@ export default function MarketingHeader() {
               Product
             </Button>
             <Button 
-              onClick={() => navigate('/solutions')}
-              sx={{ 
-                color: 'text.primary',
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                textTransform: 'none',
-                '&:hover': {
-                  color: 'text.primary',
-                  bgcolor: 'rgba(0, 0, 0, 0.04)'
-                }
-              }}
-            >
-              Solutions
-            </Button>
-            <Button 
               onClick={() => navigate('/manifesto')}
               sx={{ 
                 color: 'text.primary',
@@ -121,36 +106,6 @@ export default function MarketingHeader() {
               }}
             >
               Manifesto
-            </Button>
-            <Button 
-              onClick={() => navigate('/pricing')}
-              sx={{ 
-                color: 'text.primary',
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                textTransform: 'none',
-                '&:hover': {
-                  color: 'text.primary',
-                  bgcolor: 'rgba(0, 0, 0, 0.04)'
-                }
-              }}
-            >
-              Pricing
-            </Button>
-            <Button 
-              onClick={() => navigate('/resources')}
-              sx={{ 
-                color: 'text.primary',
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                textTransform: 'none',
-                '&:hover': {
-                  color: 'text.primary',
-                  bgcolor: 'rgba(0, 0, 0, 0.04)'
-                }
-              }}
-            >
-              Resources
             </Button>
           </Box>
           
@@ -168,7 +123,7 @@ export default function MarketingHeader() {
             </Button>
             <Button 
               variant="contained"
-              onClick={() => navigate('/login')}
+              onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
               sx={{
                 background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                 boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',

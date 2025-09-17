@@ -22,12 +22,12 @@ import {
   Avatar
 } from '@mui/material';
 import MarketingHeader from '../components/MarketingHeader';
+import Footer from '../components/Footer';
 import {
   ArrowForward as ArrowForwardIcon,
   Check as CheckIcon,
   ExpandMore as ExpandMoreIcon,
   Speed as SpeedIcon,
-  Security as SecurityIcon,
   Analytics as AnalyticsIcon,
   AutoGraph as AutoGraphIcon,
   Groups as GroupsIcon,
@@ -42,8 +42,7 @@ import {
   DataUsage as DataIcon,
   Api as ApiIcon,
   PhoneAndroid as MobileIcon,
-  LockOutlined as LockIcon,
-  Verified as VerifiedIcon
+  LockOutlined as LockIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -180,28 +179,6 @@ export default function Product() {
     }
   ];
 
-  const securityFeatures = [
-    {
-      title: 'Enterprise-Grade Security',
-      description: 'Bank-level security with end-to-end encryption',
-      icon: <SecurityIcon />
-    },
-    {
-      title: 'SOC 2 Type II Compliant',
-      description: 'Independently audited security controls',
-      icon: <VerifiedIcon />
-    },
-    {
-      title: 'Multi-Factor Authentication',
-      description: 'Advanced authentication and access controls',
-      icon: <LockIcon />
-    },
-    {
-      title: 'Data Residency Options',
-      description: 'Choose where your data is stored and processed',
-      icon: <CloudIcon />
-    }
-  ];
 
   const faqs = [
     {
@@ -270,11 +247,11 @@ export default function Product() {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  {' '}Private Equity
+                  {' '}Searchers
                 </Box>
               </Typography>
               <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6 }}>
-                From deal sourcing to portfolio management, Equitle provides the AI-powered tools and insights you need to outperform the market.
+                From deal sourcing to portfolio management, Equitle provides the AI-powered tools and insights you need to succeed in your search.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
                 <Button 
@@ -288,14 +265,6 @@ export default function Product() {
                   }}
                 >
                   Start Free Trial
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  size="large"
-                  onClick={() => navigate('/pricing')}
-                  sx={{ py: 1.5, px: 4 }}
-                >
-                  View Pricing
                 </Button>
               </Box>
             </Grid>
@@ -335,7 +304,7 @@ export default function Product() {
               Comprehensive Feature Set
             </Typography>
             <Typography variant="h6" color="text.secondary">
-              Everything you need to manage your private equity operations
+              Everything you need to manage your search fund operations
             </Typography>
           </Box>
 
@@ -351,7 +320,7 @@ export default function Product() {
                 key={index}
                 label={feature.category} 
                 icon={React.cloneElement(feature.icon, { 
-                  sx: { fontSize: 24, color: feature.color } 
+                  sx: { fontSize: 24, color: '#9CA3AF' } 
                 })}
                 iconPosition="start"
                 sx={{ 
@@ -379,7 +348,7 @@ export default function Product() {
                           '&:hover': {
                             transform: 'translateY(-4px)',
                             boxShadow: '0 12px 32px rgba(94, 92, 230, 0.15)',
-                            border: `1px solid ${feature.color}33`
+                            border: '1px solid rgba(156, 163, 175, 0.2)'
                           }
                         }}
                       >
@@ -393,7 +362,7 @@ export default function Product() {
                           {item.benefits.map((benefit, benefitIdx) => (
                             <ListItem key={benefitIdx} sx={{ px: 0, py: 0.5 }}>
                               <ListItemIcon sx={{ minWidth: 28 }}>
-                                <CheckIcon sx={{ fontSize: 16, color: feature.color }} />
+                                <CheckIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
                               </ListItemIcon>
                               <ListItemText 
                                 primary={benefit}
@@ -469,92 +438,13 @@ export default function Product() {
           </Grid>
 
           <Box sx={{ textAlign: 'center', mt: 6 }}>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography variant="body1" color="text.secondary">
               Don't see your tool? We offer custom integrations and API access.
             </Typography>
-            <Button 
-              variant="outlined"
-              endIcon={<ApiIcon />}
-              onClick={() => navigate('/resources')}
-            >
-              View API Documentation
-            </Button>
           </Box>
         </Container>
       </Box>
 
-      {/* Security & Compliance */}
-      <Box sx={{ py: 12, background: 'white' }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography 
-                variant="h2" 
-                sx={{ 
-                  fontFamily: '"Space Grotesk", sans-serif',
-                  fontWeight: 700,
-                  mb: 3
-                }}
-              >
-                Enterprise-Grade Security
-              </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
-                Your data security is our top priority. Equitle meets the highest standards of security and compliance required by private equity firms.
-              </Typography>
-              <Grid container spacing={3}>
-                {securityFeatures.map((feature, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Avatar sx={{ bgcolor: '#9CA3AF', width: 40, height: 40 }}>
-                        {feature.icon}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          {feature.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {feature.description}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Paper
-                sx={{
-                  p: 4,
-                  background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.05) 0%, rgba(124, 122, 237, 0.05) 100%)',
-                  border: '1px solid rgba(94, 92, 230, 0.1)',
-                  textAlign: 'center'
-                }}
-              >
-                <SecurityIcon sx={{ fontSize: 80, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-                  Trusted by 150+ PE Firms
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                  Leading private equity firms trust Equitle with their most sensitive data and critical operations.
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
-                  {['SOC 2 Type II', 'GDPR Compliant', 'ISO 27001', 'CCPA Ready'].map((cert) => (
-                    <Chip 
-                      key={cert}
-                      label={cert}
-                      size="small"
-                      sx={{
-                        backgroundColor: 'rgba(94, 92, 230, 0.1)',
-                        border: '1px solid rgba(94, 92, 230, 0.2)'
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
 
       {/* Platform Architecture */}
       <Box sx={{ py: 12, background: '#FAFAFA' }}>
@@ -687,12 +577,13 @@ export default function Product() {
               Ready to Transform Your Deal Flow?
             </Typography>
             <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-              Join 150+ private equity firms using Equitle to make smarter investment decisions
+              Join a community of searchers using Equitle to make smarter investment decisions
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Button 
                 variant="contained" 
                 size="large"
+                onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                 sx={{
                   background: 'white',
                   color: '#374151',
@@ -703,29 +594,13 @@ export default function Product() {
                   }
                 }}
               >
-                Start Free Trial
-              </Button>
-              <Button 
-                variant="outlined" 
-                size="large"
-                sx={{
-                  borderColor: 'white',
-                  color: 'white',
-                  py: 1.5,
-                  px: 4,
-                  '&:hover': {
-                    borderColor: 'white',
-                    background: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-                onClick={() => navigate('/pricing')}
-              >
-                View Pricing
+                Book Demo
               </Button>
             </Box>
           </Box>
         </Container>
       </Box>
+      <Footer />
     </>
   );
 }

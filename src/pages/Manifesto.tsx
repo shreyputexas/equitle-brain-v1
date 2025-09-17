@@ -16,6 +16,7 @@ import {
   Divider
 } from '@mui/material';
 import MarketingHeader from '../components/MarketingHeader';
+import Footer from '../components/Footer';
 import {
   ArrowForward as ArrowForwardIcon,
   Check as CheckIcon,
@@ -501,6 +502,7 @@ export default function Manifesto() {
           </Box>
         </Container>
       </Box>
+      <Footer />
     </>
   );
 }

@@ -8,7 +8,6 @@ import {
   Card,
   IconButton,
   Fade,
-  Zoom,
   Modal,
   TextField,
   MenuItem,
@@ -17,8 +16,6 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Tab,
-  Tabs,
   Avatar,
   AvatarGroup,
   Divider
@@ -41,7 +38,7 @@ import {
   Assessment as AssessmentIcon,
   Business as BusinessIcon,
   IntegrationInstructions as IntegrationIcon,
-  CloudUpload as CloudIcon,
+  CloudUpload as CloudUploadIcon,
   Psychology as AIIcon,
   Lightbulb as InsightIcon,
   Timeline as TimelineIcon,
@@ -50,30 +47,25 @@ import {
   Rocket as RocketIcon,
   AccountBalance as FundraisingIcon,
   Search as SourcingIcon,
-  Assessment as PortfolioIcon
+  Assessment as PortfolioIcon,
+  Email as EmailIcon,
+  Storage as StorageIcon,
+  Cloud as CloudIcon,
+  Api as ApiIcon,
+  Webhook as WebhookIcon,
+  Link as LinkIcon,
+  Sync as SyncIcon,
+  Settings as SettingsIcon,
+  Extension as ExtensionIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import MarketingHeader from '../components/MarketingHeader';
+import Footer from '../components/Footer';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
-}
 
 export default function Landing() {
   const navigate = useNavigate();
   const [openDemo, setOpenDemo] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -84,15 +76,6 @@ export default function Landing() {
     message: ''
   });
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 50;
-      setScrolled(isScrolled);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const handleOpenDemo = () => setOpenDemo(true);
   const handleCloseDemo = () => setOpenDemo(false);
@@ -151,173 +134,10 @@ export default function Landing() {
     }
   ];
 
-  const testimonials = [
-    {
-      quote: "Equitle has transformed how we manage our deal flow. The AI insights have helped us identify opportunities we would have missed.",
-      author: "Sarah Chen",
-      role: "Managing Partner",
-      company: "Apex Capital Partners",
-      avatar: "SC"
-    },
-    {
-      quote: "The platform's integration capabilities saved us hundreds of hours in data management and reporting.",
-      author: "Michael Roberts",
-      role: "Principal",
-      company: "Venture Growth Fund",
-      avatar: "MR"
-    },
-    {
-      quote: "Best-in-class security and compliance features gave us the confidence to fully digitize our deal process.",
-      author: "Elena Martinez",
-      role: "COO",
-      company: "Global PE Advisors",
-      avatar: "EM"
-    }
-  ];
 
   return (
     <>
-      {/* Floating Glass Header */}
-      <Box
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1300,
-          padding: { xs: '1rem 12px', md: '12px 16px' },
-          pointerEvents: 'none'
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box
-            sx={{
-              pointerEvents: 'auto',
-              margin: '0 auto',
-              width: '100%',
-              padding: { xs: '1rem 1.25rem', md: '1.25rem 1.5rem' },
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.9)',
-              backdropFilter: 'saturate(180%) blur(20px)',
-              border: '1px solid rgba(94, 92, 230, 0.08)',
-              borderRadius: { xs: '12px', md: '14px' },
-              boxShadow: scrolled 
-                ? '0 8px 32px rgba(0, 0, 0, 0.12)' 
-                : '0 4px 24px rgba(0, 0, 0, 0.08)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
-             <Box
-               component="img"
-               src="/assets/images/extended_logo_black_white.png"
-               alt="Equitle"
-               sx={{
-                 height: { xs: '2.25rem', md: '2.75rem' },
-                 filter: 'brightness(0)',
-                 opacity: 0.95,
-                 objectFit: 'contain',
-                 mr: { xs: '2rem', md: '4rem' },
-                 cursor: 'pointer'
-               }}
-               onClick={() => navigate('/')}
-             />
-            
-            <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, gap: 3, ml: 4 }}>
-              <Button 
-                onClick={() => navigate('/product')}
-                sx={{ 
-                  color: 'text.primary',
-                  fontWeight: 500,
-                  fontSize: '0.9rem',
-                  textTransform: 'none',
-                  '&:hover': {
-                    color: 'text.primary',
-                    bgcolor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                }}
-              >
-                Product
-              </Button>
-              <Button 
-                onClick={() => navigate('/solutions')}
-                sx={{ 
-                  color: 'text.primary',
-                  fontWeight: 500,
-                  fontSize: '0.9rem',
-                  textTransform: 'none',
-                  '&:hover': {
-                    color: 'text.primary',
-                    bgcolor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                }}
-              >
-                Solutions
-              </Button>
-              <Button 
-                onClick={() => navigate('/pricing')}
-                sx={{ 
-                  color: 'text.primary',
-                  fontWeight: 500,
-                  fontSize: '0.9rem',
-                  textTransform: 'none',
-                  '&:hover': {
-                    color: 'text.primary',
-                    bgcolor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                }}
-              >
-                Pricing
-              </Button>
-              <Button 
-                onClick={() => navigate('/resources')}
-                sx={{ 
-                  color: 'text.primary',
-                  fontWeight: 500,
-                  fontSize: '0.9rem',
-                  textTransform: 'none',
-                  '&:hover': {
-                    color: 'text.primary',
-                    bgcolor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                }}
-              >
-                Resources
-              </Button>
-            </Box>
-
-            <Box sx={{ flexGrow: 0, display: 'flex', gap: 2 }}>
-              <Button 
-                variant="text"
-                onClick={() => navigate('/login')}
-                sx={{ 
-                  color: 'text.primary',
-                  fontWeight: 500,
-                  display: { xs: 'none', md: 'inline-flex' }
-                }}
-              >
-                Sign In
-              </Button>
-              <Button 
-                variant="contained" 
-                onClick={handleOpenDemo}
-                sx={{
-                  background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
-                  fontWeight: 600,
-                  px: 3
-                }}
-              >
-                Book Demo
-              </Button>
-              <IconButton sx={{ display: { xs: 'flex', md: 'none' } }}>
-                <MenuIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      <MarketingHeader />
 
       {/* Hero Section */}
       <Box
@@ -331,123 +151,75 @@ export default function Landing() {
           pt: { xs: 12, md: 14 }
         }}
       >
-        <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Fade in timeout={1000}>
-                <Box>
-                  <Chip 
-                    icon={<RocketIcon sx={{ fontSize: 16 }} />}
-                    label="Built for Search Funders" 
-                    sx={{ 
-                      mb: 3,
-                      background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                      border: '1px solid rgba(94, 92, 230, 0.2)',
-                      fontWeight: 600
-                    }}
-                  />
-                  <Typography 
-                    variant="h1" 
-                    sx={{ 
-                      fontFamily: '"Space Grotesk", sans-serif',
-                      fontWeight: 800,
-                      fontSize: { xs: '2.5rem', md: '4rem' },
-                      lineHeight: 1.1,
-                      mb: 3
-                    }}
-                  >
-                    The CRM Built for
-                    <Box 
-                      component="span" 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
-                      }}
-                    >
-                      {' '}Search Funders
-                    </Box>
-                  </Typography>
-                  <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6 }}>
-                    Focus on relationships and deal analysis, not administrative tasks. The only CRM designed specifically for search funders who want to build great companies.
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-                    <Button 
-                      variant="contained" 
-                      size="large"
-                      endIcon={<ArrowForwardIcon />}
-                      onClick={handleOpenDemo}
-                      sx={{
-                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-                        py: 1.8,
-                        px: 4,
-                        fontSize: '1.1rem'
-                      }}
-                    >
-                      Start Free Trial
-                    </Button>
-                    <Button 
-                      variant="outlined" 
-                      size="large"
-                      startIcon={<PlayIcon />}
-                      sx={{
-                        borderWidth: 2,
-                        py: 1.8,
-                        px: 4,
-                        fontSize: '1.1rem'
-                      }}
-                    >
-                      Watch Demo
-                    </Button>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {['No credit card required', '14-day free trial', 'Cancel anytime'].map((text, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CheckIcon sx={{ color: 'success.main', fontSize: 20 }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {text}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              </Fade>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Zoom in timeout={1200}>
-                <Box
-                  sx={{
-                    position: 'relative',
-                    height: { xs: 400, md: 500 },
-                    transform: 'perspective(1000px) rotateY(-5deg)',
-                    '&:hover': {
-                      transform: 'perspective(1000px) rotateY(0deg)'
-                    },
-                    transition: 'transform 0.6s ease'
+        <Container maxWidth="md">
+          <Box sx={{ textAlign: 'center' }}>
+            <Fade in timeout={1000}>
+              <Box>
+                <Chip 
+                  icon={<RocketIcon sx={{ fontSize: 16 }} />}
+                  label="Built for Search Funders" 
+                  sx={{ 
+                    mb: 3,
+                    background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
+                    border: '1px solid rgba(94, 92, 230, 0.2)',
+                    fontWeight: 600
+                  }}
+                />
+                <Typography 
+                  variant="h1" 
+                  sx={{ 
+                    fontFamily: '"Space Grotesk", sans-serif',
+                    fontWeight: 800,
+                    fontSize: { xs: '2.5rem', md: '4rem' },
+                    lineHeight: 1.1,
+                    mb: 3
                   }}
                 >
-                  <Box
-                    component="img"
-                    src="/assets/images/dashboard-preview.png"
-                    alt="Dashboard Preview"
+                  The Software Built for
+                  <Box 
+                    component="span" 
+                    sx={{ 
+                      background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}
+                  >
+                    {' '}Searchers
+                  </Box>
+                </Typography>
+                <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
+                  Focus on relationships and deal analysis, not administrative tasks. The only CRM designed specifically for search funders who want to acquire great companies.
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                  <Button 
+                    variant="contained" 
+                    size="large"
+                    endIcon={<ArrowForwardIcon />}
+                    onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                     sx={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: 3,
-                      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
+                      background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                      py: 1.8,
+                      px: 6,
+                      fontSize: '1.1rem',
+                      fontWeight: 600
                     }}
-                    onError={(e) => {
-                      // Fallback to placeholder if image doesn't exist
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.style.background = 'linear-gradient(135deg, #F0F0FF 0%, #FFFFFF 100%)';
-                      e.currentTarget.parentElement!.style.border = '1px solid rgba(94, 92, 230, 0.1)';
-                    }}
-                  />
+                  >
+                    Book Demo
+                  </Button>
                 </Box>
-              </Zoom>
-            </Grid>
-          </Grid>
+                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {['No credit card required', '14-day free trial', 'Cancel anytime'].map((text, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {text}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Fade>
+          </Box>
         </Container>
       </Box>
 
@@ -468,95 +240,109 @@ export default function Landing() {
               Built for Every Stage of Your Deal
             </Typography>
             <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto' }}>
-              From sourcing to exit, Equitle provides the tools and intelligence you need at every step
+              From sourcing to management, Equitle provides the tools and intelligence you need at every step
             </Typography>
           </Box>
 
-          <Tabs 
-            value={tabValue} 
-            onChange={(e, v) => setTabValue(v)} 
-            centered
-            sx={{ mb: 6 }}
-          >
+          <Grid container spacing={4}>
             {useCases.map((useCase, index) => (
-              <Tab 
-                key={index}
-                label={useCase.title} 
-                icon={useCase.icon}
-                iconPosition="start"
-                sx={{ 
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  minHeight: 64,
-                  px: 3
-                }}
-              />
-            ))}
-          </Tabs>
-
-          {useCases.map((useCase, index) => (
-            <TabPanel key={index} value={tabValue} index={index}>
-              <Fade in timeout={500}>
-                <Grid container spacing={6} alignItems="center">
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="h4" sx={{ fontWeight: 600, mb: 3 }}>
-                      {useCase.description}
-                    </Typography>
-                    <List>
-                      {useCase.features.map((feature, idx) => (
-                        <ListItem key={idx} sx={{ px: 0 }}>
-                          <ListItemIcon>
-                            <CheckIcon sx={{ color: 'success.main' }} />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={feature}
-                            sx={{ 
-                              '& .MuiListItemText-primary': {
-                                fontSize: '1.1rem',
-                                fontWeight: 500
-                              }
-                            }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                    <Button 
-                      variant="contained"
-                      endIcon={<ArrowForwardIcon />}
-                      sx={{ mt: 3 }}
-                      onClick={() => navigate('/product')}
-                    >
-                      Learn More
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Box
-                      sx={{
-                        height: 400,
-                        borderRadius: 3,
-                        background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.05) 0%, rgba(124, 122, 237, 0.05) 100%)',
-                        border: '1px solid rgba(94, 92, 230, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          fontSize: 120,
-                          color: '#9CA3AF',
-                          opacity: 0.8
-                        }}
-                      >
-                        {useCase.icon}
-                      </Box>
+              <Grid item xs={12} md={4} key={index}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    p: 4,
+                    textAlign: 'center',
+                    border: '1px solid rgba(94, 92, 230, 0.08)',
+                    borderRadius: 3,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+                      border: '1px solid rgba(94, 92, 230, 0.2)'
+                    }
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
+                      border: '1px solid rgba(94, 92, 230, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 3
+                    }}
+                  >
+                    <Box sx={{ fontSize: 32, color: '#374151' }}>
+                      {useCase.icon}
                     </Box>
-                  </Grid>
-                </Grid>
-              </Fade>
-            </TabPanel>
-          ))}
+                  </Box>
+                  
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      mb: 2,
+                      color: '#374151'
+                    }}
+                  >
+                    {useCase.title}
+                  </Typography>
+                  
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      color: 'text.secondary', 
+                      mb: 3,
+                      lineHeight: 1.6
+                    }}
+                  >
+                    {useCase.description}
+                  </Typography>
+                  
+                  <List sx={{ mb: 3, textAlign: 'left' }}>
+                    {useCase.features.map((feature, idx) => (
+                      <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CheckIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={feature}
+                          sx={{ 
+                            '& .MuiListItemText-primary': {
+                              fontSize: '0.95rem',
+                              fontWeight: 500,
+                              color: '#374151'
+                            }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  
+                  <Button 
+                    variant="outlined"
+                    endIcon={<ArrowForwardIcon />}
+                    sx={{ 
+                      mt: 2,
+                      borderColor: '#374151',
+                      color: '#374151',
+                      '&:hover': {
+                        borderColor: '#1F2937',
+                        backgroundColor: 'rgba(55, 65, 81, 0.04)'
+                      }
+                    }}
+                    onClick={() => navigate('/product')}
+                  >
+                    Learn More
+                  </Button>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         </Container>
       </Box>
 
@@ -575,15 +361,14 @@ export default function Landing() {
               Everything You Need to Win
             </Typography>
             <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-              Comprehensive tools designed by PE professionals, for PE professionals
+              Comprehensive tools designed by searchers, for searchers
             </Typography>
           </Box>
 
           <Grid container spacing={4}>
             {features.map((feature, index) => (
               <Grid item xs={12} md={6} lg={4} key={index}>
-                <Zoom in timeout={1000 + index * 100}>
-                  <Card
+                <Card
                     sx={{
                       p: 4,
                       height: '100%',
@@ -633,78 +418,15 @@ export default function Landing() {
                       ))}
                     </List>
                   </Card>
-                </Zoom>
               </Grid>
             ))}
           </Grid>
         </Container>
       </Box>
 
-      {/* Testimonials */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography 
-              variant="h2" 
-              sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
-                fontWeight: 700,
-                mb: 2
-              }}
-            >
-              Loved by PE Professionals
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              See what industry leaders are saying about Equitle
-            </Typography>
-          </Box>
-
-          <Grid container spacing={4}>
-            {testimonials.map((testimonial, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Fade in timeout={1000 + index * 200}>
-                  <Card
-                    sx={{
-                      p: 4,
-                      height: '100%',
-                      position: 'relative',
-                      border: '1px solid rgba(94, 92, 230, 0.08)',
-                      '&:hover': {
-                        boxShadow: '0 12px 32px rgba(94, 92, 230, 0.1)'
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', mb: 2 }}>
-                      {[...Array(5)].map((_, i) => (
-                        <StarIcon key={i} sx={{ fontSize: 20, color: '#FFB800' }} />
-                      ))}
-                    </Box>
-                    <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.8, fontStyle: 'italic' }}>
-                      "{testimonial.quote}"
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: '#9CA3AF' }}>
-                        {testimonial.avatar}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {testimonial.author}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {testimonial.role}, {testimonial.company}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Card>
-                </Fade>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
 
       {/* Integration Section */}
-      <Box sx={{ py: 12, background: 'white' }}>
+      <Box sx={{ py: 16, background: 'white' }}>
         <Container maxWidth="lg">
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
@@ -719,13 +441,13 @@ export default function Landing() {
                 Seamlessly Integrates with Your Stack
               </Typography>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
-                Connect Equitle with your existing tools and data sources for a unified workflow. Our platform integrates with leading CRMs, data rooms, and financial systems.
+                Connect with your existing tools effortlessly. Our platform makes integration simple and straightforward, so you can focus on what matters most.
               </Typography>
               <List>
-                {['Salesforce & HubSpot CRM', 'Datasite & Intralinks', 'PitchBook & Preqin', 'Microsoft 365 & Google Workspace'].map((integration, index) => (
+                {['CRM & Sales Tools', 'Data & Analytics Platforms', 'Communication & Collaboration', 'Financial & Reporting Systems'].map((integration, index) => (
                   <ListItem key={index} sx={{ px: 0 }}>
                     <ListItemIcon>
-                      <IntegrationIcon sx={{ color: '#9CA3AF' }} />
+                      <CheckIcon sx={{ color: '#10B981' }} />
                     </ListItemIcon>
                     <ListItemText primary={integration} />
                   </ListItem>
@@ -737,7 +459,7 @@ export default function Landing() {
                 sx={{ mt: 2 }}
                 onClick={() => navigate('/product')}
               >
-                View All Integrations
+                Learn More About Integrations
               </Button>
             </Grid>
             <Grid item xs={12} md={6}>
@@ -748,7 +470,17 @@ export default function Landing() {
                   gap: 3
                 }}
               >
-                {[...Array(9)].map((_, index) => (
+                {[
+                  <EmailIcon />,
+                  <StorageIcon />,
+                  <CloudIcon />,
+                  <ApiIcon />,
+                  <WebhookIcon />,
+                  <LinkIcon />,
+                  <SyncIcon />,
+                  <SettingsIcon />,
+                  <ExtensionIcon />
+                ].map((icon, index) => (
                   <Box
                     key={index}
                     sx={{
@@ -762,11 +494,24 @@ export default function Landing() {
                       transition: 'all 0.3s ease',
                       '&:hover': {
                         transform: 'scale(1.05)',
-                        boxShadow: '0 8px 24px rgba(94, 92, 230, 0.15)'
+                        boxShadow: '0 8px 24px rgba(94, 92, 230, 0.15)',
+                        '& .integration-icon': {
+                          color: '#9CA3AF',
+                          transform: 'scale(1.1)'
+                        }
                       }
                     }}
                   >
-                    <IntegrationIcon sx={{ color: 'text.secondary' }} />
+                    <Box
+                      className="integration-icon"
+                      sx={{
+                        fontSize: 40,
+                        color: 'text.secondary',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      {icon}
+                    </Box>
                   </Box>
                 ))}
               </Box>
@@ -778,7 +523,7 @@ export default function Landing() {
       {/* CTA Section */}
       <Box 
         sx={{ 
-          py: 12, 
+          py: 16, 
           background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
           position: 'relative',
           overflow: 'hidden'
@@ -786,17 +531,6 @@ export default function Landing() {
       >
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-            <Chip 
-              icon={<TrophyIcon sx={{ fontSize: 16 }} />}
-              label="LIMITED TIME OFFER" 
-              sx={{ 
-                mb: 3,
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                fontWeight: 600,
-                border: '1px solid rgba(255, 255, 255, 0.3)'
-              }}
-            />
             <Typography 
               variant="h2" 
               sx={{ 
@@ -806,16 +540,16 @@ export default function Landing() {
                 mb: 2
               }}
             >
-              Start Your 14-Day Free Trial
+              Join a Community of Searchers
             </Typography>
             <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 4 }}>
-              Join 150+ PE firms already using Equitle to transform their deal process
+              Connect with fellow search funders and discover how Equitle can transform your deal process
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
               <Button 
                 variant="contained" 
                 size="large"
-                onClick={handleOpenDemo}
+                onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                 sx={{
                   background: 'white',
                   color: 'secondary.main',
@@ -828,187 +562,14 @@ export default function Landing() {
                   }
                 }}
               >
-                Get Started Now
-              </Button>
-              <Button 
-                variant="outlined" 
-                size="large"
-                sx={{
-                  borderColor: 'white',
-                  color: 'white',
-                  py: 2,
-                  px: 5,
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  '&:hover': {
-                    borderColor: 'white',
-                    background: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-              >
-                Schedule Demo
+                Book Demo
               </Button>
             </Box>
-            <AvatarGroup max={5} sx={{ justifyContent: 'center', mb: 2 }}>
-              {[...Array(8)].map((_, i) => (
-                <Avatar key={i} sx={{ bgcolor: 'white', color: '#9CA3AF' }}>
-                  {String.fromCharCode(65 + i)}
-                </Avatar>
-              ))}
-            </AvatarGroup>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-              Join 1,284+ professionals already using Equitle
-            </Typography>
           </Box>
         </Container>
       </Box>
 
-      {/* Footer */}
-      <Box sx={{ py: 8, background: '#0A0A0A', color: 'white' }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  fontFamily: '"Space Grotesk", sans-serif',
-                  fontWeight: 700,
-                  mb: 2
-                }}
-              >
-                Equitle
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 3, color: 'rgba(255, 255, 255, 0.7)' }}>
-                The AI-powered platform transforming private equity deal management.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                {['LinkedIn', 'Twitter', 'GitHub'].map((social) => (
-                  <Typography
-                    key={social}
-                    variant="body2"
-                    sx={{
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        color: 'white'
-                      }
-                    }}
-                  >
-                    {social}
-                  </Typography>
-                ))}
-              </Box>
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                Product
-              </Typography>
-              {['Features', 'Integrations', 'Security', 'Pricing'].map((item) => (
-                <Typography
-                  key={item}
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    mb: 1,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: 'white'
-                    }
-                  }}
-                >
-                  {item}
-                </Typography>
-              ))}
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                Solutions
-              </Typography>
-              {['Deal Sourcing', 'Due Diligence', 'Portfolio Management', 'LP Reporting'].map((item) => (
-                <Typography
-                  key={item}
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    mb: 1,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: 'white'
-                    }
-                  }}
-                >
-                  {item}
-                </Typography>
-              ))}
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                Company
-              </Typography>
-              {['About', 'Careers', 'Blog', 'Contact'].map((item) => (
-                <Typography
-                  key={item}
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    mb: 1,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: 'white'
-                    }
-                  }}
-                >
-                  {item}
-                </Typography>
-              ))}
-            </Grid>
-            <Grid item xs={6} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                Resources
-              </Typography>
-              {['Documentation', 'API', 'Support', 'Status'].map((item) => (
-                <Typography
-                  key={item}
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    mb: 1,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: 'white'
-                    }
-                  }}
-                >
-                  {item}
-                </Typography>
-              ))}
-            </Grid>
-          </Grid>
-          <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-              © 2024 Equitle. All rights reserved.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((item) => (
-                <Typography
-                  key={item}
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      color: 'white'
-                    }
-                  }}
-                >
-                  {item}
-                </Typography>
-              ))}
-            </Box>
-          </Box>
-        </Container>
-      </Box>
+      <Footer />
 
       {/* Demo Modal */}
       <Modal
