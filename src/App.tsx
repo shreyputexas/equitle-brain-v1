@@ -24,8 +24,10 @@ function App() {
       <BrainProvider>
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
-            {/* OAuth callback route */}
+            {/* OAuth callback routes */}
             <Route path="/app/oauth/callback" element={<OAuthCallback />} />
+            <Route path="/integrations/success" element={<OAuthCallback />} />
+            <Route path="/integrations/error" element={<OAuthCallback />} />
 
             {/* Main app routes - no authentication required */}
             <Route path="/" element={<Layout />}>

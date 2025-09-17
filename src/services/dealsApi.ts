@@ -124,7 +124,7 @@ export interface SearchFilters {
 }
 
 class DealsApiService {
-  private baseURL = 'http://localhost:4000/api';
+  private baseURL = 'http://localhost:4001/api';
 
   constructor() {
     // Configure axios defaults

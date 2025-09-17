@@ -3,6 +3,7 @@ import GoogleAuthService from './googleAuth';
 import logger from '../utils/logger';
 
 export interface CalendarEvent {
+  conferenceData: any;
   id: string;
   summary: string;
   description?: string | null;
@@ -55,6 +56,14 @@ export interface CreateEventData {
       method: 'email' | 'popup';
       minutes: number;
     }>;
+  };
+  conferenceData?: {
+    createRequest?: {
+      requestId: string;
+      conferenceSolutionKey?: {
+        type: 'hangoutsMeet';
+      };
+    };
   };
 }
 
@@ -121,6 +130,7 @@ export class GoogleCalendarService {
         id: event.id!,
         summary: event.summary || 'No title',
         description: event.description,
+        conferenceData: event.conferenceData,
         start: {
           dateTime: event.start?.dateTime,
           date: event.start?.date,
@@ -159,16 +169,16 @@ export class GoogleCalendarService {
 
       const response = await calendar.events.insert({
         calendarId,
+        conferenceDataVersion: eventData.conferenceData ? 1 : 0,
         requestBody: eventData,
       });
-
       const event = response.data;
       return {
         id: event.id!,
         summary: event.summary || 'No title',
         description: event.description,
+        conferenceData: event.conferenceData,
         start: {
-          dateTime: event.start?.dateTime,
           date: event.start?.date,
           timeZone: event.start?.timeZone
         },
@@ -208,12 +218,12 @@ export class GoogleCalendarService {
         eventId,
         requestBody: eventData,
       });
-
       const event = response.data;
       return {
         id: event.id!,
         summary: event.summary || 'No title',
         description: event.description,
+        conferenceData: event.conferenceData,
         start: {
           dateTime: event.start?.dateTime,
           date: event.start?.date,

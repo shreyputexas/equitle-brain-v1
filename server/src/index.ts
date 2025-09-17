@@ -75,7 +75,60 @@ app.use('/api/lp-groups', authMiddleware, lpGroupsRoutes);
 app.use('/api/companies', authMiddleware, companyRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/reports', authMiddleware, reportRoutes);
-app.use('/api/integrations', authMiddleware, integrationRoutes);
+// Integration routes with conditional auth (callback route is public)
+app.use('/api/integrations', (req, res, next) => {
+  console.log('Integration route hit:', req.path, req.method);
+  // Skip auth middleware for the OAuth callback route
+  if (req.path === '/google/callback') {
+    console.log('Skipping auth for OAuth callback');
+    return next();
+  }
+  console.log('Applying auth middleware');
+  return authMiddleware(req, res, next);
+}, integrationRoutes);
+
+// Public test endpoint for Google OAuth debugging
+app.get('/api/test-google', async (req, res) => {
+  try {
+    const hasClientId = !!process.env.GOOGLE_CLIENT_ID;
+    const hasClientSecret = !!process.env.GOOGLE_CLIENT_SECRET;
+    const hasRedirectUri = !!process.env.GOOGLE_REDIRECT_URI;
+
+    // Also check what integrations exist in the database
+    const prisma = require('./lib/database').default;
+    const allIntegrations = await prisma.integration.findMany({
+      select: {
+        id: true,
+        userId: true,
+        provider: true,
+        type: true,
+        isActive: true,
+        createdAt: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        googleSetup: {
+          hasClientId,
+          hasClientSecret,
+          hasRedirectUri,
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          redirectUri: process.env.GOOGLE_REDIRECT_URI,
+          isConfigured: hasClientId && hasClientSecret && hasRedirectUri
+        },
+        integrations: allIntegrations,
+        message: hasClientId && hasClientSecret && hasRedirectUri
+          ? 'Google integration is properly configured'
+          : 'Google integration is missing required environment variables'
+      }
+    });
+  } catch (error) {
+    logger.error('Error testing Google integration setup:', error);
+    res.status(500).json({ success: false, error: 'Failed to test Google integration setup' });
+  }
+});
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
 app.use('/api/gmail', gmailRoutes);
 

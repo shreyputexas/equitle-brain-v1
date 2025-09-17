@@ -22,6 +22,7 @@ import {
   DriveEta as DriveIcon,
   Event as CalendarIcon,
   Person as ProfileIcon,
+  Email as EmailIcon,
   CheckCircle as CheckIcon
 } from '@mui/icons-material';
 import integrationService from '../../services/integrationService';
@@ -65,6 +66,14 @@ const GoogleConnectDialog: React.FC<GoogleConnectDialogProps> = ({
       description: 'Access and manage your calendar events',
       icon: <CalendarIcon />,
       permissions: ['View your calendar events', 'Create and edit calendar events'],
+      required: false
+    },
+    {
+      type: 'gmail',
+      label: 'Gmail',
+      description: 'Access and manage your Gmail messages',
+      icon: <EmailIcon />,
+      permissions: ['Read and send emails', 'View email threads', 'Manage email labels'],
       required: false
     }
   ];

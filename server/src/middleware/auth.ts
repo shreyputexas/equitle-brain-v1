@@ -20,7 +20,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     // For development: use specific mock tokens
     if (token === 'mock-token') {
       (req as any).user = {
-        id: 'mock-user-id',
+        id: 'default-user-id',
         email: 'demo@equitle.com',
         role: 'admin',
         type: 'access'

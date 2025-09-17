@@ -138,7 +138,7 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
         ...(formData.description.trim() && { description: formData.description.trim() })
       };
 
-      const response = await fetch(`http://localhost:4000/api/deals/${deal.id}`, {
+      const response = await fetch(`http://localhost:4001/api/deals/${deal.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

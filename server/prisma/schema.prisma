@@ -106,7 +106,7 @@ model Integration {
   accessToken   String?
   refreshToken  String?
   expiresAt     DateTime?
-  scope         String?
+  scope         String[]
   profile       Json?     // Store provider profile info
   settings      Json?     // Store integration settings
   lastSync      DateTime?

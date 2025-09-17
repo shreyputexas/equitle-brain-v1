@@ -1,18 +1,18 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4000/api';
+const API_BASE_URL = 'http://localhost:4001/api';
 
 export interface Integration {
   id: string;
   provider: 'google';
-  type: 'drive' | 'calendar' | 'profile';
+  type: 'drive' | 'calendar' | 'profile' | 'gmail' | 'meet';
   isActive: boolean;
   profile: {
     email: string;
     name: string;
     picture?: string;
   };
-  scope: string[];
+  scope: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,11 +43,54 @@ export interface CalendarEvent {
   };
   location?: string;
   htmlLink: string;
+  status: string;
+  created: string;
+  updated: string;
+  attendees?: Array<{
+    email: string;
+    displayName?: string;
+    responseStatus?: string;
+  }>;
+  organizer: {
+    email: string;
+    displayName?: string;
+  };
+}
+
+export interface GmailMessage {
+  id: string;
+  threadId: string;
+  labelIds?: string[];
+  snippet: string;
+  historyId: string;
+  internalDate: string;
+  sizeEstimate: number;
+  payload?: {
+    headers: Array<{
+      name: string;
+      value: string;
+    }>;
+    body?: {
+      size: number;
+      data?: string;
+    };
+  };
+}
+
+export interface GmailLabel {
+  id: string;
+  name: string;
+  type: string;
+  messagesTotal?: number;
+  messagesUnread?: number;
+  threadsTotal?: number;
+  threadsUnread?: number;
 }
 
 class IntegrationService {
   private getAuthToken() {
-    return localStorage.getItem('token');
+    // Use the same mock token as AuthContext for consistency
+    return 'mock-token';
   }
 
   private getAuthHeaders() {
@@ -60,7 +103,12 @@ class IntegrationService {
       const response = await axios.get(`${API_BASE_URL}/integrations`, {
         headers: this.getAuthHeaders()
       });
-      return (response.data as { data: Integration[] }).data;
+      // Handle both response formats
+      const data = response.data as any;
+      if (data.success && data.data) {
+        return data.data;
+      }
+      return data;
     } catch (error) {
       console.error('Error fetching integrations:', error);
       throw error;
@@ -74,7 +122,12 @@ class IntegrationService {
         { types },
         { headers: this.getAuthHeaders() }
       );
-      return (response.data as { data: { authUrl: string } }).data;
+      // Handle both response formats
+      const data = response.data as any;
+      if (data.success && data.data) {
+        return data.data;
+      }
+      return data;
     } catch (error) {
       console.error('Error connecting to Google:', error);
       throw error;
@@ -134,6 +187,7 @@ class IntegrationService {
     };
     attendees?: Array<{ email: string }>;
     location?: string;
+    createMeetLink?: boolean;
   }): Promise<CalendarEvent> {
     try {
       const response = await axios.post(
@@ -196,6 +250,80 @@ class IntegrationService {
       return 'All day';
     }
     return 'Time not specified';
+  }
+
+  // Gmail methods
+  async getGmailMessages(options: {
+    q?: string;
+    labelIds?: string;
+    maxResults?: number;
+    pageToken?: string;
+  } = {}): Promise<{ messages: GmailMessage[]; nextPageToken?: string; resultSizeEstimate: number }> {
+    try {
+      const params = new URLSearchParams();
+      if (options.q) params.append('q', options.q);
+      if (options.labelIds) params.append('labelIds', options.labelIds);
+      if (options.maxResults) params.append('maxResults', options.maxResults.toString());
+      if (options.pageToken) params.append('pageToken', options.pageToken);
+
+      const response = await axios.get(
+        `${API_BASE_URL}/integrations/google/gmail/messages?${params}`,
+        { headers: this.getAuthHeaders() }
+      );
+      return (response.data as { data: { messages: GmailMessage[]; nextPageToken?: string; resultSizeEstimate: number } }).data;
+    } catch (error) {
+      console.error('Error fetching Gmail messages:', error);
+      throw error;
+    }
+  }
+
+  async sendGmailEmail(emailData: {
+    to: string | string[];
+    cc?: string | string[];
+    bcc?: string | string[];
+    subject: string;
+    body: string;
+    isHtml?: boolean;
+    replyTo?: string;
+    threadId?: string;
+  }): Promise<GmailMessage> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/integrations/google/gmail/send`,
+        emailData,
+        { headers: this.getAuthHeaders() }
+      );
+      return (response.data as { data: GmailMessage }).data;
+    } catch (error) {
+      console.error('Error sending Gmail email:', error);
+      throw error;
+    }
+  }
+
+  async getGmailLabels(): Promise<GmailLabel[]> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/integrations/google/gmail/labels`,
+        { headers: this.getAuthHeaders() }
+      );
+      return (response.data as { data: GmailLabel[] }).data;
+    } catch (error) {
+      console.error('Error fetching Gmail labels:', error);
+      throw error;
+    }
+  }
+
+  async markGmailAsRead(messageId: string): Promise<void> {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/integrations/google/gmail/messages/${messageId}/read`,
+        {},
+        { headers: this.getAuthHeaders() }
+      );
+    } catch (error) {
+      console.error('Error marking Gmail message as read:', error);
+      throw error;
+    }
   }
 }
 
