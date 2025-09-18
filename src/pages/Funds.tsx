@@ -181,7 +181,7 @@ export default function Funds() {
   // Filter logic
   const filteredFunds = funds.filter(fund => {
     const matchesStatus = statusFilter === 'all' || fund.status.toLowerCase() === statusFilter.toLowerCase();
-    const matchesVintage = vintageFilter === 'all' || fund.vintage.toString() === vintageFilter;
+    const matchesVintage = vintageFilter === 'all' || (fund.vintage && fund.vintage.toString() === vintageFilter);
     const matchesSearch = searchQuery === '' || fund.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSize = sizeFilter === 'all' || 
       (sizeFilter === 'small' && fund.targetSize <= 50000000) ||
@@ -275,7 +275,14 @@ export default function Funds() {
       // If no funds, show a message or download empty report
       downloadFundsPDF([], 'Empty_Funds_Portfolio_Report');
     } else {
-      downloadFundsPDF(filteredFunds, 'Funds_Portfolio_Report');
+      // Filter out funds without vintage and map to FundData format
+      const validFunds = filteredFunds
+        .filter(fund => fund.vintage !== undefined)
+        .map(fund => ({
+          ...fund,
+          vintage: fund.vintage!
+        }));
+      downloadFundsPDF(validFunds, 'Funds_Portfolio_Report');
     }
   };
 

@@ -149,6 +149,7 @@ export default function Deals() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [statusFilter, setStatusFilter] = useState<'prospective' | 'active'>('prospective');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [expandedDeals, setExpandedDeals] = useState<Set<string>>(new Set());
@@ -248,6 +249,15 @@ export default function Deals() {
   const handleCloseEditModal = () => {
     setEditDealModalOpen(false);
     setDealToEdit(null);
+  };
+
+  const handleStatusChange = async (dealId: string, newStatus: 'prospective' | 'active') => {
+    try {
+      await dealsApi.updateDeal(dealId, { status: newStatus });
+      refreshDeals();
+    } catch (error) {
+      console.error('Error updating deal status:', error);
+    }
   };
 
   const columns: GridColDef[] = [
@@ -523,9 +533,27 @@ export default function Deals() {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 100,
+      width: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {params.row.status !== 'active' && (
+            <Tooltip title="Move to Active">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusChange(params.row.id, 'active');
+                }}
+                sx={{ 
+                  bgcolor: '#000000', 
+                  color: 'white',
+                  '&:hover': { bgcolor: '#333333' }
+                }}
+              >
+                <TrendingUpIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title="Edit Deal">
             <IconButton
               size="small"
@@ -558,9 +586,15 @@ export default function Deals() {
 
     if (!matchesSearch) return false;
 
-    if (activeTab === 1) return deal.status === 'active';
-    if (activeTab === 2) return deal.stage === 'due-diligence';
-    if (activeTab === 3) return deal.status === 'closed';
+    // Filter by status (prospective vs active)
+    if (activeTab === 0) {
+      // Prospective tab - show deals that are not yet active
+      return deal.status !== 'active' && deal.status !== 'closed';
+    } else if (activeTab === 1) {
+      // Active tab - show deals that are active
+      return deal.status === 'active';
+    }
+    
     return true;
   });
 
@@ -568,6 +602,7 @@ export default function Deals() {
   const totalPipelineValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
   const avgProbability = deals.length > 0 ? Math.round(deals.reduce((sum, deal) => sum + (deal.probability || 0), 0) / deals.length) : 0;
   const activeDealCount = deals.filter(d => d.status === 'active').length;
+  const prospectiveDealCount = deals.filter(d => d.status !== 'active' && d.status !== 'closed').length;
 
   const DealCard = ({ deal }: { deal: DealWithContacts }) => {
     const isExpanded = expandedDeals.has(deal.id);
@@ -884,6 +919,25 @@ export default function Deals() {
               <Avatar key={index}>{member.split(' ').map(n => n[0]).join('')}</Avatar>
             ))}
           </AvatarGroup>
+          {deal.status !== 'active' && (
+            <Tooltip title="Move to Active">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusChange(deal.id, 'active');
+                }}
+                sx={{ 
+                  bgcolor: '#000000', 
+                  color: 'white',
+                  mr: 1,
+                  '&:hover': { bgcolor: '#333333' }
+                }}
+              >
+                <TrendingUpIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, deal.id); }}>
             <MoreVertIcon fontSize="small" />
           </IconButton>
@@ -900,7 +954,7 @@ export default function Deals() {
             Deal Pipeline
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-            Track and manage all your investment opportunities
+            Manage your investment opportunities from initial outreach to closing
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ 
             fontStyle: 'italic',
@@ -908,7 +962,7 @@ export default function Deals() {
             alignItems: 'center',
             gap: 1
           }}>
-            List view shows contact details, relationship scores, and interaction history. Card view: click expand for full details.
+            Prospective: All companies you've reached out to. Active: Deals you're actively pursuing. Use the arrow button to move deals from prospective to active.
           </Typography>
         </Box>
         <Button
@@ -1047,10 +1101,8 @@ export default function Deals() {
           onChange={(_, newValue) => setActiveTab(newValue)}
           sx={{ mb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
         >
-          <Tab label={`All Deals (${deals.length})`} />
+          <Tab label={`Prospective (${prospectiveDealCount})`} />
           <Tab label={`Active (${activeDealCount})`} />
-          <Tab label={`Due Diligence (${deals.filter(d => d.stage === 'due-diligence').length})`} />
-          <Tab label={`Closed Won (${deals.filter(d => d.status === 'closed').length})`} />
         </Tabs>
 
         {loading ? (

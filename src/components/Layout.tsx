@@ -21,7 +21,11 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-  Collapse
+  Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   AttachMoney as DealsIcon,
@@ -43,7 +47,12 @@ import {
   Stop as StopIcon,
   Send as SendIcon,
   VolumeUp as VolumeUpIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon
+  RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  Psychology as BrainIcon,
+  QuestionAnswer as AskIcon,
+  FollowTheSigns as FollowUpIcon,
+  Analytics as AnalyticsIcon,
+  Assessment as ReportIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -64,9 +73,7 @@ const navigationItems = [
   {
     text: 'Deals',
     icon: <DealsIcon />,
-    subItems: [
-      { text: 'Relationships', path: '/deals/relationships' }
-    ]
+    path: '/deals/all'
   },
   {
     text: 'Fundraising',
@@ -77,9 +84,14 @@ const navigationItems = [
     ]
   },
   {
-    text: 'Settings',
-    icon: <SettingsIcon />,
-    path: '/settings'
+    text: 'Brain',
+    icon: <BrainIcon />,
+    subItems: [
+      { text: 'Ask About Deal', path: '/brain', action: 'ask-deal' },
+      { text: 'Follow Up', path: '/brain', action: 'follow-up' },
+      { text: 'Analytics', path: '/brain', action: 'analytics' },
+      { text: 'Generate Report', path: '/brain', action: 'report' }
+    ]
   }
 ];
 
@@ -90,6 +102,7 @@ export default function Layout() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [mobileExpandedMenus, setMobileExpandedMenus] = useState<{ [key: string]: boolean }>({});
   const [brainChatOpen, setBrainChatOpen] = useState(false);
+  const [quickLookupOpen, setQuickLookupOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -136,18 +149,26 @@ export default function Layout() {
 
   const handleSearch = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate('/brain');
-      await askBrain(searchQuery);
+      // Quick lookup functionality - search for documents, emails, transcripts, etc.
+      console.log('Quick lookup search:', searchQuery);
+      // TODO: Implement quick lookup search functionality
       setSearchQuery('');
     }
   };
 
-  const handleNavigation = (path: string, menuKey?: string) => {
+  const handleNavigation = (path: string, menuKey?: string, action?: string) => {
     navigate(path);
     if (menuKey) {
       handleNavMenuClose(menuKey);
     }
     setMobileDrawerOpen(false);
+    
+    // Handle Brain quick actions
+    if (action) {
+      // You can add specific logic here for different actions
+      // For now, we'll just navigate to the brain page
+      console.log(`Brain action: ${action}`);
+    }
   };
 
   const handleMobileDrawerToggle = () => {
@@ -391,8 +412,8 @@ export default function Layout() {
                       {item.subItems.map((subItem) => (
                         <MenuItem
                           key={subItem.text}
-                          onClick={() => handleNavigation(subItem.path, item.text)}
-                          selected={location.pathname === subItem.path}
+                          onClick={() => handleNavigation(subItem.path, item.text, (subItem as any).action)}
+                          selected={false}
                         >
                           {subItem.text}
                         </MenuItem>
@@ -422,30 +443,24 @@ export default function Layout() {
           {/* Mobile spacer */}
           <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }} />
 
-          {/* Search Bar */}
-          <Paper
-            sx={{
-              p: '2px 4px',
-              display: { xs: 'none', md: 'flex' },
-              alignItems: 'center',
-              width: 300,
-              bgcolor: 'background.default',
-              border: '1px solid',
-              borderColor: 'divider',
-              mr: 2
-            }}
-          >
-            <IconButton sx={{ p: '10px' }}>
+          {/* Quick Lookup Icon */}
+          <Tooltip title="Quick Lookup">
+            <IconButton
+              onClick={() => setQuickLookupOpen(true)}
+              sx={{
+                display: { xs: 'none', md: 'flex' },
+                mr: 2,
+                bgcolor: 'background.default',
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': {
+                  bgcolor: 'action.hover'
+                }
+              }}
+            >
               <SearchIcon />
             </IconButton>
-            <InputBase
-              sx={{ ml: 1, flex: 1 }}
-              placeholder="Ask Brain anything..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleSearch}
-            />
-          </Paper>
+          </Tooltip>
 
           {/* Right side - Profile with Notifications */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -488,6 +503,12 @@ export default function Layout() {
             <PersonIcon fontSize="small" />
           </ListItemIcon>
           Profile
+        </MenuItem>
+        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          Settings
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
@@ -555,8 +576,8 @@ export default function Layout() {
                           <ListItemButton
                             key={subItem.text}
                             sx={{ pl: 4 }}
-                            onClick={() => handleNavigation(subItem.path)}
-                            selected={location.pathname === subItem.path}
+                            onClick={() => handleNavigation(subItem.path, undefined, (subItem as any).action)}
+                            selected={false}
                           >
                             <ListItemText primary={subItem.text} />
                           </ListItemButton>
@@ -579,6 +600,35 @@ export default function Layout() {
                 )}
               </Box>
             ))}
+            
+            {/* Mobile Profile Section */}
+            <Divider sx={{ my: 2 }} />
+            <List>
+              <ListItem disablePadding>
+                <ListItemButton onClick={() => { setMobileDrawerOpen(false); navigate('/profile'); }}>
+                  <ListItemIcon>
+                    <PersonIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Profile" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton onClick={() => { setMobileDrawerOpen(false); navigate('/settings'); }}>
+                  <ListItemIcon>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Settings" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton onClick={handleLogout}>
+                  <ListItemIcon>
+                    <LogoutIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Logout" />
+                </ListItemButton>
+              </ListItem>
+            </List>
           </List>
         </Box>
         </Drawer>
@@ -953,6 +1003,118 @@ export default function Layout() {
             )}
           </Paper>
         )}
+
+        {/* Quick Lookup Dialog */}
+        <Dialog
+          open={quickLookupOpen}
+          onClose={() => setQuickLookupOpen(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              minHeight: '60vh',
+              maxHeight: '80vh'
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            bgcolor: '#000000',
+            color: 'white',
+            py: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <SearchIcon />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Quick Lookup
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setQuickLookupOpen(false)} sx={{ color: 'white' }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent sx={{ p: 0 }}>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                Search across documents, emails, transcripts, and other integrated data sources.
+              </Typography>
+
+              {/* Search Input */}
+              <Paper
+                component="form"
+                sx={{
+                  p: '2px 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: '100%',
+                  mb: 3,
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}
+              >
+                <IconButton sx={{ p: '10px' }}>
+                  <SearchIcon />
+                </IconButton>
+                <InputBase
+                  sx={{ ml: 1, flex: 1 }}
+                  placeholder="Search documents, emails, transcripts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={handleSearch}
+                />
+              </Paper>
+
+              {/* Search Results Placeholder */}
+              <Box sx={{ 
+                minHeight: 200, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                border: '1px dashed',
+                borderColor: 'divider',
+                borderRadius: 2,
+                bgcolor: 'background.default'
+              }}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <SearchIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    Start searching to find content
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Search across all your integrated data sources
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          </DialogContent>
+
+          <DialogActions sx={{ p: 3, bgcolor: 'background.default' }}>
+            <Button onClick={() => setQuickLookupOpen(false)} variant="outlined">
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (searchQuery.trim()) {
+                  handleSearch({ key: 'Enter' } as React.KeyboardEvent);
+                }
+              }}
+              variant="contained"
+              disabled={!searchQuery.trim()}
+              sx={{
+                bgcolor: '#000000',
+                color: 'white',
+                '&:hover': { bgcolor: '#333333' }
+              }}
+            >
+              Search
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Box>
   );

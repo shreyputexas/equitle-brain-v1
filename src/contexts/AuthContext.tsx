@@ -95,12 +95,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     // For demo purposes - would normally authenticate
     await fetchUserProfile();
-    navigate('/deals/relationships');
+    navigate('/deals/all');
   };
 
   const logout = () => {
     setUser(null);
-    navigate('/deals/relationships');
+    navigate('/deals/all');
   };
 
   const updateUser = (userData: Partial<User>) => {
