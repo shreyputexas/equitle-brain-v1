@@ -1,3 +1,4 @@
+import { useAuth } from '../contexts/AuthContext';
 import React, { useState } from 'react';
 import {
   Box,
@@ -49,6 +50,7 @@ const steps = ['Personal Information', 'Search Details', 'Team & Experience', 'P
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -120,26 +122,22 @@ export default function SignUp() {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
 
-    try {
-      // Here you would typically send the data to your backend
-      console.log('Sign up data:', formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirect to login or dashboard
-      navigate('/login');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during sign up');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
+  try {
+    console.log('Sign up data:', formData);
+    await signup(formData.email, formData.password);
+    navigate('/app');
+  } catch (err: any) {
+    setError(err.message || 'An error occurred during sign up');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const renderPersonalInfo = () => (
     <Grid container spacing={3}>
