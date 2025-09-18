@@ -54,37 +54,34 @@ export default function Manifesto() {
   const manifestoPoints = [
     {
       title: 'Relationships Over Administration',
-      description: 'Search funders should spend their time building meaningful relationships with business owners, not managing spreadsheets and tracking emails.',
+      description: 'Build meaningful connections with business owners, not manage spreadsheets.',
       icon: <HandshakeIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       details: [
-        'Focus on understanding the business owner\'s vision and goals',
-        'Build trust through genuine conversations, not automated follow-ups',
-        'Spend time on site visits and face-to-face meetings',
-        'Develop deep industry knowledge and expertise'
+        'Focus on business owner\'s vision and goals',
+        'Build trust through genuine conversations',
+        'Develop deep industry expertise'
       ]
     },
     {
       title: 'Financial Analysis Over Data Entry',
-      description: 'Your expertise lies in analyzing financials and identifying value creation opportunities, not in manual data processing.',
+      description: 'Analyze financials and identify opportunities, not process data manually.',
       icon: <MoneyIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       details: [
-        'Dive deep into financial models and projections',
-        'Identify operational improvements and growth opportunities',
-        'Analyze market trends and competitive positioning',
+        'Deep dive into financial models',
+        'Identify growth opportunities',
         'Focus on due diligence and risk assessment'
       ]
     },
     {
       title: 'Strategic Thinking Over Task Management',
-      description: 'Search funders are strategic thinkers who should focus on deal sourcing, evaluation, and execution rather than administrative tasks.',
+      description: 'Focus on deal sourcing and execution, not administrative tasks.',
       icon: <LightbulbIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       details: [
-        'Develop investment theses and sector expertise',
-        'Build networks of industry contacts and advisors',
-        'Create value creation plans for potential acquisitions',
+        'Develop investment theses',
+        'Build industry networks',
         'Focus on fundraising and investor relations'
       ]
     }
