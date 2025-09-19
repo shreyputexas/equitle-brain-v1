@@ -42,6 +42,7 @@ import {
   DataUsage as DataIcon,
   Api as ApiIcon,
   PhoneAndroid as MobileIcon,
+  PhoneAndroid,
   LockOutlined as LockIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -67,24 +68,46 @@ export default function Product() {
 
   const features = [
     {
-      category: 'Search Fund CRM',
+      category: 'Automated Note Taking',
       icon: <AIIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [
         {
-          title: 'Relationship-First Design',
-          description: 'Built specifically for search funders who prioritize relationship building over administrative tasks',
-          benefits: ['Automated follow-ups', 'Relationship scoring', 'Conversation insights']
+          title: 'Meeting Intelligence',
+          description: 'AI automatically captures and transcribes meeting notes, extracting key insights and action items',
+          benefits: ['Real-time transcription', 'Action item extraction', 'Key insight identification']
         },
         {
-          title: 'Deal Sourcing Intelligence',
-          description: 'AI-powered tools to identify and prioritize the best acquisition opportunities',
-          benefits: ['Smart deal matching', 'Market intelligence', 'Predictive scoring']
+          title: 'Smart Note Organization',
+          description: 'Automatically categorizes and tags notes for easy retrieval and analysis',
+          benefits: ['Auto-categorization', 'Smart tagging', 'Searchable database']
         },
         {
-          title: 'Owner Relationship Management',
-          description: 'Track and nurture relationships with business owners throughout the search process',
-          benefits: ['Interaction history', 'Communication preferences', 'Relationship timeline']
+          title: 'Intelligence Integration',
+          description: 'Meeting insights are automatically added to your deal intelligence and relationship profiles',
+          benefits: ['Deal context updates', 'Relationship scoring', 'Pipeline intelligence']
+        }
+      ]
+    },
+    {
+      category: 'Automated Calling',
+      icon: <PhoneAndroid sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
+      items: [
+        {
+          title: 'Prospect Outreach Automation',
+          description: 'AI automatically calls POCs at prospective businesses based on your criteria and timing',
+          benefits: ['Automated dialing', 'Smart scheduling', 'Call outcome tracking']
+        },
+        {
+          title: 'Intelligent Conversation Flow',
+          description: 'AI conducts initial conversations to qualify prospects and gather key information',
+          benefits: ['Natural conversation', 'Qualification questions', 'Information capture']
+        },
+        {
+          title: 'Follow-up Management',
+          description: 'Automatically schedules follow-ups and tracks conversation history with prospects',
+          benefits: ['Auto-scheduling', 'Conversation tracking', 'Relationship building']
         }
       ]
     },
@@ -111,24 +134,24 @@ export default function Product() {
       ]
     },
     {
-      category: 'Analytics & Reporting',
-      icon: <AnalyticsIcon sx={{ fontSize: 40 }} />,
-      color: '#F59E0B',
+      category: 'Brain',
+      icon: <AIIcon sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
       items: [
         {
-          title: 'Performance Analytics',
-          description: 'Deep insights into portfolio performance and KPI tracking',
-          benefits: ['Real-time dashboards', 'Custom KPIs', 'Trend analysis']
+          title: 'Central LLM Intelligence',
+          description: 'A central large language model that serves as your AI-powered knowledge base and advisor',
+          benefits: ['Natural language queries', 'Contextual responses', 'Intelligent insights']
         },
         {
-          title: 'Custom Reports',
-          description: 'Flexible reporting engine for LP reports and internal analysis',
-          benefits: ['Report builder', 'Automated delivery', 'White labeling']
+          title: 'Knowledge Base Integration',
+          description: 'Connects all your data sources to create a comprehensive knowledge base for informed decision making',
+          benefits: ['Unified data access', 'Cross-reference insights', 'Historical context']
         },
         {
-          title: 'Predictive Modeling',
-          description: 'AI-powered forecasting for returns, risks, and market conditions',
-          benefits: ['Return forecasting', 'Scenario modeling', 'Risk prediction']
+          title: 'Intelligent Recommendations',
+          description: 'AI-powered suggestions based on your deal history, market data, and investment patterns',
+          benefits: ['Deal recommendations', 'Risk assessments', 'Strategic guidance']
         }
       ]
     },

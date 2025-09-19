@@ -54,37 +54,34 @@ export default function Manifesto() {
   const manifestoPoints = [
     {
       title: 'Relationships Over Administration',
-      description: 'Search funders should spend their time building meaningful relationships with business owners, not managing spreadsheets and tracking emails.',
+      description: 'Build meaningful connections with business owners, not manage spreadsheets.',
       icon: <HandshakeIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       details: [
-        'Focus on understanding the business owner\'s vision and goals',
-        'Build trust through genuine conversations, not automated follow-ups',
-        'Spend time on site visits and face-to-face meetings',
-        'Develop deep industry knowledge and expertise'
+        'Focus on business owner\'s vision and goals',
+        'Build trust through genuine conversations',
+        'Develop deep industry expertise'
       ]
     },
     {
       title: 'Financial Analysis Over Data Entry',
-      description: 'Your expertise lies in analyzing financials and identifying value creation opportunities, not in manual data processing.',
+      description: 'Analyze financials and identify opportunities, not process data manually.',
       icon: <MoneyIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       details: [
-        'Dive deep into financial models and projections',
-        'Identify operational improvements and growth opportunities',
-        'Analyze market trends and competitive positioning',
+        'Deep dive into financial models',
+        'Identify growth opportunities',
         'Focus on due diligence and risk assessment'
       ]
     },
     {
       title: 'Strategic Thinking Over Task Management',
-      description: 'Search funders are strategic thinkers who should focus on deal sourcing, evaluation, and execution rather than administrative tasks.',
+      description: 'Focus on deal sourcing and execution, not administrative tasks.',
       icon: <LightbulbIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       details: [
-        'Develop investment theses and sector expertise',
-        'Build networks of industry contacts and advisors',
-        'Create value creation plans for potential acquisitions',
+        'Develop investment theses',
+        'Build industry networks',
         'Focus on fundraising and investor relations'
       ]
     }
@@ -135,29 +132,6 @@ export default function Manifesto() {
     }
   ];
 
-  const testimonials = [
-    {
-      quote: "Equitle freed me from the administrative burden so I could focus on what I do best - building relationships and analyzing deals.",
-      author: "Sarah Chen",
-      role: "Search Fund Manager",
-      company: "Pacific Search Partners",
-      avatar: "SC"
-    },
-    {
-      quote: "I went from spending 40% of my time on CRM management to 5%. Now I can focus on the strategic work that drives results.",
-      author: "Michael Rodriguez",
-      role: "Founder & CEO",
-      company: "Mountain View Search Fund",
-      avatar: "MR"
-    },
-    {
-      quote: "The relationship insights have transformed how I approach business owners. I'm having more meaningful conversations and closing better deals.",
-      author: "Jennifer Kim",
-      role: "Managing Partner",
-      company: "Coastal Capital Partners",
-      avatar: "JK"
-    }
-  ];
 
   return (
     <>
@@ -386,60 +360,6 @@ export default function Manifesto() {
         </Container>
       </Box>
 
-      {/* Testimonials */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography 
-              variant="h2" 
-              sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
-                fontWeight: 700,
-                mb: 2
-              }}
-            >
-              What Search Funders Are Saying
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Real feedback from search funders who've made the switch
-            </Typography>
-          </Box>
-
-          <Grid container spacing={4}>
-            {testimonials.map((testimonial, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Card
-                  sx={{
-                    p: 4,
-                    height: '100%',
-                    border: '1px solid rgba(156, 163, 175, 0.08)',
-                    '&:hover': {
-                      boxShadow: '0 12px 32px rgba(156, 163, 175, 0.1)'
-                    }
-                  }}
-                >
-                  <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.7, fontStyle: 'italic' }}>
-                    "{testimonial.quote}"
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: '#9CA3AF' }}>
-                      {testimonial.avatar}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        {testimonial.author}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {testimonial.role}, {testimonial.company}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
 
       {/* Call to Action */}
       <Box 
@@ -464,10 +384,11 @@ export default function Manifesto() {
             <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
               Join the search funders who've already made the switch to relationship-focused deal sourcing
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Button 
                 variant="contained" 
                 size="large"
+                onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                 sx={{
                   background: 'white',
                   color: '#374151',
@@ -477,26 +398,8 @@ export default function Manifesto() {
                     background: 'rgba(255, 255, 255, 0.95)'
                   }
                 }}
-                onClick={() => navigate('/pricing')}
               >
-                Start Free Trial
-              </Button>
-              <Button 
-                variant="outlined" 
-                size="large"
-                sx={{
-                  borderColor: 'white',
-                  color: 'white',
-                  py: 1.5,
-                  px: 4,
-                  '&:hover': {
-                    borderColor: 'white',
-                    background: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-                onClick={() => navigate('/solutions')}
-              >
-                See How It Works
+                Book Demo
               </Button>
             </Box>
           </Box>
