@@ -148,7 +148,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
             Permissions:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {integration.scope.slice(0, 2).map((scope, index) => (
+            {integration.scope.split(',').slice(0, 2).map((scope: string, index: number) => (
               <Chip
                 key={index}
                 label={scope.split('/').pop()?.replace('auth.', '') || scope}

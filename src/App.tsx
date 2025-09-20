@@ -33,12 +33,12 @@ function App() {
 
             {/* Main app routes - no authentication required */}
             <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="/deals/relationships" />} />
+              <Route index element={<Navigate to="/deals/all" />} />
 
               {/* Deals Routes */}
               <Route path="deals">
-                <Route path="relationships" element={<Deals />} />
-                <Route path="relationships/:id" element={<DealDetail />} />
+                <Route path="all" element={<Deals />} />
+                <Route path="all/:id" element={<DealDetail />} />
               </Route>
 
               {/* Fundraising Routes */}
@@ -52,13 +52,14 @@ function App() {
               <Route path="profile" element={<Profile />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
-              <Route path="dashboard" element={<Navigate to="/deals/relationships" />} />
-              <Route path="companies" element={<Navigate to="/deals/relationships" />} />
-              <Route path="contacts" element={<Navigate to="/deals/relationships" />} />
+              <Route path="dashboard" element={<Navigate to="/deals/all" />} />
+              <Route path="companies" element={<Navigate to="/deals/all" />} />
+              <Route path="contacts" element={<Navigate to="/deals/all" />} />
               <Route path="investor-relations" element={<Navigate to="/fundraising/limited-partners" />} />
               <Route path="brain" element={<Brain />} />
               <Route path="reports" element={<Navigate to="/fundraising/funds" />} />
-              <Route path="deals" element={<Navigate to="/deals/relationships" />} />
+              <Route path="deals" element={<Navigate to="/deals/all" />} />
+              <Route path="deals/relationships" element={<Navigate to="/deals/all" />} />
             </Route>
           </Routes>
           </Box>

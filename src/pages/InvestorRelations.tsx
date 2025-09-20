@@ -4,6 +4,7 @@ import ReportModal from '../components/ReportModal';
 import EmailUpdateModal from '../components/EmailUpdateModal';
 import NewLPModal from '../components/NewLPModal';
 import ManageGroupsModal from '../components/ManageGroupsModal';
+import EntityManagementModal from '../components/EntityManagementModal';
 import InvestorsApiService, { Investor } from '../services/investorsApi';
 import {
   Box,
@@ -130,6 +131,7 @@ export default function InvestorRelations() {
   const [emailUpdateModalOpen, setEmailUpdateModalOpen] = useState(false);
   const [newLPModalOpen, setNewLPModalOpen] = useState(false);
   const [manageGroupsModalOpen, setManageGroupsModalOpen] = useState(false);
+  const [entityManagementModalOpen, setEntityManagementModalOpen] = useState(false);
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -942,6 +944,15 @@ export default function InvestorRelations() {
               >
                 Manage Groups
               </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<BusinessIcon />}
+                sx={{ justifyContent: 'flex-start' }}
+                onClick={() => setEntityManagementModalOpen(true)}
+              >
+                Entity Management
+              </Button>
             </Box>
           </Paper>
         </Grid>
@@ -1340,6 +1351,16 @@ export default function InvestorRelations() {
         open={manageGroupsModalOpen}
         onClose={() => setManageGroupsModalOpen(false)}
         onSuccess={handleManageGroupsSuccess}
+      />
+
+      {/* Entity Management Modal */}
+      <EntityManagementModal
+        open={entityManagementModalOpen}
+        onClose={() => setEntityManagementModalOpen(false)}
+        onSuccess={() => {
+          // Refresh data if needed
+          console.log('Entity management updated');
+        }}
       />
     </Box>
   );
