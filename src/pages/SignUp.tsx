@@ -745,37 +745,6 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </Typography>
               </Divider>
 
-              <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<GoogleIcon />}
-                  sx={{ 
-                    borderColor: 'rgba(0, 0, 0, 0.1)',
-                    '&:hover': {
-                      borderColor: 'rgba(0, 0, 0, 0.2)',
-                      backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                    }
-                  }}
-                >
-                  Continue with Google
-                </Button>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<MicrosoftIcon />}
-                  sx={{ 
-                    borderColor: 'rgba(0, 0, 0, 0.1)',
-                    '&:hover': {
-                      borderColor: 'rgba(0, 0, 0, 0.2)',
-                      backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                    }
-                  }}
-                >
-                  Continue with Microsoft
-                </Button>
-              </Box>
-
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">
                   Already have an account?{' '}
