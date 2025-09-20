@@ -127,9 +127,35 @@ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setError('');
   setLoading(true);
+
+  const profile = {
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    phone: formData.phone,
+    location: formData.location,
+    searchDetails: {
+      searchStage: formData.searchStage,
+      searchDuration: formData.searchDuration,
+      companySize: formData.targetCompanySize,
+      investmentRange: formData.investmentRange,
+      industries: formData.targetIndustries,
+    },
+    teamExperience: {
+      teamSize: formData.teamSize,
+      currentRole: formData.currentRole,
+      experience: formData.previousExperience,
+      education: formData.education,
+    },
+    preferences: {
+      communication: formData.communicationPreference,
+      newsletter: formData.newsletter,
+      agreeTerms: formData.termsAccepted,
+    },
+  };
+
   try {
-    console.log('Sign up data:', formData);
-    await signup(formData.email, formData.password);
+    console.log('Sign up data:', profile);
+    await signup(formData.email, formData.password, profile);
     navigate('/app');
   } catch (err: any) {
     setError(err.message || 'An error occurred during sign up');
@@ -137,6 +163,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     setLoading(false);
   }
 };
+
 
 
   const renderPersonalInfo = () => (
