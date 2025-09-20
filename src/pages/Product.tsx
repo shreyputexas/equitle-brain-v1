@@ -281,13 +281,14 @@ export default function Product() {
                   variant="contained" 
                   size="large"
                   endIcon={<ArrowForwardIcon />}
+                  onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle?month=2025-09', '_blank')}
                   sx={{
                     background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
                     py: 1.5,
-                    px: 4
+                  px: 4
                   }}
                 >
-                  Start Free Trial
+                  Discover Equitle
                 </Button>
               </Box>
             </Grid>
@@ -305,7 +306,47 @@ export default function Product() {
                   overflow: 'hidden'
                 }}
               >
-                <DashboardIcon sx={{ fontSize: 120, color: '#9CA3AF', opacity: 0.3 }} />
+                <Box
+                  component="svg"
+                  width="280"
+                  height="280"
+                  viewBox="0 0 280 280"
+                  sx={{ filter: 'drop-shadow(0 4px 12px rgba(94, 92, 230, 0.15))' }}
+                >
+                  {/* Background circles */}
+                  <circle cx="140" cy="140" r="120" fill="rgba(94, 92, 230, 0.08)" />
+                  <circle cx="140" cy="140" r="90" fill="rgba(124, 122, 237, 0.12)" />
+                  
+                  {/* Main dashboard elements */}
+                  <rect x="60" y="80" width="160" height="120" rx="8" fill="white" stroke="rgba(94, 92, 230, 0.2)" strokeWidth="2" />
+                  
+                  {/* Chart bars */}
+                  <rect x="80" y="140" width="12" height="40" fill="#5E5CE6" rx="2" />
+                  <rect x="100" y="120" width="12" height="60" fill="#7C7AED" rx="2" />
+                  <rect x="120" y="130" width="12" height="50" fill="#9CA3AF" rx="2" />
+                  <rect x="140" y="110" width="12" height="70" fill="#5E5CE6" rx="2" />
+                  <rect x="160" y="125" width="12" height="55" fill="#7C7AED" rx="2" />
+                  <rect x="180" y="135" width="12" height="45" fill="#9CA3AF" rx="2" />
+                  
+                  {/* Chart line */}
+                  <path d="M75 100 Q100 90 125 95 T175 85 T200 80" stroke="#5E5CE6" strokeWidth="3" fill="none" strokeLinecap="round" />
+                  
+                  {/* Floating elements */}
+                  <circle cx="200" cy="60" r="8" fill="#5E5CE6" opacity="0.8" />
+                  <circle cx="70" cy="200" r="6" fill="#7C7AED" opacity="0.6" />
+                  <circle cx="210" cy="220" r="10" fill="#9CA3AF" opacity="0.4" />
+                  
+                  {/* Connection lines */}
+                  <path d="M200 60 L220 40" stroke="rgba(94, 92, 230, 0.3)" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M70 200 L50 220" stroke="rgba(124, 122, 237, 0.3)" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M210 220 L230 200" stroke="rgba(156, 163, 175, 0.3)" strokeWidth="2" strokeLinecap="round" />
+                  
+                  {/* Data points */}
+                  <circle cx="75" cy="100" r="3" fill="#5E5CE6" />
+                  <circle cx="125" cy="95" r="3" fill="#5E5CE6" />
+                  <circle cx="175" cy="85" r="3" fill="#5E5CE6" />
+                  <circle cx="200" cy="80" r="3" fill="#5E5CE6" />
+                </Box>
               </Box>
             </Grid>
           </Grid>

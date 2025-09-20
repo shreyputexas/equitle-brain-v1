@@ -13,6 +13,11 @@ import { useNavigate } from 'react-router-dom';
 export default function Footer() {
   const navigate = useNavigate();
 
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <Box sx={{ py: 8, background: '#0A0A0A', color: 'white' }}>
       <Container maxWidth="lg">
@@ -57,7 +62,7 @@ export default function Footer() {
               <Typography
                 key={item.name}
                 variant="body2"
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavigation(item.path)}
                 sx={{
                   color: 'rgba(255, 255, 255, 0.7)',
                   mb: 1,
@@ -83,7 +88,7 @@ export default function Footer() {
               <Typography
                 key={item.name}
                 variant="body2"
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNavigation(item.path)}
                 sx={{
                   color: 'rgba(255, 255, 255, 0.7)',
                   mb: 1,

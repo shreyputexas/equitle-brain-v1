@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAuthErrorMessage } from '../utils/errorMessages';
 import {
   Box,
   Container,
@@ -46,7 +47,8 @@ export default function Login() {
       await login(email, password);
       navigate('/app');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      console.error('Login error:', err);
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -181,46 +183,7 @@ export default function Login() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
 
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  OR
-                </Typography>
-              </Divider>
 
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                startIcon={<GoogleIcon />}
-                sx={{ 
-                  py: 1.5, 
-                  mb: 2,
-                  borderColor: 'rgba(0, 0, 0, 0.1)',
-                  '&:hover': {
-                    borderColor: 'rgba(0, 0, 0, 0.2)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                  }
-                }}
-              >
-                Continue with Google
-              </Button>
-
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                startIcon={<MicrosoftIcon />}
-                sx={{ 
-                  py: 1.5,
-                  borderColor: 'rgba(0, 0, 0, 0.1)',
-                  '&:hover': {
-                    borderColor: 'rgba(0, 0, 0, 0.2)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                  }
-                }}
-              >
-                Continue with Microsoft
-              </Button>
             </form>
 
             <Box sx={{ mt: 4, textAlign: 'center' }}>
@@ -249,7 +212,6 @@ export default function Login() {
 
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Typography variant="caption" color="text.secondary">
-                Demo credentials: demo@equitle.com / demo123
               </Typography>
             </Box>
           </Paper>

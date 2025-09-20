@@ -1,4 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
+import { getAuthErrorMessage } from '../utils/errorMessages';
 import React, { useState } from 'react';
 import {
   Box,
@@ -158,7 +159,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     await signup(formData.email, formData.password, profile);
     navigate('/app');
   } catch (err: any) {
-    setError(err.message || 'An error occurred during sign up');
+    console.error('Sign up error:', err);
+    setError(getAuthErrorMessage(err));
   } finally {
     setLoading(false);
   }
