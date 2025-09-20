@@ -143,7 +143,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     teamExperience: {
       teamSize: formData.teamSize,
       currentRole: formData.currentRole,
-      experience: formData.previousExperience,
+      previousExperience: formData.previousExperience,
       education: formData.education,
     },
     preferences: {
