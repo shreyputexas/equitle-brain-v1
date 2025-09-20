@@ -17,8 +17,10 @@ import { Add as AddIcon } from '@mui/icons-material';
 import integrationService, { Integration } from '../services/integrationService';
 import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
 import IntegrationCard from '../components/integrations/IntegrationCard';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Settings() {
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,7 +192,10 @@ export default function Settings() {
               primary="Dark Mode" 
               secondary="Use dark theme for the interface"
             />
-            <Switch defaultChecked />
+            <Switch 
+              checked={isDarkMode}
+              onChange={toggleDarkMode}
+            />
           </ListItem>
           <ListItem>
             <ListItemText 

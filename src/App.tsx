@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { BrainProvider } from './contexts/BrainContext';
+import { AppThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 
 import Dashboard from './pages/Dashboard';
@@ -20,9 +21,10 @@ import OAuthCallback from './pages/OAuthCallback';
 
 function App() {
   return (
-    <AuthProvider>
-      <BrainProvider>
-        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <AppThemeProvider>
+      <AuthProvider>
+        <BrainProvider>
+          <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
             {/* OAuth callback routes */}
             <Route path="/app/oauth/callback" element={<OAuthCallback />} />
@@ -59,9 +61,10 @@ function App() {
               <Route path="deals" element={<Navigate to="/deals/relationships" />} />
             </Route>
           </Routes>
-        </Box>
-      </BrainProvider>
-    </AuthProvider>
+          </Box>
+        </BrainProvider>
+      </AuthProvider>
+    </AppThemeProvider>
   );
 }
 
