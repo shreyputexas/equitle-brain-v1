@@ -317,7 +317,7 @@ export default function Layout() {
                 }}
               >
                 <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  {user?.name?.charAt(0).toUpperCase()}
+                  {user?.displayName?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
               </IconButton>
             </Tooltip>

@@ -8,9 +8,9 @@ interface PrivateRouteProps {
 }
 
 export default function PrivateRoute({ children }: PrivateRouteProps) {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  if (loading) {
+  if (!user) {
     return (
       <Box
         display="flex"
@@ -23,5 +23,5 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  return <>{children}</>;
 }
