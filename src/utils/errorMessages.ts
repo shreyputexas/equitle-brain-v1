@@ -39,7 +39,6 @@ export const getFirebaseErrorMessage = (error: any): string => {
     'auth/captcha-check-failed': 'Please complete the captcha verification.',
     'auth/phone-number-already-exists': 'This phone number is already registered to another account.',
     'auth/invalid-phone-number': 'Please enter a valid phone number.',
-    'auth/quota-exceeded': 'Too many requests. Please try again later.',
     'auth/app-deleted': 'This app has been deleted. Please contact support.',
     'auth/app-not-authorized': 'This app is not authorized. Please contact support.',
     'auth/argument-error': 'Invalid request. Please try again.',
