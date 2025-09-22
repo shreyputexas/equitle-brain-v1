@@ -741,7 +741,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
               <Divider sx={{ my: 3 }}>
                 <Typography variant="body2" color="text.secondary">
-                  OR
+                  OR  
                 </Typography>
               </Divider>
 
