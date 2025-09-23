@@ -115,7 +115,7 @@ export default function NewFundModal({ open, onClose, onSuccess }: NewFundModalP
       const fundData = {
         name: formData.name.trim(),
         type: formData.type,
-        strategy: formData.strategy,
+        strategy: formData.strategy || undefined,
         targetSize: Number(formData.targetSize),
         minimumCommitment: Number(formData.minimumCommitment),
         managementFee: Number(formData.managementFee),
@@ -124,16 +124,15 @@ export default function NewFundModal({ open, onClose, onSuccess }: NewFundModalP
         vintage: Number(formData.vintage),
         investmentPeriod: Number(formData.investmentPeriod),
         fundTerm: Number(formData.fundTerm),
-        geoFocus: formData.geoFocus.trim(),
-        sectorFocus: formData.sectorFocus.trim(),
-        description: formData.description.trim(),
-        status: 'Pre-Launch',
-        raisedAmount: 0,
-        investorCount: 0
+        geoFocus: formData.geoFocus.trim() || undefined,
+        sectorFocus: formData.sectorFocus.trim() || undefined,
+        description: formData.description.trim() || undefined,
+        status: 'Pre-Launch'
       };
 
       // TODO: Replace with actual API call
-      const response = await fetch('http://localhost:4000/api/funds', {
+      console.log('Creating fund with data:', fundData);
+      const response = await fetch('http://localhost:4000/api/firebase-funds', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,9 +141,13 @@ export default function NewFundModal({ open, onClose, onSuccess }: NewFundModalP
         body: JSON.stringify(fundData)
       });
 
+      console.log('Fund creation response status:', response.status);
+      const responseData = await response.json();
+      console.log('Fund creation response data:', responseData);
+      console.log('Validation details:', responseData.details);
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create fund');
+        throw new Error(responseData.message || 'Failed to create fund');
       }
 
       // Reset form

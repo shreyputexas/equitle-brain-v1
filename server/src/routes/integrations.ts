@@ -3,14 +3,18 @@ import GoogleAuthService from '../services/googleAuth';
 import GoogleDriveService from '../services/googleDrive';
 import GoogleCalendarService from '../services/googleCalendar';
 import GmailService from '../services/gmail';
-import { authMiddleware as auth } from '../middleware/auth';
+import { firebaseAuthMiddleware as auth } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
-import prisma from '../lib/database';
+import prisma from '../lib/database.legacy';
 
 const router = express.Router();
 
 // Helper function to ensure valid access token
-async function ensureValidAccessToken(integration: any) {
+async function ensureValidAccessToken(integration: { expiresAt: Date | null; refreshToken: string | null; accessToken: string | null; id: string }) {
+  if (!integration.accessToken) {
+    throw new Error('No access token available');
+  }
+  
   if (!integration.expiresAt || !integration.refreshToken) {
     return integration.accessToken;
   }
@@ -99,12 +103,12 @@ router.get('/', auth, async (req, res) => {
     logger.info('Found integrations', { 
       userId, 
       count: userIntegrations.length,
-      integrationIds: userIntegrations.map(i => i.id)
+      integrationIds: userIntegrations.map((i: any) => i.id)
     });
 
     res.json({
       success: true,
-      data: userIntegrations.map(integration => ({
+      data: userIntegrations.map((integration: any) => ({
         id: integration.id,
         provider: integration.provider,
         type: integration.type,

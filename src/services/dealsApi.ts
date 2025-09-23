@@ -124,11 +124,10 @@ export interface SearchFilters {
 }
 
 class DealsApiService {
-  private baseURL = 'http://localhost:4001/api';
+  private baseURL = 'http://localhost:4000/api';
 
   constructor() {
-    // Configure axios defaults
-    axios.defaults.baseURL = this.baseURL;
+    // No need to configure axios defaults since we're using full URLs
   }
 
   private getAuthToken() {
@@ -156,10 +155,21 @@ class DealsApiService {
       if (filters.limit) params.append('limit', filters.limit.toString());
       if (filters.offset) params.append('offset', filters.offset.toString());
 
-      const response = await axios.get(`/deals?${params.toString()}`, {
+      const response = await axios.get(`${this.baseURL}/firebase-deals?${params.toString()}`, {
         headers: this.getAuthHeaders()
       });
-      return response.data;
+      // Firebase API returns { success: true, data: { deals: [], total: 0 } }
+      // but frontend expects { deals: [], total: 0 }
+      console.log('Deals API full response:', response);
+      console.log('Deals API response.data:', response.data);
+      console.log('Deals API response.data.data:', response.data?.data);
+      
+      if (!response.data || !response.data.data) {
+        console.error('Invalid API response structure:', response.data);
+        throw new Error('Invalid API response structure');
+      }
+      
+      return response.data.data;
     } catch (error) {
       console.error('Error fetching deals:', error);
       throw error;
@@ -171,10 +181,12 @@ class DealsApiService {
    */
   async getDeal(id: string): Promise<DealResponse> {
     try {
-      const response = await axios.get(`/deals/${id}`, {
+      const response = await axios.get(`${this.baseURL}/firebase-deals/${id}`, {
         headers: this.getAuthHeaders()
       });
-      return response.data;
+      // Firebase API returns { success: true, data: { deal: {} } }
+      // but frontend expects { deal: {} }
+      return response.data.data;
     } catch (error) {
       console.error(`Error fetching deal ${id}:`, error);
       throw error;
@@ -186,10 +198,12 @@ class DealsApiService {
    */
   async createDeal(dealData: CreateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.post('/deals', dealData, {
+      const response = await axios.post(`${this.baseURL}/firebase-deals`, dealData, {
         headers: this.getAuthHeaders()
       });
-      return response.data;
+      // Firebase API returns { success: true, data: { deal: {} } }
+      // but frontend expects { deal: {} }
+      return response.data.data;
     } catch (error) {
       console.error('Error creating deal:', error);
       throw error;
@@ -201,10 +215,12 @@ class DealsApiService {
    */
   async updateDeal(id: string, dealData: UpdateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.put(`/deals/${id}`, dealData, {
+      const response = await axios.put(`${this.baseURL}/firebase-deals/${id}`, dealData, {
         headers: this.getAuthHeaders()
       });
-      return response.data;
+      // Firebase API returns { success: true, data: { deal: {} } }
+      // but frontend expects { deal: {} }
+      return response.data.data;
     } catch (error) {
       console.error(`Error updating deal ${id}:`, error);
       throw error;
@@ -216,7 +232,7 @@ class DealsApiService {
    */
   async deleteDeal(id: string): Promise<void> {
     try {
-      await axios.delete(`/deals/${id}`, {
+      await axios.delete(`${this.baseURL}/firebase-deals/${id}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {
@@ -230,7 +246,7 @@ class DealsApiService {
    */
   async addContactToDeal(dealId: string, contactId: string): Promise<void> {
     try {
-      await axios.post(`/deals/${dealId}/contacts`, { contactId }, {
+      await axios.post(`${this.baseURL}/firebase-deals/${dealId}/contacts`, { contactId }, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {

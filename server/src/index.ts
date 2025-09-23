@@ -7,22 +7,30 @@ import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-import authRoutes from './routes/auth';
-import dealRoutes from './routes/deals';
+// import authRoutes from './routes/auth'; // Temporarily disabled due to Prisma dependency
+import firebaseAuthRoutes from './routes/firebaseAuth';
+// import dealRoutes from './routes/deals'; // Temporarily disabled due to Prisma dependency
+import firebaseDealRoutes from './routes/firebaseDeals';
 import brainRoutes from './routes/brain';
-import investorRoutes from './routes/investors';
-import fundsRoutes from './routes/funds';
-import lpGroupsRoutes from './routes/lp-groups';
+// import investorRoutes from './routes/investors'; // Temporarily disabled due to Prisma dependency
+import firebaseInvestorRoutes from './routes/firebaseInvestors';
+// import fundsRoutes from './routes/funds'; // Temporarily disabled due to Prisma dependency
+import firebaseFundsRoutes from './routes/firebaseFunds';
+// import lpGroupsRoutes from './routes/lp-groups'; // Temporarily disabled due to Prisma dependency
+import firebaseLpGroupsRoutes from './routes/firebaseLpGroups';
 import companyRoutes from './routes/companies';
-import contactRoutes from './routes/contacts';
+// import contactRoutes from './routes/contacts'; // Temporarily disabled due to Prisma dependency
+import firebaseContactsActivitiesRoutes from './routes/firebaseContactsActivities';
+import firebaseDocumentsRoutes from './routes/firebaseDocuments';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import dashboardRoutes from './routes/dashboard';
-import gmailRoutes from './routes/gmail';
+// import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
-import { authMiddleware, AuthRequest } from './middleware/auth';
-import { connectDatabase } from './lib/database';
+// import { firebaseAuthMiddleware, AuthRequest } from './middleware/auth'; // Legacy
+import { firebaseAuthMiddleware } from './middleware/firebaseAuth';
+import { connectFirebase } from './lib/firebase';
 import logger from './utils/logger';
 
 dotenv.config();
@@ -66,15 +74,35 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/deals', dealRoutes);
-app.use('/api/brain', authMiddleware, brainRoutes);
-app.use('/api/investors', authMiddleware, investorRoutes);
-app.use('/api/funds', authMiddleware, fundsRoutes);
-app.use('/api/lp-groups', authMiddleware, lpGroupsRoutes);
-app.use('/api/companies', authMiddleware, companyRoutes);
-app.use('/api/contacts', contactRoutes);
-app.use('/api/reports', authMiddleware, reportRoutes);
+// Legacy JWT auth routes (will be deprecated)
+// app.use('/api/auth', authRoutes); // Temporarily disabled due to Prisma dependency
+// New Firebase auth routes
+app.use('/api/firebase-auth', firebaseAuthRoutes);
+// Legacy Prisma deals routes (will be deprecated)
+// app.use('/api/deals', dealRoutes); // Temporarily disabled due to Prisma dependency
+// New Firebase deals routes
+app.use('/api/firebase-deals', firebaseDealRoutes);
+app.use('/api/brain', firebaseAuthMiddleware, brainRoutes);
+// Legacy Prisma investor routes (will be deprecated)
+// app.use('/api/investors', firebaseAuthMiddleware, investorRoutes); // Temporarily disabled due to Prisma dependency
+// New Firebase investor routes
+app.use('/api/firebase-investors', firebaseInvestorRoutes);
+// Legacy Prisma funds routes (will be deprecated)
+// app.use('/api/funds', firebaseAuthMiddleware, fundsRoutes); // Temporarily disabled due to Prisma dependency
+// New Firebase funds routes
+app.use('/api/firebase-funds', firebaseFundsRoutes);
+// Legacy Prisma LP groups routes (will be deprecated)
+// app.use('/api/lp-groups', firebaseAuthMiddleware, lpGroupsRoutes); // Temporarily disabled due to Prisma dependency
+// New Firebase LP groups routes
+app.use('/api/firebase-lp-groups', firebaseLpGroupsRoutes);
+app.use('/api/companies', firebaseAuthMiddleware, companyRoutes);
+// Legacy Prisma contacts routes (will be deprecated)
+// app.use('/api/contacts', contactRoutes); // Temporarily disabled due to Prisma dependency
+// New Firebase contacts, activities, and communications routes
+app.use('/api/firebase', firebaseContactsActivitiesRoutes);
+// New Firebase documents routes
+app.use('/api/firebase-documents', firebaseDocumentsRoutes);
+app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
   console.log('Integration route hit:', req.path, req.method);
@@ -84,7 +112,7 @@ app.use('/api/integrations', (req, res, next) => {
     return next();
   }
   console.log('Applying auth middleware');
-  return authMiddleware(req, res, next);
+  return firebaseAuthMiddleware(req, res, next);
 }, integrationRoutes);
 
 // Public test endpoint for Google OAuth debugging
@@ -93,19 +121,6 @@ app.get('/api/test-google', async (req, res) => {
     const hasClientId = !!process.env.GOOGLE_CLIENT_ID;
     const hasClientSecret = !!process.env.GOOGLE_CLIENT_SECRET;
     const hasRedirectUri = !!process.env.GOOGLE_REDIRECT_URI;
-
-    // Also check what integrations exist in the database
-    const prisma = require('./lib/database').default;
-    const allIntegrations = await prisma.integration.findMany({
-      select: {
-        id: true,
-        userId: true,
-        provider: true,
-        type: true,
-        isActive: true,
-        createdAt: true
-      }
-    });
 
     res.json({
       success: true,
@@ -118,7 +133,6 @@ app.get('/api/test-google', async (req, res) => {
           redirectUri: process.env.GOOGLE_REDIRECT_URI,
           isConfigured: hasClientId && hasClientSecret && hasRedirectUri
         },
-        integrations: allIntegrations,
         message: hasClientId && hasClientSecret && hasRedirectUri
           ? 'Google integration is properly configured'
           : 'Google integration is missing required environment variables'
@@ -129,8 +143,9 @@ app.get('/api/test-google', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to test Google integration setup' });
   }
 });
-app.use('/api/dashboard', authMiddleware, dashboardRoutes);
-app.use('/api/gmail', gmailRoutes);
+// Dashboard routes (using Prisma temporarily)
+app.use('/api/dashboard', firebaseAuthMiddleware, dashboardRoutes);
+// app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);
 
@@ -150,9 +165,9 @@ io.on('connection', (socket) => {
 server.listen(PORT, async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Connect to database
-  await connectDatabase();
+
+  // Connect to Firebase
+  await connectFirebase();
 });
 
 export { io };

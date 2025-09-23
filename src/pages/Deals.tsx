@@ -171,6 +171,14 @@ export default function Deals() {
     people: mockPeople // This will be replaced with real contact data later
   }));
 
+  // Debug: Log deals data to see what we're working with
+  console.log('Deals loading:', loading);
+  console.log('Deals error:', error);
+  console.log('All deals:', deals);
+  console.log('Active deals:', deals.filter(d => d.status === 'active'));
+  console.log('Prospective deals:', deals.filter(d => d.status !== 'active' && d.status !== 'closed'));
+  console.log('Current activeTab:', activeTab);
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, dealId: string) => {
     setAnchorEl(event.currentTarget);
     setSelectedDealId(dealId);
@@ -357,10 +365,10 @@ export default function Deals() {
       width: 300,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {params.row.people.slice(0, 2).map((person: Person) => (
+          {params.row.people?.slice(0, 2).map((person: Person) => (
             <Box key={person.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Avatar sx={{ width: 24, height: 24, fontSize: 10 }}>
-                {person.name.split(' ').map((n: string) => n[0]).join('')}
+                {person.name?.split(' ').map((n: string) => n[0]).join('') || 'N/A'}
               </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
@@ -406,10 +414,10 @@ export default function Deals() {
       width: 150,
       renderCell: (params: GridRenderCellParams) => (
         <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 28, height: 28, fontSize: 12 } }}>
-          <Avatar>{params.row.leadPartner.split(' ').map((n: string) => n[0]).join('')}</Avatar>
-          {params.value.map((member: string, index: number) => (
+          <Avatar>{params.row.leadPartner?.split(' ').map((n: string) => n[0]).join('') || 'N/A'}</Avatar>
+          {params.value?.map((member: string, index: number) => (
             <Avatar key={index}>{member.split(' ').map((n: string) => n[0]).join('')}</Avatar>
-          ))}
+          )) || []}
         </AvatarGroup>
       )
     },
@@ -588,15 +596,18 @@ export default function Deals() {
 
     // Filter by status (prospective vs active)
     if (activeTab === 0) {
-      // Prospective tab - show deals that are not yet active
-      return deal.status !== 'active' && deal.status !== 'closed';
-    } else if (activeTab === 1) {
       // Active tab - show deals that are active
       return deal.status === 'active';
+    } else if (activeTab === 1) {
+      // Prospective tab - show deals that are not yet active
+      return deal.status !== 'active' && deal.status !== 'closed';
     }
     
     return true;
   });
+
+  // Debug: Log filtered deals after they're calculated
+  console.log('Filtered deals:', filteredDeals);
 
   // Calculate summary statistics from real data
   const totalPipelineValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
@@ -916,7 +927,7 @@ export default function Deals() {
         <CardActions sx={{ px: 2, pb: 2 }}>
           <AvatarGroup max={3} sx={{ flexGrow: 1, '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 10 } }}>
             {deal.team?.map((member, index) => (
-              <Avatar key={index}>{member.split(' ').map(n => n[0]).join('')}</Avatar>
+              <Avatar key={index}>{member?.split(' ').map(n => n[0]).join('') || 'N/A'}</Avatar>
             ))}
           </AvatarGroup>
           {deal.status !== 'active' && (
@@ -1101,8 +1112,8 @@ export default function Deals() {
           onChange={(_, newValue) => setActiveTab(newValue)}
           sx={{ mb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
         >
-          <Tab label={`Prospective (${prospectiveDealCount})`} />
           <Tab label={`Active (${activeDealCount})`} />
+          <Tab label={`Prospective (${prospectiveDealCount})`} />
         </Tabs>
 
         {loading ? (
@@ -1264,7 +1275,7 @@ export default function Deals() {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-              {selectedPerson?.name.split(' ').map(n => n[0]).join('')}
+              {selectedPerson?.name?.split(' ').map(n => n[0]).join('') || 'N/A'}
             </Avatar>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4001/api';
+const API_BASE_URL = 'http://localhost:4000/api';
 
 export interface Fund {
   id: string;
@@ -65,10 +65,12 @@ class FundsApiService {
 
   static async getFunds(): Promise<Fund[]> {
     try {
-      const response = await axios.get<ApiResponse<Fund>>(`${API_BASE_URL}/funds`, {
+      const response = await axios.get<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds`, {
         headers: this.getAuthHeaders()
       });
-      return response.data.funds || [];
+      // Firebase API returns { success: true, data: { funds: [] } }
+      // but frontend expects { funds: [] }
+      return response.data.data.funds || [];
     } catch (error) {
       console.error('Error fetching funds:', error);
       throw error;
@@ -77,10 +79,12 @@ class FundsApiService {
 
   static async createFund(fundData: CreateFundRequest): Promise<Fund> {
     try {
-      const response = await axios.post<ApiResponse<Fund>>(`${API_BASE_URL}/funds`, fundData, {
+      const response = await axios.post<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds`, fundData, {
         headers: this.getAuthHeaders()
       });
-      return response.data.fund!;
+      // Firebase API returns { success: true, data: { fund: {} } }
+      // but frontend expects { fund: {} }
+      return response.data.data.fund!;
     } catch (error) {
       console.error('Error creating fund:', error);
       throw error;
@@ -89,10 +93,12 @@ class FundsApiService {
 
   static async getFund(id: string): Promise<Fund> {
     try {
-      const response = await axios.get<ApiResponse<Fund>>(`${API_BASE_URL}/funds/${id}`, {
+      const response = await axios.get<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds/${id}`, {
         headers: this.getAuthHeaders()
       });
-      return response.data.fund!;
+      // Firebase API returns { success: true, data: { fund: {} } }
+      // but frontend expects { fund: {} }
+      return response.data.data.fund!;
     } catch (error) {
       console.error('Error fetching fund:', error);
       throw error;
@@ -101,10 +107,12 @@ class FundsApiService {
 
   static async updateFund(id: string, fundData: Partial<CreateFundRequest>): Promise<Fund> {
     try {
-      const response = await axios.put<ApiResponse<Fund>>(`${API_BASE_URL}/funds/${id}`, fundData, {
+      const response = await axios.put<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds/${id}`, fundData, {
         headers: this.getAuthHeaders()
       });
-      return response.data.fund!;
+      // Firebase API returns { success: true, data: { fund: {} } }
+      // but frontend expects { fund: {} }
+      return response.data.data.fund!;
     } catch (error) {
       console.error('Error updating fund:', error);
       throw error;
@@ -115,7 +123,7 @@ class FundsApiService {
     try {
       console.log('FundsApiService.deleteFund called with id:', id);
       console.log('Using headers:', this.getAuthHeaders());
-      const response = await axios.delete(`${API_BASE_URL}/funds/${id}`, {
+      const response = await axios.delete(`${API_BASE_URL}/firebase-funds/${id}`, {
         headers: this.getAuthHeaders()
       });
       console.log('Delete response:', response);

@@ -79,7 +79,7 @@ export interface MessageFilters {
 }
 
 class GmailApiService {
-  private baseURL = 'http://localhost:4001/api';
+  private baseURL = 'http://localhost:4000/api';
 
   constructor() {
     axios.defaults.baseURL = this.baseURL;

@@ -324,7 +324,7 @@ export default function ManageGroupsModal({ open, onClose, onSuccess }: ManageGr
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <PeopleIcon fontSize="small" color="action" />
                           <Typography variant="body2">
-                            {calculateMemberCount(group)} members
+                            {group.memberCount || 0} members
                           </Typography>
                         </Box>
                         {group.autoAssign && (

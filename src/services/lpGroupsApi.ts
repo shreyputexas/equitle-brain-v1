@@ -58,8 +58,11 @@ export interface CreateLPGroupRequest {
 export interface UpdateLPGroupRequest extends Partial<CreateLPGroupRequest> {}
 
 interface ApiResponse<T> {
-  groups?: T[];
-  group?: T;
+  success: boolean;
+  data: {
+    groups?: T[];
+    group?: T;
+  };
   message?: string;
 }
 
@@ -77,10 +80,12 @@ class LPGroupsApiService {
 
   static async getLPGroups(): Promise<LPGroup[]> {
     try {
-      const response = await axios.get<ApiResponse<LPGroup>>(`${API_BASE_URL}/lp-groups`, {
+      const response = await axios.get<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups`, {
         headers: this.getAuthHeaders()
       });
-      return response.data.groups || [];
+      // Firebase API returns { success: true, data: { groups: [] } }
+      // but frontend expects { groups: [] }
+      return response.data.data.groups || [];
     } catch (error) {
       console.error('Error fetching LP groups:', error);
       throw error;
@@ -89,10 +94,12 @@ class LPGroupsApiService {
 
   static async createLPGroup(groupData: CreateLPGroupRequest): Promise<LPGroup> {
     try {
-      const response = await axios.post<ApiResponse<LPGroup>>(`${API_BASE_URL}/lp-groups`, groupData, {
+      const response = await axios.post<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups`, groupData, {
         headers: this.getAuthHeaders()
       });
-      return response.data.group!;
+      // Firebase API returns { success: true, data: { group: {} } }
+      // but frontend expects { group: {} }
+      return response.data.data.group!;
     } catch (error) {
       console.error('Error creating LP group:', error);
       throw error;
@@ -101,10 +108,12 @@ class LPGroupsApiService {
 
   static async getLPGroup(id: string): Promise<LPGroup> {
     try {
-      const response = await axios.get<ApiResponse<LPGroup>>(`${API_BASE_URL}/lp-groups/${id}`, {
+      const response = await axios.get<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups/${id}`, {
         headers: this.getAuthHeaders()
       });
-      return response.data.group!;
+      // Firebase API returns { success: true, data: { group: {} } }
+      // but frontend expects { group: {} }
+      return response.data.data.group!;
     } catch (error) {
       console.error('Error fetching LP group:', error);
       throw error;
@@ -113,10 +122,12 @@ class LPGroupsApiService {
 
   static async updateLPGroup(id: string, groupData: UpdateLPGroupRequest): Promise<LPGroup> {
     try {
-      const response = await axios.put<ApiResponse<LPGroup>>(`${API_BASE_URL}/lp-groups/${id}`, groupData, {
+      const response = await axios.put<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups/${id}`, groupData, {
         headers: this.getAuthHeaders()
       });
-      return response.data.group!;
+      // Firebase API returns { success: true, data: { group: {} } }
+      // but frontend expects { group: {} }
+      return response.data.data.group!;
     } catch (error) {
       console.error('Error updating LP group:', error);
       throw error;
@@ -125,7 +136,7 @@ class LPGroupsApiService {
 
   static async deleteLPGroup(id: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/lp-groups/${id}`, {
+      await axios.delete(`${API_BASE_URL}/firebase-lp-groups/${id}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {
@@ -136,7 +147,7 @@ class LPGroupsApiService {
 
   static async addInvestorToGroup(groupId: string, investorId: string): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/lp-groups/${groupId}/members`,
+      await axios.post(`${API_BASE_URL}/firebase-lp-groups/${groupId}/members`,
         { investorId },
         {
           headers: this.getAuthHeaders()
@@ -150,7 +161,7 @@ class LPGroupsApiService {
 
   static async removeInvestorFromGroup(groupId: string, investorId: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/lp-groups/${groupId}/members/${investorId}`, {
+      await axios.delete(`${API_BASE_URL}/firebase-lp-groups/${groupId}/members/${investorId}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {

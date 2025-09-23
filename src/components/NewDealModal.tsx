@@ -117,7 +117,7 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       };
 
       // For now, we'll use a simple POST to the deals API
-      const response = await fetch('http://localhost:4000/api/deals', {
+      const response = await fetch('http://localhost:4000/api/firebase-deals', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

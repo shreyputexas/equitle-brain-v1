@@ -159,11 +159,11 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
         currency: formData.currency,
         contactName: formData.contactName.trim(),
         contactEmail: formData.contactEmail.trim(),
-        contactPhone: formData.contactPhone.trim(),
-        address: formData.address.trim(),
-        website: formData.website.trim(),
-        description: formData.description.trim(),
-        investmentPreferences: formData.investmentPreferences,
+        ...(formData.contactPhone.trim() && { contactPhone: formData.contactPhone.trim() }),
+        ...(formData.address.trim() && { address: formData.address.trim() }),
+        ...(formData.website.trim() && { website: formData.website.trim() }),
+        ...(formData.description.trim() && { description: formData.description.trim() }),
+        ...(formData.investmentPreferences && formData.investmentPreferences.length > 0 && { investmentPreferences: formData.investmentPreferences }),
         isQualifiedInvestor: formData.isQualifiedInvestor,
         requiresReporting: formData.requiresReporting,
         taxExempt: formData.taxExempt,
@@ -173,7 +173,7 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
       };
 
       // TODO: Replace with actual API call
-      const response = await fetch('http://localhost:4000/api/investors', {
+      const response = await fetch('http://localhost:4000/api/firebase-investors', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

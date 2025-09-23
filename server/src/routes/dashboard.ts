@@ -1,5 +1,5 @@
 import express from 'express';
-import { authMiddleware as auth } from '../middleware/auth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import prisma from '../lib/database';
 import logger from '../utils/logger';
 
@@ -42,9 +42,42 @@ interface Document {
 const router = express.Router();
 
 // Get comprehensive dashboard data
-router.get('/', auth, async (req, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req as any).user?.uid;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const [user, metrics, dealFlow, portfolioDistribution, recentDeals] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId } }),
+      getMetrics(userId),
+      getDealFlow(userId),
+      getPortfolioDistribution(userId),
+      getRecentDeals(userId)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        userName: user?.name || 'User',
+        metrics,
+        dealFlow,
+        portfolioDistribution,
+        recentDeals
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching dashboard data:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch dashboard data' });
+  }
+});
+
+// Alias route for /data (frontend compatibility)
+router.get('/data', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -75,9 +108,9 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get dashboard metrics
-router.get('/metrics', auth, async (req, res) => {
+router.get('/metrics', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req as any).user?.uid;
     const metrics = await getMetrics(userId);
 
     res.json({
@@ -91,9 +124,9 @@ router.get('/metrics', auth, async (req, res) => {
 });
 
 // Get deal flow data
-router.get('/deal-flow', auth, async (req, res) => {
+router.get('/deal-flow', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req as any).user?.uid;
     const dealFlow = await getDealFlow(userId);
 
     res.json({
@@ -107,9 +140,9 @@ router.get('/deal-flow', auth, async (req, res) => {
 });
 
 // Get portfolio distribution
-router.get('/portfolio-distribution', auth, async (req, res) => {
+router.get('/portfolio-distribution', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req as any).user?.uid;
     const portfolioDistribution = await getPortfolioDistribution(userId);
 
     res.json({
@@ -123,9 +156,9 @@ router.get('/portfolio-distribution', auth, async (req, res) => {
 });
 
 // Get recent deals
-router.get('/recent-deals', auth, async (req, res) => {
+router.get('/recent-deals', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req as any).user?.uid;
     const recentDeals = await getRecentDeals(userId);
 
     res.json({

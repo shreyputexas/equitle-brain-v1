@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User, Profile, UserPreference } from '../generated/prisma';
-import prisma from '../lib/database';
+// import prisma from '../lib/database'; // Legacy - migrated to Firebase
 import logger from '../utils/logger';
 
 export interface CreateUserData {

@@ -12,6 +12,7 @@ export const useDeals = (filters: SearchFilters = {}) => {
       setLoading(true);
       setError(null);
       const response = await dealsApi.getDeals(filters);
+      console.log('useDeals response:', response);
       setDeals(response.deals);
       setTotal(response.total);
     } catch (err: any) {
