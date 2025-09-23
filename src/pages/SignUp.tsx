@@ -35,11 +35,9 @@ import {
   Email as EmailIcon,
   Lock as LockIcon,
   Person as PersonIcon,
-  Business as BusinessIcon,
   ArrowForward as ArrowForwardIcon,
   ArrowBack as ArrowBackIcon,
   Google as GoogleIcon,
-  Microsoft as MicrosoftIcon,
   Phone as PhoneIcon,
   LocationOn as LocationIcon
 } from '@mui/icons-material';
@@ -51,7 +49,7 @@ const steps = ['Personal Information', 'Search Details', 'Team & Experience', 'P
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signup, googleSignIn } = useAuth(); // <-- use googleSignIn
   const [activeStep, setActiveStep] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -123,50 +121,59 @@ export default function SignUp() {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+    const profile = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      phone: formData.phone || null,
+      location: formData.location || null,
+      searchDetails: {
+        searchStage: formData.searchStage,
+        searchDuration: formData.searchDuration,
+        companySize: formData.targetCompanySize,
+        investmentRange: formData.investmentRange,
+        industries: formData.targetIndustries,
+      },
+      teamExperience: {
+        teamSize: formData.teamSize,
+        currentRole: formData.currentRole,
+        previousExperience: formData.previousExperience,
+        education: formData.education,
+      },
+      preferences: {
+        communication: formData.communicationPreference,
+        newsletter: formData.newsletter,
+        agreeTerms: formData.termsAccepted,
+      },
+    };
 
-  const profile = {
-    firstName: formData.firstName,
-    lastName: formData.lastName,
-    phone: formData.phone,
-    location: formData.location,
-    searchDetails: {
-      searchStage: formData.searchStage,
-      searchDuration: formData.searchDuration,
-      companySize: formData.targetCompanySize,
-      investmentRange: formData.investmentRange,
-      industries: formData.targetIndustries,
-    },
-    teamExperience: {
-      teamSize: formData.teamSize,
-      currentRole: formData.currentRole,
-      previousExperience: formData.previousExperience,
-      education: formData.education,
-    },
-    preferences: {
-      communication: formData.communicationPreference,
-      newsletter: formData.newsletter,
-      agreeTerms: formData.termsAccepted,
-    },
+    try {
+      await signup(formData.email, formData.password, profile);
+      navigate('/app');
+    } catch (err: any) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  try {
-    console.log('Sign up data:', profile);
-    await signup(formData.email, formData.password, profile);
-    navigate('/app');
-  } catch (err: any) {
-    console.error('Sign up error:', err);
-    setError(getAuthErrorMessage(err));
-  } finally {
-    setLoading(false);
-  }
-};
-
-
+  // NEW: Google sign-in handler
+  const handleGoogle = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await googleSignIn();
+      navigate('/app');
+    } catch (err: any) {
+      setError(getAuthErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderPersonalInfo = () => (
     <Grid container spacing={3}>
@@ -315,7 +322,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
           <InputLabel>How long have you been searching?</InputLabel>
-          <Select
+        <Select
             value={formData.searchDuration}
             onChange={(e) => handleInputChange('searchDuration', e.target.value)}
             label="How long have you been searching?"
@@ -674,6 +681,30 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </Alert>
               )}
 
+              {/* Google sign-in button */}
+              <Box sx={{ mb: 2 }}>
+                <Button
+                  onClick={handleGoogle}
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<GoogleIcon />}
+                  disabled={loading}
+                  sx={{
+                    textTransform: 'none',
+                    borderColor: 'rgba(0,0,0,0.2)',
+                    '&:hover': { borderColor: 'rgba(0,0,0,0.4)', backgroundColor: 'rgba(0,0,0,0.02)' }
+                  }}
+                >
+                  Continue with Google
+                </Button>
+              </Box>
+
+              <Divider sx={{ my: 3 }}>
+                <Typography variant="body2" color="text.secondary">
+                  OR  
+                </Typography>
+              </Divider>
+
               <form onSubmit={handleSubmit}>
                 <Box sx={{ mb: 4 }}>
                   {getStepContent(activeStep)}
@@ -739,13 +770,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </Box>
               </form>
 
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  OR  
-                </Typography>
-              </Divider>
-
-              <Box sx={{ textAlign: 'center' }}>
+              <Box sx={{ textAlign: 'center', mt: 3 }}>
                 <Typography variant="body2" color="text.secondary">
                   Already have an account?{' '}
                   <Link
@@ -756,9 +781,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                       color: 'text.primary', 
                       textDecoration: 'none',
                       fontWeight: 500,
-                      '&:hover': {
-                        textDecoration: 'underline'
-                      }
+                      '&:hover': { textDecoration: 'underline' }
                     }}
                   >
                     Sign in

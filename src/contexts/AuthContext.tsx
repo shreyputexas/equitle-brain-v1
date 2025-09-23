@@ -6,6 +6,9 @@ import {
   updateProfile,
   onAuthStateChanged,
   User,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
 } from "firebase/auth";
 import { auth, db } from "../firebase/config";
 import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from "firebase/firestore";
@@ -28,6 +31,7 @@ interface AuthContextType {
   signup: (email: string, password: string, profile?: Profile) => Promise<void>;
   saveProfile: (data: Partial<Profile>) => Promise<void>;
   logout: () => Promise<void>;
+  googleSignIn: () => Promise<void>; // <-- ADDED
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,35 +49,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("token", token);
   };
 
+  const signup = async (email: string, password: string, profile?: Profile) => {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    setUser(cred.user);
+    const token = await cred.user.getIdToken();
+    localStorage.setItem("token", token);
 
-const signup = async (email: string, password: string, profile?: Profile) => {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
-  setUser(cred.user);
-  const token = await cred.user.getIdToken();
-  localStorage.setItem("token", token);
+    if (profile?.firstName || profile?.lastName) {
+      await updateProfile(cred.user, {
+        displayName: `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim(),
+      });
+    }
 
-  if (profile?.firstName || profile?.lastName) {
-    await updateProfile(cred.user, {
-      displayName: `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim(),
+    const ref = doc(db, "users", cred.user.uid);
+    await setDoc(ref, {
+      email: email.toLowerCase(),
+      firstName: profile?.firstName ?? null,
+      lastName: profile?.lastName ?? null,
+      phone: profile?.phone ?? null,
+      location: profile?.location ?? null,
+      searchDetails: profile?.searchDetails ?? null,
+      teamExperience: profile?.teamExperience ?? null,
+      preferences: profile?.preferences ?? null,
+      onboardStep: 1,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
-  }
-
-  const ref = doc(db, "users", cred.user.uid);
-  await setDoc(ref, {
-    email: email.toLowerCase(),
-    firstName: profile?.firstName ?? null,
-    lastName: profile?.lastName ?? null,
-    phone: profile?.phone ?? null,
-    location: profile?.location ?? null,
-    searchDetails: profile?.searchDetails ?? null,
-    teamExperience: profile?.teamExperience ?? null,
-    preferences: profile?.preferences ?? null,
-    onboardStep: 1,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-};
-
+  };
 
   const saveProfile = async (data: Partial<Profile>) => {
     const u = auth.currentUser;
@@ -99,8 +101,57 @@ const signup = async (email: string, password: string, profile?: Profile) => {
     localStorage.removeItem("token");
   };
 
+  // ---- ADDED: Google sign-in ----
+  const googleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    try {
+      // Prefer popup; fall back to redirect where popups are blocked (iOS/Safari)
+      const cred = await signInWithPopup(auth, provider);
+      setUser(cred.user);
+      const token = await cred.user.getIdToken();
+      localStorage.setItem("token", token);
+
+      // Ensure Firestore user doc exists
+      const ref = doc(db, "users", cred.user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        const display = cred.user.displayName || "";
+        const [first, ...rest] = display.split(" ").filter(Boolean);
+        const last = rest.join(" ") || null;
+        await setDoc(ref, {
+          email: (cred.user.email || "").toLowerCase(),
+          firstName: first || null,
+          lastName: last,
+          phone: null,
+          location: null,
+          searchDetails: null,
+          teamExperience: null,
+          preferences: null,
+          onboardStep: 1,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await updateDoc(ref, { updatedAt: serverTimestamp() });
+      }
+    } catch (err: any) {
+      if (
+        err?.code === "auth/popup-blocked" ||
+        err?.code === "auth/operation-not-supported-in-this-environment"
+      ) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+      throw err;
+    }
+  };
+  // -------------------------------
+
   return (
-    <AuthContext.Provider value={{ user, login, signup, saveProfile, logout }}>
+    <AuthContext.Provider
+      value={{ user, login, signup, saveProfile, logout, googleSignIn }} // <-- expose googleSignIn
+    >
       {children}
     </AuthContext.Provider>
   );
