@@ -197,9 +197,9 @@ export default function DealPipeline({
   }));
 
   const getDealsForStage = (stageValue: string) => {
-    // Use sample data for demonstration
-    const allDeals = [...dealsWithContacts, ...sampleDeals];
-    
+    // Use only real Firebase deals
+    const allDeals = dealsWithContacts;
+
     if (stageValue === 'all') {
       return allDeals.filter(deal => deal.status === 'active');
     }
