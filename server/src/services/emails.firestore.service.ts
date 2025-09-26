@@ -37,12 +37,16 @@ export class EmailsFirestoreService {
         updatedAt: new Date()
       };
 
-      // Only add association fields if they exist
+      // Only add association fields if they exist (don't store undefined values)
       if (associatedDeal?.id) {
         emailToStore.associatedDealId = associatedDeal.id;
+      } else {
+        emailToStore.associatedDealId = null;
       }
       if (associatedDeal?.company) {
         emailToStore.associatedDealCompany = associatedDeal.company;
+      } else {
+        emailToStore.associatedDealCompany = null;
       }
 
       // Store in Firebase
