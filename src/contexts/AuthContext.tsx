@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   // Configure axios base URL
-  axios.defaults.baseURL = 'http://localhost:4001/api';
+  axios.defaults.baseURL = 'http://localhost:4000/api';
   axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
 
   useEffect(() => {

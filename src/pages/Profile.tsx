@@ -132,7 +132,7 @@ export default function Profile() {
       setError('');
 
       // Configure axios for this request
-      const response = await axios.put<ProfileResponse>('http://localhost:4001/api/auth/profile', {
+      const response = await axios.put<ProfileResponse>('http://localhost:4000/api/auth/profile', {
         name: editData.name,
         phone: editData.phone,
         location: editData.location
@@ -158,7 +158,7 @@ export default function Profile() {
       setSaving(true);
       setError('');
 
-      const response = await axios.put<ProfileResponse>('http://localhost:4001/api/auth/profile', {
+      const response = await axios.put<ProfileResponse>('http://localhost:4000/api/auth/profile', {
         firm: editData.firm,
         role: editData.role
       }, {
@@ -183,7 +183,7 @@ export default function Profile() {
       setSaving(true);
       setError('');
 
-      await axios.put('http://localhost:4001/api/auth/preferences', preferences, {
+      await axios.put('http://localhost:4000/api/auth/preferences', preferences, {
         headers: {
           'Authorization': 'Bearer mock-token'
         }
