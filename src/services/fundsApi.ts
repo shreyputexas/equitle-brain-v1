@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4000/api';
+// Base URL is set in AuthContext globally
 
 export interface Fund {
   id: string;
@@ -65,7 +65,7 @@ class FundsApiService {
 
   static async getFunds(): Promise<Fund[]> {
     try {
-      const response = await axios.get<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds`, {
+      const response = await axios.get<ApiResponse<Fund>>(`/firebase-funds`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { funds: [] } }
@@ -79,7 +79,7 @@ class FundsApiService {
 
   static async createFund(fundData: CreateFundRequest): Promise<Fund> {
     try {
-      const response = await axios.post<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds`, fundData, {
+      const response = await axios.post<ApiResponse<Fund>>(`/firebase-funds`, fundData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { fund: {} } }
@@ -93,7 +93,7 @@ class FundsApiService {
 
   static async getFund(id: string): Promise<Fund> {
     try {
-      const response = await axios.get<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds/${id}`, {
+      const response = await axios.get<ApiResponse<Fund>>(`/firebase-funds/${id}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { fund: {} } }
@@ -107,7 +107,7 @@ class FundsApiService {
 
   static async updateFund(id: string, fundData: Partial<CreateFundRequest>): Promise<Fund> {
     try {
-      const response = await axios.put<ApiResponse<Fund>>(`${API_BASE_URL}/firebase-funds/${id}`, fundData, {
+      const response = await axios.put<ApiResponse<Fund>>(`/firebase-funds/${id}`, fundData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { fund: {} } }
@@ -123,7 +123,7 @@ class FundsApiService {
     try {
       console.log('FundsApiService.deleteFund called with id:', id);
       console.log('Using headers:', this.getAuthHeaders());
-      const response = await axios.delete(`${API_BASE_URL}/firebase-funds/${id}`, {
+      const response = await axios.delete(`/firebase-funds/${id}`, {
         headers: this.getAuthHeaders()
       });
       console.log('Delete response:', response);

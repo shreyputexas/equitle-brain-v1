@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4000/api';
+// Base URL is set in AuthContext globally
 
 export interface LPGroup {
   id: string;
@@ -80,7 +80,7 @@ class LPGroupsApiService {
 
   static async getLPGroups(): Promise<LPGroup[]> {
     try {
-      const response = await axios.get<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups`, {
+      const response = await axios.get<ApiResponse<LPGroup>>(`/firebase-lp-groups`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { groups: [] } }
@@ -94,7 +94,7 @@ class LPGroupsApiService {
 
   static async createLPGroup(groupData: CreateLPGroupRequest): Promise<LPGroup> {
     try {
-      const response = await axios.post<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups`, groupData, {
+      const response = await axios.post<ApiResponse<LPGroup>>(`/firebase-lp-groups`, groupData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { group: {} } }
@@ -108,7 +108,7 @@ class LPGroupsApiService {
 
   static async getLPGroup(id: string): Promise<LPGroup> {
     try {
-      const response = await axios.get<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups/${id}`, {
+      const response = await axios.get<ApiResponse<LPGroup>>(`/firebase-lp-groups/${id}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { group: {} } }
@@ -122,7 +122,7 @@ class LPGroupsApiService {
 
   static async updateLPGroup(id: string, groupData: UpdateLPGroupRequest): Promise<LPGroup> {
     try {
-      const response = await axios.put<ApiResponse<LPGroup>>(`${API_BASE_URL}/firebase-lp-groups/${id}`, groupData, {
+      const response = await axios.put<ApiResponse<LPGroup>>(`/firebase-lp-groups/${id}`, groupData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { group: {} } }
@@ -136,7 +136,7 @@ class LPGroupsApiService {
 
   static async deleteLPGroup(id: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/firebase-lp-groups/${id}`, {
+      await axios.delete(`/firebase-lp-groups/${id}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {
@@ -147,7 +147,7 @@ class LPGroupsApiService {
 
   static async addInvestorToGroup(groupId: string, investorId: string): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/firebase-lp-groups/${groupId}/members`,
+      await axios.post(`/firebase-lp-groups/${groupId}/members`,
         { investorId },
         {
           headers: this.getAuthHeaders()
@@ -161,7 +161,7 @@ class LPGroupsApiService {
 
   static async removeInvestorFromGroup(groupId: string, investorId: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/firebase-lp-groups/${groupId}/members/${investorId}`, {
+      await axios.delete(`/firebase-lp-groups/${groupId}/members/${investorId}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {

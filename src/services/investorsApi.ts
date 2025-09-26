@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4000/api';
+// Base URL is set in AuthContext globally
+// Cache bust: 2025-09-26T01:22
 
 export interface InvestorEntity {
   id: string;
@@ -89,7 +90,7 @@ class InvestorsApiService {
 
   static async getInvestors(): Promise<Investor[]> {
     try {
-      const response = await axios.get<ApiResponse<Investor>>(`${API_BASE_URL}/firebase-investors`, {
+      const response = await axios.get<ApiResponse<Investor>>(`/firebase-investors`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { investors: [] } }
@@ -103,7 +104,7 @@ class InvestorsApiService {
 
   static async createInvestor(investorData: CreateInvestorRequest): Promise<Investor> {
     try {
-      const response = await axios.post<ApiResponse<Investor>>(`${API_BASE_URL}/firebase-investors`, investorData, {
+      const response = await axios.post<ApiResponse<Investor>>(`/firebase-investors`, investorData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { investor: {} } }
@@ -117,7 +118,7 @@ class InvestorsApiService {
 
   static async getInvestor(id: string): Promise<Investor> {
     try {
-      const response = await axios.get<ApiResponse<Investor>>(`${API_BASE_URL}/firebase-investors/${id}`, {
+      const response = await axios.get<ApiResponse<Investor>>(`/firebase-investors/${id}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { investor: {} } }
@@ -131,7 +132,7 @@ class InvestorsApiService {
 
   static async updateInvestor(id: string, investorData: Partial<CreateInvestorRequest>): Promise<Investor> {
     try {
-      const response = await axios.put<ApiResponse<Investor>>(`${API_BASE_URL}/firebase-investors/${id}`, investorData, {
+      const response = await axios.put<ApiResponse<Investor>>(`/firebase-investors/${id}`, investorData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { investor: {} } }
@@ -145,7 +146,7 @@ class InvestorsApiService {
 
   static async deleteInvestor(id: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/firebase-investors/${id}`, {
+      await axios.delete(`/firebase-investors/${id}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {

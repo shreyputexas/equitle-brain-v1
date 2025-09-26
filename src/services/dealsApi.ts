@@ -124,7 +124,8 @@ export interface SearchFilters {
 }
 
 class DealsApiService {
-  private baseURL = 'http://localhost:4000/api';
+  // Base URL is set in AuthContext globally
+// FORCE CACHE REFRESH - 2025-09-26T01:30
 
   constructor() {
     // No need to configure axios defaults since we're using full URLs
@@ -155,7 +156,7 @@ class DealsApiService {
       if (filters.limit) params.append('limit', filters.limit.toString());
       if (filters.offset) params.append('offset', filters.offset.toString());
 
-      const response = await axios.get(`${this.baseURL}/firebase-deals?${params.toString()}`, {
+      const response = await axios.get(`/firebase-deals?${params.toString()}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deals: [], total: 0 } }
@@ -181,7 +182,7 @@ class DealsApiService {
    */
   async getDeal(id: string): Promise<DealResponse> {
     try {
-      const response = await axios.get(`${this.baseURL}/firebase-deals/${id}`, {
+      const response = await axios.get(`/firebase-deals/${id}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deal: {} } }
@@ -198,7 +199,7 @@ class DealsApiService {
    */
   async createDeal(dealData: CreateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.post(`${this.baseURL}/firebase-deals`, dealData, {
+      const response = await axios.post(`/firebase-deals`, dealData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deal: {} } }
@@ -215,7 +216,7 @@ class DealsApiService {
    */
   async updateDeal(id: string, dealData: UpdateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.put(`${this.baseURL}/firebase-deals/${id}`, dealData, {
+      const response = await axios.put(`/firebase-deals/${id}`, dealData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deal: {} } }
@@ -232,7 +233,7 @@ class DealsApiService {
    */
   async deleteDeal(id: string): Promise<void> {
     try {
-      await axios.delete(`${this.baseURL}/firebase-deals/${id}`, {
+      await axios.delete(`/firebase-deals/${id}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {
@@ -246,7 +247,7 @@ class DealsApiService {
    */
   async addContactToDeal(dealId: string, contactId: string): Promise<void> {
     try {
-      await axios.post(`${this.baseURL}/firebase-deals/${dealId}/contacts`, { contactId }, {
+      await axios.post(`/firebase-deals/${dealId}/contacts`, { contactId }, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {

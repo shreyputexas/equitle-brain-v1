@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   // Configure axios base URL
-  axios.defaults.baseURL = 'http://localhost:4000/api';
+  axios.defaults.baseURL = 'http://localhost:4001/api';
   axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
 
   useEffect(() => {
