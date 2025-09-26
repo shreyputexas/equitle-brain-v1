@@ -77,6 +77,7 @@ import dealsApi from '../services/dealsApi';
 import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 import DealPipeline from '../components/DealPipeline';
+import EmailAlerts from '../components/EmailAlerts';
 
 type ViewMode = 'grid' | 'list' | 'pipeline';
 
@@ -164,6 +165,7 @@ export default function Deals() {
   const [newDealModalOpen, setNewDealModalOpen] = useState(false);
   const [editDealModalOpen, setEditDealModalOpen] = useState(false);
   const [dealToEdit, setDealToEdit] = useState<ApiDeal | null>(null);
+  const [emailAlertsOpen, setEmailAlertsOpen] = useState(false);
 
   // Use real API for deals data
   const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
@@ -1071,14 +1073,35 @@ export default function Deals() {
       )}
 
       {viewMode === 'pipeline' ? (
-        <DealPipeline
-          deals={filteredDeals}
-          loading={loading}
-          error={error}
-          onRefresh={refreshDeals}
-          onEditDeal={handleEditDeal}
-          onDeleteDeal={handleDeleteDeal}
-        />
+        <Box sx={{ position: 'relative' }}>
+          <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
+            <Tooltip title="Email Alerts">
+              <IconButton
+                onClick={() => setEmailAlertsOpen(true)}
+                size="small"
+                sx={{
+                  bgcolor: '#000000',
+                  color: 'white',
+                  width: 20,
+                  height: 20,
+                  '&:hover': {
+                    bgcolor: '#333333'
+                  }
+                }}
+              >
+                <EmailIcon sx={{ fontSize: 12 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          <DealPipeline
+            deals={filteredDeals}
+            loading={loading}
+            error={error}
+            onRefresh={refreshDeals}
+            onEditDeal={handleEditDeal}
+            onDeleteDeal={handleDeleteDeal}
+          />
+        </Box>
       ) : (
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -1558,6 +1581,42 @@ export default function Deals() {
           handleCloseEditModal();
         }}
       />
+
+      {/* Email Alerts Modal */}
+      <Dialog
+        open={emailAlertsOpen}
+        onClose={() => setEmailAlertsOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            minHeight: '60vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          bgcolor: '#000000',
+          color: 'white',
+          py: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <EmailIcon />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Email Alerts
+            </Typography>
+          </Box>
+          <IconButton onClick={() => setEmailAlertsOpen(false)} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <EmailAlerts limit={10} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

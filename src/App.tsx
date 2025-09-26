@@ -18,6 +18,7 @@ import Funds from './pages/Funds';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import OAuthCallback from './pages/OAuthCallback';
+import VoiceCalls from './pages/VoiceCalls';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
               {/* Settings and other routes */}
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="voice-calls" element={<VoiceCalls />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/deals/all" />} />

@@ -22,6 +22,7 @@ import companyRoutes from './routes/companies';
 // import contactRoutes from './routes/contacts'; // Temporarily disabled due to Prisma dependency
 import firebaseContactsActivitiesRoutes from './routes/firebaseContactsActivities';
 import firebaseDocumentsRoutes from './routes/firebaseDocuments';
+import firebaseEmailsRoutes from './routes/firebaseEmails';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import dashboardRoutes from './routes/dashboard';
@@ -31,6 +32,7 @@ import { errorHandler } from './middleware/errorHandler';
 // import { firebaseAuthMiddleware, AuthRequest } from './middleware/auth'; // Legacy
 import { firebaseAuthMiddleware } from './middleware/firebaseAuth';
 import { connectFirebase } from './lib/firebase';
+import { EmailsFirestoreService } from './services/emails.firestore.service';
 import logger from './utils/logger';
 
 dotenv.config();
@@ -102,6 +104,8 @@ app.use('/api/companies', firebaseAuthMiddleware, companyRoutes);
 app.use('/api/firebase', firebaseContactsActivitiesRoutes);
 // New Firebase documents routes
 app.use('/api/firebase-documents', firebaseDocumentsRoutes);
+// New Firebase emails routes
+app.use('/api/firebase-emails', firebaseEmailsRoutes);
 app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
@@ -114,6 +118,26 @@ app.use('/api/integrations', (req, res, next) => {
   console.log('Applying auth middleware');
   return firebaseAuthMiddleware(req, res, next);
 }, integrationRoutes);
+
+// Zapier webhook endpoint (no auth required)
+app.post('/webhook', async (req, res) => {
+  try {
+    logger.info('Zapier webhook received', { body: req.body });
+
+    // Use the same dev user ID that the frontend uses for development
+    const userId = 'dev-user-123';
+
+    // Store email in Firebase
+    const storedEmail = await EmailsFirestoreService.storeEmail(userId, req.body);
+
+    logger.info('Email stored successfully', { emailId: storedEmail.id });
+
+    res.status(200).json({ success: true, message: 'Email processed successfully', emailId: storedEmail.id });
+  } catch (error) {
+    logger.error('Error processing webhook:', error);
+    res.status(500).json({ success: false, error: 'Failed to process webhook' });
+  }
+});
 
 // Public test endpoint for Google OAuth debugging
 app.get('/api/test-google', async (req, res) => {

@@ -52,7 +52,8 @@ import {
   QuestionAnswer as AskIcon,
   FollowTheSigns as FollowUpIcon,
   Analytics as AnalyticsIcon,
-  Assessment as ReportIcon
+  Assessment as ReportIcon,
+  Phone as PhoneIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -82,6 +83,11 @@ const navigationItems = [
       { text: 'Limited Partners', path: '/fundraising/limited-partners' },
       { text: 'Funds', path: '/fundraising/funds' }
     ]
+  },
+  {
+    text: 'Voice Calls',
+    icon: <PhoneIcon />,
+    path: '/voice-calls'
   },
   {
     text: 'Brain',
