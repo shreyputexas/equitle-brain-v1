@@ -76,6 +76,9 @@ import { Deal as ApiDeal } from '../services/dealsApi';
 import dealsApi from '../services/dealsApi';
 import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
+import DealPipeline from '../components/DealPipeline';
+
+type ViewMode = 'grid' | 'list' | 'pipeline';
 
 interface Person {
   id: string;
@@ -148,7 +151,7 @@ export default function Deals() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(0);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
   const [statusFilter, setStatusFilter] = useState<'prospective' | 'active'>('prospective');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
@@ -959,162 +962,189 @@ export default function Deals() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            Deal Pipeline
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-            Manage your investment opportunities from initial outreach to closing
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ 
-            fontStyle: 'italic',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
-            Prospective: All companies you've reached out to. Active: Deals you're actively pursuing. Use the arrow button to move deals from prospective to active.
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setNewDealModalOpen(true)}
-          sx={{
-            bgcolor: '#000000',
-            color: 'white',
-            '&:hover': {
-              bgcolor: '#333333'
-            }
-          }}
-        >
-          New Deal
-        </Button>
-      </Box>
-
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
-                <MoneyIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  ${(totalPipelineValue / 1000000).toFixed(1)}M
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Total Pipeline Value
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
-                <TrendingUpIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {avgProbability}%
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Avg. Probability
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: '#000000', mr: 2 }}>
-                <ScheduleIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  45 days
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Avg. Deal Cycle
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
-                <BusinessIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  {activeDealCount}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Active Deals
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <TextField
-            placeholder="Search deals..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ flexGrow: 1, mr: 2 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              )
-            }}
-          />
-          <Button startIcon={<FilterIcon />} sx={{ mr: 2 }}>
-            Filters
-          </Button>
-          <Box sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => setViewMode('list')}
-              sx={{
-                borderRadius: 1,
-                bgcolor: viewMode === 'list' ? '#000000' : 'transparent',
-                color: viewMode === 'list' ? 'white' : 'text.secondary'
-              }}
-            >
-              <ListView />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => setViewMode('grid')}
-              sx={{
-                borderRadius: 1,
-                bgcolor: viewMode === 'grid' ? '#000000' : 'transparent',
-                color: viewMode === 'grid' ? 'white' : 'text.secondary'
-              }}
-            >
-              <KanbanIcon />
-            </IconButton>
+      {(viewMode as string) !== 'pipeline' && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+              Deal Pipeline
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+              Manage your investment opportunities from initial outreach to closing
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ 
+              fontStyle: 'italic',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              Prospective: All companies you've reached out to. Active: Deals you're actively pursuing. Use the arrow button to move deals from prospective to active.
+            </Typography>
           </Box>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setNewDealModalOpen(true)}
+            sx={{
+              bgcolor: '#000000',
+              color: 'white',
+              '&:hover': {
+                bgcolor: '#333333'
+              }
+            }}
+          >
+            New Deal
+          </Button>
         </Box>
+      )}
 
-        <Tabs
-          value={activeTab}
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          sx={{ mb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
-        >
-          <Tab label={`Active (${activeDealCount})`} />
-          <Tab label={`Prospective (${prospectiveDealCount})`} />
-        </Tabs>
+      {(viewMode as string) !== 'pipeline' && (
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper sx={{ p: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 1.5, width: 32, height: 32 }}>
+                  <MoneyIcon fontSize="small" />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    ${(totalPipelineValue / 1000000).toFixed(1)}M
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                    Total Pipeline Value
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper sx={{ p: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 1.5, width: 32, height: 32 }}>
+                  <TrendingUpIcon fontSize="small" />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    {avgProbability}%
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                    Avg. Probability
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper sx={{ p: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: '#000000', mr: 1.5, width: 32, height: 32 }}>
+                  <ScheduleIcon fontSize="small" />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    45 days
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                    Avg. Deal Cycle
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Paper sx={{ p: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'info.main', mr: 1.5, width: 32, height: 32 }}>
+                  <BusinessIcon fontSize="small" />
+                </Avatar>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                    {activeDealCount}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                    Active Deals
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+
+      {viewMode === 'pipeline' ? (
+        <DealPipeline
+          deals={filteredDeals}
+          loading={loading}
+          error={error}
+          onRefresh={refreshDeals}
+          onEditDeal={handleEditDeal}
+          onDeleteDeal={handleDeleteDeal}
+        />
+      ) : (
+        <Paper sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <TextField
+              placeholder="Search deals..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{ flexGrow: 1, mr: 2 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+            />
+            <Button startIcon={<FilterIcon />} sx={{ mr: 2 }}>
+              Filters
+            </Button>
+            <Box sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <IconButton
+                size="small"
+                onClick={() => setViewMode('pipeline')}
+                sx={{
+                  borderRadius: 1,
+                  bgcolor: (viewMode as string) === 'pipeline' ? '#000000' : 'transparent',
+                  color: (viewMode as string) === 'pipeline' ? 'white' : 'text.secondary'
+                }}
+              >
+                <KanbanIcon />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => setViewMode('list')}
+                sx={{
+                  borderRadius: 1,
+                  bgcolor: viewMode === 'list' ? '#000000' : 'transparent',
+                  color: viewMode === 'list' ? 'white' : 'text.secondary'
+                }}
+              >
+                <ListView />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={() => setViewMode('grid')}
+                sx={{
+                  borderRadius: 1,
+                  bgcolor: viewMode === 'grid' ? '#000000' : 'transparent',
+                  color: viewMode === 'grid' ? 'white' : 'text.secondary'
+                }}
+              >
+                <BusinessIcon />
+              </IconButton>
+            </Box>
+          </Box>
+
+        {(viewMode as string) !== 'pipeline' && (
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            sx={{ mb: 3, borderBottom: '1px solid', borderColor: 'divider' }}
+          >
+            <Tab label={`Active (${activeDealCount})`} />
+            <Tab label={`Prospective (${prospectiveDealCount})`} />
+          </Tabs>
+        )}
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -1194,7 +1224,8 @@ export default function Deals() {
             ))}
           </Grid>
         )}
-      </Paper>
+        </Paper>
+      )}
 
       <Menu
         anchorEl={anchorEl}
