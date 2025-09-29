@@ -39,6 +39,13 @@ lerna-debug.log*
 # TypeScript
 *.tsbuildinfo
 
+# Development Cache Directories
+.vite/
+node_modules/.cache/
+server/node_modules/.cache/
+.next/
+.turbo/
+
 # Logs
 logs/
 *.log

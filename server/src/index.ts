@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { WebSocketServer } from 'ws';
 
 // import authRoutes from './routes/auth'; // Temporarily disabled due to Prisma dependency
 import firebaseAuthRoutes from './routes/firebaseAuth';
@@ -26,6 +27,7 @@ import firebaseEmailsRoutes from './routes/firebaseEmails';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import dashboardRoutes from './routes/dashboard';
+import voiceAgentRoutes from './routes/voiceAgent';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -52,6 +54,35 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 4000;
 
+// WebSocket server for Retell LLM integration
+const wss = new WebSocketServer({
+  noServer: true
+});
+
+// Log WebSocket server setup
+logger.info('WebSocket server initialized', {
+  path: '/llm',
+  port: PORT
+});
+
+
+// Handle WebSocket upgrade requests
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname;
+
+  logger.info('WebSocket upgrade request', { pathname, headers: request.headers });
+
+  if (pathname === '/api/voice-agent/llm' || pathname.startsWith('/llm')) {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      logger.info('WebSocket connection established for /llm');
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    logger.warn('WebSocket upgrade rejected for path', { pathname });
+    socket.destroy();
+  }
+});
+
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), 
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
@@ -74,6 +105,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// LLM WebSocket endpoint (returns upgrade required for HTTP requests)
+app.get('/api/voice-agent/llm', (req, res) => {
+  res.status(426).json({ error: 'Upgrade Required', message: 'This endpoint requires WebSocket connection' });
 });
 
 // Legacy JWT auth routes (will be deprecated)
@@ -169,6 +205,14 @@ app.get('/api/test-google', async (req, res) => {
 });
 // Dashboard routes (using Prisma temporarily)
 app.use('/api/dashboard', firebaseAuthMiddleware, dashboardRoutes);
+// Voice agent routes
+console.log('🔗 Mounting voice agent routes at /api/voice-agent');
+try {
+  app.use('/api/voice-agent', voiceAgentRoutes);
+  console.log('✅ Voice agent routes mounted successfully');
+} catch (error) {
+  console.error('❌ Error mounting voice agent routes:', error);
+}
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);
@@ -186,9 +230,93 @@ io.on('connection', (socket) => {
   });
 });
 
+// WebSocket handler for Retell LLM integration
+wss.on('connection', (ws, req) => {
+  logger.info('Retell LLM WebSocket connected', { url: req.url });
+
+  ws.on('message', async (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      logger.info('Received LLM WebSocket message', { type: message.type, content: message.content });
+
+      // Log the full message for debugging
+      logger.info('Received LLM WebSocket message details', {
+        type: message.type,
+        content: message.content?.substring(0, 100),
+        interaction_type: message.interaction_type,
+        full_message: message
+      });
+
+      // Handle different Retell message types
+      if (message.interaction_type === 'response_required') {
+        // Import services dynamically to avoid circular dependencies
+        const { OpenAIService } = await import('./services/openai.service');
+        const openaiService = new OpenAIService();
+
+        // Get the latest user message from transcript
+        const userMessage = message.transcript?.[message.transcript.length - 1]?.content || '';
+
+        logger.info('Processing user message', { userMessage });
+
+        // Convert Retell transcript format to our expected string format
+        const conversationHistory = (message.transcript || []).map((entry: any) => {
+          if (entry.role === 'user') {
+            return `User: ${entry.content}`;
+          } else if (entry.role === 'agent') {
+            return `AI: ${entry.content}`;
+          }
+          return `${entry.role}: ${entry.content}`;
+        });
+
+        // Generate AI response with a more conversational prompt
+        const aiResponse = await openaiService.generateResponse(
+          'You are a professional but friendly AI assistant making a phone call for Equitle, a deal management platform. Keep responses natural, engaging, and under 2 sentences. Be conversational and responsive.',
+          conversationHistory,
+          userMessage
+        );
+
+        logger.info('Generated AI response', { aiResponse });
+
+        // Send response back to Retell in the correct format
+        const response = {
+          response: aiResponse,
+          response_id: Date.now().toString()
+        };
+
+        logger.info('Sending LLM response to Retell', { response });
+        ws.send(JSON.stringify(response));
+      } else {
+        // For other interaction types, just acknowledge
+        logger.info('Received non-response message', {
+          interaction_type: message.interaction_type,
+          type: message.type
+        });
+        ws.send(JSON.stringify({ success: true }));
+      }
+    } catch (error) {
+      logger.error('Error handling LLM WebSocket message', error);
+      // Send fallback response in correct format
+      const fallbackResponse = {
+        response: "I apologize, but I'm experiencing some technical difficulties. Let me have someone call you back.",
+        response_id: Date.now().toString()
+      };
+      ws.send(JSON.stringify(fallbackResponse));
+    }
+  });
+
+  ws.on('close', () => {
+    logger.info('Retell LLM WebSocket disconnected');
+  });
+
+  ws.on('error', (error) => {
+    logger.error('Retell LLM WebSocket error', error);
+  });
+});
+
 server.listen(PORT, async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`Project ID: ${process.env.FIREBASE_PROJECT_ID}`);
 
   // Connect to Firebase
   await connectFirebase();

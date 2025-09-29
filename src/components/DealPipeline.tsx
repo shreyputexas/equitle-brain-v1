@@ -122,6 +122,9 @@ const sampleDeals: DealWithContacts[] = [
     lastActivity: new Date(),
     nextStep: 'Initial meeting scheduled',
     status: 'active',
+    priority: 'high',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     people: mockPeople,
     sentiment: 'good' // good, bad, neutral
   },
@@ -137,6 +140,9 @@ const sampleDeals: DealWithContacts[] = [
     lastActivity: new Date(),
     nextStep: 'Due diligence review',
     status: 'active',
+    priority: 'medium',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     people: mockPeople,
     sentiment: 'neutral'
   },
@@ -152,6 +158,9 @@ const sampleDeals: DealWithContacts[] = [
     lastActivity: new Date(),
     nextStep: 'Term sheet negotiation',
     status: 'active',
+    priority: 'low',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     people: mockPeople,
     sentiment: 'bad'
   },
@@ -167,6 +176,9 @@ const sampleDeals: DealWithContacts[] = [
     lastActivity: new Date(),
     nextStep: 'Final closing documents',
     status: 'active',
+    priority: 'high',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     people: mockPeople,
     sentiment: 'good'
   }
@@ -627,7 +639,7 @@ export default function DealPipeline({
                 py: 0.5,
                 fontSize: '0.75rem',
                 '&:hover': {
-                  bgcolor: viewMode === 'tabs' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.1)'
+                  bgcolor: viewMode === 'tabs' ? 'rgba(255,255,255,0.9)' : 'rgba(255, 252, 252, 0.1)'
                 }
               }}
             >
@@ -925,7 +937,7 @@ export default function DealPipeline({
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Last Activity</Typography>
-                    <Typography variant="body1">{selectedCompany.lastActivity.toLocaleDateString()}</Typography>
+                    <Typography variant="body1">{selectedCompany.lastActivity?.toLocaleDateString() || 'No activity'}</Typography>
                   </Box>
                 </Box>
                 
