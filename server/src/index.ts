@@ -52,7 +52,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4001;
 
 // WebSocket server for Retell LLM integration
 const wss = new WebSocketServer({
@@ -72,7 +72,7 @@ server.on('upgrade', (request, socket, head) => {
 
   logger.info('WebSocket upgrade request', { pathname, headers: request.headers });
 
-  if (pathname === '/api/voice-agent/llm' || pathname.startsWith('/llm')) {
+  if (pathname === '/llm' || pathname.startsWith('/llm/')) {
     wss.handleUpgrade(request, socket, head, (ws) => {
       logger.info('WebSocket connection established for /llm');
       wss.emit('connection', ws, request);

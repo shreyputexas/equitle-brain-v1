@@ -264,7 +264,9 @@ export class RetellService {
         updateData.language = updates.language;
       }
 
+      logger.info('Updating Retell agent with data:', updateData);
       const response = await this.client.agent.update(agentId, updateData);
+      logger.info('Retell agent update response:', response);
 
       return {
         agent_id: response.agent_id,

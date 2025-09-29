@@ -84,9 +84,16 @@ export class VoiceAgentService {
       this.activeSessions.set(callId, callSession as CallSession);
 
       // Update existing agent or create new one
+      logger.info('Getting agent ID for call', { 
+        hasExistingAgent: !!process.env.RETELL_AGENT_ID, 
+        voiceId: callSession.voiceId 
+      });
+      
       const agentId = process.env.RETELL_AGENT_ID
         ? await this.updateRetellAgent(process.env.RETELL_AGENT_ID, aiPrompt, callSession.voiceId!)
         : await this.getOrCreateRetellAgent(userId, aiPrompt, callSession.voiceId!);
+        
+      logger.info('Using agent ID for call', { agentId });
       const retellCall = await this.retellService.createCall({
         phoneNumber,
         agentId,
@@ -281,12 +288,13 @@ export class VoiceAgentService {
    */
   private async updateRetellAgent(agentId: string, prompt: string, voiceId: string): Promise<string> {
     try {
-      logger.info('Updating Retell agent configuration', { agentId });
+      logger.info('Updating Retell agent configuration', { agentId, voiceId });
 
-      await this.retellService.updateAgent(agentId, {
+      // Use ElevenLabs voice for better audio quality
+      const result = await this.retellService.updateAgent(agentId, {
         voice: {
           type: 'elevenlabs',
-          voice_id: voiceId,
+          voice_id: voiceId, // Use the provided ElevenLabs voice ID
         },
         llm: {
           type: 'custom',
@@ -299,10 +307,18 @@ export class VoiceAgentService {
         }
       });
 
+      if (result) {
+        logger.info('Agent updated successfully with ElevenLabs voice', { agentId, voiceId, result });
+      } else {
+        logger.warn('Agent update returned null - this might indicate an issue', { agentId, voiceId });
+      }
+      
       return agentId;
     } catch (error) {
       logger.error('Failed to update Retell agent', error);
-      throw error;
+      // Don't throw error - continue with existing agent
+      logger.warn('Continuing with existing agent configuration despite update failure');
+      return agentId;
     }
   }
 
@@ -316,7 +332,7 @@ export class VoiceAgentService {
       const agent = await this.retellService.createAgent({
         voice: {
           type: 'elevenlabs',
-          voice_id: voiceId,
+          voice_id: voiceId, // Use the provided ElevenLabs voice ID
         },
         llm: {
           type: 'custom',
@@ -353,10 +369,10 @@ export class VoiceAgentService {
       }
 
       // Return ElevenLabs default voice if no custom voice found
-      return 'pNInz6obpgDQGcFmaJgB'; // Default ElevenLabs voice
+      return 'EXAVITQu4vr4xnSDxMaL'; // Sarah - a valid ElevenLabs voice
     } catch (error) {
       logger.error('Failed to get default voice ID', error);
-      return 'pNInz6obpgDQGcFmaJgB'; // Fallback to default
+      return 'EXAVITQu4vr4xnSDxMaL'; // Sarah - a valid ElevenLabs voice
     }
   }
 
