@@ -3,40 +3,30 @@ import GoogleAuthService from '../services/googleAuth';
 import GoogleDriveService from '../services/googleDrive';
 import GoogleCalendarService from '../services/googleCalendar';
 import GmailService from '../services/gmail';
-import { firebaseAuthMiddleware as auth } from '../middleware/firebaseAuth';
+import IntegrationsFirestoreService from '../services/integrations.firestore.service';
+import { firebaseAuthMiddleware as auth, FirebaseAuthRequest } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
-import prisma from '../lib/database.legacy';
 
 const router = express.Router();
 
 // Helper function to ensure valid access token
-async function ensureValidAccessToken(integration: { expiresAt: Date | null; refreshToken: string | null; accessToken: string | null; id: string }) {
+async function ensureValidAccessToken(integration: { expiresAt: Date | null; refreshToken?: string; accessToken: string; id: string }) {
   if (!integration.accessToken) {
     throw new Error('No access token available');
   }
-  
+
   if (!integration.expiresAt || !integration.refreshToken) {
     return integration.accessToken;
   }
 
-  const now = new Date();
-  const expiryDate = new Date(integration.expiresAt);
-
   // If token expires within 5 minutes, refresh it
-  if (expiryDate <= new Date(now.getTime() + 5 * 60 * 1000)) {
+  if (IntegrationsFirestoreService.isTokenExpiringSoon(integration.expiresAt)) {
     try {
       logger.info(`Refreshing access token for integration ${integration.id}`);
       const refreshedTokens = await GoogleAuthService.refreshAccessToken(integration.refreshToken);
 
       // Update the integration with new tokens
-      await prisma.integration.update({
-        where: { id: integration.id },
-        data: {
-          accessToken: refreshedTokens.access_token,
-          refreshToken: refreshedTokens.refresh_token,
-          expiresAt: new Date(Date.now() + refreshedTokens.expires_in * 1000)
-        }
-      });
+      await IntegrationsFirestoreService.refreshToken(integration.id, refreshedTokens);
 
       return refreshedTokens.access_token;
     } catch (error) {
@@ -88,27 +78,27 @@ router.get('/test', async (req, res) => {
 // Get user's integrations (requires auth)
 router.get('/', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id;
+    const userId = (req as FirebaseAuthRequest).userId;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
-    logger.info('Fetching integrations for user', { userId, userEmail: (req.user as any)?.email });
+    logger.info('Fetching integrations for user', { userId, userEmail: (req as FirebaseAuthRequest).user?.email });
 
-    const userIntegrations = await prisma.integration.findMany({
-      where: { userId }
+    const userIntegrations = await IntegrationsFirestoreService.findMany({
+      userId
     });
 
-    logger.info('Found integrations', { 
-      userId, 
+    logger.info('Found integrations', {
+      userId,
       count: userIntegrations.length,
-      integrationIds: userIntegrations.map((i: any) => i.id)
+      integrationIds: userIntegrations.map((i) => i.id)
     });
 
     res.json({
       success: true,
-      data: userIntegrations.map((integration: any) => ({
+      data: userIntegrations.map((integration) => ({
         id: integration.id,
         provider: integration.provider,
         type: integration.type,
@@ -126,10 +116,14 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Initiate Google OAuth flow (requires auth)
-router.post('/google/connect', async (req, res) => {
+router.post('/google/connect', auth, async (req, res) => {
   try {
     const { types } = req.body; // ['profile', 'drive', 'calendar', 'gmail']
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
 
     if (!types || !Array.isArray(types)) {
       return res.status(400).json({
@@ -139,7 +133,7 @@ router.post('/google/connect', async (req, res) => {
     }
 
     const scopes = GoogleAuthService.getScopes(types);
-    const authUrl = GoogleAuthService.getAuthUrl(scopes, userId!);
+    const authUrl = GoogleAuthService.getAuthUrl(types, userId);
 
     res.json({
       success: true,
@@ -224,12 +218,10 @@ router.get('/google/callback', async (req, res) => {
     const createdIntegrations = [];
     for (const type of types) {
       // Remove existing integration of same type
-      const deleted = await prisma.integration.deleteMany({
-        where: {
-          userId: userId as string,
-          provider: 'google',
-          type: type
-        }
+      const deleted = await IntegrationsFirestoreService.deleteMany({
+        userId: userId as string,
+        provider: 'google',
+        type: type
       });
 
       if (deleted.count > 0) {
@@ -237,22 +229,20 @@ router.get('/google/callback', async (req, res) => {
       }
 
       // Create new integration
-      const integration = await prisma.integration.create({
-        data: {
-          userId: userId as string,
-          provider: 'google',
-          type: type,
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-          expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
-          scope: scopeList,
-          profile: {
-            email: profile.email,
-            name: profile.name,
-            picture: profile.picture as string | undefined
-          },
-          isActive: true
-        }
+      const integration = await IntegrationsFirestoreService.create({
+        userId: userId as string,
+        provider: 'google',
+        type: type as any,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+        scope: scopeList,
+        profile: {
+          email: profile.email,
+          name: profile.name,
+          picture: profile.picture as string | undefined
+        },
+        isActive: true
       });
 
       createdIntegrations.push(integration);
@@ -283,14 +273,13 @@ router.get('/google/callback', async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
 
-    const integration = await prisma.integration.findFirst({
-      where: {
-        id: id,
-        userId: userId
-      }
-    });
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const integration = await IntegrationsFirestoreService.findById(id, userId);
 
     if (!integration) {
       return res.status(404).json({
@@ -299,11 +288,7 @@ router.delete('/:id', auth, async (req, res) => {
       });
     }
 
-    await prisma.integration.delete({
-      where: {
-        id: id
-      }
-    });
+    await IntegrationsFirestoreService.delete(id);
 
     res.json({
       success: true,
@@ -318,14 +303,17 @@ router.delete('/:id', auth, async (req, res) => {
 // Get Google Drive files (requires auth)
 router.get('/google/drive/files', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
-    const driveIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'drive',
-        isActive: true
-      }
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const driveIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'drive',
+      isActive: true
     });
 
     if (!driveIntegration) {
@@ -351,16 +339,18 @@ router.get('/google/drive/files', auth, async (req, res) => {
 // Get Google Calendar events (requires auth)
 router.get('/google/calendar/events', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
     const { timeMin, timeMax } = req.query;
 
-    const calendarIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'calendar',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const calendarIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'calendar',
+      isActive: true
     });
 
     if (!calendarIntegration) {
@@ -392,16 +382,18 @@ router.get('/google/calendar/events', auth, async (req, res) => {
 // Create Google Calendar event (requires auth)
 router.post('/google/calendar/events', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
     const eventData = req.body;
 
-    const calendarIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'calendar',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const calendarIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'calendar',
+      isActive: true
     });
 
     if (!calendarIntegration) {
@@ -430,16 +422,18 @@ router.post('/google/calendar/events', auth, async (req, res) => {
 // Get Gmail messages (requires auth)
 router.get('/google/gmail/messages', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
     const { q, labelIds, maxResults = 50, pageToken, includeSpamTrash } = req.query;
 
-    const gmailIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'gmail',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const gmailIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'gmail',
+      isActive: true
     });
 
     if (!gmailIntegration) {
@@ -472,16 +466,18 @@ router.get('/google/gmail/messages', auth, async (req, res) => {
 // Send Gmail email (requires auth)
 router.post('/google/gmail/send', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
     const emailData = req.body;
 
-    const gmailIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'gmail',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const gmailIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'gmail',
+      isActive: true
     });
 
     if (!gmailIntegration) {
@@ -507,17 +503,19 @@ router.post('/google/gmail/send', auth, async (req, res) => {
 // Reply to Gmail email (requires auth)
 router.post('/google/gmail/messages/:messageId/reply', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
     const { messageId } = req.params;
     const replyData = req.body;
 
-    const gmailIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'gmail',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const gmailIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'gmail',
+      isActive: true
     });
 
     if (!gmailIntegration) {
@@ -547,16 +545,18 @@ router.post('/google/gmail/messages/:messageId/reply', auth, async (req, res) =>
 // Get Gmail threads (requires auth)
 router.get('/google/gmail/threads', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
     const { q, labelIds, maxResults = 20, pageToken, includeSpamTrash } = req.query;
 
-    const gmailIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'gmail',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const gmailIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'gmail',
+      isActive: true
     });
 
     if (!gmailIntegration) {
@@ -589,15 +589,17 @@ router.get('/google/gmail/threads', auth, async (req, res) => {
 // Get Gmail labels (requires auth)
 router.get('/google/gmail/labels', auth, async (req, res) => {
   try {
-    const userId = (req.user as any)?.id || 'default-user-id';
+    const userId = (req as FirebaseAuthRequest).userId;
 
-    const gmailIntegration = await prisma.integration.findFirst({
-      where: {
-        userId: userId,
-        provider: 'google',
-        type: 'gmail',
-        isActive: true
-      }
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const gmailIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'gmail',
+      isActive: true
     });
 
     if (!gmailIntegration) {

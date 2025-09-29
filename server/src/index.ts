@@ -25,6 +25,7 @@ import firebaseDocumentsRoutes from './routes/firebaseDocuments';
 import firebaseEmailsRoutes from './routes/firebaseEmails';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
+import googleWorkspaceRoutes from './routes/googleWorkspace';
 import dashboardRoutes from './routes/dashboard';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
@@ -118,6 +119,9 @@ app.use('/api/integrations', (req, res, next) => {
   console.log('Applying auth middleware');
   return firebaseAuthMiddleware(req, res, next);
 }, integrationRoutes);
+
+// Google Workspace API routes (all require auth)
+app.use('/api/google-workspace', firebaseAuthMiddleware, googleWorkspaceRoutes);
 
 // Zapier webhook endpoint (no auth required)
 app.post('/webhook', async (req, res) => {
