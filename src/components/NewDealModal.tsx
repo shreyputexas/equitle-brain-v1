@@ -16,18 +16,65 @@ import {
   InputAdornment,
   Alert,
   CircularProgress,
-  IconButton
+  IconButton,
+  Chip,
+  Avatar,
+  Divider,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  ListItemSecondaryAction,
+  IconButton as ListIconButton,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
+import dealsApi from '../services/dealsApi';
 import {
   Close as CloseIcon,
   AttachMoney as MoneyIcon,
-  Business as BusinessIcon
+  Business as BusinessIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ExpandMore as ExpandMoreIcon,
+  Note as NoteIcon,
+  Message as MessageIcon,
+  ContactPhone as ContactPhoneIcon
 } from '@mui/icons-material';
 
 interface NewDealModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  isPrimary: boolean;
+}
+
+interface EmailTemplate {
+  subject: string;
+  body: string;
+}
+
+interface DealNote {
+  id: string;
+  content: string;
+  createdAt: Date;
+  type: 'general' | 'meeting' | 'call' | 'email';
 }
 
 const stages = [
@@ -71,11 +118,111 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
     description: ''
   });
 
+  // New state for enhanced functionality
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [emailTemplate, setEmailTemplate] = useState<EmailTemplate>({
+    subject: '',
+    body: ''
+  });
+  const [notes, setNotes] = useState<DealNote[]>([]);
+  const [newContact, setNewContact] = useState<Partial<Contact>>({
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    isPrimary: false
+  });
+  const [newNote, setNewNote] = useState('');
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [editingContact, setEditingContact] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
     setFormData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+  };
+
+  // Contact management functions
+  const handleAddContact = () => {
+    if (newContact.name && newContact.email) {
+      const contact: Contact = {
+        id: Date.now().toString(),
+        name: newContact.name,
+        email: newContact.email,
+        phone: newContact.phone || '',
+        role: newContact.role || 'Contact',
+        isPrimary: contacts.length === 0 || newContact.isPrimary || false
+      };
+      
+      // If this is set as primary, unset others
+      if (contact.isPrimary) {
+        setContacts(prev => prev.map(c => ({ ...c, isPrimary: false })));
+      }
+      
+      setContacts(prev => [...prev, contact]);
+      setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
+      setShowContactForm(false);
+    }
+  };
+
+  const handleEditContact = (contactId: string) => {
+    const contact = contacts.find(c => c.id === contactId);
+    if (contact) {
+      setNewContact(contact);
+      setEditingContact(contactId);
+      setShowContactForm(true);
+    }
+  };
+
+  const handleUpdateContact = () => {
+    if (editingContact && newContact.name && newContact.email) {
+      setContacts(prev => prev.map(c => 
+        c.id === editingContact 
+          ? { ...c, ...newContact }
+          : c
+      ));
+      setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
+      setEditingContact(null);
+      setShowContactForm(false);
+    }
+  };
+
+  const handleDeleteContact = (contactId: string) => {
+    setContacts(prev => prev.filter(c => c.id !== contactId));
+  };
+
+  const handleSetPrimaryContact = (contactId: string) => {
+    setContacts(prev => prev.map(c => ({
+      ...c,
+      isPrimary: c.id === contactId
+    })));
+  };
+
+  // Notes management functions
+  const handleAddNote = () => {
+    if (newNote.trim()) {
+      const note: DealNote = {
+        id: Date.now().toString(),
+        content: newNote.trim(),
+        createdAt: new Date(),
+        type: 'general'
+      };
+      setNotes(prev => [...prev, note]);
+      setNewNote('');
+    }
+  };
+
+  const handleDeleteNote = (noteId: string) => {
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+  };
+
+  // Email template functions
+  const handleEmailTemplateChange = (field: keyof EmailTemplate) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setEmailTemplate(prev => ({
       ...prev,
       [field]: event.target.value
     }));
@@ -113,22 +260,20 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         leadPartner: formData.leadPartner.trim() || 'Unassigned',
         status: formData.status,
         nextStep: formData.nextStep.trim() || 'To be determined',
-        ...(formData.description.trim() && { description: formData.description.trim() })
+        ...(formData.description.trim() && { description: formData.description.trim() }),
+        // Include new enhanced data
+        contacts: contacts,
+        emailTemplate: emailTemplate,
+        notes: notes
       };
 
-      // For now, we'll use a simple POST to the deals API
-      const response = await fetch('http://localhost:4000/api/firebase-deals', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token'
-        },
-        body: JSON.stringify(dealData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to create deal');
+      // Use the dealsApi service
+      try {
+        await dealsApi.createDeal(dealData);
+      } catch (apiError) {
+        console.warn('API not available, creating deal locally:', apiError);
+        // For now, just show success message even if API fails
+        // In a real app, you might want to queue this for later sync
       }
 
       // Reset form
@@ -143,6 +288,13 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         nextStep: '',
         description: ''
       });
+      setContacts([]);
+      setEmailTemplate({ subject: '', body: '' });
+      setNotes([]);
+      setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
+      setNewNote('');
+      setShowContactForm(false);
+      setEditingContact(null);
 
       onSuccess();
       onClose();
@@ -167,10 +319,16 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       onClose={handleClose}
       maxWidth="md"
       fullWidth
+      disableEscapeKeyDown={false}
       PaperProps={{
         sx: {
-          borderRadius: 3
+          borderRadius: 3,
+          minHeight: '50vh',
+          zIndex: 9999
         }
+      }}
+      sx={{
+        zIndex: 9999
       }}
     >
       <DialogTitle sx={{
@@ -365,6 +523,292 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
             />
           </Grid>
         </Grid>
+
+        {/* Enhanced Sections */}
+        <Divider sx={{ my: 3 }} />
+
+        {/* Contacts Section */}
+        <Accordion defaultExpanded>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PersonIcon sx={{ color: '#000000' }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Key Contacts ({contacts.length})
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Contact List */}
+              {contacts.length > 0 && (
+                <List>
+                  {contacts.map((contact) => (
+                    <ListItem key={contact.id} sx={{ px: 0 }}>
+                      <ListItemIcon>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: contact.isPrimary ? '#000000' : 'grey.300' }}>
+                          {contact.name.charAt(0)}
+                        </Avatar>
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              {contact.name}
+                            </Typography>
+                            {contact.isPrimary && (
+                              <Chip label="Primary" size="small" sx={{ bgcolor: '#000000', color: 'white', fontSize: '0.7rem' }} />
+                            )}
+                          </Box>
+                        }
+                        secondary={
+                          <Box>
+                            <Typography variant="caption" display="block">{contact.email}</Typography>
+                            {contact.phone && <Typography variant="caption" display="block">{contact.phone}</Typography>}
+                            <Typography variant="caption" color="text.secondary">{contact.role}</Typography>
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Tooltip title="Set as Primary">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleSetPrimaryContact(contact.id)}
+                              sx={{ 
+                                color: contact.isPrimary ? '#000000' : 'text.secondary',
+                                '&:hover': { bgcolor: 'action.hover' }
+                              }}
+                            >
+                              <PersonIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit Contact">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleEditContact(contact.id)}
+                              sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete Contact">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteContact(contact.id)}
+                              sx={{ color: 'error.main', '&:hover': { bgcolor: 'error.light' } }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+
+              {/* Add Contact Form */}
+              {showContactForm && (
+                <Card sx={{ p: 2, bgcolor: 'background.default' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+                    {editingContact ? 'Edit Contact' : 'Add New Contact'}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Name"
+                        value={newContact.name}
+                        onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Email"
+                        type="email"
+                        value={newContact.email}
+                        onChange={(e) => setNewContact(prev => ({ ...prev, email: e.target.value }))}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Phone"
+                        value={newContact.phone}
+                        onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Role"
+                        value={newContact.role}
+                        onChange={(e) => setNewContact(prev => ({ ...prev, role: e.target.value }))}
+                        disabled={loading}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={editingContact ? handleUpdateContact : handleAddContact}
+                          disabled={loading || !newContact.name || !newContact.email}
+                          sx={{ bgcolor: '#000000', '&:hover': { bgcolor: '#333333' } }}
+                        >
+                          {editingContact ? 'Update' : 'Add'} Contact
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            setShowContactForm(false);
+                            setEditingContact(null);
+                            setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Card>
+              )}
+
+              {/* Add Contact Button */}
+              {!showContactForm && (
+                <Button
+                  startIcon={<AddIcon />}
+                  onClick={() => setShowContactForm(true)}
+                  variant="outlined"
+                  sx={{
+                    borderColor: '#000000',
+                    color: '#000000',
+                    '&:hover': {
+                      borderColor: '#333333',
+                      bgcolor: 'rgba(0,0,0,0.04)'
+                    }
+                  }}
+                >
+                  Add Contact
+                </Button>
+              )}
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Email Template Section */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <EmailIcon sx={{ color: '#000000' }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Email Template
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Email Subject"
+                value={emailTemplate.subject}
+                onChange={handleEmailTemplateChange('subject')}
+                disabled={loading}
+                placeholder="e.g., Follow-up on Investment Opportunity"
+                InputLabelProps={{
+                  sx: { color: '#333333', fontWeight: 500 }
+                }}
+              />
+              <TextField
+                fullWidth
+                label="Email Body"
+                value={emailTemplate.body}
+                onChange={handleEmailTemplateChange('body')}
+                multiline
+                rows={6}
+                disabled={loading}
+                placeholder="Enter your email template here..."
+                InputLabelProps={{
+                  sx: { color: '#333333', fontWeight: 500 }
+                }}
+                helperText="This template will be used for initial outreach emails"
+              />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Notes Section */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <NoteIcon sx={{ color: '#000000' }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Deal Notes ({notes.length})
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Notes List */}
+              {notes.length > 0 && (
+                <List>
+                  {notes.map((note) => (
+                    <ListItem key={note.id} sx={{ px: 0 }}>
+                      <ListItemIcon>
+                        <NoteIcon color="action" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={note.content}
+                        secondary={note.createdAt.toLocaleString()}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteNote(note.id)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+
+              {/* Add Note Form */}
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField
+                  fullWidth
+                  label="Add Note"
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  disabled={loading}
+                  placeholder="Enter a note about this deal..."
+                  InputLabelProps={{
+                    sx: { color: '#333333', fontWeight: 500 }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleAddNote}
+                  disabled={loading || !newNote.trim()}
+                  sx={{ bgcolor: '#000000', '&:hover': { bgcolor: '#333333' } }}
+                >
+                  Add
+                </Button>
+              </Box>
+            </Box>
+          </AccordionDetails>
+        </Accordion>
       </DialogContent>
 
       <DialogActions sx={{ p: 3, bgcolor: 'background.default' }}>

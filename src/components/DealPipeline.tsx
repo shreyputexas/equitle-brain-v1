@@ -26,7 +26,9 @@ import {
   TextField,
   InputAdornment,
   Tabs,
-  Tab
+  Tab,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -123,7 +125,10 @@ const sampleDeals: DealWithContacts[] = [
     nextStep: 'Initial meeting scheduled',
     status: 'active',
     people: mockPeople,
-    sentiment: 'good' // good, bad, neutral
+    sentiment: 'good', // good, bad, neutral
+    priority: 'high',
+    createdAt: new Date(),
+    updatedAt: new Date()
   },
   {
     id: '2',
@@ -138,7 +143,10 @@ const sampleDeals: DealWithContacts[] = [
     nextStep: 'Due diligence review',
     status: 'active',
     people: mockPeople,
-    sentiment: 'neutral'
+    sentiment: 'neutral',
+    priority: 'medium',
+    createdAt: new Date(),
+    updatedAt: new Date()
   },
   {
     id: '3',
@@ -153,7 +161,10 @@ const sampleDeals: DealWithContacts[] = [
     nextStep: 'Term sheet negotiation',
     status: 'active',
     people: mockPeople,
-    sentiment: 'bad'
+    sentiment: 'bad',
+    priority: 'low',
+    createdAt: new Date(),
+    updatedAt: new Date()
   },
   {
     id: '4',
@@ -168,7 +179,10 @@ const sampleDeals: DealWithContacts[] = [
     nextStep: 'Final closing documents',
     status: 'active',
     people: mockPeople,
-    sentiment: 'good'
+    sentiment: 'good',
+    priority: 'high',
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];
 
@@ -189,6 +203,12 @@ export default function DealPipeline({
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<DealWithContacts | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Drag and drop state
+  const [draggedDeal, setDraggedDeal] = useState<DealWithContacts | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Transform API deals to include mock people data for now
   const dealsWithContacts: DealWithContacts[] = deals.map(deal => ({
@@ -229,6 +249,66 @@ export default function DealPipeline({
         return <SentimentNeutralIcon sx={{ color: '#ff9800', fontSize: 20 }} />;
       default:
         return <SentimentNeutralIcon sx={{ color: '#9e9e9e', fontSize: 20 }} />;
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (event: React.DragEvent, deal: DealWithContacts) => {
+    setDraggedDeal(deal);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', deal.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedDeal(null);
+    setDragOverStage(null);
+  };
+
+  const handleDragOver = (event: React.DragEvent, stageValue: string) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDragOverStage(stageValue);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverStage(null);
+  };
+
+  const handleDrop = async (event: React.DragEvent, targetStage: string) => {
+    event.preventDefault();
+    setDragOverStage(null);
+
+    if (!draggedDeal) return;
+
+    try {
+      // Map our pipeline stages to the API stage values
+      let newStage = draggedDeal.stage;
+      switch (targetStage) {
+        case 'response-received':
+          newStage = 'prospect';
+          break;
+        case 'initial-diligence':
+          newStage = 'due-diligence';
+          break;
+        case 'ioi-loi':
+          newStage = 'term-sheet';
+          break;
+        default:
+          return;
+      }
+
+      // Update the deal stage via API
+      await dealsApi.updateDeal(draggedDeal.id, { stage: newStage });
+      
+      setSnackbarMessage(`Deal moved to ${stages.find(s => s.value === targetStage)?.label}`);
+      setSnackbarOpen(true);
+      
+      // Refresh the deals list
+      onRefresh();
+    } catch (error) {
+      console.error('Error updating deal stage:', error);
+      setSnackbarMessage('Failed to move deal');
+      setSnackbarOpen(true);
     }
   };
 
@@ -300,15 +380,22 @@ export default function DealPipeline({
 
     return (
       <Card
+        draggable
+        onDragStart={(e) => handleDragStart(e, deal)}
+        onDragEnd={handleDragEnd}
         sx={{
           mb: 2,
           transition: 'all 0.3s ease',
-          cursor: 'pointer',
+          cursor: 'grab',
           bgcolor: 'white',
           border: '1px solid #d0d0d0',
+          opacity: draggedDeal?.id === deal.id ? 0.5 : 1,
           '&:hover': {
             transform: 'translateY(-2px)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
+          },
+          '&:active': {
+            cursor: 'grabbing'
           }
         }}
         onClick={() => handleCompanyClick(deal)}
@@ -709,6 +796,9 @@ export default function DealPipeline({
             return (
               <Paper
                 key={stage.value}
+                onDragOver={(e) => handleDragOver(e, stage.value)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, stage.value)}
                 sx={{
                   flex: 1,
                   minWidth: 0,
@@ -716,8 +806,12 @@ export default function DealPipeline({
                   p: 1.5,
                   borderRadius: 2,
                   border: '1px solid #d0d0d0',
-                  bgcolor: '#f5f5f5',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  bgcolor: dragOverStage === stage.value ? '#e3f2fd' : '#f5f5f5',
+                  boxShadow: dragOverStage === stage.value 
+                    ? '0 4px 12px rgba(0,0,0,0.2)' 
+                    : '0 2px 8px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease',
+                  cursor: dragOverStage === stage.value ? 'pointer' : 'default'
                 }}
               >
                 {/* Stage Header */}
@@ -925,7 +1019,7 @@ export default function DealPipeline({
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Last Activity</Typography>
-                    <Typography variant="body1">{selectedCompany.lastActivity.toLocaleDateString()}</Typography>
+                    <Typography variant="body1">{selectedCompany.lastActivity?.toLocaleDateString() || 'N/A'}</Typography>
                   </Box>
                 </Box>
                 
@@ -942,6 +1036,22 @@ export default function DealPipeline({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Snackbar for drag and drop feedback */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

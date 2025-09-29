@@ -985,7 +985,9 @@ export default function Deals() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setNewDealModalOpen(true)}
+            onClick={() => {
+              setNewDealModalOpen(true);
+            }}
             sx={{
               bgcolor: '#000000',
               color: 'white',

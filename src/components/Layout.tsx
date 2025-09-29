@@ -401,14 +401,29 @@ export default function Layout() {
               {navigationItems.map((item) => (
                 <Tooltip key={item.text} title={item.text} placement="right">
                   <IconButton
-                    onClick={() => handleNavigation(item.path || '#')}
+                    onClick={() => {
+                      if (item.subItems) {
+                        // For items with submenus, open the first submenu item or show a dropdown
+                        if (item.text === 'Fundraising') {
+                          handleNavigation('/fundraising/limited-partners');
+                        } else if (item.text === 'Brain') {
+                          handleNavigation('/brain');
+                        }
+                      } else {
+                        handleNavigation(item.path || '#');
+                      }
+                    }}
                     sx={{
                       bgcolor: 'transparent',
-                      color: location.pathname === item.path ? 'primary.main' : 'text.primary',
+                      color: location.pathname === item.path || 
+                             (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
+                             (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'text.primary',
                       width: 48,
                       height: 48,
                       border: '1px solid',
-                      borderColor: location.pathname === item.path ? 'primary.main' : 'transparent',
+                      borderColor: location.pathname === item.path || 
+                                   (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
+                                   (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'transparent',
                       '&:hover': {
                         bgcolor: 'action.hover'
                       }
@@ -418,6 +433,61 @@ export default function Layout() {
                   </IconButton>
                 </Tooltip>
               ))}
+            </Box>
+
+            {/* Search Bar */}
+            <Box sx={{ mb: 2, width: '100%', px: 1 }}>
+              <Tooltip title="Quick Search" placement="right">
+                <IconButton
+                  onClick={() => setQuickLookupOpen(true)}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    bgcolor: 'background.default',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': {
+                      bgcolor: 'action.hover'
+                    }
+                  }}
+                >
+                  <SearchIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {/* Profile Section */}
+            <Box sx={{ mb: 2 }}>
+              <Tooltip title="Profile" placement="right">
+                <IconButton 
+                  onClick={handleProfileMenuOpen}
+                  sx={{ 
+                    p: 0, 
+                    position: 'relative',
+                    width: 48,
+                    height: 48
+                  }}
+                >
+                  <Badge 
+                    badgeContent={4} 
+                    sx={{ 
+                      '& .MuiBadge-badge': { 
+                        bgcolor: '#ff0000',
+                        color: 'white',
+                        right: 2,
+                        top: 2,
+                        minWidth: '18px',
+                        height: '18px',
+                        fontSize: '12px'
+                      } 
+                    }}
+                  >
+                    <Avatar sx={{ bgcolor: '#000000', width: 48, height: 48 }}>
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </Avatar>
+                  </Badge>
+                </IconButton>
+              </Tooltip>
             </Box>
 
             {/* Layout Toggle */}
