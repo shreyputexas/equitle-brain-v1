@@ -38,51 +38,51 @@ const theme = createTheme({
     divider: 'rgba(0, 0, 0, 0.06)'
   },
   typography: {
-    fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
     h1: {
-      fontFamily: '"Poppins", sans-serif',
-      fontSize: '3.75rem',
+      fontFamily: '"Inter", sans-serif',
+      fontSize: '4rem',
       fontWeight: 700,
       lineHeight: 1.1,
       letterSpacing: '-0.03em'
     },
     h2: {
-      fontFamily: '"Poppins", sans-serif',
-      fontSize: '2.75rem',
+      fontFamily: '"Inter", sans-serif',
+      fontSize: '2.875rem',
       fontWeight: 600,
       lineHeight: 1.2,
       letterSpacing: '-0.02em'
     },
     h3: {
-      fontFamily: '"Poppins", sans-serif',
-      fontSize: '2.125rem',
+      fontFamily: '"Inter", sans-serif',
+      fontSize: '2.25rem',
       fontWeight: 600,
       lineHeight: 1.3,
       letterSpacing: '-0.01em'
     },
     h4: {
-      fontSize: '1.625rem',
+      fontSize: '1.75rem',
       fontWeight: 600,
       lineHeight: 1.35,
       letterSpacing: '-0.01em'
     },
     h5: {
-      fontSize: '1.375rem',
+      fontSize: '1.5rem',
       fontWeight: 500,
       lineHeight: 1.4
     },
     h6: {
-      fontSize: '1.125rem',
+      fontSize: '1.25rem',
       fontWeight: 500,
       lineHeight: 1.45
     },
     body1: {
-      fontSize: '1rem',
+      fontSize: '1.0625rem',
       lineHeight: 1.7,
       letterSpacing: '0.01em'
     },
     body2: {
-      fontSize: '0.9375rem',
+      fontSize: '1rem',
       lineHeight: 1.6,
       letterSpacing: '0.01em'
     },

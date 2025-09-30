@@ -48,12 +48,8 @@ import {
   Send as SendIcon,
   VolumeUp as VolumeUpIcon,
   RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  Groups as GroupsIcon,
   Psychology as BrainIcon,
-  QuestionAnswer as AskIcon,
-  FollowTheSigns as FollowUpIcon,
-  Analytics as AnalyticsIcon,
-  Assessment as ReportIcon
+  Phone as PhoneIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -86,19 +82,14 @@ const navigationItems = [
     ]
   },
   {
-    text: 'Brain',
-    icon: <BrainIcon />,
-    subItems: [
-      { text: 'Ask About Deal', path: '/brain', action: 'ask-deal' },
-      { text: 'Follow Up', path: '/brain', action: 'follow-up' },
-      { text: 'Analytics', path: '/brain', action: 'analytics' },
-      { text: 'Generate Report', path: '/brain', action: 'report' }
-    ]
+    text: 'Voice Calls',
+    icon: <PhoneIcon />,
+    path: '/voice-calls'
   },
   {
-    text: 'Voice Calls',
-    icon: <GroupsIcon />,
-    path: '/voice-calls'
+    text: 'Brain',
+    icon: <BrainIcon />,
+    path: '/brain'
   }
 ];
 
@@ -379,11 +370,11 @@ export default function Layout() {
             src="/assets/images/extended_logo_black_white.png"
             alt="Equitle"
             sx={{
-              height: { xs: '2rem', md: '2.5rem' },
+              height: { xs: '2.5rem', md: '3rem' },
               filter: isDarkMode ? 'brightness(0) invert(1)' : 'brightness(0)',
               opacity: 0.95,
               objectFit: 'contain',
-              mr: 4,
+              mr: 3,
               cursor: 'pointer'
             }}
             onClick={() => navigate('/')}
@@ -392,7 +383,7 @@ export default function Layout() {
           {/* Desktop Navigation Menu */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1 }}>
             {navigationItems.map((item) => (
-              <Box key={item.text} sx={{ mr: 2 }}>
+              <Box key={item.text} sx={{ mr: 1.5 }}>
                 {item.subItems ? (
                   <>
                     <Button
@@ -402,7 +393,12 @@ export default function Layout() {
                       sx={{
                         color: 'text.primary',
                         textTransform: 'none',
-                        fontWeight: 500,
+                        fontWeight: 600,
+                        fontSize: '0.95rem',
+                        px: 2,
+                        py: 1,
+                        display: 'flex',
+                        alignItems: 'center',
                         '&:hover': {
                           bgcolor: 'action.hover'
                         }
@@ -435,7 +431,12 @@ export default function Layout() {
                     sx={{
                       color: location.pathname === item.path ? 'primary.main' : 'text.primary',
                       textTransform: 'none',
-                      fontWeight: location.pathname === item.path ? 600 : 500,
+                      fontWeight: item.text === 'Deals' ? 700 : (location.pathname === item.path ? 600 : 600),
+                      fontSize: '0.95rem',
+                      px: 2,
+                      py: 1,
+                      display: 'flex',
+                      alignItems: 'center',
                       '&:hover': {
                         bgcolor: 'action.hover'
                       }
