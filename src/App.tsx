@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { BrainProvider } from './contexts/BrainContext';
 import { AppThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
@@ -26,6 +27,7 @@ function App() {
       <AuthProvider>
         <BrainProvider>
           <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+          <ScrollToTop />
           <Routes>
             {/* OAuth callback routes */}
             <Route path="/app/oauth/callback" element={<OAuthCallback />} />

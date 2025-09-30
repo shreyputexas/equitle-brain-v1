@@ -4,9 +4,9 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#0A0A0A',
-      light: '#2C2C2C',
-      dark: '#000000',
+      main: '#6B7280',
+      light: '#9CA3AF',
+      dark: '#4B5563',
       contrastText: '#FFFFFF'
     },
     secondary: {
@@ -20,8 +20,8 @@ const theme = createTheme({
       paper: '#FFFFFF'
     },
     text: {
-      primary: '#0A0A0A',
-      secondary: '#6B7280'
+      primary: '#000000',
+      secondary: '#000000'
     },
     error: {
       main: '#EF4444'
@@ -38,23 +38,23 @@ const theme = createTheme({
     divider: 'rgba(0, 0, 0, 0.06)'
   },
   typography: {
-    fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+    fontFamily: '"Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
     h1: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Poppins", sans-serif',
       fontSize: '3.75rem',
       fontWeight: 700,
       lineHeight: 1.1,
       letterSpacing: '-0.03em'
     },
     h2: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Poppins", sans-serif',
       fontSize: '2.75rem',
       fontWeight: 600,
       lineHeight: 1.2,
       letterSpacing: '-0.02em'
     },
     h3: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Poppins", sans-serif',
       fontSize: '2.125rem',
       fontWeight: 600,
       lineHeight: 1.3,
@@ -111,20 +111,20 @@ const theme = createTheme({
           }
         },
         contained: {
-          background: 'linear-gradient(135deg, #0A0A0A 0%, #2C2C2C 100%)',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          background: 'linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%)',
+          boxShadow: '0 2px 8px rgba(107, 114, 128, 0.15)',
           '&:hover': {
-            background: 'linear-gradient(135deg, #1A1A1A 0%, #3C3C3C 100%)',
-            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)'
+            background: 'linear-gradient(135deg, #4B5563 0%, #6B7280 100%)',
+            boxShadow: '0 6px 20px rgba(107, 114, 128, 0.25)'
           }
         },
         outlined: {
           borderWidth: '1.5px',
-          borderColor: 'rgba(10, 10, 10, 0.2)',
+          borderColor: 'rgba(107, 114, 128, 0.2)',
           '&:hover': {
             borderWidth: '1.5px',
-            borderColor: 'rgba(10, 10, 10, 0.4)',
-            backgroundColor: 'rgba(10, 10, 10, 0.02)'
+            borderColor: 'rgba(107, 114, 128, 0.4)',
+            backgroundColor: 'rgba(107, 114, 128, 0.02)'
           }
         }
       }
@@ -201,7 +201,7 @@ const theme = createTheme({
     MuiAvatar: {
       styleOverrides: {
         root: {
-          backgroundColor: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+          backgroundColor: '#6B7280',
           fontWeight: 600
         }
       }

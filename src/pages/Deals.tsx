@@ -698,10 +698,10 @@ export default function Deals() {
               value={deal.probability}
               sx={{
                 height: 6,
-                borderRadius: 3,
+                borderRadius: 1.5,
                 bgcolor: 'rgba(255,255,255,0.05)',
                 '& .MuiLinearProgress-bar': {
-                  borderRadius: 3,
+                  borderRadius: 1.5,
                   background: 'linear-gradient(90deg, #9e9e9e 0%, #000000 100%)'
                 }
               }}
@@ -827,10 +827,10 @@ export default function Deals() {
                       value={person.relationshipScore}
                       sx={{
                         height: 6,
-                        borderRadius: 3,
+                        borderRadius: 1.5,
                         bgcolor: 'rgba(255,255,255,0.1)',
                         '& .MuiLinearProgress-bar': {
-                          borderRadius: 3,
+                          borderRadius: 1.5,
                           bgcolor: getRelationshipScoreColor(person.relationshipScore)
                         }
                       }}
@@ -1314,7 +1314,7 @@ export default function Deals() {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
+            borderRadius: 1.5,
             minHeight: '80vh'
           }
         }}
@@ -1590,7 +1590,7 @@ export default function Deals() {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
+            borderRadius: 1.5,
             minHeight: '60vh'
           }
         }}

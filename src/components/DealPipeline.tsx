@@ -328,7 +328,7 @@ export default function DealPipeline({
         <CardContent sx={{ pb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Avatar sx={{ bgcolor: '#000000' }}>
+              <Avatar sx={{ bgcolor: '#6B7280' }}>
                 {deal.company.charAt(0)}
               </Avatar>
               {getSentimentIcon(deal.sentiment || 'neutral')}
@@ -342,10 +342,10 @@ export default function DealPipeline({
                     toggleDealExpansion(deal.id);
                   }}
                   sx={{ 
-                    bgcolor: isExpanded ? '#000000' : 'transparent',
+                    bgcolor: isExpanded ? '#6B7280' : 'transparent',
                     color: isExpanded ? 'white' : 'text.secondary',
                     '&:hover': {
-                      bgcolor: isExpanded ? '#333333' : 'action.hover'
+                      bgcolor: isExpanded ? '#4B5563' : 'action.hover'
                     }
                   }}
                 >
@@ -593,53 +593,64 @@ export default function DealPipeline({
 
   return (
     <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh' }}>
+      {/* Top spacing with background */}
+      <Box sx={{ bgcolor: '#f8f9fa', height: 24 }} />
+      
       {/* Pipeline Header */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        mb: 2,
-        bgcolor: 'black',
-        color: 'white',
-        p: 1.5,
-        borderRadius: 0
+        mb: 3,
+        bgcolor: 'white',
+        color: '#374151',
+        p: 3,
+        borderRadius: 3,
+        border: '1px solid #E5E7EB',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        mx: 3
       }}>
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, color: '#000000', mb: 0.5 }}>
             Deal Pipeline
+          </Typography>
+          <Typography variant="body1" sx={{ color: '#000000' }}>
+            Manage your investment opportunities from initial outreach to closing
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', border: '1px solid white', borderRadius: 1 }}>
+          <Box sx={{ display: 'flex', border: '1px solid #D1D5DB', borderRadius: 2 }}>
             <Button
-              size="small"
+              size="medium"
               onClick={() => setViewMode('pipeline')}
               sx={{
-                bgcolor: viewMode === 'pipeline' ? 'white' : 'transparent',
-                color: viewMode === 'pipeline' ? 'black' : 'white',
+                bgcolor: viewMode === 'pipeline' ? '#6B7280' : 'transparent',
+                color: viewMode === 'pipeline' ? 'white' : '#000000',
                 minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                fontSize: '0.75rem',
+                px: 2,
+                py: 1,
+                fontSize: '0.875rem',
+                fontWeight: 600,
                 '&:hover': {
-                  bgcolor: viewMode === 'pipeline' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.1)'
+                  bgcolor: viewMode === 'pipeline' ? '#4B5563' : 'rgba(107, 114, 128, 0.1)'
                 }
               }}
             >
               Pipeline
             </Button>
             <Button
-              size="small"
+              size="medium"
               onClick={() => setViewMode('tabs')}
               sx={{
-                bgcolor: viewMode === 'tabs' ? 'white' : 'transparent',
-                color: viewMode === 'tabs' ? 'black' : 'white',
+                bgcolor: viewMode === 'tabs' ? '#6B7280' : 'transparent',
+                color: viewMode === 'tabs' ? 'white' : '#000000',
                 minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                fontSize: '0.75rem',
+                px: 2,
+                py: 1,
+                fontSize: '0.875rem',
+                fontWeight: 600,
                 '&:hover': {
-                  bgcolor: viewMode === 'tabs' ? 'rgba(255,255,255,0.9)' : 'rgba(255, 252, 252, 0.1)'
+                  bgcolor: viewMode === 'tabs' ? '#4B5563' : 'rgba(107, 114, 128, 0.1)'
                 }
               }}
             >
@@ -650,11 +661,16 @@ export default function DealPipeline({
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => {/* Handle new deal */}}
+            size="large"
             sx={{
-              bgcolor: 'white',
-              color: 'black',
+              bgcolor: '#6B7280',
+              color: 'white',
+              px: 3,
+              py: 1.5,
+              fontSize: '0.875rem',
+              fontWeight: 600,
               '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)'
+                bgcolor: '#4B5563'
               }
             }}
           >
@@ -664,7 +680,7 @@ export default function DealPipeline({
       </Box>
 
       {/* Search Bar */}
-      <Box sx={{ mb: 3, px: 3 }}>
+      <Box sx={{ mb: 4, px: 3 }}>
         <TextField
           placeholder="Search deals..."
           value={searchTerm}
@@ -673,15 +689,15 @@ export default function DealPipeline({
           sx={{
             '& .MuiOutlinedInput-root': {
               bgcolor: '#ffffff',
-              border: '2px solid #d0d0d0',
+              border: '2px solid #D1D5DB',
               borderRadius: 2,
               '&:hover': {
-                borderColor: '#000000',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                borderColor: '#6B7280',
+                boxShadow: '0 2px 8px rgba(107, 114, 128, 0.1)'
               },
               '&.Mui-focused': {
-                borderColor: '#000000',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                borderColor: '#6B7280',
+                boxShadow: '0 4px 12px rgba(107, 114, 128, 0.15)'
               }
             },
             '& .MuiInputBase-input': {
@@ -692,7 +708,7 @@ export default function DealPipeline({
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#666666' }} />
+                <SearchIcon sx={{ color: '#6B7280' }} />
               </InputAdornment>
             )
           }}
@@ -704,8 +720,8 @@ export default function DealPipeline({
         /* Pipeline Columns View */
         <Box sx={{ 
           display: 'flex', 
-          gap: 1.5, 
-          pb: 2, 
+          gap: 2, 
+          pb: 3, 
           minHeight: '60vh', 
           px: 3,
           width: '100%',
@@ -725,30 +741,30 @@ export default function DealPipeline({
                   flex: 1,
                   minWidth: 0,
                   maxWidth: '25%',
-                  p: 1.5,
-                  borderRadius: 2,
-                  border: '1px solid #d0d0d0',
-                  bgcolor: '#f5f5f5',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  p: 2,
+                  borderRadius: 1.5,
+                  border: '1px solid #E5E7EB',
+                  bgcolor: 'white',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                 }}
               >
                 {/* Stage Header */}
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#333333' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000' }}>
                       {stage.label}
                     </Typography>
                     <Chip
                       label={`${stageDeals.length} deal${stageDeals.length !== 1 ? 's' : ''}`}
                       size="small"
                       sx={{
-                        bgcolor: '#333333',
+                        bgcolor: '#6B7280',
                         color: 'white',
                         fontSize: '0.75rem'
                       }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#666666' }}>
+                  <Typography variant="body2" sx={{ color: '#000000' }}>
                     ${(totalValue / 1000000).toFixed(1)}M total value
                   </Typography>
                 </Box>
