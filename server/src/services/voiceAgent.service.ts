@@ -84,11 +84,12 @@ export class VoiceAgentService {
       this.activeSessions.set(callId, callSession as CallSession);
 
       // Update existing agent or create new one
-      logger.info('Getting agent ID for call', { 
-        hasExistingAgent: !!process.env.RETELL_AGENT_ID, 
-        voiceId: callSession.voiceId 
+      logger.info('Getting agent ID for call', {
+        hasExistingAgent: !!process.env.RETELL_AGENT_ID,
+        voiceId: callSession.voiceId,
+        promptToUse: aiPrompt.substring(0, 100) + '...'
       });
-      
+
       const agentId = process.env.RETELL_AGENT_ID
         ? await this.updateRetellAgent(process.env.RETELL_AGENT_ID, aiPrompt, callSession.voiceId!)
         : await this.getOrCreateRetellAgent(userId, aiPrompt, callSession.voiceId!);
@@ -288,7 +289,12 @@ export class VoiceAgentService {
    */
   private async updateRetellAgent(agentId: string, prompt: string, voiceId: string): Promise<string> {
     try {
-      logger.info('Updating Retell agent configuration', { agentId, voiceId });
+      logger.info('Updating Retell agent configuration', {
+        agentId,
+        voiceId,
+        promptPreview: prompt.substring(0, 100) + '...',
+        promptLength: prompt.length
+      });
       logger.info('Using Single Prompt Agent with Retell built-in LLM for reliable voice');
 
       // Use Single Prompt Agent with Retell's built-in LLM
