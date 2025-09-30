@@ -289,16 +289,16 @@ export class VoiceAgentService {
   private async updateRetellAgent(agentId: string, prompt: string, voiceId: string): Promise<string> {
     try {
       logger.info('Updating Retell agent configuration', { agentId, voiceId });
+      logger.info('Using Single Prompt Agent with Retell built-in LLM for reliable voice');
 
-      // Use ElevenLabs voice for better audio quality
+      // Use Single Prompt Agent with Retell's built-in LLM
       const result = await this.retellService.updateAgent(agentId, {
         voice: {
-          type: 'elevenlabs',
-          voice_id: voiceId, // Use the provided ElevenLabs voice ID
+          type: 'retell',
+          voice_id: 'Sophia', // Use Retell's built-in voice
         },
         llm: {
-          type: 'custom',
-          custom_llm_url: `${process.env.BACKEND_URL?.replace('https://', 'wss://')}/llm`,
+          type: 'retell',
         },
         prompt: prompt,
         language: 'en-US',
@@ -308,9 +308,9 @@ export class VoiceAgentService {
       });
 
       if (result) {
-        logger.info('Agent updated successfully with ElevenLabs voice', { agentId, voiceId, result });
+        logger.info('Agent updated successfully with Retell voice', { agentId, result });
       } else {
-        logger.warn('Agent update returned null - this might indicate an issue', { agentId, voiceId });
+        logger.warn('Agent update returned null - this might indicate an issue', { agentId });
       }
       
       return agentId;
@@ -331,12 +331,11 @@ export class VoiceAgentService {
       // In production, you might want to reuse agents or cache them
       const agent = await this.retellService.createAgent({
         voice: {
-          type: 'elevenlabs',
-          voice_id: voiceId, // Use the provided ElevenLabs voice ID
+          type: 'retell',
+          voice_id: 'Sophia', // Use Retell's built-in voice
         },
         llm: {
-          type: 'custom',
-          custom_llm_url: `${process.env.BACKEND_URL?.replace('https://', 'wss://')}/llm`,
+          type: 'retell',
         },
         prompt: prompt,
         language: 'en-US',

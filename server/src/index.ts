@@ -73,6 +73,7 @@ server.on('upgrade', (request, socket, head) => {
   logger.info('WebSocket upgrade request', { pathname, headers: request.headers });
 
   if (pathname === '/llm' || pathname.startsWith('/llm/')) {
+    logger.info('WebSocket upgrade accepted for path', { pathname });
     wss.handleUpgrade(request, socket, head, (ws) => {
       logger.info('WebSocket connection established for /llm');
       wss.emit('connection', ws, request);
@@ -279,8 +280,13 @@ wss.on('connection', (ws, req) => {
 
         // Send response back to Retell in the correct format
         const response = {
-          response: aiResponse,
-          response_id: Date.now().toString()
+          type: "assistant_message",
+          content: [
+            {
+              type: "text",
+              text: aiResponse
+            }
+          ]
         };
 
         logger.info('Sending LLM response to Retell', { response });
@@ -297,8 +303,13 @@ wss.on('connection', (ws, req) => {
       logger.error('Error handling LLM WebSocket message', error);
       // Send fallback response in correct format
       const fallbackResponse = {
-        response: "I apologize, but I'm experiencing some technical difficulties. Let me have someone call you back.",
-        response_id: Date.now().toString()
+        type: "assistant_message",
+        content: [
+          {
+            type: "text",
+            text: "I apologize, but I'm experiencing some technical difficulties. Let me have someone call you back."
+          }
+        ]
       };
       ws.send(JSON.stringify(fallbackResponse));
     }
