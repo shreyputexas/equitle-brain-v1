@@ -49,7 +49,8 @@ import {
   VolumeUp as VolumeUpIcon,
   RadioButtonUnchecked as RadioButtonUncheckedIcon,
   Psychology as BrainIcon,
-  Phone as PhoneIcon
+  Phone as PhoneIcon,
+  CloudUpload as DataEnrichmentIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -80,6 +81,11 @@ const navigationItems = [
       { text: 'Limited Partners', path: '/fundraising/limited-partners' },
       { text: 'Funds', path: '/fundraising/funds' }
     ]
+  },
+  {
+    text: 'Data Enrichment',
+    icon: <DataEnrichmentIcon />,
+    path: '/data-enrichment'
   },
   {
     text: 'Voice Calls',

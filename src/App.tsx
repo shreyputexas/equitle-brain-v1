@@ -20,6 +20,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import OAuthCallback from './pages/OAuthCallback';
 import VoiceCalls from './pages/VoiceCalls';
+import DataEnrichment from './pages/DataEnrichment';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="voice-calls" element={<VoiceCalls />} />
+              <Route path="data-enrichment" element={<DataEnrichment />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/deals/all" />} />

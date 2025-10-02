@@ -28,6 +28,7 @@ import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import dashboardRoutes from './routes/dashboard';
 import voiceAgentRoutes from './routes/voiceAgent';
+import dataEnrichmentRoutes from './routes/dataEnrichment';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -206,6 +207,15 @@ app.get('/api/test-google', async (req, res) => {
 });
 // Dashboard routes (using Prisma temporarily)
 app.use('/api/dashboard', firebaseAuthMiddleware, dashboardRoutes);
+// Data enrichment routes with conditional auth
+app.use('/api/data-enrichment', (req, res, next) => {
+  // Skip auth for all endpoints during development/testing
+  if (req.path === '/test' || req.path === '/sample' || req.path === '/upload') {
+    return next();
+  }
+  // Apply auth for other endpoints (none currently)
+  return firebaseAuthMiddleware(req, res, next);
+}, dataEnrichmentRoutes);
 // Voice agent routes
 console.log('🔗 Mounting voice agent routes at /api/voice-agent');
 try {

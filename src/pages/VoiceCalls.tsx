@@ -691,6 +691,54 @@ export default function VoiceCalls() {
           )}
         </Grid>
 
+        {/* Audio Player Section */}
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 4, mb: 3 }}>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Avatar
+                sx={{
+                  width: 60,
+                  height: 60,
+                  bgcolor: 'primary.main',
+                  mx: 'auto',
+                  mb: 2
+                }}
+              >
+                <VolumeUpIcon sx={{ fontSize: 30 }} />
+              </Avatar>
+
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Recording Playback
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Play back recorded conversations and audio files
+              </Typography>
+
+              {/* Audio Player */}
+              <Box sx={{ maxWidth: 500, mx: 'auto' }}>
+                <audio
+                  controls
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    borderRadius: '8px',
+                    backgroundColor: '#f5f5f5'
+                  }}
+                >
+                  <source src="/recording.wav" type="audio/wav" />
+                  <source src="/recording.mp3" type="audio/mpeg" />
+                  Your browser does not support the audio element.
+                </audio>
+                
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Supported formats: WAV, MP3, FLAC
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
+
         {/* Call History Sidebar */}
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3 }}>
