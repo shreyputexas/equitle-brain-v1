@@ -17,9 +17,10 @@ export default defineConfig({
   },
   server: {
     port: 3001,
+    host: '0.0.0.0', // Allow external connections
     proxy: {
       '/api': {
-        target: 'http://localhost:4001',
+        target: process.env.VITE_API_URL || 'http://localhost:4001',
         changeOrigin: true
       }
     }

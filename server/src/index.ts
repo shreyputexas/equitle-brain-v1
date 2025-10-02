@@ -46,9 +46,11 @@ const io = new Server(server, {
     origin: [
       process.env.FRONTEND_URL || "http://localhost:3000",
       "http://localhost:3001",
-      "http://localhost:3002"
-    ],
-    methods: ["GET", "POST"]
+      "http://localhost:3002",
+      process.env.ALLOWED_ORIGINS?.split(',') || []
+    ].flat(),
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -96,8 +98,9 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL || "http://localhost:3000",
     "http://localhost:3001",
-    "http://localhost:3002"
-  ],
+    "http://localhost:3002",
+    process.env.ALLOWED_ORIGINS?.split(',') || []
+  ].flat(),
   credentials: true
 }));
 app.use(limiter);
