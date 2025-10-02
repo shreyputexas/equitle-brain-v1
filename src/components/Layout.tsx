@@ -72,9 +72,13 @@ interface Message {
 
 const navigationItems = [
   {
-    text: 'Deals',
+    text: 'Outreach',
     icon: <DealsIcon />,
-    path: '/deals/all'
+    subItems: [
+      { text: 'Deals', path: '/outreach/deals' },
+      { text: 'Investors', path: '/outreach/investors' },
+      { text: 'Brokers', path: '/outreach/brokers' }
+    ]
   },
   {
     text: 'Fundraising',
@@ -98,6 +102,11 @@ const navigationItems = [
       { text: 'Analytics', path: '/brain', action: 'analytics' },
       { text: 'Generate Report', path: '/brain', action: 'report' }
     ]
+  },
+  {
+    text: 'Scraping',
+    icon: <AnalyticsIcon />,
+    path: '/scraping'
   }
 ];
 
@@ -399,39 +408,84 @@ export default function Layout() {
             {/* Navigation Icons */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', flex: 1 }}>
               {navigationItems.map((item) => (
-                <Tooltip key={item.text} title={item.text} placement="right">
-                  <IconButton
-                    onClick={() => {
-                      if (item.subItems) {
-                        // For items with submenus, open the first submenu item or show a dropdown
-                        if (item.text === 'Fundraising') {
-                          handleNavigation('/fundraising/limited-partners');
-                        } else if (item.text === 'Brain') {
-                          handleNavigation('/brain');
+                <Box key={item.text} sx={{ position: 'relative' }}>
+                  <Tooltip title={item.text} placement="right">
+                    <IconButton
+                      onClick={() => {
+                        if (item.subItems) {
+                          // For items with submenus, open the dropdown menu
+                          handleNavMenuOpen({ currentTarget: document.querySelector(`[data-menu-trigger="${item.text}"]`) } as any, item.text);
+                        } else {
+                          handleNavigation(item.path || '#');
                         }
-                      } else {
-                        handleNavigation(item.path || '#');
-                      }
-                    }}
-                    sx={{
-                      bgcolor: 'transparent',
-                      color: location.pathname === item.path || 
-                             (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
-                             (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'text.primary',
-                      width: 48,
-                      height: 48,
-                      border: '1px solid',
-                      borderColor: location.pathname === item.path || 
-                                   (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
-                                   (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'transparent',
-                      '&:hover': {
-                        bgcolor: 'action.hover'
-                      }
-                    }}
-                  >
-                    {item.icon}
-                  </IconButton>
-                </Tooltip>
+                      }}
+                      data-menu-trigger={item.text}
+                      sx={{
+                        bgcolor: 'transparent',
+                        color: location.pathname === item.path || 
+                               (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
+                               (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
+                               (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'text.primary',
+                        width: 48,
+                        height: 48,
+                        border: '1px solid',
+                        borderColor: location.pathname === item.path || 
+                                     (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
+                                     (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
+                                     (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'transparent',
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }}
+                    >
+                      {item.icon}
+                    </IconButton>
+                  </Tooltip>
+                  
+                  {/* Submenu for left navigation */}
+                  {item.subItems && (
+                    <Menu
+                      anchorEl={navMenuAnchors[item.text]}
+                      open={Boolean(navMenuAnchors[item.text])}
+                      onClose={() => handleNavMenuClose(item.text)}
+                      transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+                      anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
+                      PaperProps={{
+                        sx: {
+                          ml: 1,
+                          minWidth: 200,
+                          bgcolor: 'background.paper',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+                        }
+                      }}
+                    >
+                      {item.subItems.map((subItem) => (
+                        <MenuItem
+                          key={subItem.text}
+                          onClick={() => handleNavigation(subItem.path, item.text, (subItem as any).action)}
+                          selected={false}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            '&:hover': {
+                              bgcolor: 'action.hover'
+                            }
+                          }}
+                        >
+                          <ListItemText 
+                            primary={subItem.text}
+                            primaryTypographyProps={{
+                              variant: 'body2',
+                              fontWeight: 500
+                            }}
+                          />
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  )}
+                </Box>
               ))}
             </Box>
 

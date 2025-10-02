@@ -752,11 +752,13 @@ export default function DealPipeline({
               borderRadius: 2,
               '&:hover': {
                 borderColor: '#000000',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: '#ffffff'
               },
               '&.Mui-focused': {
                 borderColor: '#000000',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                bgcolor: '#ffffff'
               }
             },
             '& .MuiInputBase-input': {

@@ -19,6 +19,9 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import OAuthCallback from './pages/OAuthCallback';
 import VoiceCalls from './pages/VoiceCalls';
+import Investors from './pages/Investors';
+import Brokers from './pages/Brokers';
+import Scraping from './pages/Scraping';
 
 function App() {
   return (
@@ -34,12 +37,20 @@ function App() {
 
             {/* Main app routes - no authentication required */}
             <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="/deals/all" />} />
+              <Route index element={<Navigate to="/outreach/deals" />} />
 
-              {/* Deals Routes */}
+              {/* Outreach Routes */}
+              <Route path="outreach">
+                <Route path="deals" element={<Deals />} />
+                <Route path="deals/:id" element={<DealDetail />} />
+                <Route path="investors" element={<Investors />} />
+                <Route path="brokers" element={<Brokers />} />
+              </Route>
+
+              {/* Legacy Deals Routes - redirect to new structure */}
               <Route path="deals">
-                <Route path="all" element={<Deals />} />
-                <Route path="all/:id" element={<DealDetail />} />
+                <Route path="all" element={<Navigate to="/outreach/deals" />} />
+                <Route path="all/:id" element={<Navigate to="/outreach/deals/:id" />} />
               </Route>
 
               {/* Fundraising Routes */}
@@ -52,16 +63,17 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="voice-calls" element={<VoiceCalls />} />
+              <Route path="scraping" element={<Scraping />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
-              <Route path="dashboard" element={<Navigate to="/deals/all" />} />
-              <Route path="companies" element={<Navigate to="/deals/all" />} />
-              <Route path="contacts" element={<Navigate to="/deals/all" />} />
+              <Route path="dashboard" element={<Navigate to="/outreach/deals" />} />
+              <Route path="companies" element={<Navigate to="/outreach/deals" />} />
+              <Route path="contacts" element={<Navigate to="/outreach/deals" />} />
               <Route path="investor-relations" element={<Navigate to="/fundraising/limited-partners" />} />
               <Route path="brain" element={<Brain />} />
               <Route path="reports" element={<Navigate to="/fundraising/funds" />} />
-              <Route path="deals" element={<Navigate to="/deals/all" />} />
-              <Route path="deals/relationships" element={<Navigate to="/deals/all" />} />
+              <Route path="deals" element={<Navigate to="/outreach/deals" />} />
+              <Route path="deals/relationships" element={<Navigate to="/outreach/deals" />} />
             </Route>
           </Routes>
           </Box>
