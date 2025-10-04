@@ -67,6 +67,10 @@ import Footer from '../components/Footer';
 export default function Landing() {
   const navigate = useNavigate();
   const [openDemo, setOpenDemo] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Home - Equitle';
+  }, []);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',

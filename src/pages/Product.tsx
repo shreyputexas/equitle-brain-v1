@@ -69,6 +69,10 @@ export default function Product() {
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
 
+  useEffect(() => {
+    document.title = 'Product - Equitle';
+  }, []);
+
   const features = [
     {
       category: 'Scraping',

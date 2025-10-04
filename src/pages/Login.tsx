@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getAuthErrorMessage } from '../utils/errorMessages';
 import {
   Box,
@@ -34,6 +34,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Login - Equitle';
+  }, []);
 
   const { login, googleSignIn } = useAuth(); // <-- use googleSignIn from context
   const navigate = useNavigate();

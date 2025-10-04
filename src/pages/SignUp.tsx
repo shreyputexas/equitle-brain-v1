@@ -1,6 +1,6 @@
 import { useAuth } from '../contexts/AuthContext';
 import { getAuthErrorMessage } from '../utils/errorMessages';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -53,6 +53,10 @@ export default function SignUp() {
   const [activeStep, setActiveStep] = useState(0);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Sign Up - Equitle';
+  }, []);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 

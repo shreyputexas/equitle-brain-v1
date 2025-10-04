@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Container,
@@ -50,6 +50,10 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Manifesto() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'Manifesto - Equitle';
+  }, []);
 
   const manifestoPoints = [
     {
