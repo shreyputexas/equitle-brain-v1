@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -43,7 +43,10 @@ import {
   Api as ApiIcon,
   PhoneAndroid as MobileIcon,
   PhoneAndroid,
-  LockOutlined as LockIcon
+  LockOutlined as LockIcon,
+  Web as ScrapingIcon,
+  Voicemail as VoicemailIcon,
+  Contacts as ContactsIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -68,68 +71,68 @@ export default function Product() {
 
   const features = [
     {
-      category: 'Automated Note Taking',
-      icon: <AIIcon sx={{ fontSize: 40 }} />,
+      category: 'Scraping',
+      icon: <ScrapingIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [
         {
-          title: 'Meeting Intelligence',
-          description: 'AI automatically captures and transcribes meeting notes, extracting key insights and action items',
-          benefits: ['Real-time transcription', 'Action item extraction', 'Key insight identification']
+          title: 'Private Market Data Collection',
+          description: 'Automated data collection from private market sources to build comprehensive contact databases',
+          benefits: ['Private market data', 'Contact discovery', 'Automated collection']
         },
         {
-          title: 'Smart Note Organization',
-          description: 'Automatically categorizes and tags notes for easy retrieval and analysis',
-          benefits: ['Auto-categorization', 'Smart tagging', 'Searchable database']
+          title: 'Data Enrichment',
+          description: 'Enhance existing contact information with missing data points and verification',
+          benefits: ['Data verification', 'Missing data discovery', 'Contact validation']
         },
         {
-          title: 'Intelligence Integration',
-          description: 'Meeting insights are automatically added to your deal intelligence and relationship profiles',
-          benefits: ['Deal context updates', 'Relationship scoring', 'Pipeline intelligence']
+          title: 'Intelligent Data Processing',
+          description: 'AI-powered processing to clean, standardize, and categorize collected data',
+          benefits: ['Data cleaning', 'Standardization', 'Smart categorization']
         }
       ]
     },
     {
-      category: 'Automated Calling',
-      icon: <PhoneAndroid sx={{ fontSize: 40 }} />,
+      category: 'Automated Voicemails',
+      icon: <VoicemailIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [
         {
-          title: 'Prospect Outreach Automation',
-          description: 'AI automatically calls POCs at prospective businesses based on your criteria and timing',
-          benefits: ['Automated dialing', 'Smart scheduling', 'Call outcome tracking']
+          title: 'AI Voicemail Generation',
+          description: 'AI-powered voicemail generation and delivery to streamline outreach campaigns',
+          benefits: ['AI voicemail generation', 'Automated delivery', 'Campaign optimization']
         },
         {
-          title: 'Intelligent Conversation Flow',
-          description: 'AI conducts initial conversations to qualify prospects and gather key information',
-          benefits: ['Natural conversation', 'Qualification questions', 'Information capture']
+          title: 'Personalized Messaging',
+          description: 'Create personalized voicemails based on prospect data and interaction history',
+          benefits: ['Personalization', 'Context awareness', 'Message optimization']
         },
         {
-          title: 'Follow-up Management',
-          description: 'Automatically schedules follow-ups and tracks conversation history with prospects',
-          benefits: ['Auto-scheduling', 'Conversation tracking', 'Relationship building']
+          title: 'Campaign Management',
+          description: 'Track and manage voicemail campaigns with detailed analytics and performance metrics',
+          benefits: ['Campaign tracking', 'Performance analytics', 'A/B testing']
         }
       ]
     },
     {
-      category: 'Deal Management',
-      icon: <BusinessIcon sx={{ fontSize: 40 }} />,
-      color: '#10B981',
+      category: 'Contact Management',
+      icon: <ContactsIcon sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
       items: [
         {
-          title: 'Pipeline Management',
-          description: 'Complete deal lifecycle management from sourcing to exit',
-          benefits: ['Visual pipeline', 'Stage tracking', 'Milestone alerts']
+          title: 'Broker Management',
+          description: 'Comprehensive contact management for brokers, investors, and potential acquisitions',
+          benefits: ['Broker tracking', 'Relationship management', 'Communication history']
         },
         {
-          title: 'Document Management',
-          description: 'Centralized document storage with version control and security',
-          benefits: ['Secure storage', 'Version control', 'Access permissions']
+          title: 'Investor Relations',
+          description: 'Manage investor contacts with detailed profiles and interaction tracking',
+          benefits: ['Investor profiles', 'Interaction tracking', 'Relationship scoring']
         },
         {
-          title: 'Due Diligence Workflows',
-          description: 'Streamlined DD processes with automated checklists and reviews',
-          benefits: ['Automated workflows', 'Progress tracking', 'Collaboration tools']
+          title: 'Acquisition Pipeline',
+          description: 'Track potential acquisition targets with detailed contact information and deal status',
+          benefits: ['Target tracking', 'Deal status', 'Contact organization']
         }
       ]
     },
@@ -154,51 +157,24 @@ export default function Product() {
           benefits: ['Deal recommendations', 'Risk assessments', 'Strategic guidance']
         }
       ]
-    },
-    {
-      category: 'Collaboration',
-      icon: <GroupsIcon sx={{ fontSize: 40 }} />,
-      color: '#3B82F6',
-      items: [
-        {
-          title: 'Team Workspace',
-          description: 'Collaborative environment for deal teams and stakeholders',
-          benefits: ['Real-time collaboration', 'Task management', 'Communication hub']
-        },
-        {
-          title: 'Workflow Automation',
-          description: 'Automated workflows for repetitive tasks and approvals',
-          benefits: ['Process automation', 'Approval workflows', 'Notifications']
-        },
-        {
-          title: 'Stakeholder Portal',
-          description: 'Secure portal for external stakeholders and LPs',
-          benefits: ['External access', 'Branded portal', 'Controlled sharing']
-        }
-      ]
     }
   ];
 
   const integrations = [
     {
-      category: 'CRM Systems',
-      items: ['Salesforce', 'HubSpot', 'Microsoft Dynamics', 'Pipedrive'],
-      icon: <BusinessIcon />
+      category: 'Scrapers',
+      items: ['Grata', 'ZoomInfo', 'Apollo', 'LinkedIn Sales Navigator'],
+      icon: <ScrapingIcon />
     },
     {
-      category: 'Data Rooms',
-      items: ['Datasite', 'Intralinks', 'DealRoom', 'SecureDocs'],
-      icon: <LockIcon />
+      category: 'Suite',
+      items: ['Google Workspace', 'Microsoft 365', 'Google Drive', 'OneDrive'],
+      icon: <IntegrationIcon />
     },
     {
       category: 'Financial Data',
       items: ['PitchBook', 'Preqin', 'Bloomberg', 'FactSet'],
       icon: <DataIcon />
-    },
-    {
-      category: 'Productivity',
-      items: ['Microsoft 365', 'Google Workspace', 'Slack', 'Zoom'],
-      icon: <IntegrationIcon />
     }
   ];
 
@@ -261,7 +237,7 @@ export default function Product() {
                   mb: 3
                 }}
               >
-                The Complete Platform for 
+                The Complete Platform for{' '}
                 <Box 
                   component="span" 
                   sx={{ 
@@ -270,11 +246,11 @@ export default function Product() {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  {' '}Searchers
+                  Sourcing
                 </Box>
               </Typography>
               <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6 }}>
-                From deal sourcing to portfolio management, Equitle provides the AI-powered tools and insights you need to succeed in your search.
+                From calling to getting intelligence, Equitle provides the AI-powered tools and insights you need to succeed in your sourcing.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
                 <Button 
@@ -375,8 +351,7 @@ export default function Product() {
           <Tabs 
             value={tabValue} 
             onChange={(e, v) => setTabValue(v)} 
-            variant="scrollable"
-            scrollButtons="auto"
+            variant="fullWidth"
             sx={{ mb: 6, '& .MuiTab-root': { minWidth: 200 } }}
           >
             {features.map((feature, index) => (
@@ -400,7 +375,7 @@ export default function Product() {
           {features.map((feature, index) => (
             <TabPanel key={index} value={tabValue} index={index}>
               <Fade in timeout={500}>
-                <Grid container spacing={4}>
+                <Grid container spacing={4} justifyContent="center">
                   {feature.items.map((item, idx) => (
                     <Grid item xs={12} md={4} key={idx}>
                       <Card
@@ -467,9 +442,9 @@ export default function Product() {
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
+          <Grid container spacing={4} justifyContent="center">
             {integrations.map((integration, index) => (
-              <Grid item xs={12} md={6} lg={3} key={index}>
+              <Grid item xs={12} md={6} lg={4} key={index}>
                 <Card
                   sx={{
                     p: 3,

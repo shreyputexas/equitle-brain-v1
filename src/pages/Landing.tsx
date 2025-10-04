@@ -48,6 +48,7 @@ import {
   AccountBalance as FundraisingIcon,
   Search as SourcingIcon,
   Assessment as PortfolioIcon,
+  PersonAdd as LeadGenerationIcon,
   Email as EmailIcon,
   Storage as StorageIcon,
   Cloud as CloudIcon,
@@ -115,10 +116,10 @@ export default function Landing() {
 
   const useCases = [
     {
-      title: 'Fundraising',
-      icon: <FundraisingIcon />,
-      description: 'Manage LPs, quarterly reports, and communication',
-      features: ['LP management', 'Quarterly reports', 'Communication management']
+      title: 'Lead Generation',
+      icon: <LeadGenerationIcon />,
+      description: 'The software scrapes private market contacts for you and finds missing data',
+      features: ['Contact scraping', 'Data enrichment', 'Missing data discovery']
     },
     {
       title: 'Sourcing',
@@ -127,10 +128,10 @@ export default function Landing() {
       features: ['Outreach automation', 'Agentic calls', 'Relationship management']
     },
     {
-      title: 'Portfolio Management',
-      icon: <PortfolioIcon />,
-      description: 'Monitor and optimize portfolio performance',
-      features: ['KPI tracking', 'Value creation planning', 'Exit planning']
+      title: 'Fundraising',
+      icon: <FundraisingIcon />,
+      description: 'Manage LPs, quarterly reports, and communication',
+      features: ['LP management', 'Quarterly reports', 'Communication management']
     }
   ];
 
@@ -155,16 +156,6 @@ export default function Landing() {
           <Box sx={{ textAlign: 'center' }}>
             <Fade in timeout={1000}>
               <Box>
-                <Chip 
-                  icon={<RocketIcon sx={{ fontSize: 16 }} />}
-                  label="Built for Search Funders" 
-                  sx={{ 
-                    mb: 3,
-                    background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                    border: '1px solid rgba(94, 92, 230, 0.2)',
-                    fontWeight: 600
-                  }}
-                />
                 <Typography 
                   variant="h1" 
                   sx={{ 
@@ -184,11 +175,11 @@ export default function Landing() {
                       WebkitTextFillColor: 'transparent'
                     }}
                   >
-                    {' '}Searchers
+                    {' '}Sourcing
                   </Box>
                 </Typography>
                 <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
-                  Focus on relationships and deal analysis, not administrative tasks. The only CRM designed specifically for search funders who want to acquire great companies.
+                  Focus on relationships and deal analysis, not administrative tasks. The only CRM designed specifically for sourcing, helping you acquire great companies.
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
                   <Button 
@@ -206,16 +197,6 @@ export default function Landing() {
                   >
                     Book Demo
                   </Button>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
-                  {['No credit card required', '14-day free trial', 'Cancel anytime'].map((text, index) => (
-                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CheckIcon sx={{ color: 'success.main', fontSize: 20 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        {text}
-                      </Typography>
-                    </Box>
-                  ))}
                 </Box>
               </Box>
             </Fade>
@@ -276,9 +257,7 @@ export default function Landing() {
                       mb: 3
                     }}
                   >
-                    <Box sx={{ fontSize: 32, color: '#374151' }}>
-                      {useCase.icon}
-                    </Box>
+                    {useCase.icon}
                   </Box>
                   
                   <Typography 
