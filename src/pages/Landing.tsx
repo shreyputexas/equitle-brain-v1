@@ -170,7 +170,7 @@ export default function Landing() {
                     mb: 3
                   }}
                 >
-                  The Software Built for
+                  AI-Native Software Built for
                   <Box 
                     component="span" 
                     sx={{ 
