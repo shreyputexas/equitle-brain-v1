@@ -134,8 +134,19 @@ export class ApolloProvider implements EnrichmentProvider {
       const searchParams: any = {
         page: 1,
         per_page: limit,
-        person_titles: ['CEO', 'CTO', 'CFO', 'COO', 'President', 'Vice President', 'Director', 'Manager'],
+        // Focus on top executives only
+        person_titles: [
+          'CEO', 'Chief Executive Officer',
+          'President', 'Founder', 'Co-Founder',
+          'CTO', 'Chief Technology Officer',
+          'CFO', 'Chief Financial Officer',
+          'COO', 'Chief Operating Officer',
+          'VP', 'Vice President',
+          'Head of', 'Director'
+        ],
         q_organization_domains: domain ? [domain] : [],
+        // Add seniority filter to get senior people
+        person_seniorities: ['owner', 'founder', 'c_suite', 'vp'],
       };
 
       if (company && !domain) {

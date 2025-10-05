@@ -132,14 +132,7 @@ router.get('/sample', (req, res) => {
 
     const sampleData = [
       ['Company Name', 'Website'],
-      ['Stripe', 'stripe.com'],
       ['Shopify', 'shopify.com'],
-      ['Zoom', 'zoom.us'],
-      ['Slack', 'slack.com'],
-      ['Airbnb', 'airbnb.com'],
-      ['Uber', 'uber.com'],
-      ['DocuSign', 'docusign.com'],
-      ['Salesforce', 'salesforce.com'],
     ];
 
     const worksheet = XLSX.utils.aoa_to_sheet(sampleData);

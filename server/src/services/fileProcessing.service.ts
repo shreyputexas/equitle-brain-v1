@@ -106,24 +106,21 @@ export class FileProcessingService {
       // Prepare data for Excel export with clean, organized structure
       const excelData: any[] = [];
 
-      // Create clean, professional headers
+      // Create clean, professional headers focused on people (email only)
       const headers = [
         // Input data
         'Company Name',
-        'Website',
+        'Company Website',
 
-        // Core enriched data
-        'Industry',
-        'Employee Count',
-        'Company Phone',
-        'Headquarters',
-        'Description',
+        // Contact 1 (Top executive)
+        'Contact 1 Name',
+        'Contact 1 Title',
+        'Contact 1 Email',
 
-        // Contact information
-        'Key Contact Name',
-        'Contact Email',
-        'Contact Phone',
-        'Contact Title',
+        // Contact 2 (Second executive)
+        'Contact 2 Name',
+        'Contact 2 Title',
+        'Contact 2 Email',
 
         // Status and metadata
         'Enrichment Status',
@@ -133,41 +130,39 @@ export class FileProcessingService {
 
       excelData.push(headers);
 
-      // Add data rows with clean formatting
+      // Add data rows focused on top contacts
       enrichedCompanies.forEach((company) => {
         const enrichedCompany = company.enrichedData?.company;
         const contacts = company.enrichedData?.contacts || [];
-        const primaryContact = contacts[0]; // Get the best contact
+        const contact1 = contacts[0]; // Top contact
+        const contact2 = contacts[1]; // Second contact
 
-        // Determine enrichment status
-        let status = '❌ No Data Found';
-        let notes = company.errorMessage || '';
+        // Determine enrichment status based on contacts found
+        let status = '❌ No Contacts Found';
+        let notes = company.errorMessage || 'No executive contacts found';
 
-        if (company.status === 'success') {
-          status = '✅ Fully Enriched';
-          notes = 'All data successfully enriched';
-        } else if (company.status === 'partial') {
-          status = '⚠️ Partially Enriched';
-          notes = 'Company data found, contact search limited on free plan';
+        if (contacts.length >= 2) {
+          status = '✅ Multiple Contacts Found';
+          notes = `Found ${contacts.length} executive contacts`;
+        } else if (contacts.length === 1) {
+          status = '⚠️ One Contact Found';
+          notes = 'Found 1 executive contact';
         }
 
         const row = [
-          // Input data (clean)
+          // Input data
           company.company || '',
-          company.website || company.domain || '',
+          enrichedCompany?.website || company.website || company.domain || '',
 
-          // Core enriched data
-          enrichedCompany?.industry || '',
-          enrichedCompany?.employeeCount || '',
-          enrichedCompany?.phone || '',
-          enrichedCompany?.headquarters || '',
-          this.truncateText(enrichedCompany?.description || '', 100),
+          // Contact 1 information (email only)
+          contact1?.name || '',
+          contact1?.title || '',
+          contact1?.email || '',
 
-          // Best contact information
-          primaryContact?.name || '',
-          primaryContact?.email || '',
-          primaryContact?.phone || '',
-          primaryContact?.title || '',
+          // Contact 2 information (email only)
+          contact2?.name || '',
+          contact2?.title || '',
+          contact2?.email || '',
 
           // Status and metadata
           status,

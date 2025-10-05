@@ -52,7 +52,11 @@ export class EnrichmentService {
 
     logger.info('Starting company enrichment', { totalCompanies: companies.length });
 
-    for (let i = 0; i < companies.length; i++) {
+    // TESTING: Only process first company
+    const maxCompanies = Math.min(1, companies.length);
+    logger.info('TESTING MODE: Processing only first company', { maxCompanies });
+
+    for (let i = 0; i < maxCompanies; i++) {
       const company = companies[i];
       logger.info(`Enriching company ${i + 1}/${companies.length}`, {
         company: company.company,
@@ -113,38 +117,35 @@ export class EnrichmentService {
         domain: domain,
       });
 
-      // Try to enrich company data
+      // First get basic company data to get the actual website
       const companyResult = await this.apolloProvider.enrichCompany(domain);
 
-      // Try to find contacts for the company
+      // Focus on finding contacts - this is our main goal
       const contactsResult = await this.apolloProvider.searchContacts(
         company.company || '',
         domain,
-        3 // Limit to top 3 contacts
+        5 // Get top 5 to increase chances of finding good contacts
       );
 
-      // Determine status based on results
+      // Determine status based on contacts found (this is what matters)
       let status: 'success' | 'error' | 'partial' = 'error';
       let errorMessage = '';
 
-      if (companyResult.success || contactsResult.success) {
-        if (companyResult.success && contactsResult.success) {
-          status = 'success';
+      if (contactsResult.success && contactsResult.contacts && contactsResult.contacts.length > 0) {
+        if (contactsResult.contacts.length >= 2) {
+          status = 'success'; // Found multiple contacts
         } else {
-          status = 'partial';
-          errorMessage = !companyResult.success
-            ? 'Company data not found'
-            : 'Contact data not found';
+          status = 'partial'; // Found at least one contact
         }
 
         enrichedCompany.enrichedData = {
-          company: companyResult.company,
+          company: companyResult.company, // Include website info
           contacts: contactsResult.contacts || [],
           source: 'Apollo',
         };
       } else {
         status = 'error';
-        errorMessage = companyResult.error || contactsResult.error || 'Enrichment failed';
+        errorMessage = contactsResult.error || 'No executive contacts found';
       }
 
       enrichedCompany.status = status;
