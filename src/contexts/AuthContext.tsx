@@ -72,6 +72,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   axios.defaults.baseURL = 'http://localhost:4001/api';
 
   useEffect(() => {
+    // Development mode: bypass Firebase auth and use mock user
+    if (process.env.NODE_ENV === 'development') {
+      const mockUser: User = {
+        id: 'dev-user-123',
+        email: 'dev@equitle.com',
+        name: 'Development User',
+        role: 'admin',
+        firm: 'Equitle',
+        phone: '',
+        location: '',
+        avatar: undefined
+      };
+      
+      // Set mock token for backend
+      localStorage.setItem('token', 'mock-token');
+      axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
+      
+      setUser(mockUser);
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         // User is signed in

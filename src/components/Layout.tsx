@@ -607,7 +607,7 @@ export default function Layout() {
               alt="Equitle"
               sx={{
                 height: { xs: '2rem', md: '2.5rem' },
-                filter: 'brightness(0) invert(1)',
+                filter: 'brightness(0)',
                 opacity: 0.95,
                 objectFit: 'contain',
                 mr: 4,
