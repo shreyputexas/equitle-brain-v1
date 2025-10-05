@@ -1,9 +1,13 @@
+import dotenv from 'dotenv';
+
+// Load environment variables FIRST before any other imports
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
@@ -38,9 +42,6 @@ import logger from './utils/logger';
 
 import { EmailSyncService } from './services/emailSync';
 import emailProccesingRoutes from './routes/emailProcessing';
-
-
-dotenv.config();
 
 const app = express();
 const server = createServer(app);

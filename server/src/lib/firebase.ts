@@ -2,6 +2,8 @@ import * as admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import logger from '../utils/logger';
 
 // Initialize Firebase Admin SDK
@@ -15,28 +17,46 @@ const initializeFirebase = (): admin.app.App => {
       return app;
     }
 
-    // Initialize with service account (for production) or project ID (for emulator)
-    if (process.env.NODE_ENV === 'production') {
-      if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is required in production');
+    const useEmulators = process.env.FIREBASE_USE_EMULATORS === 'true';
+
+    if (useEmulators) {
+      // Emulator mode - use project ID for emulators
+      logger.info('🔧 Initializing Firebase with emulators');
+
+      app = admin.initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID || 'equitle-brain-dev',
+      });
+
+      // Set emulator hosts
+      process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || 'localhost:8080';
+      process.env.FIREBASE_AUTH_EMULATOR_HOST = process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099';
+      process.env.FIREBASE_STORAGE_EMULATOR_HOST = process.env.FIREBASE_STORAGE_EMULATOR_HOST || 'localhost:9199';
+
+      logger.info('🔧 Connected to Firebase emulators');
+    } else {
+      // Real Firebase mode - use service account
+      logger.info('☁️ Initializing Firebase with cloud services');
+
+      // Clear emulator environment variables to ensure cloud connection
+      delete process.env.FIRESTORE_EMULATOR_HOST;
+      delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
+      delete process.env.FIREBASE_STORAGE_EMULATOR_HOST;
+
+      if (!process.env.FIREBASE_SERVICE_ACCOUNT_PATH) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT_PATH is required for cloud Firebase');
       }
 
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+      const serviceAccountPath = resolve(process.env.FIREBASE_SERVICE_ACCOUNT_PATH);
+
+      // Read service account JSON file
+      const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
       app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: process.env.FIREBASE_PROJECT_ID,
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
       });
-    } else {
-      // Development mode - use project ID for emulators
-      app = admin.initializeApp({
-        projectId: process.env.FIREBASE_PROJECT_ID || 'equitle-brain-dev',
-      });
-      
-      // Set emulator hosts for development
-      process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
-      process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
-      process.env.FIREBASE_STORAGE_EMULATOR_HOST = 'localhost:9199';
+
+      logger.info('☁️ Connected to Firebase cloud services');
     }
 
     logger.info('✅ Firebase Admin SDK initialized successfully');

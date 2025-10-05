@@ -21,8 +21,12 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Connect to emulators in development
-if (import.meta.env.DEV) {
+// Connect to emulators if enabled
+const useEmulators = import.meta.env.VITE_FIREBASE_USE_EMULATORS === 'true';
+
+if (useEmulators) {
+  console.log('🔧 Connecting to Firebase emulators...');
+
   const isEmulatorConnected = {
     auth: false,
     firestore: false,
@@ -58,6 +62,8 @@ if (import.meta.env.DEV) {
   } catch (error) {
     console.warn('Firebase Storage Emulator connection failed:', error);
   }
+} else {
+  console.log('☁️ Using Firebase cloud services');
 }
 
 export default app;

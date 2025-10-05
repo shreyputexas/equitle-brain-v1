@@ -28,6 +28,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# Firebase service account (sensitive)
+firebase-service-account.json
+
 # IDE
 .vscode/
 .idea/
@@ -49,3 +52,4 @@ Thumbs.db
 # Uploads
 uploads/
 temp/equitle-brain-v1/
+equitle-brain-dev-firebase-adminsdk-fbsvc-f95ee42ed1.json
