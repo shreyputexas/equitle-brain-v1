@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -8,6 +8,7 @@ import {
   Grid,
   Card,
   CardContent,
+  CardActions,
   LinearProgress,
   Alert,
   Chip,
@@ -31,8 +32,7 @@ import {
   ListItemText,
   ListItemIcon,
   Avatar,
-  Badge,
-  CardActions
+  Badge
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -50,19 +50,18 @@ import {
   Close as CloseIcon,
   Refresh as RefreshIcon,
   FileDownload as FileDownloadIcon,
-  DataUsage as DataUsageIcon,
-  Info as InfoIcon,
-  GetApp as GetAppIcon
+  DataUsage as DataUsageIcon
 } from '@mui/icons-material';
 
 interface EnrichedContact {
   id: string;
   original: {
-    given: string;
-    company: string;
-    website: string;
-    phone: string;
-    email: string;
+    first_name?: string;
+    last_name?: string;
+    organization_name?: string;
+    email?: string;
+    phone?: string;
+    domain?: string;
   };
   enriched: {
     name: string;
@@ -74,7 +73,6 @@ interface EnrichedContact {
     location?: string;
     photo?: string;
     organization?: any;
-    website?: string;
   } | null;
   success: boolean;
   error?: string;
@@ -90,7 +88,7 @@ interface ScrapingResults {
   };
 }
 
-export default function DataEnrichment() {
+export default function DataScraping() {
   const [apolloApiKey, setApolloApiKey] = useState('');
   const [isValidatingKey, setIsValidatingKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
@@ -102,7 +100,6 @@ export default function DataEnrichment() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleApiKeySubmit = async () => {
@@ -114,7 +111,7 @@ export default function DataEnrichment() {
 
     setIsValidatingKey(true);
     try {
-      const response = await fetch('http://localhost:4001/api/data-enrichment/validate-key', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4001'}/api/apollo/validate-key`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -131,7 +128,7 @@ export default function DataEnrichment() {
         setShowApiKeyDialog(false);
       } else {
         setIsKeyValid(false);
-        setMessage('Apollo API key validation failed. This usually means: 1) The key is not activated in your Apollo dashboard, 2) The key lacks the required permissions, or 3) Your account doesn\'t have API access enabled. Please check your Apollo dashboard.');
+        setMessage('Invalid Apollo API key. Please check and try again.');
         setShowError(true);
       }
     } catch (error) {
@@ -143,45 +140,14 @@ export default function DataEnrichment() {
     }
   };
 
-  const handleFileSelect = (file: File) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setResults(null);
       setShowResults(false);
     }
   };
-
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    
-    const files = Array.from(e.dataTransfer.files);
-    const file = files[0];
-    
-    if (file && (file.type.includes('sheet') || file.type.includes('csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
-      handleFileSelect(file);
-    } else {
-      setMessage('Please upload an Excel file (.xlsx, .xls) or CSV file');
-      setShowError(true);
-    }
-  }, []);
 
   const handleFileUpload = async () => {
     if (!selectedFile) {
@@ -202,7 +168,7 @@ export default function DataEnrichment() {
       formData.append('file', selectedFile);
       formData.append('apiKey', apolloApiKey);
 
-      const response = await fetch('http://localhost:4001/api/data-enrichment/upload-and-enrich', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4001'}/api/apollo/upload-and-enrich`, {
         method: 'POST',
         body: formData
       });
@@ -226,48 +192,39 @@ export default function DataEnrichment() {
     }
   };
 
-  const handleDownloadResults = async () => {
+  const handleDownloadResults = () => {
     if (!results) return;
 
-    try {
-      setIsProcessing(true);
-      
-      // Generate enriched CSV in original format
-      const response = await fetch('http://localhost:4001/api/data-enrichment/generate-csv', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          results: results.results,
-          originalHeaders: ['Given', 'Company', 'To be populated', 'To be populated_1', 'To be populated_2']
-        })
-      });
+    // Create CSV content
+    const csvContent = [
+      // Header
+      ['Original Name', 'Original Company', 'Original Email', 'Enriched Name', 'Enriched Email', 'Enriched Phone', 'Enriched Title', 'Enriched Company', 'LinkedIn', 'Location', 'Status'].join(','),
+      // Data rows
+      ...results.results.map(result => [
+        `"${result.original.first_name || ''} ${result.original.last_name || ''}"`,
+        `"${result.original.organization_name || ''}"`,
+        `"${result.original.email || ''}"`,
+        `"${result.enriched?.name || ''}"`,
+        `"${result.enriched?.email || ''}"`,
+        `"${result.enriched?.phone || ''}"`,
+        `"${result.enriched?.title || ''}"`,
+        `"${result.enriched?.company || ''}"`,
+        `"${result.enriched?.linkedin || ''}"`,
+        `"${result.enriched?.location || ''}"`,
+        `"${result.success ? 'Success' : 'Failed'}"`
+      ].join(','))
+    ].join('\n');
 
-      if (!response.ok) {
-        throw new Error('Failed to generate CSV');
-      }
-
-      // Download the file
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `apollo-enriched-contacts-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
-      setMessage('Enriched CSV file downloaded successfully!');
-      setShowSuccess(true);
-    } catch (error) {
-      console.error('Download error:', error);
-      setMessage('Failed to download enriched CSV file');
-      setShowError(true);
-    } finally {
-      setIsProcessing(false);
-    }
+    // Download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `apollo-enriched-contacts-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const getStatusIcon = (success: boolean) => {
@@ -278,17 +235,21 @@ export default function DataEnrichment() {
     );
   };
 
+  const getStatusColor = (success: boolean) => {
+    return success ? 'success.main' : 'error.main';
+  };
+
   return (
     <Box>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
         <Box>
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            Data Enrichment with Apollo
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
+          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+            Data Scraping & Contact Enrichment
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
             Upload Excel files and enrich contact data using Apollo API
-        </Typography>
+          </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Tooltip title="Configure Apollo API">
@@ -343,8 +304,8 @@ export default function DataEnrichment() {
               {isKeyValid === false && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                   Invalid API key. Please check your Apollo API key and try again.
-              </Alert>
-            )}
+                </Alert>
+              )}
               {isKeyValid === true && (
                 <Alert severity="success" sx={{ mb: 2 }}>
                   Apollo API key is configured and valid
@@ -352,59 +313,38 @@ export default function DataEnrichment() {
               )}
             </Box>
 
-            {/* Drag and Drop File Upload */}
-            <Box 
-                  sx={{
-                mb: 3,
-                border: '2px dashed',
-                borderColor: isDragOver ? 'primary.main' : 'divider',
-                borderRadius: 2,
-                p: 4,
-                textAlign: 'center',
-                bgcolor: isDragOver ? 'action.hover' : 'background.paper',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: 'action.hover'
-                }
-              }}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                {selectedFile ? selectedFile.name : 'Drag & Drop CSV File Here'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                or click to browse files
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Supports any CSV format with flexible column names (max 10MB)
-              </Typography>
+            {/* File Upload */}
+            <Box sx={{ mb: 3 }}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<CloudUploadIcon />}
+                fullWidth
+                sx={{ 
+                  py: 2,
+                  borderStyle: 'dashed',
+                  borderWidth: 2,
+                  '&:hover': {
+                    borderStyle: 'dashed',
+                    borderWidth: 2
+                  }
+                }}
+              >
+                {selectedFile ? selectedFile.name : 'Choose Excel File (.xlsx, .xls, .csv)'}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  hidden
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileSelect}
+                />
+              </Button>
               
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileInputChange}
-              />
-            </Box>
-
-            {selectedFile && (
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {selectedFile.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {(selectedFile.size / 1024).toFixed(1)} KB
-                    </Typography>
-                  </Box>
+              {selectedFile && (
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </Typography>
                   <IconButton
                     size="small"
                     onClick={() => {
@@ -417,59 +357,44 @@ export default function DataEnrichment() {
                     <CloseIcon fontSize="small" />
                   </IconButton>
                 </Box>
-              </Box>
-            )}
+              )}
+            </Box>
 
             {/* File Format Instructions */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Supported File Formats:
+                Expected Excel Format:
               </Typography>
               <List dense>
                 <ListItem sx={{ py: 0 }}>
-                  <ListItemIcon>
-                    <InfoIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Any CSV format with flexible column names"
-                    secondary="We automatically detect: Name, Company, Email, Phone, Website columns"
+                  <ListItemText 
+                    primary="Columns: first_name, last_name, company, email, phone, domain"
+                    secondary="Any combination of these columns will work"
                   />
                 </ListItem>
                 <ListItem sx={{ py: 0 }}>
-                  <ListItemIcon>
-                    <GetAppIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="File types: .csv, .xlsx, .xls"
+                  <ListItemText 
+                    primary="File types: .xlsx, .xls, .csv"
                     secondary="Maximum file size: 10MB"
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemIcon>
-                    <CheckCircleIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Smart column detection"
-                    secondary="Works with any column names like: 'Full Name', 'Contact', 'Business', 'E-mail', etc."
                   />
                 </ListItem>
               </List>
             </Box>
 
             {/* Process Button */}
-              <Button
+            <Button
               variant="contained"
               size="large"
               startIcon={isProcessing ? <CircularProgress size={20} /> : <SearchIcon />}
               onClick={handleFileUpload}
               disabled={!selectedFile || !apolloApiKey.trim() || isProcessing}
-                fullWidth
-                sx={{
+              fullWidth
+              sx={{
                 bgcolor: 'white',
-                  color: '#000000',
+                color: '#000000',
                 border: '2px solid #000000',
                 py: 1.5,
-                  '&:hover': {
+                '&:hover': {
                   bgcolor: '#f5f5f5'
                 },
                 '&:disabled': {
@@ -478,8 +403,8 @@ export default function DataEnrichment() {
                 }
               }}
             >
-              {isProcessing ? 'Processing...' : 'Enrich Contacts with Apollo'}
-              </Button>
+              {isProcessing ? 'Processing...' : 'Enrich Contacts'}
+            </Button>
 
             {isProcessing && (
               <Box sx={{ mt: 2 }}>
@@ -518,7 +443,7 @@ export default function DataEnrichment() {
                       <Typography variant="caption" color="text.secondary">
                         Total Contacts
                       </Typography>
-          </Card>
+                    </Card>
                   </Grid>
                   <Grid item xs={6}>
                     <Card sx={{ p: 2, textAlign: 'center' }}>
@@ -527,7 +452,7 @@ export default function DataEnrichment() {
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Enriched
-              </Typography>
+                      </Typography>
                     </Card>
                   </Grid>
                 </Grid>
@@ -538,7 +463,7 @@ export default function DataEnrichment() {
                     <Typography variant="body2">Success Rate</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {results?.summary.successRate}%
-              </Typography>
+                    </Typography>
                   </Box>
                   <LinearProgress 
                     variant="determinate" 
@@ -569,7 +494,6 @@ export default function DataEnrichment() {
                         <TableCell>Name</TableCell>
                         <TableCell>Company</TableCell>
                         <TableCell>Email</TableCell>
-                        <TableCell>Phone</TableCell>
                         <TableCell>Status</TableCell>
                       </TableRow>
                     </TableHead>
@@ -582,23 +506,18 @@ export default function DataEnrichment() {
                                 <Avatar src={result.enriched.photo} sx={{ width: 24, height: 24 }} />
                               )}
                               <Typography variant="body2">
-                                {result.enriched?.name || result.original.given}
+                                {result.enriched?.name || `${result.original.first_name} ${result.original.last_name}`}
                               </Typography>
                             </Box>
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
-                              {result.enriched?.company || result.original.company}
+                              {result.enriched?.company || result.original.organization_name}
                             </Typography>
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2">
                               {result.enriched?.email || result.original.email}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {result.enriched?.phone || result.original.phone}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -648,30 +567,6 @@ export default function DataEnrichment() {
 
           <Alert severity="info" sx={{ mb: 2 }}>
             Your API key is stored locally and only used for this session. It's not saved to our servers.
-          </Alert>
-
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              API Key Validation Issues?
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              1. Log into Apollo.io → Settings → API Keys
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              2. Click "Activate" on your API key if it's not already active
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              3. Ensure your $99/month plan includes API access
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              4. Check that you have remaining API credits
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              5. Verify the key has "People Search" and "Organization Lookup" permissions
-            </Typography>
-            <Typography variant="body2">
-              6. Contact Apollo support if the issue persists
-            </Typography>
           </Alert>
         </DialogContent>
         <DialogActions>
