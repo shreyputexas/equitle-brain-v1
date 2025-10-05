@@ -2,11 +2,11 @@ import { google } from 'googleapis';
 import { Integration, GoogleTokens } from '../models/Integration';
 import logger from '../utils/logger';
 
-// Initialize OAuth2 client once
+// Initialize OAuth2 client once with fallback values
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
+  process.env.GOOGLE_CLIENT_ID || 'demo-client-id',
+  process.env.GOOGLE_CLIENT_SECRET || 'demo-client-secret',
+  process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4001/api/integrations/google/callback'
 );
 
 export class GoogleAuthService {
@@ -15,6 +15,18 @@ export class GoogleAuthService {
    */
   static getAuthUrl(serviceTypes: string[], userId: string): string {
     try {
+      // Debug: Log environment variables
+      logger.info('Google OAuth Debug', {
+        GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET',
+        GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET',
+        GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI || 'NOT SET'
+      });
+
+      // Validate required environment variables
+      if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        throw new Error('Google OAuth credentials not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file.');
+      }
+
       // Generate secure state parameter with user ID and timestamp
       const timestamp = Date.now();
       const state = `${userId}:${timestamp}`;

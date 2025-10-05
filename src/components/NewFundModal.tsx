@@ -132,7 +132,7 @@ export default function NewFundModal({ open, onClose, onSuccess }: NewFundModalP
 
       // TODO: Replace with actual API call
       console.log('Creating fund with data:', fundData);
-      const response = await fetch('http://localhost:4000/api/firebase-funds', {
+      const response = await fetch('http://localhost:4001/api/firebase-funds', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

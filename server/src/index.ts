@@ -36,6 +36,10 @@ import { connectFirebase } from './lib/firebase';
 import { EmailsFirestoreService } from './services/emails.firestore.service';
 import logger from './utils/logger';
 
+import { EmailSyncService } from './services/emailSync';
+import emailProccesingRoutes from './routes/emailProcessing';
+
+
 dotenv.config();
 
 const app = express();
@@ -94,6 +98,8 @@ app.use('/api/firebase-investors', firebaseInvestorRoutes);
 // app.use('/api/funds', firebaseAuthMiddleware, fundsRoutes); // Temporarily disabled due to Prisma dependency
 // New Firebase funds routes
 app.use('/api/firebase-funds', firebaseFundsRoutes);
+app.use('/api/email-processing', emailProccesingRoutes);
+
 // Legacy Prisma LP groups routes (will be deprecated)
 // app.use('/api/lp-groups', firebaseAuthMiddleware, lpGroupsRoutes); // Temporarily disabled due to Prisma dependency
 // New Firebase LP groups routes
@@ -196,6 +202,7 @@ server.listen(PORT, async () => {
 
   // Connect to Firebase
   await connectFirebase();
+  await EmailSyncService.startEmailSync();
 });
 
 export { io };

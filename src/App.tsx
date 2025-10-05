@@ -5,7 +5,9 @@ import { AuthProvider } from './contexts/AuthContext';
 import { BrainProvider } from './contexts/BrainContext';
 import { AppThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
+import PrivateRoute from './components/PrivateRoute';
 
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
 import DealDetail from './pages/DealDetail';
@@ -30,13 +32,20 @@ function App() {
         <BrainProvider>
           <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
+            {/* Authentication routes */}
+            <Route path="/login" element={<Login />} />
+
             {/* OAuth callback routes */}
             <Route path="/app/oauth/callback" element={<OAuthCallback />} />
             <Route path="/integrations/success" element={<OAuthCallback />} />
             <Route path="/integrations/error" element={<OAuthCallback />} />
 
-            {/* Main app routes - no authentication required */}
-            <Route path="/" element={<Layout />}>
+            {/* Main app routes - protected */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <Layout />
+              </PrivateRoute>
+            }>
               <Route index element={<Navigate to="/outreach/deals" />} />
 
               {/* Outreach Routes */}

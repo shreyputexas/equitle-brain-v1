@@ -14,6 +14,7 @@ import {
   Divider
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
+import { useLocation } from 'react-router-dom';
 import integrationService, { Integration } from '../services/integrationService';
 import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
 import IntegrationCard from '../components/integrations/IntegrationCard';
@@ -21,6 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 export default function Settings() {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const location = useLocation();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +117,7 @@ export default function Settings() {
           {error}
         </Alert>
       )}
+
 
       {/* Integrations Section */}
       <Paper sx={{ p: 3, mb: 3 }}>

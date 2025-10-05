@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -12,7 +12,13 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Badge
+  Badge,
+  CircularProgress,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Divider
 } from '@mui/material';
 import {
   BusinessCenter as BusinessCenterIcon,
@@ -21,8 +27,12 @@ import {
   Business as BusinessIcon,
   TrendingUp as TrendingUpIcon,
   Schedule as ScheduleIcon,
-  AttachMoney as MoneyIcon
+  AttachMoney as MoneyIcon,
+  ExpandMore as ExpandMoreIcon,
+  Email as EmailIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
+import { emailProcessingApi, ProcessedEmail } from '../services/emailProcessingApi';
 
 // Mock data for brokers - empty for now
 const mockBrokers: any[] = [];
@@ -35,21 +45,165 @@ const stages = [
 
 export default function Brokers() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [emails, setEmails] = useState<ProcessedEmail[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const getBrokersForStage = (stageValue: string) => {
-    if (stageValue === 'all') {
-      return mockBrokers;
+  // Load broker emails on component mount
+  useEffect(() => {
+    loadBrokerEmails();
+  }, []);
+
+  const loadBrokerEmails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const brokerEmails = await emailProcessingApi.getEmailsByCategory('broker');
+      setEmails(brokerEmails);
+    } catch (err) {
+      console.error('Error loading broker emails:', err);
+      setError('Failed to load broker emails');
+    } finally {
+      setLoading(false);
     }
-    return mockBrokers.filter(broker => broker.stage === stageValue);
+  };
+
+  const getEmailsForStage = (stageValue: string) => {
+    if (stageValue === 'all') {
+      return emails;
+    }
+    return emails.filter(email => email.subCategory === stageValue);
   };
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment) {
-      case 'good': return '#4caf50';
-      case 'bad': return '#f44336';
-      case 'neutral': return '#ff9800';
-      default: return '#9e9e9e';
+      case 'GREEN': return { color: '#4caf50', bgColor: '#e8f5e8' };
+      case 'RED': return { color: '#f44336', bgColor: '#ffeaea' };
+      case 'YELLOW': return { color: '#ff9800', bgColor: '#fff8e1' };
+      default: return { color: '#9e9e9e', bgColor: '#f5f5f5' };
     }
+  };
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case 'GREEN': return '🟢';
+      case 'YELLOW': return '🟡';
+      case 'RED': return '🔴';
+      default: return '⚪';
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Unknown date';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  const EmailCard = ({ email }: { email: ProcessedEmail }) => {
+    const sentimentStyle = getSentimentColor(email.sentiment);
+    
+    return (
+      <Card
+        sx={{
+          mb: 2,
+          transition: 'all 0.3s ease',
+          cursor: 'pointer',
+          bgcolor: 'white',
+          border: '1px solid #d0d0d0',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Box display="flex" alignItems="center" width="100%">
+              <Avatar sx={{
+                bgcolor: sentimentStyle.bgColor,
+                color: sentimentStyle.color,
+                mr: 2,
+                width: 40,
+                height: 40
+              }}>
+                {getSentimentIcon(email.sentiment)}
+              </Avatar>
+
+              <Box flex={1}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography variant="subtitle1" fontWeight="medium" color="#000000">
+                    {email.prospect_name || email.prospect_email}
+                  </Typography>
+                  <Chip
+                    label={email.sentiment}
+                    size="small"
+                    sx={{
+                      bgcolor: sentimentStyle.bgColor,
+                      color: sentimentStyle.color,
+                      fontWeight: 'bold'
+                    }}
+                  />
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  {email.email_subject || 'No subject'}
+                </Typography>
+
+                <Box display="flex" alignItems="center" gap={2} mt={1}>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDate(email.received_date)}
+                  </Typography>
+                  {email.source && (
+                    <Chip
+                      label={email.source}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: '0.7rem' }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          </AccordionSummary>
+
+          <AccordionDetails>
+            <Box>
+              <Typography variant="body2" color="text.secondary" mb={1}>
+                <strong>From:</strong> {email.prospect_email}
+              </Typography>
+
+              {email.email_subject && (
+                <Typography variant="body2" color="text.secondary" mb={1}>
+                  <strong>Subject:</strong> {email.email_subject}
+                </Typography>
+              )}
+
+              <Divider sx={{ my: 1 }} />
+
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                {email.email_body || 'No email content available'}
+              </Typography>
+
+              {email.confidence && (
+                <Box mt={2}>
+                  <Typography variant="caption" color="text.secondary">
+                    Confidence: {(email.confidence * 100).toFixed(0)}%
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+      </Card>
+    );
   };
 
   const BrokerCard = ({ broker }: { broker: any }) => (
@@ -139,19 +293,35 @@ export default function Brokers() {
             Brokers Pipeline
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          sx={{
-            bgcolor: 'white',
-            color: 'black',
-            '&:hover': {
-              bgcolor: 'rgba(255,255,255,0.9)'
-            }
-          }}
-        >
-          New Broker
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<RefreshIcon />}
+            onClick={loadBrokerEmails}
+            sx={{
+              bgcolor: 'white',
+              color: 'black',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.9)'
+              }
+            }}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{
+              bgcolor: 'white',
+              color: 'black',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.9)'
+              }
+            }}
+          >
+            New Broker
+          </Button>
+        </Box>
       </Box>
 
       {/* Search Bar */}
@@ -192,84 +362,108 @@ export default function Brokers() {
         />
       </Box>
 
-      {/* Pipeline Columns */}
-      <Box sx={{ 
-        display: 'flex', 
-        gap: 1.5, 
-        pb: 2, 
-        minHeight: '60vh', 
-        px: 3,
-        width: '100%',
-        overflowX: 'hidden',
-        bgcolor: '#f8f9fa'
-      }}>
-        {stages.map((stage) => {
-          const stageBrokers = getBrokersForStage(stage.value).filter(broker => 
-            searchTerm === '' || broker.name.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          const totalValue = stageBrokers.reduce((sum, broker) => sum + (broker.value || 0), 0);
-          
-          return (
-            <Paper
-              key={stage.value}
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                maxWidth: '33.33%',
-                p: 1.5,
-                borderRadius: 2,
-                border: '1px solid #d0d0d0',
-                bgcolor: '#f5f5f5',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}
-            >
-              {/* Stage Header */}
-              <Box sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: '#333333' }}>
-                    {stage.label}
-                  </Typography>
-                  <Chip
-                    label={`${stageBrokers.length} broker${stageBrokers.length !== 1 ? 's' : ''}`}
-                    size="small"
-                    sx={{
-                      bgcolor: '#333333',
-                      color: 'white',
-                      fontSize: '0.75rem'
-                    }}
-                  />
-                </Box>
-                <Typography variant="body2" sx={{ color: '#666666' }}>
-                  ${(totalValue / 1000000).toFixed(1)}M total value
-                </Typography>
-              </Box>
+      {/* Loading State */}
+      {loading && (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={40} />
+        </Box>
+      )}
 
-              {/* Stage Brokers */}
-              <Box sx={{ minHeight: 400 }}>
-                {stageBrokers.length === 0 ? (
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    py: 8,
-                    border: '2px dashed',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    bgcolor: 'background.default'
-                  }}>
-                    <BusinessCenterIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                    <Typography variant="body2" color="text.secondary">
-                      No brokers in this stage
+      {/* Error State */}
+      {error && (
+        <Box sx={{ px: 3, mb: 3 }}>
+          <Alert severity="error" action={
+            <Button color="inherit" size="small" onClick={loadBrokerEmails}>
+              Retry
+            </Button>
+          }>
+            {error}
+          </Alert>
+        </Box>
+      )}
+
+      {/* Pipeline Columns */}
+      {!loading && !error && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1.5, 
+          pb: 2, 
+          minHeight: '60vh', 
+          px: 3,
+          width: '100%',
+          overflowX: 'hidden',
+          bgcolor: '#f8f9fa'
+        }}>
+          {stages.map((stage) => {
+            const stageEmails = getEmailsForStage(stage.value).filter(email => 
+              searchTerm === '' || 
+              email.prospect_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              email.prospect_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              email.email_subject?.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            return (
+              <Paper
+                key={stage.value}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  maxWidth: '33.33%',
+                  p: 1.5,
+                  borderRadius: 2,
+                  border: '1px solid #d0d0d0',
+                  bgcolor: '#f5f5f5',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+              >
+                {/* Stage Header */}
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#333333' }}>
+                      {stage.label}
                     </Typography>
+                    <Chip
+                      label={`${stageEmails.length} email${stageEmails.length !== 1 ? 's' : ''}`}
+                      size="small"
+                      sx={{
+                        bgcolor: '#333333',
+                        color: 'white',
+                        fontSize: '0.75rem'
+                      }}
+                    />
                   </Box>
-                ) : (
-                  stageBrokers.map((broker) => (
-                    <BrokerCard key={broker.id} broker={broker} />
-                  ))
-                )}
-              </Box>
-            </Paper>
-          );
-        })}
-      </Box>
+                  <Typography variant="body2" sx={{ color: '#666666' }}>
+                    Broker communications
+                  </Typography>
+                </Box>
+
+                {/* Stage Emails */}
+                <Box sx={{ minHeight: 400 }}>
+                  {stageEmails.length === 0 ? (
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      py: 8,
+                      border: '2px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      bgcolor: 'background.default'
+                    }}>
+                      <EmailIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        No broker emails in this stage
+                      </Typography>
+                    </Box>
+                  ) : (
+                    stageEmails.map((email) => (
+                      <EmailCard key={email.id} email={email} />
+                    ))
+                  )}
+                </Box>
+              </Paper>
+            );
+          })}
+        </Box>
+      )}
     </Box>
   );
 }

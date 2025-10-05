@@ -173,7 +173,7 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
       };
 
       // TODO: Replace with actual API call
-      const response = await fetch('http://localhost:4000/api/firebase-investors', {
+      const response = await fetch('http://localhost:4001/api/firebase-investors', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

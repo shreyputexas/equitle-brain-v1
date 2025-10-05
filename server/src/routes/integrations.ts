@@ -132,8 +132,13 @@ router.post('/google/connect', auth, async (req, res) => {
       });
     }
 
+    logger.info('Google OAuth connect request', { userId, types });
+    
     const scopes = GoogleAuthService.getScopes(types);
+    logger.info('Generated scopes', { scopes });
+    
     const authUrl = GoogleAuthService.getAuthUrl(types, userId);
+    logger.info('Generated auth URL', { authUrl });
 
     res.json({
       success: true,
@@ -144,8 +149,16 @@ router.post('/google/connect', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Error initiating Google OAuth:', error);
-    res.status(500).json({ success: false, error: 'Failed to initiate OAuth flow' });
+    logger.error('Error initiating Google OAuth:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId,
+      types
+    });
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to initiate OAuth flow' 
+    });
   }
 });
 

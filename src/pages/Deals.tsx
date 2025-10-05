@@ -78,6 +78,7 @@ import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 import DealPipeline from '../components/DealPipeline';
 import EmailAlerts from '../components/EmailAlerts';
+import { emailProcessingApi } from '../services/emailProcessingApi';
 
 type ViewMode = 'grid' | 'list' | 'pipeline';
 
@@ -166,6 +167,7 @@ export default function Deals() {
   const [editDealModalOpen, setEditDealModalOpen] = useState(false);
   const [dealToEdit, setDealToEdit] = useState<ApiDeal | null>(null);
   const [emailAlertsOpen, setEmailAlertsOpen] = useState(false);
+  const [processingEmails, setProcessingEmails] = useState(false);
 
   // Use real API for deals data
   const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
@@ -187,6 +189,19 @@ export default function Deals() {
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, dealId: string) => {
     setAnchorEl(event.currentTarget);
     setSelectedDealId(dealId);
+  };
+
+  const handleProcessEmails = async () => {
+    try {
+      setProcessingEmails(true);
+      await emailProcessingApi.processEmailsNow();
+      alert('Email processing completed! Check the Investors and Brokers tabs to see categorized emails.');
+    } catch (error) {
+      console.error('Error processing emails:', error);
+      alert('Failed to process emails. Please try again.');
+    } finally {
+      setProcessingEmails(false);
+    }
   };
 
   const handleMenuClose = () => {
@@ -982,22 +997,40 @@ export default function Deals() {
               Prospective: All companies you've reached out to. Active: Deals you're actively pursuing. Use the arrow button to move deals from prospective to active.
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setNewDealModalOpen(true);
-            }}
-            sx={{
-              bgcolor: '#000000',
-              color: 'white',
-              '&:hover': {
-                bgcolor: '#333333'
-              }
-            }}
-          >
-            New Deal
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<EmailIcon />}
+              onClick={handleProcessEmails}
+              disabled={processingEmails}
+              sx={{
+                borderColor: '#000000',
+                color: '#000000',
+                '&:hover': {
+                  borderColor: '#333333',
+                  bgcolor: '#f5f5f5'
+                }
+              }}
+            >
+              {processingEmails ? 'Processing...' : 'Process Emails'}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setNewDealModalOpen(true);
+              }}
+              sx={{
+                bgcolor: '#000000',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: '#333333'
+                }
+              }}
+            >
+              New Deal
+            </Button>
+          </Box>
         </Box>
       )}
 

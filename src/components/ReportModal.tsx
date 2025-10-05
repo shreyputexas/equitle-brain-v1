@@ -124,7 +124,7 @@ export default function ReportModal({ open, onClose, onSuccess }: ReportModalPro
       };
 
       // TODO: Replace with actual API call
-      const response = await fetch('http://localhost:4000/api/reports', {
+      const response = await fetch('http://localhost:4001/api/reports', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -47,7 +47,7 @@ export interface LogInteractionData {
 }
 
 class ContactsApiService {
-  private baseURL = 'http://localhost:4000/api';
+  private baseURL = 'http://localhost:4001/api';
 
   constructor() {
     axios.defaults.baseURL = this.baseURL;

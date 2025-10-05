@@ -2,6 +2,13 @@ import * as React from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  User as FirebaseUser 
+} from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 interface User {
   id: string;
@@ -63,45 +70,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Configure axios base URL
   axios.defaults.baseURL = 'http://localhost:4001/api';
-  axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
 
   useEffect(() => {
-    fetchUserProfile();
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        // User is signed in
+        const idToken = await firebaseUser.getIdToken();
+        localStorage.setItem('token', idToken);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+        
+        // Create user object from Firebase user
+        const user: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          role: 'user',
+          firm: '',
+          phone: firebaseUser.phoneNumber || '',
+          location: '',
+          avatar: firebaseUser.photoURL || undefined
+        };
+        
+        setUser(user);
+      } else {
+        // User is signed out
+        setUser(null);
+        localStorage.removeItem('token');
+        delete axios.defaults.headers.common['Authorization'];
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const fetchUserProfile = async () => {
+  // fetchUserProfile is no longer needed - using Firebase auth state listener
+
+  const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const response = await axios.get<AuthResponse>('/auth/me');
-      setUser(response.data.user);
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-      // Fallback to default user if API fails
-      const fallbackUser: User = {
-        id: 'default-user-id',
-        email: 'demo@equitle.com',
-        name: 'Demo User',
-        role: 'admin',
-        firm: 'Equitle',
-        phone: '+1 (555) 123-4567',
-        location: 'San Francisco, CA',
-        avatar: undefined
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      // Get the ID token for backend authentication
+      const idToken = await firebaseUser.getIdToken();
+      localStorage.setItem('token', idToken);
+      
+      // Set axios default header for backend requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+      
+      // Create user object from Firebase user
+      const user: User = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+        role: 'user',
+        firm: '',
+        phone: firebaseUser.phoneNumber || '',
+        location: '',
+        avatar: firebaseUser.photoURL || undefined
       };
-      setUser(fallbackUser);
+      
+      setUser(user);
+      navigate('/outreach/deals');
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      throw new Error(error.message || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string) => {
-    // For demo purposes - would normally authenticate
-    await fetchUserProfile();
-    navigate('/deals/all');
-  };
-
-  const logout = () => {
-    setUser(null);
-    navigate('/deals/all');
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still clear local state even if Firebase logout fails
+      setUser(null);
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+      navigate('/login');
+    }
   };
 
   const updateUser = (userData: Partial<User>) => {
