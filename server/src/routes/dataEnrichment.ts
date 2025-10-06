@@ -1,6 +1,12 @@
 import express from 'express';
 import multer from 'multer';
-import * as XLSX from 'xlsx';
+// Optional import for xlsx - will be handled gracefully if not available
+let XLSX: any = null;
+try {
+  XLSX = require('xlsx');
+} catch (error) {
+  console.warn('xlsx not found - Excel file processing features will be disabled');
+}
 import { ApolloService } from '../services/apollo.service';
 import logger from '../utils/logger';
 
@@ -91,6 +97,13 @@ router.post('/upload-and-enrich', upload.single('file'), async (req, res) => {
     const apolloService = new ApolloService();
 
     // Parse Excel file
+    if (!XLSX) {
+      return res.status(400).json({
+        success: false,
+        error: 'Excel file processing not available - xlsx module not installed'
+      });
+    }
+
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];

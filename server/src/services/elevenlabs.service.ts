@@ -1,4 +1,10 @@
-import ElevenLabs from 'elevenlabs-node';
+// Optional import for elevenlabs-node - will be handled gracefully if not available
+let ElevenLabs: any = null;
+try {
+  ElevenLabs = require('elevenlabs-node');
+} catch (error) {
+  console.warn('elevenlabs-node not found - voice synthesis features will be disabled');
+}
 import logger from '../utils/logger';
 import { Readable } from 'stream';
 
@@ -38,12 +44,25 @@ export interface TTSRequest {
 
 export class ElevenLabsService {
   private apiKey: string;
+  private client: any;
 
   constructor() {
+    if (!ElevenLabs) {
+      logger.warn('ElevenLabs SDK not available - voice synthesis features disabled');
+      this.client = null;
+      return;
+    }
+
     this.apiKey = process.env.ELEVENLABS_API_KEY || '';
     if (!this.apiKey) {
-      throw new Error('ELEVENLABS_API_KEY environment variable is required');
+      logger.warn('ELEVENLABS_API_KEY not found - voice synthesis features disabled');
+      this.client = null;
+      return;
     }
+
+    this.client = new ElevenLabs({
+      apiKey: this.apiKey
+    });
 
     logger.info('ElevenLabsService initialized');
   }
@@ -52,6 +71,10 @@ export class ElevenLabsService {
    * Clone a voice from audio sample
    */
   async cloneVoice(name: string, audioBuffer: Buffer, description?: string): Promise<ElevenLabsVoice> {
+    if (!this.client) {
+      throw new Error('ElevenLabs service not available - SDK not installed or API key not configured');
+    }
+
     try {
       logger.info('Cloning voice with ElevenLabs', { name, audioSize: audioBuffer.length });
 
@@ -95,6 +118,10 @@ export class ElevenLabsService {
    * Generate speech from text
    */
   async textToSpeech(request: TTSRequest): Promise<Buffer> {
+    if (!this.client) {
+      throw new Error('ElevenLabs service not available - SDK not installed or API key not configured');
+    }
+
     try {
       logger.info('Generating speech with ElevenLabs', {
         voiceId: request.voice_id,
@@ -141,6 +168,10 @@ export class ElevenLabsService {
    * Get all available voices
    */
   async getVoices(): Promise<ElevenLabsVoice[]> {
+    if (!this.client) {
+      throw new Error('ElevenLabs service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await fetch('https://api.elevenlabs.io/v1/voices', {
         method: 'GET',
@@ -180,6 +211,10 @@ export class ElevenLabsService {
    * Get specific voice details
    */
   async getVoice(voiceId: string): Promise<ElevenLabsVoice | null> {
+    if (!this.client) {
+      throw new Error('ElevenLabs service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
         method: 'GET',
@@ -222,6 +257,10 @@ export class ElevenLabsService {
    * Delete a cloned voice
    */
   async deleteVoice(voiceId: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('ElevenLabs service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
         method: 'DELETE',
@@ -303,6 +342,10 @@ export class ElevenLabsService {
    * Get user subscription info
    */
   async getSubscription(): Promise<any> {
+    if (!this.client) {
+      throw new Error('ElevenLabs service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await fetch('https://api.elevenlabs.io/v1/user/subscription', {
         method: 'GET',
@@ -327,6 +370,11 @@ export class ElevenLabsService {
    * Test connection to ElevenLabs API
    */
   async testConnection(): Promise<boolean> {
+    if (!this.client) {
+      logger.warn('ElevenLabs service not available - SDK not installed or API key not configured');
+      return false;
+    }
+
     try {
       const response = await fetch('https://api.elevenlabs.io/v1/voices', {
         method: 'GET',

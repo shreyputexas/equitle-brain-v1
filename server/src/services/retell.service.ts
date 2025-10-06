@@ -1,4 +1,11 @@
-import { Retell } from 'retell-sdk';
+// Optional import for retell-sdk - will be handled gracefully if not available
+let Retell: any = null;
+try {
+  const retellModule = require('retell-sdk');
+  Retell = retellModule.Retell;
+} catch (error) {
+  console.warn('retell-sdk not found - voice agent features will be disabled');
+}
 import logger from '../utils/logger';
 
 export interface RetellCallRequest {
@@ -55,12 +62,20 @@ export interface RetellWebhookEvent {
 }
 
 export class RetellService {
-  private client: Retell;
+  private client: Retell | null;
 
   constructor() {
+    if (!Retell) {
+      logger.warn('Retell SDK not available - voice agent features disabled');
+      this.client = null;
+      return;
+    }
+
     const apiKey = process.env.RETELL_API_KEY;
     if (!apiKey) {
-      throw new Error('RETELL_API_KEY environment variable is required');
+      logger.warn('RETELL_API_KEY not found - voice agent features disabled');
+      this.client = null;
+      return;
     }
 
     this.client = new Retell({
@@ -76,6 +91,10 @@ export class RetellService {
    * Create a new phone call
    */
   async createCall(request: RetellCallRequest): Promise<RetellCall> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       logger.info('Creating Retell call', { phoneNumber: request.phoneNumber, agentId: request.agentId });
       logger.info('Available call methods:', Object.keys(this.client.call));
@@ -116,6 +135,10 @@ export class RetellService {
    * Create a new agent
    */
   async createAgent(request: RetellAgentRequest): Promise<RetellAgent> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       logger.info('Creating Retell agent');
 
@@ -157,6 +180,10 @@ export class RetellService {
    * Get call details
    */
   async getCall(callId: string): Promise<RetellCall | null> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await this.client.call.retrieve(callId);
 
@@ -177,6 +204,10 @@ export class RetellService {
    * List all calls with pagination
    */
   async listCalls(limit: number = 50, after?: string): Promise<RetellCall[]> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await this.client.call.list({
         limit,
@@ -200,6 +231,10 @@ export class RetellService {
    * Get agent details
    */
   async getAgent(agentId: string): Promise<RetellAgent | null> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await this.client.agent.retrieve(agentId);
 
@@ -221,6 +256,10 @@ export class RetellService {
    * List all agents
    */
   async listAgents(): Promise<RetellAgent[]> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await this.client.agent.list();
 
@@ -242,6 +281,10 @@ export class RetellService {
    * Update an existing agent
    */
   async updateAgent(agentId: string, updates: Partial<RetellAgentRequest>): Promise<RetellAgent | null> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const updateData: any = {};
 
@@ -286,6 +329,10 @@ export class RetellService {
    * Delete an agent
    */
   async deleteAgent(agentId: string): Promise<boolean> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       await this.client.agent.delete(agentId);
       logger.info('Retell agent deleted successfully', { agentId });
@@ -344,6 +391,10 @@ export class RetellService {
    * Get phone numbers associated with account
    */
   async getPhoneNumbers(): Promise<Array<{ number: string; id: string; name?: string }>> {
+    if (!this.client) {
+      throw new Error('Retell service not available - SDK not installed or API key not configured');
+    }
+
     try {
       const response = await this.client.phoneNumber.list();
 
@@ -362,6 +413,11 @@ export class RetellService {
    * Test connection to Retell API
    */
   async testConnection(): Promise<boolean> {
+    if (!this.client) {
+      logger.warn('Retell service not available - SDK not installed or API key not configured');
+      return false;
+    }
+
     try {
       await this.client.agent.list({ limit: 1 });
       logger.info('Retell API connection test successful');

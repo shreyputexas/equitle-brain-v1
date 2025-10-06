@@ -303,25 +303,63 @@ export class ApolloService {
    */
   async validateApiKey(): Promise<boolean> {
     try {
-      // Try a simple search to validate the key
-      const response = await axios.post(
-        `${this.baseUrl}/mixed_people/search`,
-        {
-          first_name: 'John',
-          per_page: 1
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey,
-            'Cache-Control': 'no-cache'
-          }
-        }
-      );
+      if (!this.apiKey) {
+        logger.error('Apollo API key is not provided');
+        return false;
+      }
 
-      if (response.data && response.status === 200) {
-        logger.info('Apollo API key validation successful');
-        return true;
+      // First try the /me endpoint which is most reliable for validation
+      try {
+        const meResponse = await axios.get(
+          `${this.baseUrl}/me`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Api-Key': this.apiKey,
+              'Cache-Control': 'no-cache'
+            }
+          }
+        );
+
+        if (meResponse.data && meResponse.status === 200) {
+          logger.info('Apollo API key validation successful via /me endpoint', {
+            user: meResponse.data.user?.email || 'Unknown',
+            plan: meResponse.data.user?.plan || 'Unknown'
+          });
+          return true;
+        }
+      } catch (meError: any) {
+        logger.warn('Apollo /me endpoint failed, trying fallback validation', {
+          error: meError.message,
+          status: meError.response?.status
+        });
+
+        // Fallback: Try a simple search with minimal parameters
+        try {
+          const searchResponse = await axios.post(
+            `${this.baseUrl}/mixed_people/search`,
+            {
+              per_page: 1
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': this.apiKey,
+                'Cache-Control': 'no-cache'
+              }
+            }
+          );
+
+          if (searchResponse.data && searchResponse.status === 200) {
+            logger.info('Apollo API key validation successful via fallback search');
+            return true;
+          }
+        } catch (searchError: any) {
+          logger.error('Apollo fallback validation also failed', {
+            searchError: searchError.message,
+            searchStatus: searchError.response?.status
+          });
+        }
       }
       
       return false;
@@ -331,25 +369,36 @@ export class ApolloService {
         logger.error('Apollo API key is invalid or not activated', {
           error: 'Invalid access credentials',
           status: 401,
-          message: 'Please check your Apollo dashboard to activate the API key and verify permissions'
+          message: 'Please check your Apollo dashboard to activate the API key and verify permissions',
+          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
         });
       } else if (error.response?.status === 403) {
         logger.error('Apollo API key lacks permissions', {
           error: 'Forbidden',
           status: 403,
-          message: 'API key does not have the required permissions for this operation'
+          message: 'API key does not have the required permissions for this operation',
+          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
         });
       } else if (error.response?.status === 422) {
         logger.error('Apollo API request parameters invalid', {
           error: 'Unprocessable Entity',
           status: 422,
-          message: 'Request parameters are invalid or missing'
+          message: 'Request parameters are invalid or missing',
+          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
+        });
+      } else if (error.response?.status === 429) {
+        logger.error('Apollo API rate limit exceeded', {
+          error: 'Rate limit exceeded',
+          status: 429,
+          message: 'API rate limit has been exceeded. Please try again later.',
+          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
         });
       } else {
         logger.error('Apollo API key validation failed', { 
           error: error.message,
           status: error.response?.status,
-          data: error.response?.data 
+          data: error.response?.data,
+          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
         });
       }
       
