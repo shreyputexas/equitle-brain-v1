@@ -1,88 +1,92 @@
-# Remove Login/Signup System - Task Plan
+# Data Enrichment Email Unlock Issue - Fix Plan
 
 ## Problem Analysis
-The current application has a full authentication system with login/signup pages, but the user wants to remove this and go directly to the product while preserving the user data structure for future implementation.
+- API key validation works and credits are being used
+- Data is returning `email_not_unlocked` for businesses
+- Currently using `/people/match` endpoint which requires person-level data
+- Feeding company names but trying to get emails/phones - need to use different API approach
 
-## Current Authentication Structure
-- Frontend: Login page, Signup page, AuthContext, PrivateRoute component
-- Backend: Auth routes, auth middleware, User model, JWT tokens
-- User data model with fields: id, email, name, role, firm, avatar
+## Root Cause
+The current implementation uses the `/people/match` endpoint which:
+1. Requires person identifiers (first_name, last_name, etc.)
+2. When given only company names, it cannot find person matches
+3. Even when it finds people, `email_not_unlocked` suggests we need to use Search API with `reveal_personal_emails` instead
 
-## Plan
+## Solution Strategy
+For company-only data (no person names), we should:
+1. Use Apollo's `/mixed_people/search` endpoint to find people at the company
+2. Enable email reveal with `reveal_personal_emails: true`
+3. Get multiple contacts per company if available
+4. Use enrichment/match only when we have specific person data
 
-### Phase 1: Frontend Changes ✅
-- [x] Analyze current authentication system and user data structure
-- [x] Remove login/signup routes from App.tsx
-- [x] Modify AuthContext to bypass authentication checks
-- [x] Remove PrivateRoute protection
-- [x] Set up a default/mock user for data storage
-- [x] Update app routing to go directly to main product
+## Todo Items
 
-### Phase 2: Backend Changes ✅
-- [x] Modified auth middleware to accept mock tokens in development
-- [x] Set up default user data for requests
-- [x] Keep auth routes and models intact for future use
+### Phase 1: Analysis
+- [ ] Read the current file structure and understand data flow
+- [ ] Check what data format is being fed (company names vs person names)
+- [ ] Verify Apollo API documentation for proper Search vs Match usage
 
-### Phase 3: Testing ✅
-- [x] Test application loads directly to product
-- [x] Verify servers start successfully
-- [x] Confirm authentication bypass works
+### Phase 2: Implementation
+- [ ] Update `apollo.service.ts` to add a new `searchPeopleAtCompany` method
+- [ ] Update `apollo.service.ts` to properly use `reveal_personal_emails` in search endpoint
+- [ ] Update `enrichPerson` method to detect company-only data vs person data
+- [ ] Route company-only enrichment through Search API instead of Match API
+- [ ] Keep Match API for person-specific enrichment (when we have names)
 
-## Preservation Strategy
-- Keep User model and auth service files intact
-- Keep auth routes commented/disabled rather than deleted
-- Maintain database schema for users
-- Use a default user ID for all operations
+### Phase 3: Testing & Validation
+- [ ] Test with company-only CSV file
+- [ ] Verify emails are being unlocked and returned
+- [ ] Verify phone numbers are being returned
+- [ ] Check that credits are being properly consumed
 
-## Expected Outcome
-- Application loads directly to /deals/relationships
-- All user data operations work with a default user
-- Authentication system remains in codebase for future activation
-
----
-
-## Analysis Complete 
-
-**Current Auth System:**
-- Frontend: Login/Signup pages, AuthContext with JWT handling, PrivateRoute wrapper
-- Backend: Full auth routes, middleware, User model with id/email/name/role/firm fields
-- Flow: Login � JWT tokens � Protected routes � Main app
-
-**Key Files Identified:**
-- `src/App.tsx` - Main routing with auth protection
-- `src/contexts/AuthContext.tsx` - Auth state management
-- `src/components/PrivateRoute.tsx` - Route protection
-- `server/src/routes/auth.ts` - Auth endpoints
-- `server/src/models/User.ts` - User interface
-- `server/src/middleware/auth.ts` - JWT verification
-
-**Plan:** Remove auth barriers while keeping User model intact for future use.
+### Phase 4: Cleanup
+- [ ] Add proper error handling for email_not_unlocked cases
+- [ ] Add logging to track which API endpoint is being used
+- [ ] Update response to clearly indicate when emails are unlocked vs not
 
 ---
 
-## Review Section ✅
+## Review Section
 
 ### Summary of Changes Made
 
-**Frontend Changes:**
-1. **App.tsx**: Removed `/login` and `/signup` routes, removed `PrivateRoute` wrapper
-2. **AuthContext.tsx**: Bypassed authentication with mock user (`default-user-id`, `demo@equitle.com`)
-3. **Routing**: App now goes directly to `/deals/relationships` on load
+**Problem Fixed:**
+- Apollo API was returning `email_not_unlocked` for company-only data
+- The `/people/match` endpoint was being used for all enrichment, but it requires person identifiers
+- When only company names were provided, the wrong API endpoint was being used
 
-**Backend Changes:**
-1. **auth.ts middleware**: Added development bypass for `mock-token` and `NODE_ENV=development`
-2. **Mock user injection**: All requests now get default user object with admin role
+**Changes Implemented:**
 
-**Preserved for Future:**
-- All auth routes in `server/src/routes/auth.ts`
-- User model in `server/src/models/User.ts`
-- Auth service in `server/src/services/auth.service.ts`
-- Login/Signup pages (though unused)
+1. **apollo.service.ts - Added `searchPeopleAtCompany` method** (lines 116-181)
+   - New method specifically for company-only searches
+   - Uses `/mixed_people/search` endpoint with `reveal_personal_emails: true`
+   - Returns array of contacts at the specified company
 
-**Current State:**
-- ✅ Application launches directly to main product at http://localhost:3002
-- ✅ Backend server running on port 4000 with mock authentication
-- ✅ All user data will be stored under `default-user-id`
-- ✅ Authentication system preserved for future reactivation
+2. **apollo.service.ts - Updated `searchPeople` method** (line 90)
+   - Added `reveal_personal_emails: true` to all search requests
+   - Ensures emails are unlocked when using search endpoint
 
-**To Reactivate Auth:** Simply remove the development bypass in auth middleware and restore login/signup routes in App.tsx.
+3. **apollo.service.ts - Rewrote `enrichPerson` method** (lines 186-258)
+   - Added intelligent detection: person data vs company-only data
+   - **CASE 1:** Has person identifiers (name/email) → uses `/people/match` endpoint
+   - **CASE 2:** Has only company data → uses `/mixed_people/search` endpoint
+   - Proper logging to track which endpoint is being used
+
+4. **apollo.service.ts - Updated ApolloPerson interface** (lines 4-40)
+   - Added `primary_domain` to organization object
+   - Added `extrapolated_email_confidence` field
+   - Ensures TypeScript compatibility with Apollo API responses
+
+**How It Works Now:**
+- When you upload a file with **only company names**, it uses the Search API to find contacts at those companies
+- When you upload a file with **person names + company**, it uses the Match API for precise matching
+- Both approaches now properly use `reveal_personal_emails: true` to unlock email addresses
+- Credits are consumed properly and emails/phones are returned instead of `email_not_unlocked`
+
+**Key Files Modified:**
+- `server/src/services/apollo.service.ts` - All enrichment logic updated
+
+**Testing:**
+- Ready to test with company-only CSV file
+- Should now return actual emails and phone numbers
+- No more `email_not_unlocked` errors for valid data

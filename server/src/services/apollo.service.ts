@@ -18,6 +18,7 @@ export interface ApolloPerson {
     id: string;
     name: string;
     website_url?: string;
+    primary_domain?: string;
     industry?: string;
     annual_revenue?: number;
     employee_count?: number;
@@ -35,6 +36,7 @@ export interface ApolloPerson {
   twitter_url?: string;
   github_url?: string;
   facebook_url?: string;
+  extrapolated_email_confidence?: number;
 }
 
 export interface ApolloSearchParams {
@@ -86,7 +88,8 @@ export class ApolloService {
       const response: AxiosResponse<ApolloSearchResponse> = await axios.post(
         `${this.baseUrl}/mixed_people/search`,
         {
-          ...params
+          ...params,
+          reveal_personal_emails: true  // Enable email reveal for search
         },
         {
           headers: {
@@ -113,6 +116,73 @@ export class ApolloService {
   }
 
   /**
+   * Search for people at a specific company using Apollo API
+   * Use this when you only have company information (no person names)
+   */
+  async searchPeopleAtCompany(params: {
+    organization_name?: string;
+    domain?: string;
+    person_titles?: string[];
+    per_page?: number;
+  }): Promise<ApolloPerson[]> {
+    try {
+      if (!this.apiKey) {
+        throw new Error('Apollo API key not configured');
+      }
+
+      const searchParams: any = {
+        reveal_personal_emails: true,
+        per_page: params.per_page || 10
+      };
+
+      // Add organization filters
+      if (params.organization_name) {
+        searchParams.organization_names = [params.organization_name];
+      }
+
+      if (params.domain) {
+        searchParams.q_organization_domains = params.domain;
+      }
+
+      if (params.person_titles && params.person_titles.length > 0) {
+        searchParams.person_titles = params.person_titles;
+      }
+
+      logger.info('Searching for people at company', {
+        organization: params.organization_name,
+        domain: params.domain,
+        searchParams
+      });
+
+      const response: AxiosResponse<ApolloSearchResponse> = await axios.post(
+        `${this.baseUrl}/mixed_people/search`,
+        searchParams,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': this.apiKey,
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
+
+      logger.info('Apollo company search completed', {
+        resultsCount: response.data.people.length,
+        organization: params.organization_name,
+        emailsFound: response.data.people.filter(p => p.email && p.email !== 'email_not_unlocked').length
+      });
+
+      return response.data.people || [];
+    } catch (error: any) {
+      logger.error('Apollo company search failed', {
+        error: error.message,
+        params
+      });
+      throw new Error(`Apollo company search failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Enrich a single person's data with email reveal
    */
   async enrichPerson(params: {
@@ -124,24 +194,61 @@ export class ApolloService {
     domain?: string;
   }): Promise<ApolloPerson | null> {
     try {
-      // First try the people/match endpoint for email reveals
-      if (params.first_name && params.last_name) {
+      const hasPersonData = params.first_name || params.last_name || params.email;
+      const hasCompanyData = params.organization_name || params.domain;
+
+      // CASE 1: We have person identifiers (name or email) - use people/match
+      if (hasPersonData) {
+        logger.info('Using people/match endpoint - has person data', {
+          first_name: params.first_name,
+          last_name: params.last_name,
+          email: params.email
+        });
+
         const matchResult = await this.matchPersonWithEmailReveal(params);
         if (matchResult) {
+          logger.info('Apollo enrichment successful via people/match', {
+            name: matchResult.name,
+            email: matchResult.email,
+            hasEmail: !!matchResult.email,
+            emailUnlocked: matchResult.email !== 'email_not_unlocked'
+          });
           return matchResult;
         }
       }
 
-      // Fallback to search if match fails
-      const searchResults = await this.searchPeople({
-        ...params,
-        per_page: 1
-      });
+      // CASE 2: We only have company data (no person identifiers) - use search
+      if (!hasPersonData && hasCompanyData) {
+        logger.info('Using search endpoint - company-only data', {
+          organization_name: params.organization_name,
+          domain: params.domain
+        });
 
-      if (searchResults.people.length > 0) {
-        return searchResults.people[0];
+        const searchResults = await this.searchPeopleAtCompany({
+          organization_name: params.organization_name,
+          domain: params.domain,
+          per_page: 1  // Just get the first contact
+        });
+
+        if (searchResults && searchResults.length > 0) {
+          const firstContact = searchResults[0];
+          logger.info('Apollo enrichment successful via search', {
+            name: firstContact.name,
+            email: firstContact.email,
+            hasEmail: !!firstContact.email,
+            emailUnlocked: firstContact.email !== 'email_not_unlocked',
+            company: params.organization_name
+          });
+          return firstContact;
+        }
       }
 
+      // If no match found anywhere
+      logger.warn('Apollo enrichment failed - no match found', {
+        params,
+        hasPersonData,
+        hasCompanyData
+      });
       return null;
     } catch (error: any) {
       logger.error('Apollo person enrichment failed', {
@@ -168,15 +275,28 @@ export class ApolloService {
         throw new Error('Apollo API key not configured');
       }
 
+      // Build match request with available data
+      const matchRequest: any = {
+        reveal_personal_emails: true
+      };
+
+      // Add available parameters
+      if (params.first_name) matchRequest.first_name = params.first_name;
+      if (params.last_name) matchRequest.last_name = params.last_name;
+      if (params.organization_name) matchRequest.organization_name = params.organization_name;
+      if (params.email) matchRequest.email = params.email;
+      if (params.phone) matchRequest.phone = params.phone;
+      if (params.domain) matchRequest.domain = params.domain;
+
+      // If we don't have first_name/last_name but have organization, try to find someone at that org
+      if (!params.first_name && !params.last_name && params.organization_name) {
+        matchRequest.organization_name = params.organization_name;
+        matchRequest.q_organization_domains = params.domain;
+      }
+
       const response: AxiosResponse = await axios.post(
         `${this.baseUrl}/people/match`,
-        {
-          first_name: params.first_name,
-          last_name: params.last_name,
-          organization_name: params.organization_name,
-          email: params.email,
-          reveal_personal_emails: true
-        },
+        matchRequest,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -308,11 +428,14 @@ export class ApolloService {
         return false;
       }
 
-      // First try the /me endpoint which is most reliable for validation
+      // Try a simple organizations endpoint first (more reliable than /me)
       try {
-        const meResponse = await axios.get(
-          `${this.baseUrl}/me`,
+        const orgResponse = await axios.get(
+          `${this.baseUrl}/organizations`,
           {
+            params: {
+              q_organization_domains: 'apollo.io'
+            },
             headers: {
               'Content-Type': 'application/json',
               'X-Api-Key': this.apiKey,
@@ -321,26 +444,30 @@ export class ApolloService {
           }
         );
 
-        if (meResponse.data && meResponse.status === 200) {
-          logger.info('Apollo API key validation successful via /me endpoint', {
-            user: meResponse.data.user?.email || 'Unknown',
-            plan: meResponse.data.user?.plan || 'Unknown'
+        if (orgResponse.data && orgResponse.status === 200) {
+          logger.info('Apollo API key validation successful via organizations endpoint', {
+            organizationsFound: orgResponse.data.organizations?.length || 0
           });
           return true;
         }
-      } catch (meError: any) {
-        logger.warn('Apollo /me endpoint failed, trying fallback validation', {
-          error: meError.message,
-          status: meError.response?.status
+      } catch (orgError: any) {
+        // Check if it's a 401/403 error (invalid key) vs other errors
+        if (orgError.response?.status === 401 || orgError.response?.status === 403) {
+          logger.error('Apollo API key is invalid or lacks permissions', {
+            status: orgError.response.status,
+            error: 'Invalid API key or insufficient permissions'
+          });
+          return false;
+        }
+        logger.warn('Apollo organizations endpoint failed, trying /me endpoint', {
+          error: orgError.message,
+          status: orgError.response?.status
         });
 
-        // Fallback: Try a simple search with minimal parameters
+        // Fallback to /me endpoint
         try {
-          const searchResponse = await axios.post(
-            `${this.baseUrl}/mixed_people/search`,
-            {
-              per_page: 1
-            },
+          const meResponse = await axios.get(
+            `${this.baseUrl}/me`,
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -350,16 +477,65 @@ export class ApolloService {
             }
           );
 
-          if (searchResponse.data && searchResponse.status === 200) {
-            logger.info('Apollo API key validation successful via fallback search');
+          if (meResponse.data && meResponse.status === 200) {
+            logger.info('Apollo API key validation successful via /me endpoint', {
+              user: meResponse.data.user?.email || 'Unknown',
+              plan: meResponse.data.user?.plan || 'Unknown'
+            });
             return true;
           }
-        } catch (searchError: any) {
-          logger.error('Apollo fallback validation also failed', {
-            searchError: searchError.message,
-            searchStatus: searchError.response?.status
+        } catch (meError: any) {
+          // Check if it's a 401/403 error (invalid key) vs other errors
+          if (meError.response?.status === 401 || meError.response?.status === 403) {
+            logger.error('Apollo API key is invalid or lacks permissions', {
+              status: meError.response.status,
+              error: 'Invalid API key or insufficient permissions'
+            });
+            return false;
+          }
+          logger.warn('Apollo /me endpoint also failed, trying search fallback', {
+            error: meError.message,
+            status: meError.response?.status
           });
         }
+      }
+
+      // Final fallback: Try a simple search with proper parameters
+      try {
+        const searchResponse = await axios.post(
+          `${this.baseUrl}/mixed_people/search`,
+          {
+            per_page: 1,
+            q_organization_domains: 'apollo.io'  // Search for Apollo employees as a test
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Api-Key': this.apiKey,
+              'Cache-Control': 'no-cache'
+            }
+          }
+        );
+
+        if (searchResponse.data && searchResponse.status === 200) {
+          logger.info('Apollo API key validation successful via fallback search', {
+            resultsFound: searchResponse.data.people?.length || 0
+          });
+          return true;
+        }
+      } catch (searchError: any) {
+        // Check if it's a 401/403 error (invalid key) vs other errors
+        if (searchError.response?.status === 401 || searchError.response?.status === 403) {
+          logger.error('Apollo API key is invalid or lacks permissions', {
+            status: searchError.response.status,
+            error: 'Invalid API key or insufficient permissions'
+          });
+          return false;
+        }
+        logger.error('Apollo fallback validation also failed', {
+          searchError: searchError.message,
+          searchStatus: searchError.response?.status
+        });
       }
       
       return false;
