@@ -23,7 +23,7 @@ import OAuthCallback from './pages/OAuthCallback';
 import VoiceCalls from './pages/VoiceCalls';
 import Investors from './pages/Investors';
 import Brokers from './pages/Brokers';
-import Scraping from './pages/Scraping';
+import DataEnrichment from './pages/DataEnrichment';
 
 function App() {
   return (
@@ -72,7 +72,7 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="voice-calls" element={<VoiceCalls />} />
-              <Route path="scraping" element={<Scraping />} />
+              <Route path="data-enrichment" element={<DataEnrichment />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/outreach/deals" />} />

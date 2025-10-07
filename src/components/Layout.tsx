@@ -53,7 +53,8 @@ import {
   FollowTheSigns as FollowUpIcon,
   Analytics as AnalyticsIcon,
   Assessment as ReportIcon,
-  Phone as PhoneIcon
+  Phone as PhoneIcon,
+  DataUsage as DataEnrichmentIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -106,7 +107,7 @@ const navigationItems = [
   {
     text: 'Scraping',
     icon: <AnalyticsIcon />,
-    path: '/scraping'
+    path: '/data-enrichment'
   }
 ];
 
