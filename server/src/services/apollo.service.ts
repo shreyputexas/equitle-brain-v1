@@ -419,7 +419,90 @@ export class ApolloService {
   }
 
   /**
-   * Check API key validity
+   * Enrich organization data using Apollo Organization Enrichment API
+   */
+  async enrichOrganization(domain: string): Promise<{
+    success: boolean;
+    organization?: any;
+    error?: string;
+  }> {
+    try {
+      if (!this.apiKey) {
+        throw new Error('Apollo API key not configured');
+      }
+
+      logger.info('Apollo: Enriching organization', { domain });
+
+      const response = await axios.post(
+        `${this.baseUrl}/organizations/enrich`,
+        {
+          domain: domain
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': this.apiKey,
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
+
+      if (response.data && response.data.organization) {
+        const org = response.data.organization;
+        
+        logger.info('Apollo: Organization enrichment successful', {
+          domain,
+          name: org.name,
+          website: org.website_url,
+          industry: org.industry,
+          employeeCount: org.estimated_num_employees
+        });
+
+        return {
+          success: true,
+          organization: {
+            name: org.name,
+            domain: org.website_url || domain,
+            website: org.website_url,
+            industry: org.industry,
+            estimated_num_employees: org.estimated_num_employees,
+            short_description: org.short_description,
+            headquarters_address_line_1: org.headquarters_address_line_1,
+            phone: org.phone,
+            email: org.email,
+            linkedin_url: org.linkedin_url,
+            twitter_url: org.twitter_url,
+            facebook_url: org.facebook_url,
+            annual_revenue: org.annual_revenue,
+            founded_year: org.founded_year,
+            technologies: org.technologies,
+            keywords: org.keywords,
+            account_id: org.account_id,
+            account: org.account
+          }
+        };
+      }
+
+      return {
+        success: false,
+        error: 'No organization data found'
+      };
+    } catch (error: any) {
+      logger.error('Apollo: Organization enrichment failed', {
+        domain,
+        error: error.message,
+        status: error.response?.status
+      });
+
+      return {
+        success: false,
+        error: error.message || 'Apollo API error'
+      };
+    }
+  }
+
+  /**
+   * Check API key validity - Simple validation
    */
   async validateApiKey(): Promise<boolean> {
     try {
@@ -428,156 +511,34 @@ export class ApolloService {
         return false;
       }
 
-      // Try a simple organizations endpoint first (more reliable than /me)
-      try {
-        const orgResponse = await axios.get(
-          `${this.baseUrl}/organizations`,
-          {
-            params: {
-              q_organization_domains: 'apollo.io'
-            },
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Api-Key': this.apiKey,
-              'Cache-Control': 'no-cache'
-            }
-          }
-        );
+      logger.info('Validating Apollo API key');
 
-        if (orgResponse.data && orgResponse.status === 200) {
-          logger.info('Apollo API key validation successful via organizations endpoint', {
-            organizationsFound: orgResponse.data.organizations?.length || 0
-          });
-          return true;
-        }
-      } catch (orgError: any) {
-        // Check if it's a 401/403 error (invalid key) vs other errors
-        if (orgError.response?.status === 401 || orgError.response?.status === 403) {
-          logger.error('Apollo API key is invalid or lacks permissions', {
-            status: orgError.response.status,
-            error: 'Invalid API key or insufficient permissions'
-          });
-          return false;
-        }
-        logger.warn('Apollo organizations endpoint failed, trying /me endpoint', {
-          error: orgError.message,
-          status: orgError.response?.status
-        });
-
-        // Fallback to /me endpoint
-        try {
-          const meResponse = await axios.get(
-            `${this.baseUrl}/me`,
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Api-Key': this.apiKey,
-                'Cache-Control': 'no-cache'
-              }
-            }
-          );
-
-          if (meResponse.data && meResponse.status === 200) {
-            logger.info('Apollo API key validation successful via /me endpoint', {
-              user: meResponse.data.user?.email || 'Unknown',
-              plan: meResponse.data.user?.plan || 'Unknown'
-            });
-            return true;
-          }
-        } catch (meError: any) {
-          // Check if it's a 401/403 error (invalid key) vs other errors
-          if (meError.response?.status === 401 || meError.response?.status === 403) {
-            logger.error('Apollo API key is invalid or lacks permissions', {
-              status: meError.response.status,
-              error: 'Invalid API key or insufficient permissions'
-            });
-            return false;
-          }
-          logger.warn('Apollo /me endpoint also failed, trying search fallback', {
-            error: meError.message,
-            status: meError.response?.status
-          });
-        }
-      }
-
-      // Final fallback: Try a simple search with proper parameters
-      try {
-        const searchResponse = await axios.post(
-          `${this.baseUrl}/mixed_people/search`,
-          {
-            per_page: 1,
-            q_organization_domains: 'apollo.io'  // Search for Apollo employees as a test
+      // Make a minimal test request
+      const response = await axios.post(
+        `${this.baseUrl}/mixed_people/search`,
+        { per_page: 1 },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': this.apiKey
           },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Api-Key': this.apiKey,
-              'Cache-Control': 'no-cache'
-            }
-          }
-        );
+          timeout: 10000
+        }
+      );
 
-        if (searchResponse.data && searchResponse.status === 200) {
-          logger.info('Apollo API key validation successful via fallback search', {
-            resultsFound: searchResponse.data.people?.length || 0
-          });
-          return true;
-        }
-      } catch (searchError: any) {
-        // Check if it's a 401/403 error (invalid key) vs other errors
-        if (searchError.response?.status === 401 || searchError.response?.status === 403) {
-          logger.error('Apollo API key is invalid or lacks permissions', {
-            status: searchError.response.status,
-            error: 'Invalid API key or insufficient permissions'
-          });
-          return false;
-        }
-        logger.error('Apollo fallback validation also failed', {
-          searchError: searchError.message,
-          searchStatus: searchError.response?.status
-        });
+      // If we get a 200 response, the key is valid
+      if (response.status === 200) {
+        logger.info('Apollo API key validation successful');
+        return true;
       }
-      
+
+      logger.warn('Apollo API key validation failed - unexpected response');
       return false;
     } catch (error: any) {
-      // Check for specific error types
-      if (error.response?.status === 401) {
-        logger.error('Apollo API key is invalid or not activated', {
-          error: 'Invalid access credentials',
-          status: 401,
-          message: 'Please check your Apollo dashboard to activate the API key and verify permissions',
-          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
-        });
-      } else if (error.response?.status === 403) {
-        logger.error('Apollo API key lacks permissions', {
-          error: 'Forbidden',
-          status: 403,
-          message: 'API key does not have the required permissions for this operation',
-          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
-        });
-      } else if (error.response?.status === 422) {
-        logger.error('Apollo API request parameters invalid', {
-          error: 'Unprocessable Entity',
-          status: 422,
-          message: 'Request parameters are invalid or missing',
-          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
-        });
-      } else if (error.response?.status === 429) {
-        logger.error('Apollo API rate limit exceeded', {
-          error: 'Rate limit exceeded',
-          status: 429,
-          message: 'API rate limit has been exceeded. Please try again later.',
-          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
-        });
-      } else {
-        logger.error('Apollo API key validation failed', { 
-          error: error.message,
-          status: error.response?.status,
-          data: error.response?.data,
-          apiKey: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'Not provided'
-        });
-      }
-      
+      logger.error('Apollo API key validation failed', {
+        error: error.message,
+        status: error.response?.status
+      });
       return false;
     }
   }

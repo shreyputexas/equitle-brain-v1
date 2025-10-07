@@ -127,6 +127,46 @@ interface DiscoveredContact {
   email_unlocked: boolean;
 }
 
+interface EnrichedOrganization {
+  id: string;
+  original: {
+    company: string;
+    website: string;
+    industry: string;
+    location: string;
+  };
+  enriched: {
+    name: string;
+    website?: string;
+    linkedin?: string;
+    phone?: string;
+    email?: string;
+    industry?: string;
+    employeeCount?: number;
+    description?: string;
+    headquarters?: string;
+    revenue?: string;
+    foundedYear?: number;
+    socialMedia?: {
+      linkedin?: string;
+      twitter?: string;
+      facebook?: string;
+    };
+  } | null;
+  success: boolean;
+  error?: string;
+}
+
+interface OrganizationResults {
+  results: EnrichedOrganization[];
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+    successRate: number;
+  };
+}
+
 export default function DataEnrichment() {
   const [apolloApiKey, setApolloApiKey] = useState('');
   const [isValidatingKey, setIsValidatingKey] = useState(false);
@@ -168,6 +208,103 @@ export default function DataEnrichment() {
   const [discoveryResults, setDiscoveryResults] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [contactsToFind, setContactsToFind] = useState<number>(10);
+
+  // Organization enrichment state
+  const [orgSelectedFile, setOrgSelectedFile] = useState<File | null>(null);
+  const [isOrgProcessing, setIsOrgProcessing] = useState(false);
+  const [orgResults, setOrgResults] = useState<OrganizationResults | null>(null);
+  const [showOrgResults, setShowOrgResults] = useState(false);
+  const [orgFileInputRef] = useState(useRef<HTMLInputElement>(null));
+
+  // Organization enrichment handlers
+  const handleOrgFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setOrgSelectedFile(file);
+      setOrgResults(null);
+      setShowOrgResults(false);
+    }
+  };
+
+  const handleOrgFileUpload = async () => {
+    if (!orgSelectedFile) {
+      setMessage('Please select a file to upload');
+      setShowError(true);
+      return;
+    }
+
+    if (!apolloApiKey.trim()) {
+      setMessage('Please configure your Apollo API key first');
+      setShowError(true);
+      return;
+    }
+
+    setIsOrgProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', orgSelectedFile);
+      formData.append('apiKey', apolloApiKey);
+
+      const response = await fetch('http://localhost:4001/api/data-enrichment/organization-enrich', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setOrgResults(data);
+        setShowOrgResults(true);
+        setMessage(`Successfully processed ${data.summary.total} organizations with ${data.summary.successRate}% success rate`);
+        setShowSuccess(true);
+      } else {
+        setMessage(data.error || 'Failed to process file');
+        setShowError(true);
+      }
+    } catch (error) {
+      setMessage('Network error. Please try again.');
+      setShowError(true);
+    } finally {
+      setIsOrgProcessing(false);
+    }
+  };
+
+  const handleOrgDownloadResults = () => {
+    if (!orgResults) return;
+
+    const csvData = orgResults.results.map(org => ({
+      'Original Company': org.original.company,
+      'Original Website': org.original.website,
+      'Enriched Name': org.enriched?.name || '',
+      'Enriched Website': org.enriched?.website || '',
+      'LinkedIn': org.enriched?.linkedin || '',
+      'Phone': org.enriched?.phone || '',
+      'Email': org.enriched?.email || '',
+      'Industry': org.enriched?.industry || '',
+      'Employee Count': org.enriched?.employeeCount || '',
+      'Description': org.enriched?.description || '',
+      'Headquarters': org.enriched?.headquarters || '',
+      'Revenue': org.enriched?.revenue || '',
+      'Founded Year': org.enriched?.foundedYear || '',
+      'Status': org.success ? 'Success' : 'Failed',
+      'Error': org.error || ''
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `organization_enrichment_results_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
   const handleContactSearch = async () => {
     if (!thesisCriteria.industries.trim() && !thesisCriteria.subindustries.trim()) {
@@ -329,8 +466,13 @@ export default function DataEnrichment() {
     }
 
     setIsValidatingKey(true);
+    console.log('Starting API key validation...');
+
     try {
-      const response = await fetch('http://localhost:4001/api/data-enrichment/validate-key', {
+      const url = 'http://localhost:4001/api/data-enrichment/validate-key';
+      console.log('Sending request to:', url);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -338,21 +480,34 @@ export default function DataEnrichment() {
         body: JSON.stringify({ apiKey: apolloApiKey })
       });
 
+      console.log('Response received:', response.status, response.statusText);
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
-      
+      console.log('Response data:', data);
+
       if (data.success && data.valid) {
         setIsKeyValid(true);
-        setMessage('Apollo API key is valid!');
+        setMessage('✅ Apollo API key is valid and ready to use!');
         setShowSuccess(true);
         setShowApiKeyDialog(false);
       } else {
         setIsKeyValid(false);
-        setMessage('Apollo API key validation failed. This usually means: 1) The key is not activated in your Apollo dashboard, 2) The key lacks the required permissions, or 3) Your account doesn\'t have API access enabled. Please check your Apollo dashboard.');
+        setMessage('❌ Invalid API key. Please check: 1) Key is activated in Apollo dashboard, 2) You have API access enabled, 3) Key has correct permissions.');
         setShowError(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       setIsKeyValid(false);
-      setMessage('Failed to validate API key. Please try again.');
+      console.error('API key validation error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+      setMessage(`❌ Failed to validate API key: ${error.message || 'Network error - check if server is running on port 4001'}`);
       setShowError(true);
     } finally {
       setIsValidatingKey(false);
@@ -524,6 +679,7 @@ export default function DataEnrichment() {
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
               <Tab label="File Enrichment" />
+              <Tab label="Organization Enrichment" />
               <Tab label="Contact Search" />
             </Tabs>
           </Box>
@@ -848,8 +1004,240 @@ export default function DataEnrichment() {
         </Grid>
       )}
 
+      {/* Organization Enrichment Tab */}
+      {activeTab === 1 && (
+        <Grid container spacing={3}>
+          {/* Upload Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Organization Enrichment
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Upload an Excel file with organization data to enrich with LinkedIn links, phone numbers, emails, and other company information using Apollo's Organization Enrichment API.
+              </Typography>
+
+              {/* File Upload Area */}
+              <Box
+                sx={{
+                  border: '2px dashed',
+                  borderColor: isDragOver ? 'primary.main' : 'grey.300',
+                  borderRadius: 2,
+                  p: 4,
+                  textAlign: 'center',
+                  bgcolor: isDragOver ? 'action.hover' : 'background.paper',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'action.hover',
+                  },
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => orgFileInputRef.current?.click()}
+              >
+                <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  {orgSelectedFile ? orgSelectedFile.name : 'Drop your Excel file here or click to browse'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Supports .xlsx, .xls, and .csv files
+                </Typography>
+                <input
+                  ref={orgFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleOrgFileSelect}
+                  style={{ display: 'none' }}
+                />
+              </Box>
+
+              {/* File Info */}
+              {orgSelectedFile && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CheckCircleIcon sx={{ color: 'success.main' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      File selected: {orgSelectedFile.name}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Size: {(orgSelectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Upload Button */}
+              <Button
+                variant="contained"
+                onClick={handleOrgFileUpload}
+                disabled={!orgSelectedFile || isOrgProcessing}
+                startIcon={isOrgProcessing ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                sx={{ mt: 3, width: '100%' }}
+              >
+                {isOrgProcessing ? 'Processing...' : 'Enrich Organizations'}
+              </Button>
+
+              {/* Progress Bar */}
+              {isOrgProcessing && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Enriching organization data... This may take a few minutes.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Results Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Enrichment Results
+                </Typography>
+                {orgResults && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleOrgDownloadResults}
+                    size="small"
+                  >
+                    Download CSV
+                  </Button>
+                )}
+              </Box>
+
+              {showOrgResults && orgResults ? (
+                <Box>
+                  {/* Summary Stats */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={6}>
+                      <Card sx={{ textAlign: 'center', bgcolor: 'primary.light' }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            {orgResults.summary.total}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Total Organizations
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Card sx={{ textAlign: 'center', bgcolor: 'success.light' }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
+                            {orgResults.summary.successRate}%
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Success Rate
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* Results Table */}
+                  <TableContainer sx={{ maxHeight: 400 }}>
+                    <Table stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Company</TableCell>
+                          <TableCell>Website</TableCell>
+                          <TableCell>LinkedIn</TableCell>
+                          <TableCell>Phone</TableCell>
+                          <TableCell>Status</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {orgResults.results.slice(0, 10).map((org, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Box>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {org.enriched?.name || org.original.company}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {org.original.company}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {org.enriched?.website ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <BusinessIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                                  <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {org.enriched.website}
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No website
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {org.enriched?.linkedin ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <LinkedInIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                                  <Typography variant="body2">LinkedIn</Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No LinkedIn
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {org.enriched?.phone ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <PhoneIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                                  <Typography variant="body2">{org.enriched.phone}</Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No phone
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={org.success ? 'Success' : 'Failed'}
+                                color={org.success ? 'success' : 'error'}
+                                size="small"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {orgResults.results.length > 10 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                      Showing first 10 results. Download CSV for complete data.
+                    </Typography>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    Upload an Excel file to start enriching organization data
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+
           {/* Contact Search Tab */}
-          {activeTab === 1 && (
+          {activeTab === 2 && (
         <Grid container spacing={3}>
           {/* Thesis Criteria Form */}
           <Grid item xs={12} md={6}>
@@ -1140,27 +1528,18 @@ export default function DataEnrichment() {
             Your API key is stored locally and only used for this session. It's not saved to our servers.
           </Alert>
 
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              API Key Validation Issues?
+              How to get your Apollo API key:
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              1. Log into Apollo.io → Settings → API Keys
+              1. Go to Apollo.io → Settings → API Keys
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              2. Click "Activate" on your API key if it's not already active
+              2. Click "Activate" on your API key
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              3. Ensure your $99/month plan includes API access
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              4. Check that you have remaining API credits
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              5. Verify the key has "People Search" and "Organization Lookup" permissions
-            </Typography>
-            <Typography variant="body2">
-              6. Contact Apollo support if the issue persists
+              3. Make sure you have API access enabled on your plan
             </Typography>
           </Alert>
         </DialogContent>

@@ -80,10 +80,13 @@ router.post('/validate-key', async (req, res) => {
       });
     }
   } catch (error: any) {
-    logger.error('Apollo API key validation error', error);
+    logger.error('Apollo API key validation error', {
+      error: error.message,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
-      error: 'Failed to validate API key'
+      error: 'Failed to validate API key: ' + error.message
     });
   }
 });
@@ -1456,5 +1459,326 @@ router.post('/download-enriched', (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/data-enrichment/organization-enrich
+ * Enrich organization data from Excel file using Apollo Organization Enrichment API
+ */
+router.post('/organization-enrich', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const { apiKey } = req.body;
+    if (!apiKey) {
+      return res.status(400).json({ success: false, error: 'Apollo API key is required' });
+    }
+
+    logger.info('Starting organization enrichment process', {
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype
+    });
+
+    // Initialize Apollo service
+    const apolloService = new ApolloService(apiKey);
+
+    // Parse Excel file to extract organization data
+    const organizations = parseOrganizationExcelFile(req.file.buffer, req.file.originalname);
+    
+    if (organizations.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No valid organization data found in the uploaded file' 
+      });
+    }
+
+    logger.info('Parsed organization data', { 
+      totalOrganizations: organizations.length,
+      sample: organizations.slice(0, 3)
+    });
+
+    // Enrich organizations using Apollo
+    const enrichedResults = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (let i = 0; i < organizations.length; i++) {
+      const org = organizations[i];
+      logger.info(`Enriching organization ${i + 1}/${organizations.length}`, {
+        company: org.company,
+        domain: org.domain
+      });
+
+      try {
+        const enrichedOrg = await enrichSingleOrganization(org, apolloService);
+        enrichedResults.push(enrichedOrg);
+
+        if (enrichedOrg.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+
+        // Add delay between API calls to respect rate limits
+        if (i < organizations.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error: any) {
+        logger.error('Organization enrichment failed', {
+          company: org.company,
+          error: error.message
+        });
+
+        enrichedResults.push({
+          id: `org_${i}`,
+          original: {
+            company: org.company,
+            website: org.domain,
+            industry: org.industry || '',
+            location: org.location || ''
+          },
+          enriched: null,
+          success: false,
+          error: error.message
+        });
+        failureCount++;
+      }
+    }
+
+    const successRate = Math.round((successCount / organizations.length) * 100);
+
+    logger.info('Organization enrichment completed', {
+      total: organizations.length,
+      successful: successCount,
+      failed: failureCount,
+      successRate: `${successRate}%`
+    });
+
+    res.json({
+      success: true,
+      results: enrichedResults,
+      summary: {
+        total: organizations.length,
+        successful: successCount,
+        failed: failureCount,
+        successRate
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Organization enrichment process failed', { error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to process organization enrichment: ' + error.message 
+    });
+  }
+});
+
+/**
+ * Parse Excel file to extract organization data
+ */
+function parseOrganizationExcelFile(buffer: Buffer, filename: string): any[] {
+  if (!XLSX) {
+    throw new Error('Excel processing not available - xlsx library not installed');
+  }
+
+  try {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Convert to JSON
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    
+    if (jsonData.length < 2) {
+      throw new Error('File must contain at least a header row and one data row');
+    }
+
+    const headers = jsonData[0] as string[];
+    const dataRows = jsonData.slice(1) as any[][];
+
+    logger.info('Excel file headers', { headers });
+
+    // Map headers to expected fields
+    const fieldMapping = {
+      company: ['company', 'organization', 'company_name', 'organization_name', 'name'],
+      domain: ['domain', 'website', 'url', 'company_website', 'website_url'],
+      industry: ['industry', 'sector', 'business_type'],
+      location: ['location', 'city', 'address', 'headquarters']
+    };
+
+    const mappedHeaders: { [key: string]: number } = {};
+    
+    // Find matching columns
+    Object.entries(fieldMapping).forEach(([field, possibleNames]) => {
+      const headerIndex = headers.findIndex(header => 
+        possibleNames.some(name => 
+          header && header.toLowerCase().includes(name.toLowerCase())
+        )
+      );
+      if (headerIndex !== -1) {
+        mappedHeaders[field] = headerIndex;
+      }
+    });
+
+    logger.info('Mapped headers', { mappedHeaders });
+
+    // Extract organization data
+    const organizations = dataRows
+      .filter(row => row && row.length > 0 && row.some(cell => cell && cell.toString().trim()))
+      .map((row, index) => {
+        const org: any = {
+          company: '',
+          domain: '',
+          industry: '',
+          location: '',
+          originalRow: row
+        };
+
+        Object.entries(mappedHeaders).forEach(([field, columnIndex]) => {
+          if (columnIndex !== undefined && row[columnIndex]) {
+            org[field] = row[columnIndex].toString().trim();
+          }
+        });
+
+        return org;
+      })
+      .filter(org => org.company || org.domain); // Must have at least company name or domain
+
+    return organizations;
+  } catch (error: any) {
+    logger.error('Failed to parse Excel file', { error: error.message, filename });
+    throw new Error(`Failed to parse Excel file: ${error.message}`);
+  }
+}
+
+/**
+ * Enrich a single organization using Apollo API
+ */
+async function enrichSingleOrganization(org: any, apolloService: ApolloService): Promise<any> {
+  const result = {
+    id: `org_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    original: {
+      company: org.company,
+      website: org.domain,
+      industry: org.industry || '',
+      location: org.location || ''
+    },
+    enriched: null as any,
+    success: false,
+    error: undefined as string | undefined
+  };
+
+  try {
+    // Determine domain to use for enrichment
+    let domain = org.domain || org.website;
+    
+    if (!domain && org.company) {
+      // Try to extract domain from company name
+      domain = extractDomainFromCompany(org.company);
+    }
+
+    if (!domain) {
+      throw new Error('No domain or company name available for enrichment');
+    }
+
+    // Clean domain
+    domain = cleanDomain(domain);
+
+    logger.info('Enriching organization with domain', {
+      originalCompany: org.company,
+      domain: domain
+    });
+
+    // Use Apollo Organization Enrichment API
+    const enrichmentResult = await apolloService.enrichOrganization(domain);
+
+    if (enrichmentResult.success && enrichmentResult.organization) {
+      const orgData = enrichmentResult.organization;
+      
+      result.enriched = {
+        name: orgData.name || org.company,
+        website: orgData.website || orgData.domain || domain,
+        linkedin: orgData.linkedin_url || '',
+        phone: orgData.phone || '',
+        email: orgData.email || '',
+        industry: orgData.industry || org.industry || '',
+        employeeCount: orgData.estimated_num_employees || undefined,
+        description: orgData.short_description || '',
+        headquarters: orgData.headquarters_address_line_1 || org.location || '',
+        revenue: orgData.annual_revenue || undefined,
+        foundedYear: orgData.founded_year || undefined,
+        socialMedia: {
+          linkedin: orgData.linkedin_url || '',
+          twitter: orgData.twitter_url || '',
+          facebook: orgData.facebook_url || ''
+        }
+      };
+
+      result.success = true;
+
+      logger.info('Organization enrichment successful', {
+        company: org.company,
+        domain: domain,
+        foundData: Object.keys(result.enriched).filter(key => result.enriched[key])
+      });
+    } else {
+      result.error = enrichmentResult.error || 'No organization data found';
+      logger.warn('Organization enrichment failed', {
+        company: org.company,
+        domain: domain,
+        error: result.error
+      });
+    }
+
+    return result;
+  } catch (error: any) {
+    result.error = error.message;
+    logger.error('Organization enrichment error', {
+      company: org.company,
+      error: error.message
+    });
+    return result;
+  }
+}
+
+/**
+ * Extract domain from company name (basic implementation)
+ */
+function extractDomainFromCompany(companyName: string): string {
+  // Simple domain extraction - in practice, you might want to use a more sophisticated approach
+  const cleanName = companyName.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/inc|llc|corp|corporation|ltd|limited|company|co$/g, '');
+  
+  return `${cleanName}.com`;
+}
+
+/**
+ * Clean domain string
+ */
+function cleanDomain(domain: string): string {
+  try {
+    // Remove protocol
+    let cleanDomain = domain.replace(/^https?:\/\//, '');
+    
+    // Remove www
+    cleanDomain = cleanDomain.replace(/^www\./, '');
+    
+    // Remove path and query parameters
+    cleanDomain = cleanDomain.split('/')[0].split('?')[0];
+    
+    // Remove port
+    cleanDomain = cleanDomain.split(':')[0];
+    
+    return cleanDomain.toLowerCase().trim();
+  } catch (error) {
+    logger.warn('Domain cleaning failed, using original', { domain });
+    return domain;
+  }
+}
 
 export default router;
