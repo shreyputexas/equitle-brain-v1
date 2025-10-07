@@ -1022,13 +1022,27 @@ router.get('/load-thesis/:userId', async (req, res) => {
 // Contact search endpoint
 router.post('/search-contacts', async (req, res) => {
   try {
-    const { thesisCriteria, apolloApiKey, contactsToFind = 10 } = req.body;
+    console.log('Search-contacts endpoint called with body:', JSON.stringify(req.body, null, 2));
+    const { contactType, thesisCriteria, brokerCriteria, investorCriteria, searchQuery, contactsToFind, apolloApiKey } = req.body;
 
-    if (!thesisCriteria) {
-      return res.status(400).json({
-        success: false,
-        error: 'Thesis criteria is required'
-      });
+    // Validate criteria based on contact type
+    if (contactType === 'people') {
+      if (!thesisCriteria || (!thesisCriteria.industries && !thesisCriteria.subindustries)) {
+        return res.status(400).json({
+          success: false,
+          error: 'At least Industries or Subindustries must be provided for people search'
+        });
+      }
+    } else if (contactType === 'brokers') {
+      // Allow empty search query for brokers - we'll search for all brokers
+      // if (!searchQuery || !searchQuery.trim()) {
+      //   return res.status(400).json({
+      //     success: false,
+      //     error: 'Please describe what kind of brokers you are looking for'
+      //   });
+      // }
+    } else if (contactType === 'investors') {
+      // No validation needed for investors - structured form ensures valid data
     }
 
     if (!apolloApiKey) {
@@ -1051,52 +1065,112 @@ router.post('/search-contacts', async (req, res) => {
     }
 
     logger.info('Starting contact search', {
-      thesisCriteria,
-      criteriaCount: Object.keys(thesisCriteria).length,
-      contactsToFind
+      contactType,
+      contactsToFind,
+      apiKeyPrefix: apolloApiKey.substring(0, 8) + '...'
     });
 
-    // Build simple search parameters - just search for contacts in the specified industry
-    const searchParams: any = {
-      per_page: Math.min(contactsToFind, 50),
+    let searchParams: any = {
+      per_page: Math.min(contactsToFind || 10, 50), // Limit to 50 max
+      page: 1,
       reveal_personal_emails: true
     };
 
-    // Simple industry-based search
-    if (thesisCriteria.industries) {
-      // Search for people with titles related to the industry
+    let searchResults: any[] = [];
+
+    // Handle different contact types
+    if (contactType === 'people') {
+      // People at companies search
+      if (thesisCriteria.industries) {
+        searchParams.person_titles = [
+          'CEO', 'CTO', 'VP', 'Director', 'Manager', 'Founder', 'President'
+        ];
+        
+        // Add industry-specific titles
+        if (thesisCriteria.industries.toLowerCase().includes('healthcare')) {
+          searchParams.person_titles.push('Chief Medical Officer', 'Medical Director', 'Healthcare Director');
+        }
+        if (thesisCriteria.industries.toLowerCase().includes('tech')) {
+          searchParams.person_titles.push('Chief Technology Officer', 'VP Engineering', 'Head of Engineering');
+        }
+      }
+
+      if (thesisCriteria.location) {
+        searchParams.organization_locations = [thesisCriteria.location];
+      }
+
+      // Add company size based on revenue/EBITDA
+      if (thesisCriteria.revenue || thesisCriteria.ebitda) {
+        searchParams.organization_num_employees_ranges = ['51,100', '101,200', '201,500', '501,1000'];
+      }
+
+      const results = await apolloService.searchPeople(searchParams);
+      searchResults = results.people || [];
+
+    } else if (contactType === 'brokers') {
+      // Brokers search - use structured criteria
       searchParams.person_titles = [
-        'CEO', 'CTO', 'VP', 'Director', 'Manager', 'Founder', 'President'
+        'Investment Banker', 'M&A Advisor', 'Deal Maker', 'Transaction Advisor',
+        'Investment Banking', 'Corporate Finance', 'Business Broker', 'Broker',
+        'M&A', 'Mergers and Acquisitions'
       ];
       
-      // Add industry-specific titles
-      if (thesisCriteria.industries.toLowerCase().includes('healthcare')) {
-        searchParams.person_titles.push('Chief Medical Officer', 'Medical Director', 'Healthcare Director');
+      // Apply structured filters
+      if (brokerCriteria.industries) {
+        searchParams.organization_industry = [brokerCriteria.industries];
       }
-      if (thesisCriteria.industries.toLowerCase().includes('tech')) {
-        searchParams.person_titles.push('Chief Technology Officer', 'VP Engineering', 'Head of Engineering');
+      if (brokerCriteria.location) {
+        searchParams.organization_locations = [brokerCriteria.location];
       }
+      if (brokerCriteria.dealSize) {
+        // Map deal size to employee ranges
+        const dealSizeMap = {
+          '1M-10M': ['51,100', '101,200'],
+          '10M-50M': ['201,500', '501,1000'],
+          '50M-100M': ['501,1000', '1001,5000'],
+          '100M-500M': ['1001,5000', '5001,10000'],
+          '500M+': ['5001,10000', '10001,50000']
+        };
+        if (dealSizeMap[brokerCriteria.dealSize]) {
+          searchParams.organization_num_employees_ranges = dealSizeMap[brokerCriteria.dealSize];
+        }
+      }
+      if (brokerCriteria.keywords) {
+        searchParams.q_keywords = brokerCriteria.keywords;
+      }
+
+      logger.info('Broker search parameters', { searchParams, brokerCriteria });
+
+      const results = await apolloService.searchPeople(searchParams);
+      searchResults = results.people || [];
+
+    } else if (contactType === 'investors') {
+      // Investors search - use structured criteria
+      searchParams.person_titles = [
+        'Partner', 'Principal', 'Managing Director', 'Investment Partner',
+        'Venture Partner', 'Angel Investor', 'Fund Manager', 'Investment Director',
+        'Investor', 'VC', 'Venture Capital', 'Private Equity'
+      ];
+      
+      // Apply structured filters
+      if (investorCriteria.industries) {
+        searchParams.organization_industry = [investorCriteria.industries];
+      }
+      if (investorCriteria.location) {
+        searchParams.organization_locations = [investorCriteria.location];
+      }
+      if (investorCriteria.keywords) {
+        searchParams.q_keywords = investorCriteria.keywords;
+      }
+
+      logger.info('Investor search parameters', { searchParams, investorCriteria });
+
+      const results = await apolloService.searchPeople(searchParams);
+      searchResults = results.people || [];
     }
 
-    // Add location if specified
-    if (thesisCriteria.location) {
-      searchParams.organization_locations = [thesisCriteria.location];
-    }
-
-    // Add company size based on revenue/EBITDA
-    if (thesisCriteria.revenue || thesisCriteria.ebitda) {
-      searchParams.organization_num_employees_ranges = ['51,100', '101,200', '201,500', '501,1000'];
-    }
-
-    logger.info('Apollo search parameters for thesis', {
-      searchParams,
-      thesisCriteria
-    });
-
-    // Search for contacts using Apollo
-    const searchResults = await apolloService.searchPeople(searchParams);
-
-    if (!searchResults.people || searchResults.people.length === 0) {
+    if (!searchResults || searchResults.length === 0) {
+      logger.warn('No contacts found matching criteria');
       return res.json({
         success: true,
         contacts: [],
@@ -1105,12 +1179,12 @@ router.post('/search-contacts', async (req, res) => {
           found: 0,
           successRate: 0
         },
-        message: 'No contacts found matching thesis criteria'
+        message: `No ${contactType} found matching criteria`
       });
     }
 
     // Process and format the results
-    const discoveredContacts = searchResults.people.map((person, index) => ({
+    const discoveredContacts = searchResults.map((person, index) => ({
       id: person.id,
       name: person.name,
       first_name: person.first_name,
@@ -1127,7 +1201,8 @@ router.post('/search-contacts', async (req, res) => {
       match_quality: 'thesis_match',
       apollo_confidence: person.extrapolated_email_confidence || 0,
       email_status: person.email === 'email_not_unlocked' ? 'not_unlocked' : 'available',
-      email_unlocked: person.email !== 'email_not_unlocked'
+      email_unlocked: person.email !== 'email_not_unlocked',
+      contactType: contactType // Add contact type for identification
     }));
 
     // Filter out contacts with locked emails if needed
@@ -1136,7 +1211,8 @@ router.post('/search-contacts', async (req, res) => {
     );
 
     logger.info('Contact search completed', {
-      totalFound: searchResults.people.length,
+      contactType,
+      totalFound: searchResults.length,
       usefulContacts: usefulContacts.length,
       emailsUnlocked: usefulContacts.filter(c => c.email_unlocked).length
     });
@@ -1145,9 +1221,9 @@ router.post('/search-contacts', async (req, res) => {
       success: true,
       contacts: usefulContacts,
       summary: {
-        total: searchResults.people.length,
+        total: searchResults.length,
         found: usefulContacts.length,
-        successRate: Math.round((usefulContacts.length / searchResults.people.length) * 100)
+        successRate: Math.round((usefulContacts.length / searchResults.length) * 100)
       },
       thesisCriteria,
       searchParams
@@ -1778,6 +1854,504 @@ function cleanDomain(domain: string): string {
   } catch (error) {
     logger.warn('Domain cleaning failed, using original', { domain });
     return domain;
+  }
+}
+
+/**
+ * POST /api/data-enrichment/contact-enrich
+ * Enrich contact data from Excel file using Apollo People Enrichment API
+ */
+router.post('/contact-enrich', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const { apiKey } = req.body;
+    if (!apiKey) {
+      return res.status(400).json({ success: false, error: 'Apollo API key is required' });
+    }
+
+    logger.info('Starting contact enrichment process', {
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype
+    });
+
+    // Initialize Apollo service
+    const apolloService = new ApolloService(apiKey);
+
+    // Parse Excel file to extract contact data
+    const contacts = parseContactExcelFile(req.file.buffer, req.file.originalname);
+    
+    if (contacts.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'No valid contact data found in the uploaded file' 
+      });
+    }
+
+    logger.info('Parsed contact data', { 
+      totalContacts: contacts.length,
+      sample: contacts.slice(0, 3)
+    });
+
+    // Enrich contacts using Apollo
+    const enrichedResults = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      logger.info(`Enriching contact ${i + 1}/${contacts.length}`, {
+        name: `${contact.firstName} ${contact.lastName}`,
+        company: contact.company
+      });
+
+      try {
+        const enrichedContact = await enrichSingleContact(contact, apolloService);
+        enrichedResults.push(enrichedContact);
+
+        if (enrichedContact.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+
+        // Add delay between API calls to respect rate limits
+        if (i < contacts.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error: any) {
+        logger.error('Contact enrichment failed', {
+          name: `${contact.firstName} ${contact.lastName}`,
+          error: error.message
+        });
+
+        enrichedResults.push({
+          id: `contact_${i}`,
+          original: {
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            email: contact.email,
+            company: contact.company,
+            title: contact.title,
+            phone: contact.phone
+          },
+          enriched: null,
+          success: false,
+          error: error.message
+        });
+        failureCount++;
+      }
+    }
+
+    const successRate = Math.round((successCount / contacts.length) * 100);
+
+    logger.info('Contact enrichment completed', {
+      total: contacts.length,
+      successful: successCount,
+      failed: failureCount,
+      successRate: `${successRate}%`
+    });
+
+    res.json({
+      success: true,
+      results: enrichedResults,
+      summary: {
+        total: contacts.length,
+        successful: successCount,
+        failed: failureCount,
+        successRate
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Contact enrichment process failed', { error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to process contact enrichment: ' + error.message 
+    });
+  }
+});
+
+/**
+ * Parse Excel file to extract contact data
+ */
+function parseContactExcelFile(buffer: Buffer, filename: string): any[] {
+  if (!XLSX) {
+    throw new Error('Excel processing not available - xlsx library not installed');
+  }
+
+  try {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Convert to JSON
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    
+    if (jsonData.length < 2) {
+      throw new Error('File must contain at least a header row and one data row');
+    }
+
+    const headers = jsonData[0] as string[];
+    const dataRows = jsonData.slice(1) as any[][];
+
+    logger.info('Excel file headers', { headers });
+
+    // Map headers to expected fields
+    const fieldMapping = {
+      firstName: ['first_name', 'firstname', 'first name', 'given_name', 'given name'],
+      lastName: ['last_name', 'lastname', 'last name', 'surname', 'family_name', 'family name'],
+      email: ['email', 'email_address', 'email address', 'e_mail'],
+      company: ['company', 'organization', 'company_name', 'organization_name', 'employer'],
+      title: ['title', 'job_title', 'job title', 'position', 'role'],
+      phone: ['phone', 'phone_number', 'phone number', 'telephone', 'mobile', 'cell']
+    };
+
+    const mappedHeaders: { [key: string]: number } = {};
+    
+    // Find matching columns
+    Object.entries(fieldMapping).forEach(([field, possibleNames]) => {
+      const headerIndex = headers.findIndex(header => 
+        possibleNames.some(name => 
+          header && header.toLowerCase().includes(name.toLowerCase())
+        )
+      );
+      if (headerIndex !== -1) {
+        mappedHeaders[field] = headerIndex;
+      }
+    });
+
+    logger.info('Mapped headers', { mappedHeaders });
+
+    // Extract contact data
+    const contacts = dataRows
+      .filter(row => row && row.length > 0 && row.some(cell => cell && cell.toString().trim()))
+      .map((row, index) => {
+        const contact: any = {
+          firstName: '',
+          lastName: '',
+          email: '',
+          company: '',
+          title: '',
+          phone: '',
+          originalRow: row
+        };
+
+        Object.entries(mappedHeaders).forEach(([field, columnIndex]) => {
+          if (columnIndex !== undefined && row[columnIndex]) {
+            contact[field] = row[columnIndex].toString().trim();
+          }
+        });
+
+        return contact;
+      })
+      .filter(contact => contact.firstName || contact.lastName || contact.email); // Must have at least name or email
+
+    return contacts;
+  } catch (error: any) {
+    logger.error('Failed to parse Excel file', { error: error.message, filename });
+    throw new Error(`Failed to parse Excel file: ${error.message}`);
+  }
+}
+
+/**
+ * Enrich a single contact using Apollo People Enrichment API
+ */
+async function enrichSingleContact(contact: any, apolloService: ApolloService): Promise<any> {
+  const result = {
+    id: `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    original: {
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      company: contact.company,
+      title: contact.title,
+      phone: contact.phone
+    },
+    enriched: null as any,
+    success: false,
+    error: undefined as string | undefined
+  };
+
+  try {
+    // Use Apollo People Enrichment API
+    const enrichmentResult = await apolloService.enrichPerson({
+      first_name: contact.firstName,
+      last_name: contact.lastName,
+      email: contact.email,
+      organization_name: contact.company,
+      phone: contact.phone
+    });
+
+    if (enrichmentResult) {
+      result.enriched = {
+        name: enrichmentResult.name || `${contact.firstName} ${contact.lastName}`,
+        email: enrichmentResult.email || contact.email,
+        phone: enrichmentResult.phone_numbers?.[0]?.sanitized_number || contact.phone,
+        title: enrichmentResult.title || contact.title,
+        company: enrichmentResult.organization?.name || contact.company,
+        linkedin: enrichmentResult.linkedin_url || '',
+        location: enrichmentResult.city ? `${enrichmentResult.city}, ${enrichmentResult.state || ''}`.trim() : '',
+        photo: enrichmentResult.photo_url || '',
+        industry: enrichmentResult.organization?.industry || '',
+        employeeCount: enrichmentResult.organization?.employee_count || undefined,
+        companyDomain: enrichmentResult.organization?.website_url || enrichmentResult.organization?.primary_domain || '',
+        twitter: enrichmentResult.twitter_url || '',
+        github: enrichmentResult.github_url || '',
+        facebook: enrichmentResult.facebook_url || ''
+      };
+
+      result.success = true;
+
+      logger.info('Contact enrichment successful', {
+        name: `${contact.firstName} ${contact.lastName}`,
+        company: contact.company,
+        foundEmail: !!result.enriched.email,
+        foundPhone: !!result.enriched.phone,
+        foundLinkedIn: !!result.enriched.linkedin
+      });
+    } else {
+      result.error = 'No contact data found';
+      logger.warn('Contact enrichment failed - no data found', {
+        name: `${contact.firstName} ${contact.lastName}`,
+        company: contact.company
+      });
+    }
+
+    return result;
+  } catch (error: any) {
+    result.error = error.message;
+    logger.error('Contact enrichment error', {
+      name: `${contact.firstName} ${contact.lastName}`,
+      error: error.message
+    });
+    return result;
+  }
+}
+
+/**
+ * POST /api/data-enrichment/search-organizations
+ * Search for organizations using Apollo Organization Search API
+ */
+router.post('/search-organizations', async (req, res) => {
+  try {
+    const { searchCriteria, orgsToFind, apolloApiKey } = req.body;
+
+    if (!apolloApiKey) {
+      return res.status(400).json({ success: false, error: 'Apollo API key is required' });
+    }
+
+    if (!searchCriteria.industries && !searchCriteria.subindustries) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'At least Industries or Subindustries must be provided' 
+      });
+    }
+
+    logger.info('Starting organization search', {
+      searchCriteria,
+      orgsToFind,
+      apiKeyPrefix: apolloApiKey.substring(0, 8) + '...'
+    });
+
+    // Initialize Apollo service
+    const apolloService = new ApolloService(apolloApiKey);
+
+    // Build search parameters for Apollo Organization Search API
+    const searchParams: any = {
+      per_page: Math.min(orgsToFind || 10, 100), // Limit to 100 max
+      page: 1
+    };
+
+    // Add industry filters
+    if (searchCriteria.industries) {
+      searchParams.organization_industry_tag_ids = searchCriteria.industries.split(',').map((s: string) => s.trim());
+    }
+
+    // Add location filters
+    if (searchCriteria.location) {
+      searchParams.organization_locations = searchCriteria.location.split(',').map((s: string) => s.trim());
+    }
+
+    // Add keyword search
+    if (searchCriteria.keywords) {
+      searchParams.q_keywords = searchCriteria.keywords.split(',').map((s: string) => s.trim()).join(' ');
+    }
+
+    // Add employee count range
+    if (searchCriteria.employeeCount) {
+      const ranges = parseRange(searchCriteria.employeeCount);
+      searchParams.organization_num_employees_ranges = ranges;
+    }
+
+    // Add founded year filter
+    if (searchCriteria.foundedYear) {
+      const years = searchCriteria.foundedYear.split('-').map((s: string) => s.trim());
+      if (years.length === 2) {
+        searchParams.organization_founded_year_min = parseInt(years[0]);
+        searchParams.organization_founded_year_max = parseInt(years[1]);
+      }
+    }
+
+    logger.info('Apollo search parameters', { searchParams });
+
+    // Search organizations using Apollo
+    const searchResults = await apolloService.searchOrganizations(searchParams);
+
+    if (!searchResults || searchResults.length === 0) {
+      logger.warn('No organizations found matching criteria');
+      return res.json({
+        success: true,
+        organizations: [],
+        summary: {
+          total: 0,
+          averageRevenue: 'N/A',
+          averageEmployeeCount: 'N/A',
+          topIndustries: []
+        }
+      });
+    }
+
+    // Process organization data directly from search results
+    const enrichedOrganizations = [];
+    let totalRevenue = 0;
+    let totalEmployees = 0;
+    let revenueCount = 0;
+    let employeeCount = 0;
+    const industryCounts: { [key: string]: number } = {};
+
+    for (const org of searchResults) {
+      const enrichedOrg = {
+        id: org.id,
+        name: org.name,
+        website: org.website_url || org.primary_domain || 'N/A',
+        industry: org.industry || 'N/A',
+        location: org.city ? `${org.city}, ${org.state || ''}`.trim() : org.state || 'N/A',
+        employeeCount: org.estimated_num_employees || org.num_employees || 'N/A',
+        revenue: org.annual_revenue ? formatRevenue(org.annual_revenue) : 'N/A',
+        foundedYear: org.founded_year || 'N/A',
+        description: org.short_description || org.description || 'N/A',
+        ceo: org.ceo_name || 'N/A',
+        phone: org.phone || 'N/A',
+        email: org.email || 'N/A',
+        linkedin: org.linkedin_url || 'N/A',
+        growth: org.estimated_annual_revenue_growth_rate || 'N/A',
+        ebitda: 'N/A', // Not typically available in search results
+        funding: org.total_funding ? formatRevenue(org.total_funding) : 'N/A',
+        lastFundingDate: org.latest_funding_round_date || 'N/A'
+      };
+
+      enrichedOrganizations.push(enrichedOrg);
+
+      // Calculate statistics
+      if (org.annual_revenue && org.annual_revenue > 0) {
+        totalRevenue += org.annual_revenue;
+        revenueCount++;
+      }
+
+      if (org.estimated_num_employees && org.estimated_num_employees > 0) {
+        totalEmployees += org.estimated_num_employees;
+        employeeCount++;
+      }
+
+      if (org.industry) {
+        industryCounts[org.industry] = (industryCounts[org.industry] || 0) + 1;
+      }
+    }
+
+    // Calculate summary statistics
+    const averageRevenue = revenueCount > 0 ? formatRevenue(totalRevenue / revenueCount) : 'N/A';
+    const averageEmployeeCount = employeeCount > 0 ? Math.round(totalEmployees / employeeCount) : 'N/A';
+    const topIndustries = Object.entries(industryCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([industry, count]) => ({ industry, count }));
+
+    logger.info('Organization search completed', {
+      totalFound: enrichedOrganizations.length,
+      averageRevenue,
+      averageEmployeeCount,
+      topIndustries: topIndustries.map(ti => ti.industry)
+    });
+
+    res.json({
+      success: true,
+      organizations: enrichedOrganizations,
+      summary: {
+        total: enrichedOrganizations.length,
+        averageRevenue,
+        averageEmployeeCount,
+        topIndustries
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Organization search failed', { error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to search organizations: ' + error.message 
+    });
+  }
+});
+
+/**
+ * Parse range string like "10-100" or "100+" into Apollo format
+ */
+function parseRange(rangeStr: string): string[] {
+  if (!rangeStr) return [];
+  
+  const ranges = [];
+  const parts = rangeStr.split(',').map(s => s.trim());
+  
+  for (const part of parts) {
+    if (part.includes('-')) {
+      const [min, max] = part.split('-').map(s => s.trim());
+      ranges.push(`${min}-${max}`);
+    } else if (part.endsWith('+')) {
+      const min = part.replace('+', '').trim();
+      ranges.push(`${min}+`);
+    } else {
+      ranges.push(part);
+    }
+  }
+  
+  return ranges;
+}
+
+/**
+ * Parse revenue string like "$1M" or "$1,000,000" into number
+ */
+function parseRevenue(revenueStr: string): number {
+  if (!revenueStr || revenueStr === 'N/A') return 0;
+  
+  const cleanStr = revenueStr.replace(/[$,]/g, '').toLowerCase();
+  
+  if (cleanStr.includes('b')) {
+    return parseFloat(cleanStr.replace('b', '')) * 1000000000;
+  } else if (cleanStr.includes('m')) {
+    return parseFloat(cleanStr.replace('m', '')) * 1000000;
+  } else if (cleanStr.includes('k')) {
+    return parseFloat(cleanStr.replace('k', '')) * 1000;
+  } else {
+    return parseFloat(cleanStr) || 0;
+  }
+}
+
+/**
+ * Format revenue number back to string
+ */
+function formatRevenue(revenue: number): string {
+  if (revenue >= 1000000000) {
+    return `$${(revenue / 1000000000).toFixed(1)}B`;
+  } else if (revenue >= 1000000) {
+    return `$${(revenue / 1000000).toFixed(1)}M`;
+  } else if (revenue >= 1000) {
+    return `$${(revenue / 1000).toFixed(1)}K`;
+  } else {
+    return `$${revenue.toFixed(0)}`;
   }
 }
 

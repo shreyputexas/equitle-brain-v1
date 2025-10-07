@@ -48,6 +48,7 @@ import {
   Download as DownloadIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
+  AccountBalance as AccountBalanceIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
   Email as EmailIcon,
@@ -167,6 +168,46 @@ interface OrganizationResults {
   };
 }
 
+interface EnrichedContactData {
+  id: string;
+  original: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    company: string;
+    title: string;
+    phone: string;
+  };
+  enriched: {
+    name: string;
+    email?: string;
+    phone?: string;
+    title?: string;
+    company?: string;
+    linkedin?: string;
+    location?: string;
+    photo?: string;
+    industry?: string;
+    employeeCount?: number;
+    companyDomain?: string;
+    twitter?: string;
+    github?: string;
+    facebook?: string;
+  } | null;
+  success: boolean;
+  error?: string;
+}
+
+interface ContactResults {
+  results: EnrichedContactData[];
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+    successRate: number;
+  };
+}
+
 export default function DataEnrichment() {
   const [apolloApiKey, setApolloApiKey] = useState('');
   const [isValidatingKey, setIsValidatingKey] = useState(false);
@@ -182,8 +223,11 @@ export default function DataEnrichment() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Thesis-related state
-  const [activeTab, setActiveTab] = useState(0);
+
+  // Main tab and sub-tab state
+  const [activeMainTab, setActiveMainTab] = useState(0); // 0: Enrichment, 1: Search
+  const [activeSubTab, setActiveSubTab] = useState(0); // 0: Contact, 1: Organization
+  const [activeTab, setActiveTab] = useState(0); // Keep for backward compatibility
   const [thesisCriteria, setThesisCriteria] = useState<ThesisCriteria>(() => {
     // Load from localStorage on component mount
     const saved = localStorage.getItem('thesisCriteria');
@@ -215,6 +259,50 @@ export default function DataEnrichment() {
   const [orgResults, setOrgResults] = useState<OrganizationResults | null>(null);
   const [showOrgResults, setShowOrgResults] = useState(false);
   const [orgFileInputRef] = useState(useRef<HTMLInputElement>(null));
+
+  // Contact enrichment state
+  const [contactSelectedFile, setContactSelectedFile] = useState<File | null>(null);
+  const [isContactProcessing, setIsContactProcessing] = useState(false);
+  const [contactResults, setContactResults] = useState<ContactResults | null>(null);
+  const [showContactResults, setShowContactResults] = useState(false);
+  const [contactFileInputRef] = useState(useRef<HTMLInputElement>(null));
+
+  // Organization search state
+  const [orgSearchCriteria, setOrgSearchCriteria] = useState({
+    industries: '',
+    subindustries: '',
+    location: '',
+    revenue: '',
+    ebitda: '',
+    growth: '',
+    employeeCount: '',
+    foundedYear: '',
+    keywords: ''
+  });
+  const [isOrgSearching, setIsOrgSearching] = useState(false);
+  const [orgSearchResults, setOrgSearchResults] = useState<any>(null);
+  const [showOrgSearchResults, setShowOrgSearchResults] = useState(false);
+  const [orgsToFind, setOrgsToFind] = useState<number>(10);
+
+  // Enhanced contact search state
+  const [contactSearchType, setContactSearchType] = useState<'people' | 'brokers' | 'investors'>('people');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [brokerSearchCriteria, setBrokerSearchCriteria] = useState({
+    industries: '',
+    subindustries: '',
+    location: '',
+    experience: '',
+    dealSize: '',
+    keywords: ''
+  });
+  const [investorSearchCriteria, setInvestorSearchCriteria] = useState({
+    industries: '',
+    subindustries: '',
+    location: '',
+    investmentStage: '',
+    checkSize: '',
+    keywords: ''
+  });
 
   // Organization enrichment handlers
   const handleOrgFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,8 +394,104 @@ export default function DataEnrichment() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleContactSearch = async () => {
-    if (!thesisCriteria.industries.trim() && !thesisCriteria.subindustries.trim()) {
+  // Contact enrichment handlers
+  const handleContactFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setContactSelectedFile(file);
+      setContactResults(null);
+      setShowContactResults(false);
+    }
+  };
+
+  const handleContactFileUpload = async () => {
+    if (!contactSelectedFile) {
+      setMessage('Please select a file to upload');
+      setShowError(true);
+      return;
+    }
+
+    if (!apolloApiKey.trim()) {
+      setMessage('Please configure your Apollo API key first');
+      setShowError(true);
+      return;
+    }
+
+    setIsContactProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', contactSelectedFile);
+      formData.append('apiKey', apolloApiKey);
+
+      const response = await fetch('http://localhost:4001/api/data-enrichment/contact-enrich', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setContactResults(data);
+        setShowContactResults(true);
+        setMessage(`Successfully processed ${data.summary.total} contacts with ${data.summary.successRate}% success rate`);
+        setShowSuccess(true);
+      } else {
+        setMessage(data.error || 'Failed to process file');
+        setShowError(true);
+      }
+    } catch (error) {
+      setMessage('Network error. Please try again.');
+      setShowError(true);
+    } finally {
+      setIsContactProcessing(false);
+    }
+  };
+
+  const handleContactDownloadResults = () => {
+    if (!contactResults) return;
+
+    const csvData = contactResults.results.map(contact => ({
+      'Original First Name': contact.original.firstName,
+      'Original Last Name': contact.original.lastName,
+      'Original Email': contact.original.email,
+      'Original Company': contact.original.company,
+      'Original Title': contact.original.title,
+      'Original Phone': contact.original.phone,
+      'Enriched Name': contact.enriched?.name || '',
+      'Enriched Email': contact.enriched?.email || '',
+      'Enriched Phone': contact.enriched?.phone || '',
+      'Enriched Title': contact.enriched?.title || '',
+      'Enriched Company': contact.enriched?.company || '',
+      'LinkedIn': contact.enriched?.linkedin || '',
+      'Location': contact.enriched?.location || '',
+      'Industry': contact.enriched?.industry || '',
+      'Company Domain': contact.enriched?.companyDomain || '',
+      'Twitter': contact.enriched?.twitter || '',
+      'GitHub': contact.enriched?.github || '',
+      'Facebook': contact.enriched?.facebook || '',
+      'Status': contact.success ? 'Success' : 'Failed',
+      'Error': contact.error || ''
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contact_enrichment_results_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Organization search handler
+  const handleOrgSearch = async () => {
+    if (!orgSearchCriteria.industries.trim() && !orgSearchCriteria.subindustries.trim()) {
       setMessage('Please enter at least Industries or Subindustries');
       setShowError(true);
       return;
@@ -319,18 +503,87 @@ export default function DataEnrichment() {
       return;
     }
 
-    setIsDiscovering(true);
+    setIsOrgSearching(true);
     try {
-      const response = await fetch('http://localhost:4001/api/data-enrichment/search-contacts', {
+      const response = await fetch('http://localhost:4001/api/data-enrichment/search-organizations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          thesisCriteria,
-          contactsToFind,
+          searchCriteria: orgSearchCriteria,
+          orgsToFind,
           apolloApiKey
         })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setOrgSearchResults(data);
+        setShowOrgSearchResults(true);
+        setMessage(`Found ${data.organizations?.length || 0} organizations matching your criteria`);
+        setShowSuccess(true);
+      } else {
+        setMessage(data.error || 'Failed to search organizations');
+        setShowError(true);
+      }
+    } catch (error) {
+      setMessage('Network error. Please try again.');
+      setShowError(true);
+    } finally {
+      setIsOrgSearching(false);
+    }
+  };
+
+  const handleContactSearch = async () => {
+    if (!apolloApiKey.trim()) {
+      setMessage('Please configure your Apollo API key first');
+      setShowError(true);
+      return;
+    }
+
+    // Validate criteria based on contact type
+    if (contactSearchType === 'people') {
+      if (!thesisCriteria.industries.trim() && !thesisCriteria.subindustries.trim()) {
+        setMessage('Please enter at least Industries or Subindustries');
+        setShowError(true);
+        return;
+      }
+    } else if (contactSearchType === 'brokers') {
+      // Allow empty search query for brokers - we'll search for all brokers
+      // if (!searchQuery.trim()) {
+      //   setMessage('Please describe what kind of brokers you are looking for');
+      //   setShowError(true);
+      //   return;
+      // }
+    } else if (contactSearchType === 'investors') {
+      // No validation needed for investors - structured form ensures valid data
+    }
+
+    setIsDiscovering(true);
+    try {
+      const searchPayload: any = {
+        contactType: contactSearchType,
+        contactsToFind,
+        apolloApiKey
+      };
+
+      // Add appropriate criteria based on contact type
+      if (contactSearchType === 'people') {
+        searchPayload.thesisCriteria = thesisCriteria;
+      } else if (contactSearchType === 'brokers') {
+        searchPayload.brokerCriteria = brokerSearchCriteria;
+      } else if (contactSearchType === 'investors') {
+        searchPayload.investorCriteria = investorSearchCriteria;
+      }
+
+      const response = await fetch('http://localhost:4001/api/data-enrichment/search-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(searchPayload)
       });
 
       const data = await response.json();
@@ -488,7 +741,7 @@ export default function DataEnrichment() {
 
       const data = await response.json();
       console.log('Response data:', data);
-
+      
       if (data.success && data.valid) {
         setIsKeyValid(true);
         setMessage('✅ Apollo API key is valid and ready to use!');
@@ -675,14 +928,32 @@ export default function DataEnrichment() {
         </Box>
       </Box>
 
-          {/* Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-              <Tab label="File Enrichment" />
-              <Tab label="Organization Enrichment" />
-              <Tab label="Contact Search" />
+          {/* Main Tabs */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={activeMainTab} onChange={(e, newValue) => setActiveMainTab(newValue)}>
+              <Tab label="Enrichment" />
+              <Tab label="Search" />
             </Tabs>
           </Box>
+
+          {/* Sub Tabs */}
+          {activeMainTab === 0 && (
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+              <Tabs value={activeSubTab} onChange={(e, newValue) => setActiveSubTab(newValue)}>
+                <Tab label="Contact Enrichment" />
+                <Tab label="Organization Enrichment" />
+              </Tabs>
+            </Box>
+          )}
+
+          {activeMainTab === 1 && (
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+              <Tabs value={activeSubTab} onChange={(e, newValue) => setActiveSubTab(newValue)}>
+              <Tab label="Contact Search" />
+                <Tab label="Organization Search" />
+            </Tabs>
+          </Box>
+          )}
 
       {/* Success/Error Alerts */}
       <Snackbar
@@ -706,7 +977,7 @@ export default function DataEnrichment() {
       </Snackbar>
 
       {/* Tab Panel Content */}
-      {activeTab === 0 && (
+      {activeMainTab === 0 && activeSubTab === 0 && (
         <Grid container spacing={3}>
           {/* Upload Section */}
           <Grid item xs={12} md={6}>
@@ -1005,7 +1276,7 @@ export default function DataEnrichment() {
       )}
 
       {/* Organization Enrichment Tab */}
-      {activeTab === 1 && (
+      {activeMainTab === 0 && activeSubTab === 1 && (
         <Grid container spacing={3}>
           {/* Upload Section */}
           <Grid item xs={12} md={6}>
@@ -1205,10 +1476,10 @@ export default function DataEnrichment() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <Chip
+                <Chip 
                                 label={org.success ? 'Success' : 'Failed'}
                                 color={org.success ? 'success' : 'error'}
-                                size="small"
+                  size="small" 
                               />
                             </TableCell>
                           </TableRow>
@@ -1236,10 +1507,507 @@ export default function DataEnrichment() {
         </Grid>
       )}
 
-          {/* Contact Search Tab */}
-          {activeTab === 2 && (
+      {/* Contact Enrichment Tab */}
+      {activeMainTab === 0 && activeSubTab === 0 && (
         <Grid container spacing={3}>
-          {/* Thesis Criteria Form */}
+          {/* Upload Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Contact Enrichment
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Upload an Excel file with contact data to enrich with emails, phone numbers, LinkedIn profiles, and other contact information using Apollo's People Enrichment API.
+              </Typography>
+
+              {/* File Upload Area */}
+              <Box
+                sx={{
+                  border: '2px dashed',
+                  borderColor: isDragOver ? 'primary.main' : 'grey.300',
+                  borderRadius: 2,
+                  p: 4,
+                  textAlign: 'center',
+                  bgcolor: isDragOver ? 'action.hover' : 'background.paper',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'action.hover',
+                  },
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => contactFileInputRef.current?.click()}
+              >
+                <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  {contactSelectedFile ? contactSelectedFile.name : 'Drop your Excel file here or click to browse'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Supports .xlsx, .xls, and .csv files
+                </Typography>
+                <input
+                  ref={contactFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleContactFileSelect}
+                  style={{ display: 'none' }}
+                />
+              </Box>
+
+              {/* File Info */}
+              {contactSelectedFile && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CheckCircleIcon sx={{ color: 'success.main' }} />
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      File selected: {contactSelectedFile.name}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Size: {(contactSelectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Upload Button */}
+              <Button
+                variant="contained"
+                onClick={handleContactFileUpload}
+                disabled={!contactSelectedFile || isContactProcessing}
+                startIcon={isContactProcessing ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                sx={{ mt: 3, width: '100%' }}
+              >
+                {isContactProcessing ? 'Processing...' : 'Enrich Contacts'}
+              </Button>
+
+              {/* Progress Bar */}
+              {isContactProcessing && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress />
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Enriching contact data... This may take a few minutes.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+
+          {/* Results Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Enrichment Results
+                </Typography>
+                {contactResults && (
+                  <Button
+                  variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleContactDownloadResults}
+                    size="small"
+                  >
+                    Download CSV
+                  </Button>
+                )}
+              </Box>
+
+              {showContactResults && contactResults ? (
+                <Box>
+                  {/* Summary Stats */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={6}>
+                      <Card sx={{ textAlign: 'center', bgcolor: 'primary.light' }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            {contactResults.summary.total}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Total Contacts
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Card sx={{ textAlign: 'center', bgcolor: 'success.light' }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
+                            {contactResults.summary.successRate}%
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Success Rate
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* Results Table */}
+                  <TableContainer sx={{ maxHeight: 400 }}>
+                    <Table stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Contact</TableCell>
+                          <TableCell>Email</TableCell>
+                          <TableCell>Phone</TableCell>
+                          <TableCell>LinkedIn</TableCell>
+                          <TableCell>Status</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {contactResults.results.slice(0, 10).map((contact, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Box>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {contact.enriched?.name || `${contact.original.firstName} ${contact.original.lastName}`}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {contact.original.company}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {contact.enriched?.email ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <EmailIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                                  <Typography variant="body2">{contact.enriched.email}</Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No email
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {contact.enriched?.phone ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <PhoneIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                                  <Typography variant="body2">{contact.enriched.phone}</Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No phone
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {contact.enriched?.linkedin ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <LinkedInIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                                  <Typography variant="body2">LinkedIn</Typography>
+                                </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                  No LinkedIn
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={contact.success ? 'Success' : 'Failed'}
+                                color={contact.success ? 'success' : 'error'}
+                                size="small"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {contactResults.results.length > 10 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                      Showing first 10 results. Download CSV for complete data.
+                    </Typography>
+                  )}
+              </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    Upload an Excel file to start enriching contact data
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Organization Search Tab */}
+      {activeMainTab === 1 && activeSubTab === 1 && (
+        <Grid container spacing={3}>
+          {/* Search Criteria Form */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Organization Search Criteria
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Enter your search criteria to find organizations using Apollo's Organization Search API. Get detailed company information including CEO, revenue, growth, and more.
+              </Typography>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Industries *"
+                    value={orgSearchCriteria.industries}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, industries: e.target.value})}
+                    placeholder="Technology, Healthcare, Finance"
+                    helperText="Target industries (comma-separated)"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Subindustries"
+                    value={orgSearchCriteria.subindustries}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, subindustries: e.target.value})}
+                    placeholder="SaaS, Fintech, MedTech"
+                    helperText="Specific subindustries or focus areas"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Location"
+                    value={orgSearchCriteria.location}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, location: e.target.value})}
+                    placeholder="San Francisco, New York, Remote"
+                    helperText="Geographic location criteria"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Revenue"
+                    value={orgSearchCriteria.revenue}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, revenue: e.target.value})}
+                    placeholder="$1M-$10M"
+                    helperText="Revenue range criteria"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="EBITDA"
+                    value={orgSearchCriteria.ebitda}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, ebitda: e.target.value})}
+                    placeholder="$500K-$5M"
+                    helperText="Minimum EBITDA requirements"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Growth Rate"
+                    value={orgSearchCriteria.growth}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, growth: e.target.value})}
+                    placeholder="20%+"
+                    helperText="Annual growth rate"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Employee Count"
+                    value={orgSearchCriteria.employeeCount}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, employeeCount: e.target.value})}
+                    placeholder="10-100"
+                    helperText="Company size range"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Founded Year"
+                    value={orgSearchCriteria.foundedYear}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, foundedYear: e.target.value})}
+                    placeholder="2015-2020"
+                    helperText="Year range when founded"
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    fullWidth
+                    label="Number of Organizations to Find"
+                    type="number"
+                    value={orgsToFind}
+                    onChange={(e) => setOrgsToFind(parseInt(e.target.value) || 10)}
+                    helperText="Maximum organizations to return"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Keywords"
+                    value={orgSearchCriteria.keywords}
+                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, keywords: e.target.value})}
+                    placeholder="AI, Machine Learning, Blockchain"
+                    helperText="Additional keywords to refine search"
+                  />
+                </Grid>
+                </Grid>
+
+              <Button
+                variant="contained"
+                onClick={handleOrgSearch}
+                disabled={isOrgSearching}
+                startIcon={isOrgSearching ? <CircularProgress size={20} /> : <SearchIcon />}
+                sx={{ mt: 3, width: '100%' }}
+              >
+                {isOrgSearching ? 'Searching...' : 'Search Organizations'}
+              </Button>
+            </Paper>
+          </Grid>
+
+          {/* Results Section */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Search Results
+              </Typography>
+
+              {showOrgSearchResults && orgSearchResults ? (
+                <Box>
+                  {/* Summary Stats */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={6}>
+                      <Card sx={{ textAlign: 'center', bgcolor: 'primary.light' }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                            {orgSearchResults.organizations?.length || 0}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Organizations Found
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Card sx={{ textAlign: 'center', bgcolor: 'success.light' }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
+                            {orgSearchResults.summary?.averageRevenue || 'N/A'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Avg Revenue
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* Results Table */}
+                  <TableContainer sx={{ maxHeight: 400 }}>
+                    <Table stickyHeader>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Company</TableCell>
+                          <TableCell>CEO</TableCell>
+                          <TableCell>Revenue</TableCell>
+                          <TableCell>Location</TableCell>
+                          <TableCell>Industry</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {orgSearchResults.organizations?.slice(0, 10).map((org: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <Box>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {org.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {org.website}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {org.ceo || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {org.revenue || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {org.location || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {org.industry || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {orgSearchResults.organizations?.length > 10 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                      Showing first 10 results. Download CSV for complete data.
+                    </Typography>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">
+                    Enter your search criteria and click "Search Organizations" to find companies
+                  </Typography>
+              </Box>
+            )}
+          </Paper>
+        </Grid>
+        </Grid>
+      )}
+
+          {/* Contact Search Tab */}
+          {activeMainTab === 1 && activeSubTab === 0 && (
+        <Grid container spacing={3}>
+          {/* Contact Type Selection */}
+          <Grid item xs={12}>
+            <Paper sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Contact Search Type
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant={contactSearchType === 'people' ? 'contained' : 'outlined'}
+                  onClick={() => setContactSearchType('people')}
+                  startIcon={<PersonIcon />}
+                >
+                  People at Companies
+                </Button>
+                <Button
+                  variant={contactSearchType === 'brokers' ? 'contained' : 'outlined'}
+                  onClick={() => setContactSearchType('brokers')}
+                  startIcon={<BusinessIcon />}
+                >
+                  Brokers
+                </Button>
+                <Button
+                  variant={contactSearchType === 'investors' ? 'contained' : 'outlined'}
+                  onClick={() => setContactSearchType('investors')}
+                  startIcon={<AccountBalanceIcon />}
+                >
+                  Investors
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Search Criteria Form */}
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1253,38 +2021,40 @@ export default function DataEnrichment() {
                   variant="outlined"
                 />
               </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Enter your search criteria to find relevant contacts using Apollo's Search API. 
-                Your criteria will be automatically saved locally and can be loaded later.
-              </Typography>
+              {/* People at Companies Form */}
+              {contactSearchType === 'people' && (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Find people at companies that match your investment thesis criteria.
+                  </Typography>
+                </>
+              )}
 
-              <Grid container spacing={3}>
+              {/* Brokers Form */}
+              {contactSearchType === 'brokers' && (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Find brokers who have connections and experience in your target industries.
+                  </Typography>
+                </>
+              )}
+
+              {/* Investors Form */}
+              {contactSearchType === 'investors' && (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Find investors who invest in your target industries and match your investment criteria.
+                  </Typography>
+                </>
+              )}
+
+              {/* People at Companies Form Fields */}
+              {contactSearchType === 'people' && (
+                <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="EBITDA"
-                    placeholder="e.g., $3M+, $5M+, $10M+"
-                    value={thesisCriteria.ebitda}
-                    onChange={(e) => handleThesisCriteriaChange('ebitda', e.target.value)}
-                    helperText="Minimum EBITDA requirements"
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Revenue"
-                    placeholder="e.g., $10M-$20M, $20M-$50M, $50M+"
-                    value={thesisCriteria.revenue}
-                    onChange={(e) => handleThesisCriteriaChange('revenue', e.target.value)}
-                    helperText="Revenue range criteria"
-                  />
-                </Grid>
-
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Industries"
+                      label="Industries *"
                     placeholder="e.g., Healthcare, Technology, Finance"
                     value={thesisCriteria.industries}
                     onChange={(e) => handleThesisCriteriaChange('industries', e.target.value)}
@@ -1292,18 +2062,16 @@ export default function DataEnrichment() {
                     required
                   />
                 </Grid>
-
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Subindustries"
-                    placeholder="e.g., Compliance, Revenue Cycle Management, Training"
+                      placeholder="e.g., SaaS, Fintech, MedTech"
                     value={thesisCriteria.subindustries}
                     onChange={(e) => handleThesisCriteriaChange('subindustries', e.target.value)}
                     helperText="Specific subindustries or focus areas"
                   />
                 </Grid>
-
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -1314,7 +2082,26 @@ export default function DataEnrichment() {
                     helperText="Geographic location criteria"
                   />
                 </Grid>
-
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="EBITDA"
+                      placeholder="e.g., $3M+, $5M+, $10M+"
+                      value={thesisCriteria.ebitda}
+                      onChange={(e) => handleThesisCriteriaChange('ebitda', e.target.value)}
+                      helperText="Minimum EBITDA requirements"
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      fullWidth
+                      label="Revenue"
+                      placeholder="e.g., $10M-$20M, $20M-$50M, $50M+"
+                      value={thesisCriteria.revenue}
+                      onChange={(e) => handleThesisCriteriaChange('revenue', e.target.value)}
+                      helperText="Revenue range criteria"
+                    />
+                  </Grid>
                 <Grid item xs={12}>
                   <FormControl fullWidth>
                     <InputLabel>Growth Rate</InputLabel>
@@ -1330,7 +2117,6 @@ export default function DataEnrichment() {
                     </Select>
                   </FormControl>
                 </Grid>
-
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
@@ -1339,31 +2125,224 @@ export default function DataEnrichment() {
                     value={contactsToFind}
                     onChange={(e) => setContactsToFind(parseInt(e.target.value) || 10)}
                     helperText="How many contacts should Apollo search for? (1-50)"
-                    inputProps={{ min: 1, max: 50 }}
                   />
                 </Grid>
+                </Grid>
+              )}
 
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleSaveThesis}
-                      disabled={isSaving}
-                      startIcon={isSaving ? <CircularProgress size={16} /> : <GetAppIcon />}
-                      sx={{ flex: 1 }}
-                    >
-                      {isSaving ? 'Saving...' : 'Save Criteria'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={handleLoadThesis}
-                      startIcon={<RefreshIcon />}
-                      sx={{ flex: 1 }}
-                    >
-                      Load Saved
-                    </Button>
-                  </Box>
-                  
+              {/* Brokers Form Fields */}
+              {contactSearchType === 'brokers' && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Industry Focus</InputLabel>
+                      <Select
+                        value={brokerSearchCriteria.industries}
+                        onChange={(e) => setBrokerSearchCriteria({...brokerSearchCriteria, industries: e.target.value})}
+                        label="Industry Focus"
+                      >
+                        <MenuItem value="">Any Industry</MenuItem>
+                        <MenuItem value="healthcare">Healthcare</MenuItem>
+                        <MenuItem value="technology">Technology</MenuItem>
+                        <MenuItem value="financial services">Financial Services</MenuItem>
+                        <MenuItem value="manufacturing">Manufacturing</MenuItem>
+                        <MenuItem value="retail">Retail</MenuItem>
+                        <MenuItem value="energy">Energy</MenuItem>
+                        <MenuItem value="real estate">Real Estate</MenuItem>
+                        <MenuItem value="media">Media & Entertainment</MenuItem>
+                        <MenuItem value="education">Education</MenuItem>
+                        <MenuItem value="transportation">Transportation</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Deal Size Range</InputLabel>
+                      <Select
+                        value={brokerSearchCriteria.dealSize}
+                        onChange={(e) => setBrokerSearchCriteria({...brokerSearchCriteria, dealSize: e.target.value})}
+                        label="Deal Size Range"
+                      >
+                        <MenuItem value="">Any Deal Size</MenuItem>
+                        <MenuItem value="1M-10M">$1M - $10M</MenuItem>
+                        <MenuItem value="10M-50M">$10M - $50M</MenuItem>
+                        <MenuItem value="50M-100M">$50M - $100M</MenuItem>
+                        <MenuItem value="100M-500M">$100M - $500M</MenuItem>
+                        <MenuItem value="500M+">$500M+</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Location</InputLabel>
+                      <Select
+                        value={brokerSearchCriteria.location}
+                        onChange={(e) => setBrokerSearchCriteria({...brokerSearchCriteria, location: e.target.value})}
+                        label="Location"
+                      >
+                        <MenuItem value="">Any Location</MenuItem>
+                        <MenuItem value="New York">New York</MenuItem>
+                        <MenuItem value="California">California</MenuItem>
+                        <MenuItem value="Texas">Texas</MenuItem>
+                        <MenuItem value="Florida">Florida</MenuItem>
+                        <MenuItem value="Illinois">Illinois</MenuItem>
+                        <MenuItem value="Massachusetts">Massachusetts</MenuItem>
+                        <MenuItem value="Pennsylvania">Pennsylvania</MenuItem>
+                        <MenuItem value="Georgia">Georgia</MenuItem>
+                        <MenuItem value="North Carolina">North Carolina</MenuItem>
+                        <MenuItem value="Virginia">Virginia</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Experience Level</InputLabel>
+                      <Select
+                        value={brokerSearchCriteria.experience}
+                        onChange={(e) => setBrokerSearchCriteria({...brokerSearchCriteria, experience: e.target.value})}
+                        label="Experience Level"
+                      >
+                        <MenuItem value="">Any Experience</MenuItem>
+                        <MenuItem value="junior">Junior (1-5 years)</MenuItem>
+                        <MenuItem value="mid">Mid-level (5-10 years)</MenuItem>
+                        <MenuItem value="senior">Senior (10-15 years)</MenuItem>
+                        <MenuItem value="executive">Executive (15+ years)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Additional Keywords"
+                      placeholder="e.g., M&A, investment banking, private equity, venture capital"
+                      value={brokerSearchCriteria.keywords}
+                      onChange={(e) => setBrokerSearchCriteria({...brokerSearchCriteria, keywords: e.target.value})}
+                      helperText="Optional: Add specific terms like deal types, specializations, etc."
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Number of Brokers to Find"
+                      type="number"
+                      value={contactsToFind}
+                      onChange={(e) => setContactsToFind(parseInt(e.target.value) || 10)}
+                      helperText="How many brokers should Apollo search for? (1-50)"
+                    />
+                  </Grid>
+                </Grid>
+              )}
+
+              {/* Investors Form Fields */}
+              {contactSearchType === 'investors' && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Investment Focus</InputLabel>
+                      <Select
+                        value={investorSearchCriteria.industries}
+                        onChange={(e) => setInvestorSearchCriteria({...investorSearchCriteria, industries: e.target.value})}
+                        label="Investment Focus"
+                      >
+                        <MenuItem value="">Any Industry</MenuItem>
+                        <MenuItem value="healthcare">Healthcare</MenuItem>
+                        <MenuItem value="technology">Technology</MenuItem>
+                        <MenuItem value="fintech">Fintech</MenuItem>
+                        <MenuItem value="saas">SaaS</MenuItem>
+                        <MenuItem value="ecommerce">E-commerce</MenuItem>
+                        <MenuItem value="biotech">Biotech</MenuItem>
+                        <MenuItem value="cleantech">Clean Tech</MenuItem>
+                        <MenuItem value="edtech">EdTech</MenuItem>
+                        <MenuItem value="proptech">PropTech</MenuItem>
+                        <MenuItem value="cybersecurity">Cybersecurity</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Investment Stage</InputLabel>
+                      <Select
+                        value={investorSearchCriteria.investmentStage}
+                        onChange={(e) => setInvestorSearchCriteria({...investorSearchCriteria, investmentStage: e.target.value})}
+                        label="Investment Stage"
+                      >
+                        <MenuItem value="">Any Stage</MenuItem>
+                        <MenuItem value="seed">Seed</MenuItem>
+                        <MenuItem value="series-a">Series A</MenuItem>
+                        <MenuItem value="series-b">Series B</MenuItem>
+                        <MenuItem value="series-c">Series C</MenuItem>
+                        <MenuItem value="growth">Growth</MenuItem>
+                        <MenuItem value="late-stage">Late Stage</MenuItem>
+                        <MenuItem value="pre-ipo">Pre-IPO</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Check Size Range</InputLabel>
+                      <Select
+                        value={investorSearchCriteria.checkSize}
+                        onChange={(e) => setInvestorSearchCriteria({...investorSearchCriteria, checkSize: e.target.value})}
+                        label="Check Size Range"
+                      >
+                        <MenuItem value="">Any Check Size</MenuItem>
+                        <MenuItem value="100K-500K">$100K - $500K</MenuItem>
+                        <MenuItem value="500K-1M">$500K - $1M</MenuItem>
+                        <MenuItem value="1M-5M">$1M - $5M</MenuItem>
+                        <MenuItem value="5M-10M">$5M - $10M</MenuItem>
+                        <MenuItem value="10M-25M">$10M - $25M</MenuItem>
+                        <MenuItem value="25M+">$25M+</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Location</InputLabel>
+                      <Select
+                        value={investorSearchCriteria.location}
+                        onChange={(e) => setInvestorSearchCriteria({...investorSearchCriteria, location: e.target.value})}
+                        label="Location"
+                      >
+                        <MenuItem value="">Any Location</MenuItem>
+                        <MenuItem value="San Francisco">San Francisco</MenuItem>
+                        <MenuItem value="New York">New York</MenuItem>
+                        <MenuItem value="Boston">Boston</MenuItem>
+                        <MenuItem value="Los Angeles">Los Angeles</MenuItem>
+                        <MenuItem value="Austin">Austin</MenuItem>
+                        <MenuItem value="Seattle">Seattle</MenuItem>
+                        <MenuItem value="Chicago">Chicago</MenuItem>
+                        <MenuItem value="Miami">Miami</MenuItem>
+                        <MenuItem value="Denver">Denver</MenuItem>
+                        <MenuItem value="Remote">Remote</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Additional Keywords"
+                      placeholder="e.g., AI, blockchain, sustainability, B2B, enterprise"
+                      value={investorSearchCriteria.keywords}
+                      onChange={(e) => setInvestorSearchCriteria({...investorSearchCriteria, keywords: e.target.value})}
+                      helperText="Optional: Add specific terms like technologies, business models, etc."
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Number of Investors to Find"
+                      type="number"
+                      value={contactsToFind}
+                      onChange={(e) => setContactsToFind(parseInt(e.target.value) || 10)}
+                      helperText="How many investors should Apollo search for? (1-50)"
+                    />
+                  </Grid>
+                </Grid>
+              )}
+
+
+              {/* Search Button */}
+              <Box sx={{ mt: 3 }}>
                   <Button
                     fullWidth
                     variant="contained"
@@ -1375,8 +2354,7 @@ export default function DataEnrichment() {
                   >
                     {isDiscovering ? `Searching for ${contactsToFind} Contacts...` : `Search for ${contactsToFind} Contacts`}
                   </Button>
-                </Grid>
-              </Grid>
+              </Box>
             </Paper>
           </Grid>
 

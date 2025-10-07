@@ -543,6 +543,86 @@ export class ApolloService {
     }
   }
 
+  /**
+   * Search for organizations using Apollo Organization Search API
+   */
+  async searchOrganizations(params: any): Promise<any[]> {
+    try {
+      if (!this.apiKey) {
+        throw new Error('Apollo API key not configured');
+      }
+
+      logger.info('Searching organizations with Apollo', { params });
+
+      const response = await axios.post(`${this.baseUrl}/organizations/search`, {
+        ...params
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': this.apiKey,
+          'Cache-Control': 'no-cache'
+        },
+        timeout: 30000
+      });
+
+      if (response.data && response.data.organizations) {
+        logger.info('Organization search successful', {
+          totalFound: response.data.organizations.length,
+          pagination: response.data.pagination
+        });
+        return response.data.organizations;
+      }
+
+      return [];
+    } catch (error: any) {
+      logger.error('Organization search failed', {
+        error: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed organization information
+   */
+  async getOrganizationDetails(organizationId: string): Promise<any> {
+    try {
+      if (!this.apiKey) {
+        throw new Error('Apollo API key not configured');
+      }
+
+      logger.info('Getting organization details', { organizationId });
+
+      const response = await axios.get(`${this.baseUrl}/organizations/${organizationId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': this.apiKey,
+          'Cache-Control': 'no-cache'
+        },
+        timeout: 15000
+      });
+
+      if (response.data && response.data.organization) {
+        logger.info('Organization details retrieved', {
+          orgId: organizationId,
+          orgName: response.data.organization.name
+        });
+        return response.data.organization;
+      }
+
+      return null;
+    } catch (error: any) {
+      logger.error('Failed to get organization details', {
+        organizationId,
+        error: error.message,
+        status: error.response?.status
+      });
+      return null;
+    }
+  }
+
 }
 
 export default ApolloService;

@@ -1,6 +1,6 @@
-Given,Company,To be populated Websites,To be populated Phone,To be populated Email
-John Smith,Acme Corporation,,,
-Jane Doe,Tech Solutions Inc,https://techsolutions.com,,
-Mike Johnson,StartupXYZ,,,
-Sarah Wilson,Innovation Labs,https://innovationlabs.com,,
-David Brown,DataCorp,,,
+First Name,Last Name,Email,Company,Title,Phone
+John,Smith,john.smith@example.com,Acme Corp,CEO,555-0123
+Jane,Doe,jane.doe@techcorp.com,TechCorp,CTO,555-0456
+Mike,Johnson,mike.j@startup.io,StartupIO,Founder,555-0789
+Sarah,Wilson,sarah.w@bigcorp.com,BigCorp,VP Sales,555-0321
+David,Brown,david.b@innovate.com,Innovate Inc,Product Manager,555-0654
