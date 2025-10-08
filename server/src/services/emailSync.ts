@@ -58,18 +58,23 @@ export class EmailSyncService {
 
   private static async getUsersWithEmailIntegration() {
     try {
-      // Get users who have connected Gmail or Outlook
-      const usersSnapshot = await db.collection('users').get();
-      const users: any[] = [];
+      // Get users who have Gmail or Outlook integrations
+      const integrationsSnapshot = await db.collection('integrations')
+        .where('isActive', '==', true)
+        .where('type', 'in', ['gmail', 'mail'])
+        .get();
       
-      for (const doc of usersSnapshot.docs) {
-        const userData = doc.data();
-        // Check if user has email integrations
-        if (userData.hasGmailIntegration || userData.hasOutlookIntegration) {
-          users.push({ id: doc.id, ...userData });
+      const userIds = new Set<string>();
+      integrationsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.userId) {
+          userIds.add(data.userId);
         }
-      }
+      });
       
+      const users = Array.from(userIds).map(userId => ({ id: userId }));
+      
+      logger.info(`Found ${users.length} users with email integrations`);
       return users;
     } catch (error) {
       logger.error('Error getting users with email integration:', error);

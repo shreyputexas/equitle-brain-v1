@@ -89,8 +89,8 @@ export interface GmailLabel {
 
 class IntegrationService {
   private getAuthToken() {
-    // Use the same mock token as AuthContext for consistency
-    return 'mock-token';
+    // Get token from localStorage (set by AuthContext)
+    return localStorage.getItem('token') || '';
   }
 
   private getAuthHeaders() {

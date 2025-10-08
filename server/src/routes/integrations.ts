@@ -170,12 +170,12 @@ router.get('/google/callback', async (req, res) => {
     // Handle OAuth errors from Google
     if (oauthError) {
       logger.error('OAuth error from Google:', { error: oauthError, description: req.query.error_description });
-      return res.redirect(`http://localhost:3000/settings?integration=error&reason=${encodeURIComponent(oauthError as string)}`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&reason=${encodeURIComponent(oauthError as string)}`);
     }
 
     if (!code || !state) {
       logger.error('Missing authorization code or state in OAuth callback', { code: !!code, state: !!state });
-      return res.redirect('http://localhost:3000/settings?integration=error&reason=missing_parameters');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&reason=missing_parameters`);
     }
 
     // Extract userId from state (format: userId:timestamp)
@@ -183,7 +183,7 @@ router.get('/google/callback', async (req, res) => {
 
     if (!userId) {
       logger.error('Invalid state parameter format', { state });
-      return res.redirect('http://localhost:3000/settings?integration=error&reason=invalid_state');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&reason=invalid_state`);
     }
 
     // Validate timestamp (should be within last 10 minutes for security)
@@ -198,7 +198,7 @@ router.get('/google/callback', async (req, res) => {
         age: now - stateTimestamp,
         maxAge
       });
-      return res.redirect('http://localhost:3000/settings?integration=error&reason=expired_state');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&reason=expired_state`);
     }
 
     logger.info('Processing Google OAuth callback', { userId, codeLength: (code as string).length, stateAge: now - stateTimestamp });
@@ -224,7 +224,7 @@ router.get('/google/callback', async (req, res) => {
 
     if (types.length === 0) {
       logger.error('No valid integration types found in scopes', { scopes: scopeList });
-      return res.redirect('http://localhost:3000/settings?integration=error&reason=invalid_scopes');
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&reason=invalid_scopes`);
     }
 
     // Create integrations for each type
@@ -270,7 +270,7 @@ router.get('/google/callback', async (req, res) => {
     });
 
     // Redirect to settings page with success status
-    res.redirect(`http://localhost:3000/settings?integration=success&types=${encodeURIComponent(types.join(','))}&userId=${userId}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=success&types=${encodeURIComponent(types.join(','))}&userId=${userId}`);
   } catch (error) {
     logger.error('Error handling Google OAuth callback:', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -278,7 +278,7 @@ router.get('/google/callback', async (req, res) => {
       userId: req.query.state,
       hasCode: !!req.query.code
     });
-    res.redirect(`http://localhost:3000/settings?integration=error&reason=server_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&reason=server_error`);
   }
 });
 

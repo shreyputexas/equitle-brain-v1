@@ -53,3 +53,7 @@ Thumbs.db
 uploads/
 temp/equitle-brain-v1/
 equitle-brain-dev-firebase-adminsdk-fbsvc-f95ee42ed1.json
+
+
+// firebase authentication
+server/secrets/serviceAccountKey.json
