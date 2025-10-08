@@ -73,6 +73,11 @@ interface Message {
 
 const navigationItems = [
   {
+    text: 'Data',
+    icon: <AnalyticsIcon />,
+    path: '/data-enrichment'
+  },
+  {
     text: 'Outreach',
     icon: <DealsIcon />,
     subItems: [
@@ -80,6 +85,11 @@ const navigationItems = [
       { text: 'Investors', path: '/outreach/investors' },
       { text: 'Brokers', path: '/outreach/brokers' }
     ]
+  },
+  {
+    text: 'Voice Calls',
+    icon: <PhoneIcon />,
+    path: '/voice-calls'
   },
   {
     text: 'Fundraising',
@@ -90,11 +100,6 @@ const navigationItems = [
     ]
   },
   {
-    text: 'Voice Calls',
-    icon: <PhoneIcon />,
-    path: '/voice-calls'
-  },
-  {
     text: 'Brain',
     icon: <BrainIcon />,
     subItems: [
@@ -103,11 +108,6 @@ const navigationItems = [
       { text: 'Analytics', path: '/brain', action: 'analytics' },
       { text: 'Generate Report', path: '/brain', action: 'report' }
     ]
-  },
-  {
-    text: 'Scraping',
-    icon: <AnalyticsIcon />,
-    path: '/data-enrichment'
   }
 ];
 
@@ -370,8 +370,6 @@ export default function Layout() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          borderRight: '1px solid',
-          borderColor: 'divider',
           position: 'fixed',
           left: 0,
           top: 0,
@@ -382,9 +380,7 @@ export default function Layout() {
           position: 'fixed',
           top: 0,
           zIndex: 1200,
-          boxShadow: 'none',
-          borderBottom: '1px solid',
-          borderColor: 'divider'
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
         })
       }}>
         {navPosition === 'left' ? (
@@ -429,11 +425,6 @@ export default function Layout() {
                                (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'text.primary',
                         width: 48,
                         height: 48,
-                        border: '1px solid',
-                        borderColor: location.pathname === item.path || 
-                                     (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
-                                     (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
-                                     (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'transparent',
                         '&:hover': {
                           bgcolor: 'action.hover'
                         }
@@ -499,8 +490,6 @@ export default function Layout() {
                     width: 48,
                     height: 48,
                     bgcolor: 'background.default',
-                    border: '1px solid',
-                    borderColor: 'divider',
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -556,8 +545,6 @@ export default function Layout() {
                     width: 32,
                     height: 32,
                     fontSize: '0.7rem',
-                    border: '1px solid',
-                    borderColor: navPosition === 'top' ? 'primary.main' : 'divider',
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -575,8 +562,6 @@ export default function Layout() {
                     width: 32,
                     height: 32,
                     fontSize: '0.7rem',
-                    border: '1px solid',
-                    borderColor: navPosition === 'left' ? 'primary.main' : 'divider',
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -693,8 +678,6 @@ export default function Layout() {
                   fontSize: '0.75rem',
                   minWidth: 'auto',
                   px: 1.5,
-                  border: '1px solid',
-                  borderColor: navPosition === 'top' ? 'primary.main' : 'divider',
                   '&:hover': {
                     bgcolor: 'action.hover'
                   }
@@ -711,8 +694,6 @@ export default function Layout() {
                   fontSize: '0.75rem',
                   minWidth: 'auto',
                   px: 1.5,
-                  border: '1px solid',
-                  borderColor: navPosition === 'left' ? 'primary.main' : 'divider',
                   '&:hover': {
                     bgcolor: 'action.hover'
                   }
@@ -730,8 +711,6 @@ export default function Layout() {
                   display: { xs: 'none', md: 'flex' },
                   mr: 2,
                   bgcolor: 'background.default',
-                  border: '1px solid',
-                  borderColor: 'divider',
                   '&:hover': {
                     bgcolor: 'action.hover'
                   }

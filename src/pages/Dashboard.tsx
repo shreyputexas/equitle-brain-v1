@@ -108,11 +108,11 @@ export default function Dashboard() {
 
   return (
     <Box className="fade-in">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontFamily: '"Space Grotesk", sans-serif' }}>
+      <Box sx={{ mb: 4, p: 3, bgcolor: 'background.paper' }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
           Welcome back, {dashboardData.userName}
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.05rem' }}>
+        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1rem' }}>
           Here's what's happening with your portfolio today.
         </Typography>
       </Box>
@@ -123,25 +123,21 @@ export default function Dashboard() {
             <Card
               className="scale-in premium-shadow-hover"
               sx={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 250, 250, 0.9) 100%)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(94, 92, 230, 0.08)',
-                borderRadius: '16px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                background: 'background.paper',
+                transition: 'all 0.2s ease',
                 '&:hover': {
-                  transform: 'translateY(-6px) scale(1.02)',
-                  boxShadow: '0 20px 40px rgba(94, 92, 230, 0.12)',
-                  border: '1px solid rgba(94, 92, 230, 0.2)'
+                  transform: 'none',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
                 }
               }}
             >
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Avatar sx={{ 
-                    background: `linear-gradient(135deg, ${metric.color} 0%, ${metric.color}dd 100%)`,
+                    background: 'primary.main',
                     width: 48, 
                     height: 48,
-                    boxShadow: `0 4px 12px ${metric.color}33`
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                   }}>
                     {metric.icon}
                   </Avatar>
@@ -152,6 +148,7 @@ export default function Dashboard() {
                     sx={{
                       bgcolor: metric.trend === 'up' ? 'success.main' : 'error.main',
                       color: 'white',
+                      borderRadius: 1,
                       '& .MuiChip-icon': {
                         color: 'white'
                       }
@@ -172,12 +169,12 @@ export default function Dashboard() {
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
-          <Paper className="scale-in" sx={{ p: 3.5, height: 400, borderRadius: '16px', border: '1px solid rgba(94, 92, 230, 0.08)' }}>
+          <Paper className="scale-in" sx={{ p: 3, height: 400 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
                 Deal Flow Performance
               </Typography>
-              <Button variant="text" endIcon={<ArrowForwardIcon />}>
+              <Button variant="outlined" endIcon={<ArrowForwardIcon />} sx={{ borderRadius: 1 }}>
                 View Details
               </Button>
             </Box>
@@ -185,28 +182,28 @@ export default function Dashboard() {
               <AreaChart data={dashboardData.dealFlow}>
                 <defs>
                   <linearGradient id="colorDeals" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#5E5CE6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#5E5CE6" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#000000" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#000000" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7C7AED" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#7C7AED" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#666666" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#666666" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="month" stroke="#9CA3AF" />
-                <YAxis stroke="#9CA3AF" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+                <XAxis dataKey="month" stroke="#666666" />
+                <YAxis stroke="#666666" />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#111827',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    borderRadius: 4
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="deals"
-                  stroke="#5E5CE6"
+                  stroke="#000000"
                   fillOpacity={1}
                   fill="url(#colorDeals)"
                   strokeWidth={2}
@@ -214,7 +211,7 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="value"
-                  stroke="#7C7AED"
+                  stroke="#666666"
                   fillOpacity={1}
                   fill="url(#colorValue)"
                   strokeWidth={2}
@@ -225,8 +222,8 @@ export default function Dashboard() {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Paper className="scale-in" sx={{ p: 3.5, height: 400, borderRadius: '16px', border: '1px solid rgba(94, 92, 230, 0.08)' }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, fontFamily: '"Space Grotesk", sans-serif' }}>
+          <Paper className="scale-in" sx={{ p: 3, height: 400 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
               Portfolio Distribution
             </Typography>
             <ResponsiveContainer width="100%" height={320}>
@@ -246,9 +243,9 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#111827',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    borderRadius: 4
                   }}
                 />
               </PieChart>
@@ -278,12 +275,12 @@ export default function Dashboard() {
         </Grid>
 
         <Grid item xs={12}>
-          <Paper className="slide-up" sx={{ p: 3.5, borderRadius: '16px', border: '1px solid rgba(94, 92, 230, 0.08)' }}>
+          <Paper className="slide-up" sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
                 Recent Deals
               </Typography>
-              <Button variant="contained" startIcon={<BusinessIcon />}>
+              <Button variant="contained" startIcon={<BusinessIcon />} sx={{ borderRadius: 1 }}>
                 New Deal
               </Button>
             </Box>
@@ -294,17 +291,14 @@ export default function Dashboard() {
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    p: 2.5,
+                    p: 2,
                     mb: 2,
-                    borderRadius: '12px',
-                    bgcolor: 'rgba(250, 250, 250, 0.5)',
-                    border: '1px solid rgba(94, 92, 230, 0.06)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    bgcolor: 'background.paper',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      borderColor: 'rgba(94, 92, 230, 0.2)',
-                      bgcolor: 'rgba(94, 92, 230, 0.02)',
-                      transform: 'translateX(8px)',
-                      boxShadow: '0 4px 12px rgba(94, 92, 230, 0.08)'
+                      bgcolor: 'action.hover',
+                      transform: 'none',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)'
                     }
                   }}
                 >
@@ -332,12 +326,12 @@ export default function Dashboard() {
                       variant="determinate"
                       value={deal.progress}
                       sx={{
-                        height: 6,
-                        borderRadius: 3,
-                        bgcolor: 'rgba(255,255,255,0.05)',
+                        height: 4,
+                        borderRadius: 2,
+                        bgcolor: 'rgba(0,0,0,0.1)',
                         '& .MuiLinearProgress-bar': {
-                          borderRadius: 4,
-                          background: 'linear-gradient(90deg, #5E5CE6 0%, #7C7AED 100%)'
+                          borderRadius: 2,
+                          background: '#000000'
                         }
                       }}
                     />
