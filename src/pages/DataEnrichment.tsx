@@ -209,7 +209,10 @@ interface ContactResults {
 }
 
 export default function DataEnrichment() {
+  const [selectedProvider, setSelectedProvider] = useState<'apollo' | 'zoominfo' | 'gratta'>('apollo');
   const [apolloApiKey, setApolloApiKey] = useState('');
+  const [zoominfoApiKey, setZoominfoApiKey] = useState('');
+  const [grattaApiKey, setGrattaApiKey] = useState('');
   const [isValidatingKey, setIsValidatingKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -267,6 +270,35 @@ export default function DataEnrichment() {
   const [showContactResults, setShowContactResults] = useState(false);
   const [contactFileInputRef] = useState(useRef<HTMLInputElement>(null));
 
+  // Helper function to get current API key based on selected provider
+  const getCurrentApiKey = () => {
+    switch (selectedProvider) {
+      case 'apollo':
+        return apolloApiKey;
+      case 'zoominfo':
+        return zoominfoApiKey;
+      case 'gratta':
+        return grattaApiKey;
+      default:
+        return apolloApiKey;
+    }
+  };
+
+  // Helper function to set API key based on selected provider
+  const setCurrentApiKey = (key: string) => {
+    switch (selectedProvider) {
+      case 'apollo':
+        setApolloApiKey(key);
+        break;
+      case 'zoominfo':
+        setZoominfoApiKey(key);
+        break;
+      case 'gratta':
+        setGrattaApiKey(key);
+        break;
+    }
+  };
+
   // Organization search state
   const [orgSearchCriteria, setOrgSearchCriteria] = useState({
     industries: '',
@@ -321,8 +353,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!apolloApiKey.trim()) {
-      setMessage('Please configure your Apollo API key first');
+    if (!getCurrentApiKey().trim()) {
+      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -331,7 +363,8 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', orgSelectedFile);
-      formData.append('apiKey', apolloApiKey);
+      formData.append('apiKey', getCurrentApiKey());
+      formData.append('provider', selectedProvider);
 
       const response = await fetch('http://localhost:4001/api/data-enrichment/organization-enrich', {
         method: 'POST',
@@ -411,8 +444,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!apolloApiKey.trim()) {
-      setMessage('Please configure your Apollo API key first');
+    if (!getCurrentApiKey().trim()) {
+      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -421,7 +454,8 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', contactSelectedFile);
-      formData.append('apiKey', apolloApiKey);
+      formData.append('apiKey', getCurrentApiKey());
+      formData.append('provider', selectedProvider);
 
       const response = await fetch('http://localhost:4001/api/data-enrichment/contact-enrich', {
         method: 'POST',
@@ -497,8 +531,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!apolloApiKey.trim()) {
-      setMessage('Please configure your Apollo API key first');
+    if (!getCurrentApiKey().trim()) {
+      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -513,7 +547,8 @@ export default function DataEnrichment() {
         body: JSON.stringify({
           searchCriteria: orgSearchCriteria,
           orgsToFind,
-          apolloApiKey
+          apiKey: getCurrentApiKey(),
+          provider: selectedProvider
         })
       });
 
@@ -537,8 +572,8 @@ export default function DataEnrichment() {
   };
 
   const handleContactSearch = async () => {
-    if (!apolloApiKey.trim()) {
-      setMessage('Please configure your Apollo API key first');
+    if (!getCurrentApiKey().trim()) {
+      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -712,8 +747,9 @@ export default function DataEnrichment() {
   };
 
   const handleApiKeySubmit = async () => {
-    if (!apolloApiKey.trim()) {
-      setMessage('Please enter your Apollo API key');
+    const currentApiKey = getCurrentApiKey();
+    if (!currentApiKey.trim()) {
+      setMessage(`Please enter your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key`);
       setShowError(true);
       return;
     }
@@ -730,7 +766,10 @@ export default function DataEnrichment() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ apiKey: apolloApiKey })
+        body: JSON.stringify({ 
+          apiKey: currentApiKey,
+          provider: selectedProvider
+        })
       });
 
       console.log('Response received:', response.status, response.statusText);
@@ -744,12 +783,13 @@ export default function DataEnrichment() {
       
       if (data.success && data.valid) {
         setIsKeyValid(true);
-        setMessage('✅ Apollo API key is valid and ready to use!');
+        setMessage(`✅ ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is valid and ready to use!`);
         setShowSuccess(true);
         setShowApiKeyDialog(false);
       } else {
         setIsKeyValid(false);
-        setMessage('❌ Invalid API key. Please check: 1) Key is activated in Apollo dashboard, 2) You have API access enabled, 3) Key has correct permissions.');
+        const providerName = selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1);
+        setMessage(`❌ Invalid ${providerName} API key. Please check your API key and permissions.`);
         setShowError(true);
       }
     } catch (error: any) {
@@ -814,8 +854,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!apolloApiKey.trim()) {
-      setMessage('Please configure your Apollo API key first');
+    if (!getCurrentApiKey().trim()) {
+      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -824,7 +864,8 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('apiKey', apolloApiKey);
+      formData.append('apiKey', getCurrentApiKey());
+      formData.append('provider', selectedProvider);
 
       const response = await fetch('http://localhost:4001/api/data-enrichment/upload-and-enrich', {
         method: 'POST',
@@ -908,14 +949,14 @@ export default function DataEnrichment() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
         <Box>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            Data Enrichment with Apollo
+            Data Enrichment
         </Typography>
         <Typography variant="body1" color="text.secondary">
-            Upload Excel files and enrich contact data using Apollo API
+            Enrich and discover contact data using {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API
         </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Tooltip title="Configure Apollo API">
+          <Tooltip title={`Configure ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API`}>
             <Button
               variant="outlined"
               startIcon={<DataUsageIcon />}
@@ -928,32 +969,94 @@ export default function DataEnrichment() {
         </Box>
       </Box>
 
-          {/* Main Tabs */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={activeMainTab} onChange={(e, newValue) => setActiveMainTab(newValue)}>
-              <Tab label="Enrichment" />
-              <Tab label="Search" />
-            </Tabs>
+          {/* Simplified Navigation */}
+          <Box sx={{ mb: 4 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    border: activeMainTab === 0 && activeSubTab === 0 ? '2px solid #000000' : '1px solid #e0e0e0',
+                    '&:hover': { borderColor: '#000000' }
+                  }}
+                  onClick={() => { setActiveMainTab(0); setActiveSubTab(0); }}
+                >
+                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <PersonIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 0 && activeSubTab === 0 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Enrich Contacts
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    border: activeMainTab === 0 && activeSubTab === 1 ? '2px solid #000000' : '1px solid #e0e0e0',
+                    '&:hover': { borderColor: '#000000' }
+                  }}
+                  onClick={() => { setActiveMainTab(0); setActiveSubTab(1); }}
+                >
+                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <BusinessIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 0 && activeSubTab === 1 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Enrich Companies
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    border: activeMainTab === 1 && activeSubTab === 0 ? '2px solid #000000' : '1px solid #e0e0e0',
+                    '&:hover': { borderColor: '#000000' }
+                  }}
+                  onClick={() => { setActiveMainTab(1); setActiveSubTab(0); }}
+                >
+                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <SearchIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 1 && activeSubTab === 0 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Find Contacts
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <Card 
+                  sx={{ 
+                    cursor: 'pointer', 
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    border: activeMainTab === 1 && activeSubTab === 1 ? '2px solid #000000' : '1px solid #e0e0e0',
+                    '&:hover': { borderColor: '#000000' }
+                  }}
+                  onClick={() => { setActiveMainTab(1); setActiveSubTab(1); }}
+                >
+                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <BusinessIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 1 && activeSubTab === 1 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Find Companies
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
           </Box>
-
-          {/* Sub Tabs */}
-          {activeMainTab === 0 && (
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-              <Tabs value={activeSubTab} onChange={(e, newValue) => setActiveSubTab(newValue)}>
-                <Tab label="Contact Enrichment" />
-                <Tab label="Organization Enrichment" />
-              </Tabs>
-            </Box>
-          )}
-
-          {activeMainTab === 1 && (
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-              <Tabs value={activeSubTab} onChange={(e, newValue) => setActiveSubTab(newValue)}>
-              <Tab label="Contact Search" />
-                <Tab label="Organization Search" />
-            </Tabs>
-          </Box>
-          )}
 
       {/* Success/Error Alerts */}
       <Snackbar
@@ -990,17 +1093,17 @@ export default function DataEnrichment() {
             <Box sx={{ mb: 3 }}>
               {isKeyValid === null && (
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  Please configure your Apollo API key to start enriching contacts
+                  Please configure your {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key to start enriching contacts
                 </Alert>
               )}
               {isKeyValid === false && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                  Invalid API key. Please check your Apollo API key and try again.
+                  Invalid API key. Please check your {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key and try again.
               </Alert>
             )}
               {isKeyValid === true && (
                 <Alert severity="success" sx={{ mb: 2 }}>
-                  Apollo API key is configured and valid
+                  {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is configured and valid
                 </Alert>
               )}
             </Box>
@@ -1115,7 +1218,7 @@ export default function DataEnrichment() {
               size="large"
               startIcon={isProcessing ? <CircularProgress size={20} /> : <SearchIcon />}
               onClick={handleFileUpload}
-              disabled={!selectedFile || !apolloApiKey.trim() || isProcessing}
+              disabled={!selectedFile || !getCurrentApiKey().trim() || isProcessing}
                 fullWidth
                 sx={{
                 bgcolor: 'white',
@@ -1138,7 +1241,7 @@ export default function DataEnrichment() {
               <Box sx={{ mt: 2 }}>
                 <LinearProgress />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Processing contacts with Apollo API...
+                  Processing contacts with {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API...
                 </Typography>
               </Box>
             )}
@@ -2485,20 +2588,33 @@ export default function DataEnrichment() {
         fullWidth
       >
         <DialogTitle>
-          Configure Apollo API Key
+          Configure API Key
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Enter your Apollo API key to enable contact enrichment. You can get your API key from your Apollo account settings.
+            Select your data provider and enter the corresponding API key to enable contact enrichment.
           </Typography>
+          
+          <FormControl fullWidth sx={{ mb: 3 }}>
+            <InputLabel>Data Provider</InputLabel>
+            <Select
+              value={selectedProvider}
+              onChange={(e) => setSelectedProvider(e.target.value as 'apollo' | 'zoominfo' | 'gratta')}
+              label="Data Provider"
+            >
+              <MenuItem value="apollo">Apollo</MenuItem>
+              <MenuItem value="zoominfo">ZoomInfo</MenuItem>
+              <MenuItem value="gratta">Gratta</MenuItem>
+            </Select>
+          </FormControl>
           
           <TextField
             fullWidth
-            label="Apollo API Key"
+            label={`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API Key`}
             type="password"
-            value={apolloApiKey}
-            onChange={(e) => setApolloApiKey(e.target.value)}
-            placeholder="Enter your Apollo API key"
+            value={getCurrentApiKey()}
+            onChange={(e) => setCurrentApiKey(e.target.value)}
+            placeholder={`Enter your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key`}
             sx={{ mb: 2 }}
           />
 
@@ -2508,17 +2624,47 @@ export default function DataEnrichment() {
 
           <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-              How to get your Apollo API key:
+              How to get your {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key:
             </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              1. Go to Apollo.io → Settings → API Keys
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              2. Click "Activate" on your API key
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              3. Make sure you have API access enabled on your plan
-            </Typography>
+            {selectedProvider === 'apollo' && (
+              <>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  1. Go to Apollo.io → Settings → API Keys
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  2. Click "Activate" on your API key
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  3. Make sure you have API access enabled on your plan
+                </Typography>
+              </>
+            )}
+            {selectedProvider === 'zoominfo' && (
+              <>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  1. Go to ZoomInfo → Account Settings → API Keys
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  2. Generate a new API key or use existing one
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  3. Ensure you have the appropriate API access permissions
+                </Typography>
+              </>
+            )}
+            {selectedProvider === 'gratta' && (
+              <>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  1. Go to Gratta → Dashboard → API Settings
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  2. Create or copy your API key
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  3. Verify your API key has the required permissions
+                </Typography>
+              </>
+            )}
           </Alert>
         </DialogContent>
         <DialogActions>
@@ -2528,7 +2674,7 @@ export default function DataEnrichment() {
           <Button
             variant="contained"
             onClick={handleApiKeySubmit}
-            disabled={!apolloApiKey.trim() || isValidatingKey}
+            disabled={!getCurrentApiKey().trim() || isValidatingKey}
             startIcon={isValidatingKey ? <CircularProgress size={16} /> : <CheckCircleIcon />}
           >
             {isValidatingKey ? 'Validating...' : 'Validate & Save'}
