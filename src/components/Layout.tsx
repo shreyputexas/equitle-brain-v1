@@ -390,21 +390,103 @@ export default function Layout() {
         {navPosition === 'left' ? (
           /* Left Mode - Compact Icons */
           <>
-            {/* Logo - Always top-left */}
-            <Box
-              component="img"
-              src="/assets/images/extended_logo_black_white.png"
-              alt="Equitle"
-              sx={{
-                height: '2rem',
-                filter: 'brightness(0) invert(1)',
-                opacity: 0.95,
-                objectFit: 'contain',
-                cursor: 'pointer',
-                mb: 3
-              }}
-              onClick={() => navigate('/')}
-            />
+            {/* Equitle Logo Icon */}
+            <Tooltip title="Equitle" placement="right">
+              <IconButton
+                onClick={() => navigate('/')}
+                sx={{
+                  width: 48,
+                  height: 48,
+                  bgcolor: 'transparent',
+                  color: 'text.primary',
+                  border: '1px solid',
+                  borderColor: 'transparent',
+                  mb: 3,
+                  '&:hover': {
+                    bgcolor: 'action.hover',
+                    borderColor: 'divider'
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    position: 'relative',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '12px',
+                      height: '12px',
+                      bgcolor: 'currentColor',
+                      borderRadius: '50% 50% 50% 0%',
+                      transform: 'rotate(-45deg)'
+                    },
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      top: '6px',
+                      left: '6px',
+                      width: '6px',
+                      height: '6px',
+                      bgcolor: 'currentColor',
+                      borderRadius: '2px'
+                    }
+                  }}
+                >
+                  {/* D shape */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: '2px',
+                      width: '8px',
+                      height: '8px',
+                      border: '2px solid currentColor',
+                      borderRadius: '50% 0% 50% 50%',
+                      borderRight: 'none',
+                      borderBottom: 'none'
+                    }}
+                  />
+                  {/* Corner squares */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '8px',
+                      left: '8px',
+                      width: '4px',
+                      height: '4px',
+                      bgcolor: 'currentColor',
+                      borderRadius: '1px'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '8px',
+                      width: '4px',
+                      height: '4px',
+                      bgcolor: 'currentColor',
+                      borderRadius: '1px'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '8px',
+                      left: '12px',
+                      width: '4px',
+                      height: '4px',
+                      bgcolor: 'currentColor',
+                      borderRadius: '1px'
+                    }}
+                  />
+                </Box>
+              </IconButton>
+            </Tooltip>
 
             {/* Navigation Icons */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', flex: 1 }}>
