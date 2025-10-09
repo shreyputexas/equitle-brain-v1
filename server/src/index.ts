@@ -34,6 +34,7 @@ import googleWorkspaceRoutes from './routes/googleWorkspace';
 import dashboardRoutes from './routes/dashboard';
 import dataEnrichmentRoutes from './routes/dataEnrichment';
 import apolloRoutes from './routes/apollo';
+import voiceAgentRoutes from './routes/voiceAgent';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -221,6 +222,8 @@ app.use('/api/dashboard', firebaseAuthMiddleware, dashboardRoutes);
 app.use('/api/data-enrichment', dataEnrichmentRoutes);
 // Apollo API routes - no auth required for development
 app.use('/api/apollo', apolloRoutes);
+// Voice Agent routes - temporarily removing auth for debugging
+app.use('/api/voice-agent', voiceAgentRoutes);
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);
@@ -330,7 +333,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 

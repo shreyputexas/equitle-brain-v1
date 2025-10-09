@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getApiUrl, getSocketUrl } from '../config/api';
 import {
   Box,
   Paper,
@@ -142,7 +143,7 @@ export default function VoiceCalls() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:4001/api/voice-agent/create-call', {
+      const response = await fetch(getApiUrl('voice-agent/create-call'), {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -174,7 +175,7 @@ export default function VoiceCalls() {
 
   const loadVoiceProfiles = async () => {
     try {
-      const response = await fetch('http://localhost:4001/api/voice-agent/voices', {
+      const response = await fetch(getApiUrl('voice-agent/voices'), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -190,7 +191,7 @@ export default function VoiceCalls() {
 
   const loadCallHistory = async () => {
     try {
-      const response = await fetch('http://localhost:4001/api/voice-agent/calls?limit=10', {
+      const response = await fetch(getApiUrl('voice-agent/calls?limit=10'), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -209,7 +210,7 @@ export default function VoiceCalls() {
     loadCallHistory();
 
     // Initialize WebSocket connection
-    const socketConnection = io('http://localhost:4001', {
+    const socketConnection = io(getSocketUrl(), {
       auth: {
         token: localStorage.getItem('token')
       }
@@ -327,7 +328,7 @@ export default function VoiceCalls() {
       formData.append('description', voiceDescription.trim());
       formData.append('isDefault', 'false');
 
-      const response = await fetch('http://localhost:4001/api/voice-agent/voice-clone', {
+      const response = await fetch(getApiUrl('voice-agent/voice-clone'), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

@@ -9,6 +9,7 @@ import {
   User as FirebaseUser 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { API_BASE_URL } from '../config/api';
 
 interface User {
   id: string;
@@ -69,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   // Configure axios base URL
-  axios.defaults.baseURL = 'http://localhost:4001/api';
+  axios.defaults.baseURL = `${API_BASE_URL}/api`;
 
   useEffect(() => {
     // Development mode: bypass Firebase auth and use mock user
