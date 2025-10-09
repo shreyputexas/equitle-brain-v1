@@ -78,7 +78,7 @@ import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 import DealPipeline from '../components/DealPipeline';
 import EmailAlerts from '../components/EmailAlerts';
-import { emailProcessingApi } from '../services/emailProcessingApi';
+import { emailProcessingApi, ProcessedEmail } from '../services/emailProcessingApi';
 
 type ViewMode = 'grid' | 'list' | 'pipeline';
 
@@ -168,6 +168,8 @@ export default function Deals() {
   const [dealToEdit, setDealToEdit] = useState<ApiDeal | null>(null);
   const [emailAlertsOpen, setEmailAlertsOpen] = useState(false);
   const [processingEmails, setProcessingEmails] = useState(false);
+  const [processedEmails, setProcessedEmails] = useState<ProcessedEmail[]>([]);
+  const [emailsLoading, setEmailsLoading] = useState(false);
 
   // Use real API for deals data
   const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
@@ -195,7 +197,9 @@ export default function Deals() {
     try {
       setProcessingEmails(true);
       await emailProcessingApi.processEmailsNow();
-      alert('Email processing completed! Check the Investors and Brokers tabs to see categorized emails.');
+      // Load processed emails after processing
+      await loadProcessedEmails();
+      alert('Email processing completed! Check the processed emails below.');
     } catch (error) {
       console.error('Error processing emails:', error);
       alert('Failed to process emails. Please try again.');
@@ -203,6 +207,23 @@ export default function Deals() {
       setProcessingEmails(false);
     }
   };
+
+  const loadProcessedEmails = async () => {
+    try {
+      setEmailsLoading(true);
+      const emails = await emailProcessingApi.getEmailsByCategory('deal');
+      setProcessedEmails(emails);
+    } catch (error) {
+      console.error('Error loading processed emails:', error);
+    } finally {
+      setEmailsLoading(false);
+    }
+  };
+
+  // Load processed emails on component mount
+  useEffect(() => {
+    loadProcessedEmails();
+  }, []);
 
   const handleMenuClose = () => {
     setAnchorEl(null);
@@ -980,9 +1001,9 @@ export default function Deals() {
   return (
     <Box>
       {(viewMode as string) !== 'pipeline' && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, p: 3, bgcolor: 'background.paper' }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
+            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
               Deal Pipeline
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
@@ -1003,14 +1024,7 @@ export default function Deals() {
               startIcon={<EmailIcon />}
               onClick={handleProcessEmails}
               disabled={processingEmails}
-              sx={{
-                borderColor: '#000000',
-                color: '#000000',
-                '&:hover': {
-                  borderColor: '#333333',
-                  bgcolor: '#f5f5f5'
-                }
-              }}
+              sx={{ borderRadius: 1 }}
             >
               {processingEmails ? 'Processing...' : 'Process Emails'}
             </Button>
@@ -1020,13 +1034,7 @@ export default function Deals() {
               onClick={() => {
                 setNewDealModalOpen(true);
               }}
-              sx={{
-                bgcolor: '#000000',
-                color: 'white',
-                '&:hover': {
-                  bgcolor: '#333333'
-                }
-              }}
+              sx={{ borderRadius: 1 }}
             >
               New Deal
             </Button>
@@ -1037,13 +1045,13 @@ export default function Deals() {
       {(viewMode as string) !== 'pipeline' && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 1.5 }}>
+            <Paper sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: '#000000', mr: 1.5, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
                   <MoneyIcon fontSize="small" />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
                     ${(totalPipelineValue / 1000000).toFixed(1)}M
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -1054,13 +1062,13 @@ export default function Deals() {
             </Paper>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 1.5 }}>
+            <Paper sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: '#000000', mr: 1.5, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
                   <TrendingUpIcon fontSize="small" />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
                     {avgProbability}%
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -1071,13 +1079,13 @@ export default function Deals() {
             </Paper>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 1.5 }}>
+            <Paper sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: '#000000', mr: 1.5, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
                   <ScheduleIcon fontSize="small" />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
                     45 days
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -1088,13 +1096,13 @@ export default function Deals() {
             </Paper>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Paper sx={{ p: 1.5 }}>
+            <Paper sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: 'info.main', mr: 1.5, width: 32, height: 32 }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
                   <BusinessIcon fontSize="small" />
                 </Avatar>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
                     {activeDealCount}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -1136,6 +1144,73 @@ export default function Deals() {
             onEditDeal={handleEditDeal}
             onDeleteDeal={handleDeleteDeal}
           />
+          
+          {/* Processed Emails Section */}
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 2, color: '#000000' }}>
+              Processed Emails
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Emails automatically categorized from your Gmail integration
+            </Typography>
+            
+            {emailsLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : processedEmails.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <EmailIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No processed emails yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Click "Process Emails" to fetch and categorize emails from your Gmail
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={2}>
+                {processedEmails.map((email) => (
+                  <Grid item xs={12} sm={6} md={4} key={email.id}>
+                    <Card sx={{ height: '100%', border: '1px solid #e0e0e0' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#000000' }}>
+                            {email.prospect_name || email.prospect_email}
+                          </Typography>
+                          <Chip
+                            label={email.sentiment}
+                            size="small"
+                            sx={{
+                              bgcolor: email.sentiment === 'GREEN' ? '#e8f5e8' : 
+                                      email.sentiment === 'YELLOW' ? '#fff8e1' : '#ffeaea',
+                              color: email.sentiment === 'GREEN' ? '#4caf50' : 
+                                     email.sentiment === 'YELLOW' ? '#ff9800' : '#f44336',
+                              fontWeight: 600
+                            }}
+                          />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          {email.email_subject}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {email.received_date ? new Date(email.received_date).toLocaleDateString() : 'Unknown date'}
+                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                          <Chip
+                            label={email.subCategory}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.75rem' }}
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Box>
         </Box>
       ) : (
         <Paper sx={{ p: 3 }}>
@@ -1156,41 +1231,6 @@ export default function Deals() {
             <Button startIcon={<FilterIcon />} sx={{ mr: 2 }}>
               Filters
             </Button>
-            <Box sx={{ display: 'flex', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-              <IconButton
-                size="small"
-                onClick={() => setViewMode('pipeline')}
-                sx={{
-                  borderRadius: 1,
-                  bgcolor: (viewMode as string) === 'pipeline' ? '#000000' : 'transparent',
-                  color: (viewMode as string) === 'pipeline' ? 'white' : 'text.secondary'
-                }}
-              >
-                <KanbanIcon />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => setViewMode('list')}
-                sx={{
-                  borderRadius: 1,
-                  bgcolor: viewMode === 'list' ? '#000000' : 'transparent',
-                  color: viewMode === 'list' ? 'white' : 'text.secondary'
-                }}
-              >
-                <ListView />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => setViewMode('grid')}
-                sx={{
-                  borderRadius: 1,
-                  bgcolor: viewMode === 'grid' ? '#000000' : 'transparent',
-                  color: viewMode === 'grid' ? 'white' : 'text.secondary'
-                }}
-              >
-                <BusinessIcon />
-              </IconButton>
-            </Box>
           </Box>
 
         {(viewMode as string) !== 'pipeline' && (

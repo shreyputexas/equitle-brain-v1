@@ -23,38 +23,38 @@ const createAppTheme = (isDarkMode: boolean) => {
     palette: {
       mode: isDarkMode ? 'dark' : 'light',
       primary: {
-        main: isDarkMode ? '#FFFFFF' : '#0A0A0A',
-        light: isDarkMode ? '#E5E5E5' : '#2C2C2C',
+        main: isDarkMode ? '#FFFFFF' : '#000000',
+        light: isDarkMode ? '#E5E5E5' : '#333333',
         dark: isDarkMode ? '#CCCCCC' : '#000000',
-        contrastText: isDarkMode ? '#0A0A0A' : '#FFFFFF'
+        contrastText: isDarkMode ? '#000000' : '#FFFFFF'
       },
       secondary: {
-        main: '#5E5CE6',
-        light: '#7C7AED',
-        dark: '#4A48C7',
+        main: '#666666',
+        light: '#999999',
+        dark: '#333333',
         contrastText: '#FFFFFF'
       },
       background: {
-        default: isDarkMode ? '#0A0A0A' : '#FFFFFF',
-        paper: isDarkMode ? '#1A1A1A' : '#FFFFFF'
+        default: isDarkMode ? '#000000' : '#FFFFFF',
+        paper: isDarkMode ? '#111111' : '#FFFFFF'
       },
       text: {
-        primary: isDarkMode ? '#FFFFFF' : '#0A0A0A',
-        secondary: isDarkMode ? '#B3B3B3' : '#6B7280'
+        primary: isDarkMode ? '#FFFFFF' : '#000000',
+        secondary: isDarkMode ? '#CCCCCC' : '#666666'
       },
       error: {
-        main: '#EF4444'
+        main: '#000000'
       },
       warning: {
-        main: '#F59E0B'
+        main: '#666666'
       },
       info: {
-        main: '#3B82F6'
+        main: '#000000'
       },
       success: {
-        main: '#10B981'
+        main: '#000000'
       },
-      divider: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)'
+      divider: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
     },
     typography: {
       fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
@@ -112,50 +112,38 @@ const createAppTheme = (isDarkMode: boolean) => {
       }
     },
     shape: {
-      borderRadius: 16
+      borderRadius: 4
     },
     components: {
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 10,
-            padding: '12px 28px',
-            fontSize: '0.9375rem',
+            borderRadius: 4,
+            padding: '12px 24px',
+            fontSize: '0.875rem',
             fontWeight: 600,
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            textTransform: 'none',
+            transition: 'all 0.2s ease',
             boxShadow: 'none',
+            border: 'none',
             '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: isDarkMode 
-                ? '0 8px 20px rgba(255, 255, 255, 0.1)' 
-                : '0 8px 20px rgba(94, 92, 230, 0.25)'
+              transform: 'none',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
             }
           },
           contained: {
-            background: isDarkMode 
-              ? 'linear-gradient(135deg, #FFFFFF 0%, #E5E5E5 100%)'
-              : 'linear-gradient(135deg, #0A0A0A 0%, #2C2C2C 100%)',
-            color: isDarkMode ? '#0A0A0A' : '#FFFFFF',
-            boxShadow: isDarkMode 
-              ? '0 2px 8px rgba(255, 255, 255, 0.1)'
-              : '0 2px 8px rgba(0, 0, 0, 0.15)',
+            background: isDarkMode ? '#FFFFFF' : '#000000',
+            color: isDarkMode ? '#000000' : '#FFFFFF',
+            border: 'none',
             '&:hover': {
-              background: isDarkMode 
-                ? 'linear-gradient(135deg, #F0F0F0 0%, #D0D0D0 100%)'
-                : 'linear-gradient(135deg, #1A1A1A 0%, #3C3C3C 100%)',
-              boxShadow: isDarkMode 
-                ? '0 6px 20px rgba(255, 255, 255, 0.15)'
-                : '0 6px 20px rgba(0, 0, 0, 0.25)'
+              background: isDarkMode ? '#F5F5F5' : '#333333'
             }
           },
           outlined: {
-            borderWidth: '1.5px',
-            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(10, 10, 10, 0.2)',
-            color: isDarkMode ? '#FFFFFF' : '#0A0A0A',
+            border: 'none',
+            color: isDarkMode ? '#FFFFFF' : '#000000',
             '&:hover': {
-              borderWidth: '1.5px',
-              borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(10, 10, 10, 0.4)',
-              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(10, 10, 10, 0.02)'
+              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
             }
           }
         }
@@ -164,38 +152,23 @@ const createAppTheme = (isDarkMode: boolean) => {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF',
-            border: isDarkMode 
-              ? '1px solid rgba(255, 255, 255, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.05)',
-            boxShadow: isDarkMode 
-              ? '0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2)'
-              : '0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.02)',
-            borderRadius: 16
+            backgroundColor: isDarkMode ? '#111111' : '#FFFFFF',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            borderRadius: 4
           }
         }
       },
       MuiCard: {
         styleOverrides: {
           root: {
-            backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+            backgroundColor: isDarkMode ? '#111111' : '#FFFFFF',
             backgroundImage: 'none',
-            border: isDarkMode 
-              ? '1px solid rgba(255, 255, 255, 0.1)'
-              : '1px solid rgba(0, 0, 0, 0.05)',
-            borderRadius: 16,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: isDarkMode 
-              ? '0 2px 8px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2)'
-              : '0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.02)',
+            borderRadius: 4,
+            transition: 'all 0.2s ease',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
             '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: isDarkMode 
-                ? '0 12px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3)'
-                : '0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)',
-              border: isDarkMode 
-                ? '1px solid rgba(94, 92, 230, 0.3)'
-                : '1px solid rgba(94, 92, 230, 0.15)'
+              transform: 'none',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
             }
           }
         }
@@ -204,20 +177,20 @@ const createAppTheme = (isDarkMode: boolean) => {
         styleOverrides: {
           root: {
             '& .MuiOutlinedInput-root': {
-              backgroundColor: isDarkMode ? '#2A2A2A' : '#FAFAFA',
-              borderRadius: 10,
-              transition: 'all 0.2s ease-in-out',
+              backgroundColor: isDarkMode ? '#222222' : '#FFFFFF',
+              borderRadius: 4,
+              transition: 'all 0.2s ease',
               '& fieldset': {
-                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                borderWidth: '1.5px'
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                borderWidth: '1px'
               },
               '&:hover fieldset': {
-                borderColor: 'rgba(94, 92, 230, 0.3)'
+                borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.4)'
               },
               '&.Mui-focused': {
-                backgroundColor: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+                backgroundColor: isDarkMode ? '#111111' : '#FFFFFF',
                 '& fieldset': {
-                  borderColor: '#5E5CE6',
+                  borderColor: isDarkMode ? '#FFFFFF' : '#000000',
                   borderWidth: '2px'
                 }
               }
@@ -228,15 +201,15 @@ const createAppTheme = (isDarkMode: boolean) => {
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
-            backgroundColor: isDarkMode ? 'rgba(94, 92, 230, 0.2)' : 'rgba(94, 92, 230, 0.08)',
-            border: isDarkMode ? '1px solid rgba(94, 92, 230, 0.4)' : '1px solid rgba(94, 92, 230, 0.2)',
-            color: isDarkMode ? '#FFFFFF' : '#0A0A0A',
+            borderRadius: 4,
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(0, 0, 0, 0.1)',
+            color: isDarkMode ? '#FFFFFF' : '#000000',
             fontWeight: 500,
-            transition: 'all 0.2s ease-in-out',
+            transition: 'all 0.2s ease',
             '&:hover': {
-              backgroundColor: isDarkMode ? 'rgba(94, 92, 230, 0.3)' : 'rgba(94, 92, 230, 0.15)',
-              transform: 'scale(1.05)'
+              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+              transform: 'none'
             }
           }
         }
@@ -244,7 +217,8 @@ const createAppTheme = (isDarkMode: boolean) => {
       MuiAvatar: {
         styleOverrides: {
           root: {
-            backgroundColor: 'linear-gradient(135deg, #5E5CE6 0%, #7C7AED 100%)',
+            backgroundColor: isDarkMode ? '#FFFFFF' : '#000000',
+            color: isDarkMode ? '#000000' : '#FFFFFF',
             fontWeight: 600
           }
         }
@@ -252,13 +226,13 @@ const createAppTheme = (isDarkMode: boolean) => {
       MuiLinearProgress: {
         styleOverrides: {
           root: {
-            height: 8,
-            borderRadius: 4,
-            backgroundColor: isDarkMode ? 'rgba(94, 92, 230, 0.2)' : 'rgba(94, 92, 230, 0.1)'
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
           },
           bar: {
-            borderRadius: 4,
-            background: 'linear-gradient(90deg, #5E5CE6 0%, #7C7AED 100%)'
+            borderRadius: 2,
+            background: isDarkMode ? '#FFFFFF' : '#000000'
           }
         }
       },
@@ -267,14 +241,14 @@ const createAppTheme = (isDarkMode: boolean) => {
           root: {
             '& .MuiSwitch-switchBase': {
               '&.Mui-checked': {
-                color: '#5E5CE6',
+                color: isDarkMode ? '#000000' : '#FFFFFF',
                 '& + .MuiSwitch-track': {
-                  backgroundColor: '#5E5CE6',
+                  backgroundColor: isDarkMode ? '#FFFFFF' : '#000000',
                 },
               },
             },
             '& .MuiSwitch-track': {
-              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.2)',
+              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
             },
           },
         },

@@ -685,42 +685,6 @@ export default function DealPipeline({
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', border: '1px solid white', borderRadius: 1 }}>
-            <Button
-              size="small"
-              onClick={() => setViewMode('pipeline')}
-              sx={{
-                bgcolor: viewMode === 'pipeline' ? 'white' : 'transparent',
-                color: viewMode === 'pipeline' ? 'black' : 'white',
-                minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                fontSize: '0.75rem',
-                '&:hover': {
-                  bgcolor: viewMode === 'pipeline' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Pipeline
-            </Button>
-            <Button
-              size="small"
-              onClick={() => setViewMode('tabs')}
-              sx={{
-                bgcolor: viewMode === 'tabs' ? 'white' : 'transparent',
-                color: viewMode === 'tabs' ? 'black' : 'white',
-                minWidth: 'auto',
-                px: 1.5,
-                py: 0.5,
-                fontSize: '0.75rem',
-                '&:hover': {
-                  bgcolor: viewMode === 'tabs' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Tabs
-            </Button>
-          </Box>
           <Button
             variant="contained"
             startIcon={<AddIcon />}

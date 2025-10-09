@@ -12,17 +12,17 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@services': path.resolve(__dirname, './src/services'),
-      '@types': path.resolve(__dirname, './src/types')
-    }
+      '@types': path.resolve(__dirname, './src/types'),
+    },
   },
   server: {
-    port: 3001,
+    port: 3001, // frontend runs here
     proxy: {
       '/api': {
-        target: 'http://localhost:4001',
-        changeOrigin: true
-      }
-    }
+        target: 'http://127.0.0.1:4001', // backend runs here
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     rollupOptions: {
@@ -30,8 +30,8 @@ export default defineConfig({
         manualChunks: undefined,
         entryFileNames: `[name]-${Date.now()}.js`,
         chunkFileNames: `[name]-${Date.now()}.js`,
-        assetFileNames: `[name]-${Date.now()}.[ext]`
-      }
-    }
-  }
+        assetFileNames: `[name]-${Date.now()}.[ext]`,
+      },
+    },
+  },
 });
