@@ -552,12 +552,12 @@ export default function Layout() {
                   onClick={() => setNavPosition('top')}
                   sx={{
                     bgcolor: 'transparent',
-                    color: navPosition === 'top' ? 'primary.main' : 'text.primary',
+                    color: (navPosition as string) === 'top' ? 'primary.main' : 'text.primary',
                     width: 32,
                     height: 32,
                     fontSize: '0.7rem',
                     border: '1px solid',
-                    borderColor: navPosition === 'top' ? 'primary.main' : 'divider',
+                    borderColor: (navPosition as string) === 'top' ? 'primary.main' : 'divider',
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -571,12 +571,12 @@ export default function Layout() {
                   onClick={() => setNavPosition('left')}
                   sx={{
                     bgcolor: 'transparent',
-                    color: navPosition === 'left' ? 'primary.main' : 'text.primary',
+                    color: (navPosition as string) === 'left' ? 'primary.main' : 'text.primary',
                     width: 32,
                     height: 32,
                     fontSize: '0.7rem',
                     border: '1px solid',
-                    borderColor: navPosition === 'left' ? 'primary.main' : 'divider',
+                    borderColor: (navPosition as string) === 'left' ? 'primary.main' : 'divider',
                     '&:hover': {
                       bgcolor: 'action.hover'
                     }
@@ -707,12 +707,12 @@ export default function Layout() {
                 onClick={() => setNavPosition('left')}
                 sx={{
                   bgcolor: 'transparent',
-                  color: navPosition === 'left' ? 'primary.main' : 'text.primary',
+                  color: (navPosition as string) === 'left' ? 'primary.main' : 'text.primary',
                   fontSize: '0.75rem',
                   minWidth: 'auto',
                   px: 1.5,
                   border: '1px solid',
-                  borderColor: navPosition === 'left' ? 'primary.main' : 'divider',
+                  borderColor: (navPosition as string) === 'left' ? 'primary.main' : 'divider',
                   '&:hover': {
                     bgcolor: 'action.hover'
                   }
