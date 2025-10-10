@@ -183,6 +183,62 @@ export class ApolloService {
   }
 
   /**
+   * Use Apollo Email Finder API to find/reveal emails
+   */
+  async findEmail(params: {
+    first_name?: string;
+    last_name?: string;
+    organization_name?: string;
+    domain?: string;
+  }): Promise<{ email?: string; confidence?: number } | null> {
+    try {
+      if (!this.apiKey) {
+        throw new Error('Apollo API key not configured');
+      }
+
+      logger.info('Using Apollo Email Finder API', params);
+
+      const response = await axios.post(
+        `${this.baseUrl}/email_finder`,
+        {
+          first_name: params.first_name,
+          last_name: params.last_name,
+          domain: params.domain,
+          organization_name: params.organization_name
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': this.apiKey,
+            'Cache-Control': 'no-cache'
+          }
+        }
+      );
+
+      if (response.data && response.data.email) {
+        logger.info('Apollo Email Finder successful', {
+          email: response.data.email,
+          confidence: response.data.confidence
+        });
+
+        return {
+          email: response.data.email,
+          confidence: response.data.confidence
+        };
+      }
+
+      return null;
+    } catch (error: any) {
+      logger.error('Apollo Email Finder failed', {
+        error: error.message,
+        params,
+        status: error.response?.status
+      });
+      return null;
+    }
+  }
+
+  /**
    * Enrich a single person's data with email reveal
    */
   async enrichPerson(params: {
@@ -207,6 +263,22 @@ export class ApolloService {
 
         const matchResult = await this.matchPersonWithEmailReveal(params);
         if (matchResult) {
+          // If we got a placeholder email, try the Email Finder API
+          if (matchResult.email?.includes('email_not_unlocked') && params.first_name && params.last_name) {
+            logger.info('Trying Email Finder API for email reveal');
+            const emailResult = await this.findEmail({
+              first_name: params.first_name,
+              last_name: params.last_name,
+              organization_name: params.organization_name,
+              domain: params.domain
+            });
+
+            if (emailResult?.email) {
+              matchResult.email = emailResult.email;
+              logger.info('Email Finder API successful, updated email');
+            }
+          }
+
           logger.info('Apollo enrichment successful via people/match', {
             name: matchResult.name,
             email: matchResult.email,
@@ -232,6 +304,23 @@ export class ApolloService {
 
         if (searchResults && searchResults.length > 0) {
           const firstContact = searchResults[0];
+
+          // If we got a placeholder email, try the Email Finder API
+          if (firstContact.email?.includes('email_not_unlocked') && firstContact.first_name && firstContact.last_name) {
+            logger.info('Trying Email Finder API for search result email reveal');
+            const emailResult = await this.findEmail({
+              first_name: firstContact.first_name,
+              last_name: firstContact.last_name,
+              organization_name: params.organization_name,
+              domain: params.domain
+            });
+
+            if (emailResult?.email) {
+              firstContact.email = emailResult.email;
+              logger.info('Email Finder API successful for search result, updated email');
+            }
+          }
+
           logger.info('Apollo enrichment successful via search', {
             name: firstContact.name,
             email: firstContact.email,

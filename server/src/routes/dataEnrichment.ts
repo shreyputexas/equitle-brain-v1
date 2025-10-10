@@ -112,9 +112,8 @@ router.post('/upload-and-enrich', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Set API key for this request
-    process.env.APOLLO_API_KEY = apiKey;
-    const apolloService = new ApolloService();
+    // Create Apollo service with the provided API key
+    const apolloService = new ApolloService(apiKey);
 
     // Parse Excel file
     if (!XLSX) {
@@ -750,9 +749,8 @@ router.post('/enrich-single', async (req, res) => {
       });
     }
 
-    // Set API key for this request
-    process.env.APOLLO_API_KEY = apiKey;
-    const apolloService = new ApolloService();
+    // Create Apollo service with the provided API key
+    const apolloService = new ApolloService(apiKey);
 
     const enriched = await apolloService.enrichPerson(searchParams);
 
@@ -1183,27 +1181,75 @@ router.post('/search-contacts', async (req, res) => {
       });
     }
 
-    // Process and format the results
-    const discoveredContacts = searchResults.map((person, index) => ({
-      id: person.id,
-      name: person.name,
-      first_name: person.first_name,
-      last_name: person.last_name,
-      title: person.title,
-      email: person.email && person.email !== 'email_not_unlocked' ? person.email : '',
-      phone: person.phone_numbers?.[0]?.sanitized_number || '',
-      linkedin_url: person.linkedin_url || '',
-      company: person.organization?.name || '',
-      company_domain: person.organization?.primary_domain || '',
-      company_industry: person.organization?.industry || '',
-      company_size: person.organization?.employee_count || '',
-      location: `${person.city || ''}, ${person.state || ''}`.replace(/^,\s*|,\s*$/g, ''),
-      match_quality: 'thesis_match',
-      apollo_confidence: person.extrapolated_email_confidence || 0,
-      email_status: person.email === 'email_not_unlocked' ? 'not_unlocked' : 'available',
-      email_unlocked: person.email !== 'email_not_unlocked',
-      contactType: contactType // Add contact type for identification
-    }));
+    // Process and format the results, with Email Finder API for locked emails
+    const discoveredContacts = [];
+
+    for (let i = 0; i < searchResults.length; i++) {
+      const person = searchResults[i];
+      let email = person.email && person.email !== 'email_not_unlocked' ? person.email : '';
+
+      // Debug: Log what emails we're getting from Apollo
+      logger.info('Apollo person email debug', {
+        name: `${person.first_name} ${person.last_name}`,
+        rawEmail: person.email,
+        cleanEmail: email,
+        isLocked: person.email === 'email_not_unlocked' || person.email?.includes('email_not_unlocked')
+      });
+
+      // If email is locked, try Email Finder API
+      if ((person.email === 'email_not_unlocked' || person.email?.includes('email_not_unlocked')) && person.first_name && person.last_name) {
+        try {
+          logger.info('Trying Email Finder API for locked email', {
+            name: `${person.first_name} ${person.last_name}`,
+            company: person.organization?.name
+          });
+
+          const emailResult = await apolloService.matchPersonWithEmailReveal({
+            first_name: person.first_name,
+            last_name: person.last_name,
+            organization_name: person.organization?.name,
+            domain: person.organization?.primary_domain
+          });
+
+          if (emailResult?.email) {
+            email = emailResult.email;
+            logger.info('Email Finder API successful', {
+              name: `${person.first_name} ${person.last_name}`,
+              email: emailResult.email
+            });
+          }
+        } catch (error: any) {
+          logger.error('Email Finder API failed', {
+            name: `${person.first_name} ${person.last_name}`,
+            error: error.message
+          });
+        }
+
+        // Add small delay to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      discoveredContacts.push({
+        id: person.id,
+        name: person.name,
+        first_name: person.first_name,
+        last_name: person.last_name,
+        title: person.title,
+        email: email,
+        phone: person.phone_numbers?.[0]?.sanitized_number || '',
+        linkedin_url: person.linkedin_url || '',
+        company: person.organization?.name || '',
+        company_domain: person.organization?.primary_domain || '',
+        company_industry: person.organization?.industry || '',
+        company_size: person.organization?.employee_count || '',
+        location: `${person.city || ''}, ${person.state || ''}`.replace(/^,\s*|,\s*$/g, ''),
+        match_quality: 'thesis_match',
+        apollo_confidence: person.extrapolated_email_confidence || 0,
+        email_status: email ? 'available' : 'not_unlocked',
+        email_unlocked: !!email,
+        contactType: contactType // Add contact type for identification
+      });
+    }
 
     // Filter out contacts with locked emails if needed
     const usefulContacts = discoveredContacts.filter(contact => 
