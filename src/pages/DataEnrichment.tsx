@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -227,6 +227,27 @@ export default function DataEnrichment() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
+  // Load API key state from localStorage on component mount
+  useEffect(() => {
+    const savedApolloKey = localStorage.getItem('apolloApiKey');
+    const savedZoominfoKey = localStorage.getItem('zoominfoApiKey');
+    const savedGrattaKey = localStorage.getItem('grattaApiKey');
+    const savedIsKeyValid = localStorage.getItem('isKeyValid');
+    const savedSelectedProvider = localStorage.getItem('selectedProvider');
+
+    if (savedApolloKey) setApolloApiKey(savedApolloKey);
+    if (savedZoominfoKey) setZoominfoApiKey(savedZoominfoKey);
+    if (savedGrattaKey) setGrattaApiKey(savedGrattaKey);
+    if (savedIsKeyValid) {
+      const isValid = savedIsKeyValid === 'true';
+      setIsKeyValid(isValid);
+    }
+    if (savedSelectedProvider && ['apollo', 'zoominfo', 'gratta'].includes(savedSelectedProvider)) {
+      setSelectedProvider(savedSelectedProvider as 'apollo' | 'zoominfo' | 'gratta');
+    }
+  }, []);
+
+
   // Main tab and sub-tab state
   const [activeMainTab, setActiveMainTab] = useState(0); // 0: Enrichment, 1: Search
   const [activeSubTab, setActiveSubTab] = useState(0); // 0: Contact, 1: Organization
@@ -289,32 +310,19 @@ export default function DataEnrichment() {
     switch (selectedProvider) {
       case 'apollo':
         setApolloApiKey(key);
+        localStorage.setItem('apolloApiKey', key);
         break;
       case 'zoominfo':
         setZoominfoApiKey(key);
+        localStorage.setItem('zoominfoApiKey', key);
         break;
       case 'gratta':
         setGrattaApiKey(key);
+        localStorage.setItem('grattaApiKey', key);
         break;
     }
   };
 
-  // Organization search state
-  const [orgSearchCriteria, setOrgSearchCriteria] = useState({
-    industries: '',
-    subindustries: '',
-    location: '',
-    revenue: '',
-    ebitda: '',
-    growth: '',
-    employeeCount: '',
-    foundedYear: '',
-    keywords: ''
-  });
-  const [isOrgSearching, setIsOrgSearching] = useState(false);
-  const [orgSearchResults, setOrgSearchResults] = useState<any>(null);
-  const [showOrgSearchResults, setShowOrgSearchResults] = useState(false);
-  const [orgsToFind, setOrgsToFind] = useState<number>(10);
 
   // Enhanced contact search state
   const [contactSearchType, setContactSearchType] = useState<'people' | 'brokers' | 'investors'>('people');
@@ -353,8 +361,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!getCurrentApiKey().trim()) {
-      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
+    if (!isKeyValid) {
+      setMessage(`Please configure and validate your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -444,8 +452,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!getCurrentApiKey().trim()) {
-      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
+    if (!isKeyValid) {
+      setMessage(`Please configure and validate your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -523,57 +531,9 @@ export default function DataEnrichment() {
     window.URL.revokeObjectURL(url);
   };
 
-  // Organization search handler
-  const handleOrgSearch = async () => {
-    if (!orgSearchCriteria.industries.trim() && !orgSearchCriteria.subindustries.trim()) {
-      setMessage('Please enter at least Industries or Subindustries');
-      setShowError(true);
-      return;
-    }
-
-    if (!getCurrentApiKey().trim()) {
-      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
-      setShowError(true);
-      return;
-    }
-
-    setIsOrgSearching(true);
-    try {
-      const response = await fetch('http://localhost:4001/api/data-enrichment/search-organizations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          searchCriteria: orgSearchCriteria,
-          orgsToFind,
-          apiKey: getCurrentApiKey(),
-          provider: selectedProvider
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setOrgSearchResults(data);
-        setShowOrgSearchResults(true);
-        setMessage(`Found ${data.organizations?.length || 0} organizations matching your criteria`);
-        setShowSuccess(true);
-      } else {
-        setMessage(data.error || 'Failed to search organizations');
-        setShowError(true);
-      }
-    } catch (error) {
-      setMessage('Network error. Please try again.');
-      setShowError(true);
-    } finally {
-      setIsOrgSearching(false);
-    }
-  };
-
   const handleContactSearch = async () => {
-    if (!getCurrentApiKey().trim()) {
-      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
+    if (!isKeyValid) {
+      setMessage(`Please configure and validate your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -785,17 +745,21 @@ export default function DataEnrichment() {
       
       if (data.success && data.valid) {
         setIsKeyValid(true);
+        localStorage.setItem('isKeyValid', 'true');
+        localStorage.setItem('selectedProvider', selectedProvider);
         setMessage(`✅ ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is valid and ready to use!`);
         setShowSuccess(true);
         setShowApiKeyDialog(false);
       } else {
         setIsKeyValid(false);
+        localStorage.setItem('isKeyValid', 'false');
         const providerName = selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1);
         setMessage(`❌ Invalid ${providerName} API key. Please check your API key and permissions.`);
         setShowError(true);
       }
     } catch (error: any) {
       setIsKeyValid(false);
+      localStorage.setItem('isKeyValid', 'false');
       console.error('API key validation error:', error);
       console.error('Error details:', {
         message: error.message,
@@ -856,8 +820,8 @@ export default function DataEnrichment() {
       return;
     }
 
-    if (!getCurrentApiKey().trim()) {
-      setMessage(`Please configure your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
+    if (!isKeyValid) {
+      setMessage(`Please configure and validate your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key first`);
       setShowError(true);
       return;
     }
@@ -973,8 +937,8 @@ export default function DataEnrichment() {
 
           {/* Simplified Navigation */}
           <Box sx={{ mb: 4 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6} md={3}>
+            <Grid container spacing={3} justifyContent="center">
+              <Grid item xs={12} sm={6} md={4}>
                 <Card 
                   sx={{ 
                     cursor: 'pointer', 
@@ -986,16 +950,19 @@ export default function DataEnrichment() {
                   }}
                   onClick={() => { setActiveMainTab(0); setActiveSubTab(0); }}
                 >
-                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <PersonIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 0 && activeSubTab === 0 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  <CardContent sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <PersonIcon sx={{ fontSize: 48, mb: 2, color: activeMainTab === 0 && activeSubTab === 0 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                       Enrich Contacts
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+                      Upload Excel files to enrich contact data
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={4}>
                 <Card 
                   sx={{ 
                     cursor: 'pointer', 
@@ -1007,16 +974,19 @@ export default function DataEnrichment() {
                   }}
                   onClick={() => { setActiveMainTab(0); setActiveSubTab(1); }}
                 >
-                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <BusinessIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 0 && activeSubTab === 1 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Enrich Companies
+                  <CardContent sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <BusinessIcon sx={{ fontSize: 48, mb: 2, color: activeMainTab === 0 && activeSubTab === 1 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      Enrich Organizations
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+                      Upload Excel files to enrich organization data
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={4}>
                 <Card 
                   sx={{ 
                     cursor: 'pointer', 
@@ -1028,35 +998,18 @@ export default function DataEnrichment() {
                   }}
                   onClick={() => { setActiveMainTab(1); setActiveSubTab(0); }}
                 >
-                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <SearchIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 1 && activeSubTab === 0 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  <CardContent sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <SearchIcon sx={{ fontSize: 48, mb: 2, color: activeMainTab === 1 && activeSubTab === 0 ? '#000000' : '#666666' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                       Find Contacts
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+                      Search for people, brokers, and investors
                     </Typography>
                   </CardContent>
                 </Card>
               </Grid>
               
-              <Grid item xs={12} sm={6} md={3}>
-                <Card 
-                  sx={{ 
-                    cursor: 'pointer', 
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: activeMainTab === 1 && activeSubTab === 1 ? '2px solid #000000' : '1px solid #e0e0e0',
-                    '&:hover': { borderColor: '#000000' }
-                  }}
-                  onClick={() => { setActiveMainTab(1); setActiveSubTab(1); }}
-                >
-                  <CardContent sx={{ textAlign: 'center', py: 3, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <BusinessIcon sx={{ fontSize: 40, mb: 2, color: activeMainTab === 1 && activeSubTab === 1 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      Find Companies
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
             </Grid>
           </Box>
 
@@ -1081,304 +1034,6 @@ export default function DataEnrichment() {
         </Alert>
       </Snackbar>
 
-      {/* Tab Panel Content */}
-      {activeMainTab === 0 && activeSubTab === 0 && (
-        <Grid container spacing={3}>
-          {/* Upload Section */}
-          <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 4 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              Upload Excel File
-            </Typography>
-
-            {/* API Key Status */}
-            <Box sx={{ mb: 3 }}>
-              {isKeyValid === null && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Please configure your {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key to start enriching contacts
-                </Alert>
-              )}
-              {isKeyValid === false && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  Invalid API key. Please check your {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key and try again.
-              </Alert>
-            )}
-              {isKeyValid === true && (
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is configured and valid
-                </Alert>
-              )}
-            </Box>
-
-            {/* Drag and Drop File Upload */}
-            <Box 
-                  sx={{
-                mb: 3,
-                border: '2px dashed',
-                borderColor: isDragOver ? 'primary.main' : 'divider',
-                borderRadius: 2,
-                p: 4,
-                textAlign: 'center',
-                bgcolor: isDragOver ? 'action.hover' : 'background.paper',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: 'action.hover'
-                }
-              }}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                {selectedFile ? selectedFile.name : 'Drag & Drop CSV File Here'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                or click to browse files
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Supports any CSV format with flexible column names (max 10MB)
-              </Typography>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileInputChange}
-              />
-            </Box>
-
-            {selectedFile && (
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {selectedFile.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {(selectedFile.size / 1024).toFixed(1)} KB
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                    }}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-            )}
-
-            {/* File Format Instructions */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Supported File Formats:
-              </Typography>
-              <List dense>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemIcon>
-                    <InfoIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Any CSV format with flexible column names"
-                    secondary="We automatically detect: Name, Company, Email, Phone, Website columns"
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemIcon>
-                    <GetAppIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="File types: .csv, .xlsx, .xls"
-                    secondary="Maximum file size: 10MB"
-                  />
-                </ListItem>
-                <ListItem sx={{ py: 0 }}>
-                  <ListItemIcon>
-                    <CheckCircleIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary="Smart column detection"
-                    secondary="Works with any column names like: 'Full Name', 'Contact', 'Business', 'E-mail', etc."
-                  />
-                </ListItem>
-              </List>
-            </Box>
-
-            {/* Process Button */}
-              <Button
-              variant="contained"
-              size="large"
-              startIcon={isProcessing ? <CircularProgress size={20} /> : <SearchIcon />}
-              onClick={handleFileUpload}
-              disabled={!selectedFile || !getCurrentApiKey().trim() || isProcessing}
-                fullWidth
-                sx={{
-                bgcolor: 'white',
-                  color: '#000000',
-                border: '2px solid #000000',
-                py: 1.5,
-                  '&:hover': {
-                  bgcolor: '#f5f5f5'
-                },
-                '&:disabled': {
-                  bgcolor: '#cccccc',
-                  color: '#666666'
-                }
-              }}
-            >
-              {isProcessing ? 'Processing...' : 'Enrich Contacts with Apollo'}
-              </Button>
-
-            {isProcessing && (
-              <Box sx={{ mt: 2 }}>
-                <LinearProgress />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Processing contacts with {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API...
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-
-        {/* Results Section */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 4 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              Enrichment Results
-            </Typography>
-
-            {!showResults ? (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <DataUsageIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="body1" color="text.secondary">
-                  Upload and process a file to see enrichment results
-                </Typography>
-              </Box>
-            ) : (
-              <Box>
-                {/* Summary Stats */}
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={6}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        {results?.summary.total}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Total Contacts
-                      </Typography>
-          </Card>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
-                        {results?.summary.successful}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Enriched
-              </Typography>
-                    </Card>
-                  </Grid>
-                </Grid>
-
-                {/* Success Rate */}
-                <Box sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Success Rate</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {results?.summary.successRate}%
-              </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={results?.summary.successRate || 0}
-                    sx={{ height: 8, borderRadius: 4 }}
-                  />
-                </Box>
-
-                {/* Download Button */}
-                <Button
-                  variant="outlined"
-                  startIcon={<FileDownloadIcon />}
-                  onClick={handleDownloadResults}
-                  fullWidth
-                  sx={{ mb: 3 }}
-                >
-                  Download Enriched Data (CSV)
-                </Button>
-
-                {/* Sample Results Preview */}
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2 }}>
-                  Sample Results:
-                </Typography>
-                <TableContainer sx={{ maxHeight: 300 }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Company</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Phone</TableCell>
-                        <TableCell>Status</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {results?.results.slice(0, 5).map((result, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              {result.enriched?.photo && (
-                                <Avatar src={result.enriched.photo} sx={{ width: 24, height: 24 }} />
-                              )}
-                              <Typography variant="body2">
-                                {result.enriched?.name || result.original.given}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {result.enriched?.company || result.original.company}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {result.enriched?.email || result.original.email}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {result.enriched?.phone || result.original.phone}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            {getStatusIcon(result.success)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-
-                {results && results.results.length > 5 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                    Showing first 5 results. Download CSV for complete data.
-                  </Typography>
-                )}
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-        </Grid>
-      )}
 
       {/* Organization Enrichment Tab */}
       {activeMainTab === 0 && activeSubTab === 1 && (
@@ -1842,240 +1497,6 @@ export default function DataEnrichment() {
         </Grid>
       )}
 
-      {/* Organization Search Tab */}
-      {activeMainTab === 1 && activeSubTab === 1 && (
-        <Grid container spacing={3}>
-          {/* Search Criteria Form */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                Organization Search Criteria
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Enter your search criteria to find organizations using Apollo's Organization Search API. Get detailed company information including CEO, revenue, growth, and more.
-              </Typography>
-
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Industries *"
-                    value={orgSearchCriteria.industries}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, industries: e.target.value})}
-                    placeholder="Technology, Healthcare, Finance"
-                    helperText="Target industries (comma-separated)"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Subindustries"
-                    value={orgSearchCriteria.subindustries}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, subindustries: e.target.value})}
-                    placeholder="SaaS, Fintech, MedTech"
-                    helperText="Specific subindustries or focus areas"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Location"
-                    value={orgSearchCriteria.location}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, location: e.target.value})}
-                    placeholder="San Francisco, New York, Remote"
-                    helperText="Geographic location criteria"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Revenue"
-                    value={orgSearchCriteria.revenue}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, revenue: e.target.value})}
-                    placeholder="$1M-$10M"
-                    helperText="Revenue range criteria"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="EBITDA"
-                    value={orgSearchCriteria.ebitda}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, ebitda: e.target.value})}
-                    placeholder="$500K-$5M"
-                    helperText="Minimum EBITDA requirements"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Growth Rate"
-                    value={orgSearchCriteria.growth}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, growth: e.target.value})}
-                    placeholder="20%+"
-                    helperText="Annual growth rate"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Employee Count"
-                    value={orgSearchCriteria.employeeCount}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, employeeCount: e.target.value})}
-                    placeholder="10-100"
-                    helperText="Company size range"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Founded Year"
-                    value={orgSearchCriteria.foundedYear}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, foundedYear: e.target.value})}
-                    placeholder="2015-2020"
-                    helperText="Year range when founded"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Number of Organizations to Find"
-                    type="number"
-                    value={orgsToFind}
-                    onChange={(e) => setOrgsToFind(parseInt(e.target.value) || 10)}
-                    helperText="Maximum organizations to return"
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Keywords"
-                    value={orgSearchCriteria.keywords}
-                    onChange={(e) => setOrgSearchCriteria({...orgSearchCriteria, keywords: e.target.value})}
-                    placeholder="AI, Machine Learning, Blockchain"
-                    helperText="Additional keywords to refine search"
-                  />
-                </Grid>
-                </Grid>
-
-              <Button
-                variant="contained"
-                onClick={handleOrgSearch}
-                disabled={isOrgSearching}
-                startIcon={isOrgSearching ? <CircularProgress size={20} /> : <SearchIcon />}
-                sx={{ mt: 3, width: '100%' }}
-              >
-                {isOrgSearching ? 'Searching...' : 'Search Organizations'}
-              </Button>
-            </Paper>
-          </Grid>
-
-          {/* Results Section */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                Search Results
-              </Typography>
-
-              {showOrgSearchResults && orgSearchResults ? (
-                <Box>
-                  {/* Summary Stats */}
-                  <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid item xs={6}>
-                      <Card sx={{ textAlign: 'center', bgcolor: 'primary.light' }}>
-                        <CardContent sx={{ py: 2 }}>
-                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            {orgSearchResults.organizations?.length || 0}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Organizations Found
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Card sx={{ textAlign: 'center', bgcolor: 'success.light' }}>
-                        <CardContent sx={{ py: 2 }}>
-                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
-                            {orgSearchResults.summary?.averageRevenue || 'N/A'}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Avg Revenue
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  </Grid>
-
-                  {/* Results Table */}
-                  <TableContainer sx={{ maxHeight: 400 }}>
-                    <Table stickyHeader>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>Company</TableCell>
-                          <TableCell>CEO</TableCell>
-                          <TableCell>Revenue</TableCell>
-                          <TableCell>Location</TableCell>
-                          <TableCell>Industry</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {orgSearchResults.organizations?.slice(0, 10).map((org: any, index: number) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              <Box>
-                                <Typography variant="body2" fontWeight={500}>
-                                  {org.name}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {org.website}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {org.ceo || 'N/A'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {org.revenue || 'N/A'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {org.location || 'N/A'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">
-                                {org.industry || 'N/A'}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  {orgSearchResults.organizations?.length > 10 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-                      Showing first 10 results. Download CSV for complete data.
-                    </Typography>
-                  )}
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="body1" color="text.secondary">
-                    Enter your search criteria and click "Search Organizations" to find companies
-                  </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-        </Grid>
-      )}
 
           {/* Contact Search Tab */}
           {activeMainTab === 1 && activeSubTab === 0 && (
@@ -2601,7 +2022,11 @@ export default function DataEnrichment() {
             <InputLabel>Data Provider</InputLabel>
             <Select
               value={selectedProvider}
-              onChange={(e) => setSelectedProvider(e.target.value as 'apollo' | 'zoominfo' | 'gratta')}
+              onChange={(e) => {
+                const newProvider = e.target.value as 'apollo' | 'zoominfo' | 'gratta';
+                setSelectedProvider(newProvider);
+                localStorage.setItem('selectedProvider', newProvider);
+              }}
               label="Data Provider"
             >
               <MenuItem value="apollo">Apollo</MenuItem>
@@ -2616,6 +2041,11 @@ export default function DataEnrichment() {
             type="password"
             value={getCurrentApiKey()}
             onChange={(e) => setCurrentApiKey(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && getCurrentApiKey().trim() && !isValidatingKey) {
+                handleApiKeySubmit();
+              }
+            }}
             placeholder={`Enter your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key`}
             sx={{ mb: 2 }}
           />
