@@ -95,7 +95,12 @@ Be natural, conversational, and respectful of their time.`;
 export default function VoiceCalls() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [callType, setCallType] = useState('live');
-  const [aiPrompt, setAiPrompt] = useState(DEFAULT_AI_PROMPT);
+  const [contactName, setContactName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [dealType, setDealType] = useState('');
+  const [investmentRange, setInvestmentRange] = useState('');
+  const [industryFocus, setIndustryFocus] = useState('');
+  const [customInstructions, setCustomInstructions] = useState('');
   const [selectedVoice, setSelectedVoice] = useState('');
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([]);
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
@@ -149,7 +154,12 @@ export default function VoiceCalls() {
         body: JSON.stringify({
           phoneNumber: phoneNumber.trim(),
           callType,
-          aiPrompt,
+          contactName: contactName.trim(),
+          companyName: companyName.trim(),
+          dealType,
+          investmentRange,
+          industryFocus: industryFocus.trim(),
+          customInstructions: customInstructions.trim(),
           voiceId: selectedVoice || undefined
         })
       });
@@ -160,6 +170,12 @@ export default function VoiceCalls() {
         setMessage(`Call initiated successfully! Call ID: ${data.callId}`);
         setShowSuccess(true);
         setPhoneNumber('');
+        setContactName('');
+        setCompanyName('');
+        setDealType('');
+        setInvestmentRange('');
+        setIndustryFocus('');
+        setCustomInstructions('');
         loadCallHistory(); // Refresh call history
       } else {
         setMessage(data.error || 'Failed to initiate call');
@@ -521,16 +537,101 @@ export default function VoiceCalls() {
                   </RadioGroup>
                 </FormControl>
 
-                {/* AI Prompt Configuration */}
+                {/* Contact Information */}
+                <Typography variant="h6" sx={{ mt: 3, mb: 2, color: '#000000', fontWeight: 600 }}>
+                  Contact Information
+                </Typography>
+
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Contact Name"
+                      placeholder="John Smith"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      helperText="Person you're calling"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Company Name"
+                      placeholder="Acme Corp"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      helperText="Their company"
+                    />
+                  </Grid>
+                </Grid>
+
+                {/* Deal Information */}
+                <Typography variant="h6" sx={{ mb: 2, color: '#000000', fontWeight: 600 }}>
+                  Deal Information
+                </Typography>
+
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Deal Type</InputLabel>
+                      <Select
+                        value={dealType}
+                        onChange={(e) => setDealType(e.target.value)}
+                        label="Deal Type"
+                      >
+                        <MenuItem value="growth-investment">Growth Investment</MenuItem>
+                        <MenuItem value="acquisition">Acquisition</MenuItem>
+                        <MenuItem value="merger">Merger</MenuItem>
+                        <MenuItem value="buyout">Buyout</MenuItem>
+                        <MenuItem value="series-funding">Series Funding</MenuItem>
+                        <MenuItem value="other">Other</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Investment Range</InputLabel>
+                      <Select
+                        value={investmentRange}
+                        onChange={(e) => setInvestmentRange(e.target.value)}
+                        label="Investment Range"
+                      >
+                        <MenuItem value="under-1m">Under $1M</MenuItem>
+                        <MenuItem value="1m-5m">$1M - $5M</MenuItem>
+                        <MenuItem value="5m-10m">$5M - $10M</MenuItem>
+                        <MenuItem value="10m-25m">$10M - $25M</MenuItem>
+                        <MenuItem value="25m-50m">$25M - $50M</MenuItem>
+                        <MenuItem value="50m-plus">$50M+</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Industry Focus"
+                      placeholder="Healthcare Technology, SaaS, Manufacturing"
+                      value={industryFocus}
+                      onChange={(e) => setIndustryFocus(e.target.value)}
+                      helperText="Target industry or sector"
+                    />
+                  </Grid>
+                </Grid>
+
+                {/* Custom Instructions */}
+                <Typography variant="h6" sx={{ mb: 2, color: '#000000', fontWeight: 600 }}>
+                  Additional Instructions (Optional)
+                </Typography>
+
                 <TextField
                   fullWidth
                   multiline
-                  rows={4}
-                  label="AI Agent Prompt"
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  sx={{ mt: 2 }}
-                  helperText="Customize what your AI agent should say and how it should behave"
+                  rows={3}
+                  label="Custom Instructions"
+                  placeholder="Any specific talking points, questions to ask, or custom instructions..."
+                  value={customInstructions}
+                  onChange={(e) => setCustomInstructions(e.target.value)}
+                  helperText="Optional: Add any specific instructions for this call"
+                  sx={{ mb: 2 }}
                 />
               </Box>
 

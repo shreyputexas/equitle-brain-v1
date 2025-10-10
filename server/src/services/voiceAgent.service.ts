@@ -16,7 +16,7 @@ export interface CallSession {
   transcript: string[];
   retellCallId?: string;
   voiceId?: string;
-  aiPrompt: string;
+  dynamicVariables?: Record<string, string>;
   metadata?: any;
 }
 
@@ -55,7 +55,7 @@ export class VoiceAgentService {
     userId: string,
     phoneNumber: string,
     callType: 'live' | 'voicemail',
-    aiPrompt: string,
+    dynamicVariables: Record<string, string>,
     voiceId?: string
   ): Promise<CallResult> {
     try {
@@ -67,7 +67,7 @@ export class VoiceAgentService {
         phoneNumber,
         status: 'initiated',
         callType,
-        aiPrompt,
+        dynamicVariables,
         voiceId: voiceId || await this.getDefaultVoiceId(userId),
         transcript: [],
         startTime: new Date(),
@@ -83,21 +83,23 @@ export class VoiceAgentService {
       callSession.id = callId;
       this.activeSessions.set(callId, callSession as CallSession);
 
-      // Update existing agent or create new one
-      logger.info('Getting agent ID for call', {
-        hasExistingAgent: !!process.env.RETELL_AGENT_ID,
+      // Use pre-configured agent with dynamic variables
+      const agentId = process.env.RETELL_AGENT_ID;
+
+      if (!agentId) {
+        throw new Error('RETELL_AGENT_ID not configured in environment variables');
+      }
+
+      logger.info('Using configured agent with dynamic variables', {
+        agentId,
         voiceId: callSession.voiceId,
-        promptToUse: aiPrompt.substring(0, 100) + '...'
+        dynamicVariables
       });
 
-      const agentId = process.env.RETELL_AGENT_ID
-        ? await this.updateRetellAgent(process.env.RETELL_AGENT_ID, aiPrompt, callSession.voiceId!)
-        : await this.getOrCreateRetellAgent(userId, aiPrompt, callSession.voiceId!);
-        
-      logger.info('Using agent ID for call', { agentId });
       const retellCall = await this.retellService.createCall({
         phoneNumber,
         agentId,
+        dynamicVariables,
         metadata: { callId, userId }
       });
 

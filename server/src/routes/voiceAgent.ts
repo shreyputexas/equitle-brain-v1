@@ -70,16 +70,33 @@ router.post('/create-call', async (req, res) => {
 
   try {
     const { voiceAgentService } = getServices();
-    const { phoneNumber, callType, aiPrompt, voiceId } = req.body;
+    const {
+      phoneNumber,
+      callType,
+      contactName,
+      companyName,
+      dealType,
+      investmentRange,
+      industryFocus,
+      customInstructions,
+      voiceId
+    } = req.body;
 
     // For development: always use dev user (no auth required)
     const userId = 'dev-user-123';
 
-    console.log('Voice call request received:', { phoneNumber, callType, userId });
+    console.log('Voice call request received:', {
+      phoneNumber,
+      callType,
+      contactName,
+      companyName,
+      dealType,
+      userId
+    });
 
-    if (!phoneNumber || !callType || !aiPrompt) {
+    if (!phoneNumber || !callType) {
       return res.status(400).json({
-        error: 'Missing required fields: phoneNumber, callType, aiPrompt'
+        error: 'Missing required fields: phoneNumber, callType'
       });
     }
 
@@ -96,11 +113,21 @@ router.post('/create-call', async (req, res) => {
 
     logger.info('Creating voice call', { userId, phoneNumber, callType });
 
+    // Create dynamic variables object for Retell
+    const dynamicVariables = {
+      contact_name: contactName || '',
+      company_name: companyName || '',
+      deal_type: dealType || '',
+      investment_range: investmentRange || '',
+      industry_focus: industryFocus || '',
+      custom_instructions: customInstructions || ''
+    };
+
     const result = await voiceAgentService.initiateCall(
       userId,
       phoneNumber,
       callType,
-      aiPrompt,
+      dynamicVariables,
       voiceId
     );
 
@@ -505,16 +532,21 @@ router.post('/test-call', firebaseAuthMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Phone number is required' });
     }
 
-    const testPrompt = `You are a friendly AI assistant calling to test the voice system.
-    Keep the conversation brief and professional.
-    Ask if the call quality is good and if they can hear you clearly.
-    Thank them for their time and end the call politely.`;
+    // Create test dynamic variables
+    const testDynamicVariables = {
+      contact_name: 'Test Contact',
+      company_name: 'Test Company',
+      deal_type: 'test-call',
+      investment_range: 'N/A',
+      industry_focus: 'System Testing',
+      custom_instructions: 'You are a friendly AI assistant calling to test the voice system. Keep the conversation brief and professional. Ask if the call quality is good and if they can hear you clearly. Thank them for their time and end the call politely.'
+    };
 
     const result = await voiceAgentService.initiateCall(
       userId,
       phoneNumber,
       'live',
-      testPrompt
+      testDynamicVariables
     );
 
     res.json(result);

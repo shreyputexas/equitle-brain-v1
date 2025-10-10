@@ -1819,13 +1819,49 @@ async function enrichSingleOrganization(org: any, apolloService: ApolloService):
 
     if (enrichmentResult.success && enrichmentResult.organization) {
       const orgData = enrichmentResult.organization;
-      
+
+      // Try to get organization email, but if empty, fetch senior executive email
+      let organizationEmail = orgData.email || '';
+
+      // If no organization email (which is almost always the case with Apollo),
+      // fetch the highest-ranking person's email
+      if (!organizationEmail) {
+        try {
+          logger.info('Organization email empty, fetching senior executive email', {
+            company: org.company,
+            domain: domain
+          });
+
+          const seniorExecutive = await findSeniorExecutiveEmail(domain, apolloService);
+          if (seniorExecutive) {
+            organizationEmail = seniorExecutive.email;
+            logger.info('Found senior executive email for organization', {
+              company: org.company,
+              executive: seniorExecutive.name,
+              title: seniorExecutive.title,
+              email: seniorExecutive.email
+            });
+          } else {
+            logger.warn('No senior executive email found', {
+              company: org.company,
+              domain: domain
+            });
+          }
+        } catch (error: any) {
+          logger.error('Failed to fetch senior executive email', {
+            company: org.company,
+            domain: domain,
+            error: error.message
+          });
+        }
+      }
+
       result.enriched = {
         name: orgData.name || org.company,
         website: orgData.website || orgData.domain || domain,
         linkedin: orgData.linkedin_url || '',
         phone: orgData.phone || '',
-        email: orgData.email || '',
+        email: organizationEmail,
         industry: orgData.industry || org.industry || '',
         employeeCount: orgData.estimated_num_employees || undefined,
         description: orgData.short_description || '',
@@ -1836,7 +1872,9 @@ async function enrichSingleOrganization(org: any, apolloService: ApolloService):
           linkedin: orgData.linkedin_url || '',
           twitter: orgData.twitter_url || '',
           facebook: orgData.facebook_url || ''
-        }
+        },
+        // Add metadata about the email source
+        emailSource: organizationEmail ? (orgData.email ? 'organization' : 'senior_executive') : 'none'
       };
 
       result.success = true;
@@ -1864,6 +1902,174 @@ async function enrichSingleOrganization(org: any, apolloService: ApolloService):
     });
     return result;
   }
+}
+
+/**
+ * Find the highest-ranking executive's email for an organization
+ */
+async function findSeniorExecutiveEmail(domain: string, apolloService: ApolloService): Promise<{ name: string; email: string; title: string } | null> {
+  try {
+    // Define executive titles in order of seniority (highest first)
+    const executiveTitles = [
+      'CEO', 'Chief Executive Officer',
+      'President', 'Founder', 'Co-Founder',
+      'Chairman', 'Chair', 'Owner',
+      'Managing Director', 'General Manager',
+      'Chief Operating Officer', 'COO',
+      'Chief Technology Officer', 'CTO',
+      'Chief Financial Officer', 'CFO',
+      'Vice President', 'VP',
+      'Senior Vice President', 'SVP'
+    ];
+
+    // Search for senior executives at this organization
+    const searchResults = await apolloService.searchPeopleAtCompany({
+      domain: domain,
+      person_titles: executiveTitles,
+      per_page: 20 // Get more results to find the best match
+    });
+
+    if (!searchResults || searchResults.length === 0) {
+      logger.warn('No executives found for domain', { domain });
+      return null;
+    }
+
+    // Calculate seniority score for each person and find the best email
+    let bestExecutive: { name: string; email: string; title: string; score: number } | null = null;
+
+    for (const person of searchResults) {
+      // Calculate seniority score first
+      const seniorityScore = calculateExecutiveSeniorityScore(person.title || '');
+
+      let actualEmail = person.email;
+
+      // If email is locked, try to unlock it using Apollo People Match API
+      if (!person.email || person.email === 'email_not_unlocked' || person.email.includes('email_not_unlocked')) {
+        try {
+          logger.info('Attempting to unlock email using People Match API', {
+            personId: person.id,
+            name: person.name,
+            title: person.title
+          });
+
+          const matchResult = await apolloService.matchPersonWithEmailReveal({
+            first_name: person.first_name,
+            last_name: person.last_name,
+            organization_name: person.organization?.name,
+            domain: domain
+          });
+
+          if (matchResult && matchResult.email && matchResult.email !== 'email_not_unlocked') {
+            actualEmail = matchResult.email;
+            logger.info('Successfully unlocked email via People Match API', {
+              personId: person.id,
+              name: person.name,
+              email: actualEmail
+            });
+          } else {
+            logger.warn('People Match API did not return unlocked email', {
+              personId: person.id,
+              name: person.name
+            });
+            continue; // Skip this person if we can't get their email
+          }
+        } catch (error: any) {
+          logger.error('Failed to unlock email via People Match API', {
+            personId: person.id,
+            name: person.name,
+            error: error.message
+          });
+          continue; // Skip this person if API call failed
+        }
+      }
+
+      // Now we have either an originally unlocked email or one we just unlocked
+      const candidate = {
+        name: person.name || `${person.first_name} ${person.last_name}`,
+        email: actualEmail,
+        title: person.title || '',
+        score: seniorityScore
+      };
+
+      // Keep the highest-ranking executive with a valid email
+      if (!bestExecutive || candidate.score > bestExecutive.score) {
+        bestExecutive = candidate;
+      }
+    }
+
+    if (bestExecutive) {
+      logger.info('Found senior executive with email', {
+        domain,
+        name: bestExecutive.name,
+        title: bestExecutive.title,
+        seniorityScore: bestExecutive.score
+      });
+
+      return {
+        name: bestExecutive.name,
+        email: bestExecutive.email,
+        title: bestExecutive.title
+      };
+    } else {
+      logger.warn('No executives with unlocked emails found', { domain });
+      return null;
+    }
+
+  } catch (error: any) {
+    logger.error('Failed to find senior executive email', {
+      domain,
+      error: error.message
+    });
+    return null;
+  }
+}
+
+/**
+ * Calculate seniority score for executive titles (higher = more senior)
+ */
+function calculateExecutiveSeniorityScore(title: string): number {
+  if (!title) return 0;
+
+  const titleLower = title.toLowerCase();
+
+  // CEO, Founder, Owner - highest priority
+  if (titleLower.includes('ceo') || titleLower.includes('chief executive') ||
+      titleLower.includes('founder') || titleLower.includes('co-founder') ||
+      titleLower.includes('owner') || titleLower.includes('chairman') ||
+      titleLower.includes('chair')) {
+    return 100;
+  }
+
+  // President, Managing Director
+  if (titleLower.includes('president') || titleLower.includes('managing director')) {
+    return 90;
+  }
+
+  // Other C-Suite executives
+  if (titleLower.includes('chief operating') || titleLower.includes('coo') ||
+      titleLower.includes('chief technology') || titleLower.includes('cto') ||
+      titleLower.includes('chief financial') || titleLower.includes('cfo') ||
+      titleLower.includes('chief') || titleLower.includes('general manager')) {
+    return 85;
+  }
+
+  // Senior VPs
+  if (titleLower.includes('senior vice president') || titleLower.includes('svp')) {
+    return 75;
+  }
+
+  // VPs
+  if (titleLower.includes('vice president') || titleLower.includes('vp')) {
+    return 70;
+  }
+
+  // Directors
+  if (titleLower.includes('director') && !titleLower.includes('assistant')) {
+    return 60;
+  }
+
+  // Default for other titles
+  return 25;
 }
 
 /**
@@ -2399,6 +2605,184 @@ function formatRevenue(revenue: number): string {
   } else {
     return `$${revenue.toFixed(0)}`;
   }
+}
+
+// POST people from a specific organization by Apollo organization ID
+router.post('/organization-people', async (req, res) => {
+  try {
+    const { organizationId, apolloApiKey, limit = 10 } = req.body;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Organization ID is required'
+      });
+    }
+
+    if (!apolloApiKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'Apollo API key is required'
+      });
+    }
+
+    logger.info('Searching for people in organization', {
+      organizationId,
+      limit,
+      apiKeyPrefix: apolloApiKey.substring(0, 8) + '...'
+    });
+
+    // Create Apollo service
+    const apolloService = new ApolloService(apolloApiKey);
+
+    // First, get organization details to get the company name/domain
+    let organizationName = '';
+    let organizationDomain = '';
+
+    try {
+      // Try to get organization details first
+      const orgResponse = await apolloService.enrichOrganization('', organizationId);
+      if (orgResponse.success && orgResponse.organization) {
+        organizationName = orgResponse.organization.name;
+        organizationDomain = orgResponse.organization.primary_domain || orgResponse.organization.website_url;
+      }
+    } catch (error) {
+      logger.warn('Could not get organization details, proceeding with people search', { error: error.message });
+    }
+
+    // Search for people using the organization ID
+    const searchParams = {
+      q_organization_id: organizationId,
+      per_page: Math.min(limit, 50),
+      page: 1,
+      reveal_personal_emails: true,
+      person_titles: ['CEO', 'Chief Executive Officer', 'President', 'Founder', 'Managing Director', 'Chairman', 'Owner']
+    };
+
+    logger.info('Apollo search parameters', { searchParams });
+
+    const searchResults = await apolloService.searchPeople(searchParams);
+
+    if (!searchResults || !searchResults.people || searchResults.people.length === 0) {
+      logger.warn('No people found for organization', { organizationId });
+      return res.json({
+        success: true,
+        people: [],
+        organization: {
+          id: organizationId,
+          name: organizationName,
+          domain: organizationDomain
+        },
+        summary: {
+          total: 0,
+          topPerson: null
+        }
+      });
+    }
+
+    // Process and rank people by seniority
+    const people = searchResults.people.map(person => ({
+      id: person.id,
+      name: person.name || `${person.first_name} ${person.last_name}`,
+      first_name: person.first_name,
+      last_name: person.last_name,
+      title: person.title || '',
+      email: person.email && person.email !== 'email_not_unlocked' ? person.email : '',
+      phone: person.phone_numbers?.[0]?.sanitized_number || '',
+      linkedin_url: person.linkedin_url || '',
+      photo_url: person.photo_url || '',
+      city: person.city || '',
+      state: person.state || '',
+      country: person.country || '',
+      seniority_score: calculateSeniorityScore(person.title || ''),
+      email_unlocked: person.email && person.email !== 'email_not_unlocked'
+    }));
+
+    // Sort by seniority score (highest first)
+    people.sort((a, b) => b.seniority_score - a.seniority_score);
+
+    // Find the top person (highest seniority)
+    const topPerson = people[0] || null;
+
+    logger.info('People search completed', {
+      organizationId,
+      totalFound: people.length,
+      topPerson: topPerson ? `${topPerson.name} - ${topPerson.title}` : 'None found',
+      emailsAvailable: people.filter(p => p.email_unlocked).length
+    });
+
+    res.json({
+      success: true,
+      people: people,
+      organization: {
+        id: organizationId,
+        name: organizationName,
+        domain: organizationDomain
+      },
+      summary: {
+        total: people.length,
+        topPerson: topPerson
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Organization people search failed', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search for people in organization: ' + error.message
+    });
+  }
+});
+
+/**
+ * Calculate seniority score based on title
+ */
+function calculateSeniorityScore(title: string): number {
+  if (!title) return 0;
+
+  const titleLower = title.toLowerCase();
+
+  // CEO, Founder, Owner - highest priority
+  if (titleLower.includes('ceo') || titleLower.includes('chief executive') ||
+      titleLower.includes('founder') || titleLower.includes('owner') ||
+      titleLower.includes('chairman')) {
+    return 100;
+  }
+
+  // President, Managing Director
+  if (titleLower.includes('president') || titleLower.includes('managing director')) {
+    return 90;
+  }
+
+  // C-Suite executives
+  if (titleLower.includes('chief') || titleLower.includes('cto') ||
+      titleLower.includes('cfo') || titleLower.includes('coo')) {
+    return 85;
+  }
+
+  // VPs and SVPs
+  if (titleLower.includes('vice president') || titleLower.includes('vp') ||
+      titleLower.includes('senior vice president') || titleLower.includes('svp')) {
+    return 75;
+  }
+
+  // Directors
+  if (titleLower.includes('director') && !titleLower.includes('assistant')) {
+    return 65;
+  }
+
+  // Senior managers
+  if (titleLower.includes('senior manager') || titleLower.includes('head of')) {
+    return 55;
+  }
+
+  // Managers
+  if (titleLower.includes('manager')) {
+    return 45;
+  }
+
+  // Default for other titles
+  return 25;
 }
 
 export default router;
