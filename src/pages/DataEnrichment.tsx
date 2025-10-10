@@ -602,6 +602,8 @@ export default function DataEnrichment() {
         contactType: contactSearchType,
         contactsToFind,
         apolloApiKey
+        //apiKey: getCurrentApiKey(),  
+        //provider: selectedProvider
       };
 
       // Add appropriate criteria based on contact type
