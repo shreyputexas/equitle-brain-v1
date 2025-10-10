@@ -238,6 +238,59 @@ router.post('/upload-and-enrich', upload.single('file'), async (req, res) => {
 });
 
 /**
+ * POST /api/apollo/find-email
+ * Find email using Apollo Email Finder API
+ */
+router.post('/find-email', async (req, res) => {
+  try {
+    const { apiKey, first_name, last_name, organization_name, domain } = req.body;
+
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'Apollo API key is required'
+      });
+    }
+
+    if (!first_name || !last_name) {
+      return res.status(400).json({
+        success: false,
+        error: 'First name and last name are required for email finding'
+      });
+    }
+
+    // Create Apollo service with the provided API key
+    const apolloService = new ApolloService(apiKey);
+
+    const emailResult = await apolloService.findEmail({
+      first_name,
+      last_name,
+      organization_name,
+      domain
+    });
+
+    if (emailResult?.email) {
+      res.json({
+        success: true,
+        data: emailResult
+      });
+    } else {
+      res.json({
+        success: false,
+        error: 'No email found with Email Finder API'
+      });
+    }
+
+  } catch (error: any) {
+    logger.error('Email finding error', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to find email'
+    });
+  }
+});
+
+/**
  * POST /api/apollo/enrich-single
  * Enrich a single contact
  */
