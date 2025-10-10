@@ -57,3 +57,10 @@ equitle-brain-dev-firebase-adminsdk-fbsvc-f95ee42ed1.json
 
 // firebase authentication
 server/secrets/serviceAccountKey.json
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
