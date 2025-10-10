@@ -35,6 +35,7 @@ import dashboardRoutes from './routes/dashboard';
 import dataEnrichmentRoutes from './routes/dataEnrichment';
 import apolloRoutes from './routes/apollo';
 import voiceAgentRoutes from './routes/voiceAgent';
+import campaignRoutes from './routes/campaigns';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -224,6 +225,8 @@ app.use('/api/data-enrichment', dataEnrichmentRoutes);
 app.use('/api/apollo', apolloRoutes);
 // Voice Agent routes - temporarily removing auth for debugging
 app.use('/api/voice-agent', voiceAgentRoutes);
+// Campaign routes for mass voicemail
+app.use('/api/campaigns', campaignRoutes);
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);
