@@ -47,6 +47,7 @@ export interface ApolloSearchParams {
   phone?: string;
   domain?: string;
   q_organization_domains?: string;
+  q_organization_id?: string;
   person_titles?: string[];
   organization_locations?: string[];
   page?: number;

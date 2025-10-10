@@ -4,6 +4,7 @@ import logger from '../utils/logger';
 export interface RetellCallRequest {
   phoneNumber: string;
   agentId: string;
+  dynamicVariables?: Record<string, string>;
   metadata?: Record<string, any>;
 }
 
@@ -88,12 +89,20 @@ export class RetellService {
         agent: request.agentId
       });
 
-      const response = await this.client.call.createPhoneCall({
+      const callData: any = {
         from_number: fromNumber,
         to_number: request.phoneNumber,
         agent_id: request.agentId,
         metadata: request.metadata
-      });
+      };
+
+      // Add dynamic variables if provided
+      if (request.dynamicVariables) {
+        callData.retell_llm_dynamic_variables = request.dynamicVariables;
+        logger.info('Adding dynamic variables to call', { dynamicVariables: request.dynamicVariables });
+      }
+
+      const response = await this.client.call.createPhoneCall(callData);
 
       logger.info('Retell API response', response);
 
