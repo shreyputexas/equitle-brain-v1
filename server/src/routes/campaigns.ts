@@ -64,6 +64,7 @@ function formatPhoneNumber(phoneNumber: string): string {
   return `+1${digits}`;
 }
 
+
 // Mock campaign data for development
 const mockCampaigns: any[] = [];
 let campaignIdCounter = 1;
@@ -108,7 +109,7 @@ router.post('/parse-csv', firebaseAuthMiddleware, upload.single('csv'), async (r
       const values = line.split(',').map(v => v.trim());
       return {
         name: values[0] || `Contact ${index + 1}`,
-        phoneNumber: values[1] || '',
+        phoneNumber: formatPhoneNumber(values[1] || ''),
         companyName: values[2] || '',
         status: 'pending'
       };
@@ -164,12 +165,13 @@ router.post('/', firebaseAuthMiddleware, upload.single('csv'), async (req, res) 
     // Simple CSV parsing
     const csvText = csvFile.buffer.toString('utf-8');
     const lines = csvText.split('\n').filter(line => line.trim());
+    const headers = lines[0]?.split(',').map(h => h.trim());
 
     const contacts = lines.slice(1).map((line, index) => {
       const values = line.split(',').map(v => v.trim());
       return {
         name: values[0] || `Contact ${index + 1}`,
-        phoneNumber: values[1] || '',
+        phoneNumber: formatPhoneNumber(values[1] || ''),
         companyName: values[2] || '',
         status: 'pending'
       };
