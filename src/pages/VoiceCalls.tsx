@@ -1684,9 +1684,16 @@ export default function VoiceCalls() {
               startIcon={<PlayArrowIcon />}
               onClick={async () => {
                 try {
+                  const token = localStorage.getItem('token');
+                  const headers: Record<string, string> = {
+                    'Content-Type': 'application/json'
+                  };
+                  if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                  }
                   const response = await fetch(getApiUrl(`campaigns/${selectedCampaign.id}/start`), {
                     method: 'POST',
-                    headers: getAuthHeaders()
+                    headers: headers
                   });
 
                   if (response.ok) {
@@ -1714,9 +1721,16 @@ export default function VoiceCalls() {
               color="warning"
               onClick={async () => {
                 try {
+                  const token = localStorage.getItem('token');
+                  const headers: Record<string, string> = {
+                    'Content-Type': 'application/json'
+                  };
+                  if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                  }
                   const response = await fetch(getApiUrl(`campaigns/${selectedCampaign.id}/pause`), {
                     method: 'POST',
-                    headers: getAuthHeaders()
+                    headers: headers
                   });
 
                   if (response.ok) {
