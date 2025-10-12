@@ -108,74 +108,72 @@ export default function Dashboard() {
 
   return (
     <Box className="fade-in">
-      <Box sx={{ mb: 4, p: 3, bgcolor: 'background.paper' }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
+      <Box sx={{ mb: 3, p: 3, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
           Welcome back, {dashboardData.userName}
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1rem' }}>
+        <Typography variant="body1" color="text.secondary">
           Here's what's happening with your portfolio today.
         </Typography>
       </Box>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
         {metrics.map((metric, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
             <Card
-              className="scale-in premium-shadow-hover"
+              className="scale-in"
               sx={{
                 background: 'background.paper',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.15s ease',
+                cursor: 'pointer',
                 '&:hover': {
-                  transform: 'none',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)'
+                  borderColor: '#D1D5DB'
                 }
               }}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+              <CardContent sx={{ p: 2.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.8125rem' }}>
+                      {metric.title}
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.75rem' }}>
+                      {metric.value}
+                    </Typography>
+                  </Box>
                   <Avatar sx={{ 
-                    background: 'primary.main',
-                    width: 48, 
-                    height: 48,
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                    bgcolor: '#F3F4F6',
+                    color: '#000000',
+                    width: 40, 
+                    height: 40
                   }}>
                     {metric.icon}
                   </Avatar>
-                  <Chip
-                    label={metric.change}
-                    size="small"
-                    icon={metric.trend === 'up' ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                    sx={{
-                      bgcolor: metric.trend === 'up' ? 'success.main' : 'error.main',
-                      color: 'white',
-                      borderRadius: 1,
-                      '& .MuiChip-icon': {
-                        color: 'white'
-                      }
-                    }}
-                  />
                 </Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5, fontFamily: '"Space Grotesk", sans-serif' }}>
-                  {metric.value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  {metric.title}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  {metric.trend === 'up' ? <TrendingUpIcon sx={{ fontSize: 16, color: 'success.main' }} /> : <TrendingDownIcon sx={{ fontSize: 16, color: 'error.main' }} />}
+                  <Typography variant="caption" sx={{ color: metric.trend === 'up' ? 'success.main' : 'error.main', fontWeight: 600 }}>
+                    {metric.change}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    from last month
+                  </Typography>
+                </Box>
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         <Grid item xs={12} md={8}>
-          <Paper className="scale-in" sx={{ p: 3, height: 400 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
+          <Paper className="scale-in" sx={{ p: 2.5, height: 400 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
                 Deal Flow Performance
               </Typography>
-              <Button variant="outlined" endIcon={<ArrowForwardIcon />} sx={{ borderRadius: 1 }}>
-                View Details
+              <Button variant="text" size="small" endIcon={<ArrowForwardIcon />}>
+                View All
               </Button>
             </Box>
             <ResponsiveContainer width="100%" height={320}>
@@ -222,8 +220,8 @@ export default function Dashboard() {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Paper className="scale-in" sx={{ p: 3, height: 400 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
+          <Paper className="scale-in" sx={{ p: 2.5, height: 400 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
               Portfolio Distribution
             </Typography>
             <ResponsiveContainer width="100%" height={320}>
@@ -275,12 +273,12 @@ export default function Dashboard() {
         </Grid>
 
         <Grid item xs={12}>
-          <Paper className="slide-up" sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
+          <Paper className="slide-up" sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
                 Recent Deals
               </Typography>
-              <Button variant="contained" startIcon={<BusinessIcon />} sx={{ borderRadius: 1 }}>
+              <Button variant="contained" size="small" startIcon={<BusinessIcon />}>
                 New Deal
               </Button>
             </Box>
@@ -292,33 +290,36 @@ export default function Dashboard() {
                     display: 'flex',
                     alignItems: 'center',
                     p: 2,
-                    mb: 2,
+                    mb: 1.5,
                     bgcolor: 'background.paper',
-                    transition: 'all 0.2s ease',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1.5,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                     '&:hover': {
-                      bgcolor: 'action.hover',
-                      transform: 'none',
-                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)'
+                      bgcolor: '#F9FAFB',
+                      borderColor: '#D1D5DB'
                     }
                   }}
                 >
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.25 }}>
                       {deal.company}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary">
                       {deal.stage}
                     </Typography>
                   </Box>
-                  <Typography variant="h6" sx={{ mx: 3, fontWeight: 600 }}>
+                  <Typography variant="h6" sx={{ mx: 3, fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.125rem' }}>
                     {deal.value}
                   </Typography>
-                  <Box sx={{ width: 200, mr: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
+                  <Box sx={{ width: 180, mr: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
                         Progress
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.6875rem' }}>
                         {deal.progress}%
                       </Typography>
                     </Box>
@@ -326,13 +327,8 @@ export default function Dashboard() {
                       variant="determinate"
                       value={deal.progress}
                       sx={{
-                        height: 4,
-                        borderRadius: 2,
-                        bgcolor: 'rgba(0,0,0,0.1)',
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 2,
-                          background: '#000000'
-                        }
+                        height: 6,
+                        borderRadius: 3
                       }}
                     />
                   </Box>
@@ -342,16 +338,22 @@ export default function Dashboard() {
                     sx={{
                       bgcolor:
                         deal.status === 'active'
-                          ? 'success.main'
+                          ? '#DCFCE7'
                           : deal.status === 'pending'
-                          ? 'warning.main'
-                          : 'info.main',
-                      color: 'white',
-                      textTransform: 'capitalize'
+                          ? '#FEF3C7'
+                          : '#DBEAFE',
+                      color:
+                        deal.status === 'active'
+                          ? '#166534'
+                          : deal.status === 'pending'
+                          ? '#92400E'
+                          : '#1E40AF',
+                      textTransform: 'capitalize',
+                      fontWeight: 500
                     }}
                   />
-                  <IconButton sx={{ ml: 2 }}>
-                    <MoreVertIcon />
+                  <IconButton size="small" sx={{ ml: 1 }}>
+                    <MoreVertIcon fontSize="small" />
                   </IconButton>
                 </Box>
               ))}

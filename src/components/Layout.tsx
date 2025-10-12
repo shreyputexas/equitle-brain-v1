@@ -34,7 +34,6 @@ import {
   Notifications as NotificationsIcon,
   Search as SearchIcon,
   Logout as LogoutIcon,
-  Person as PersonIcon,
   People as RelationshipsIcon,
   AccountBalance as LimitedPartnersIcon,
   BusinessCenter as FundsIcon,
@@ -395,96 +394,31 @@ export default function Layout() {
               <IconButton
                 onClick={() => navigate('/')}
                 sx={{
-                  width: 48,
-                  height: 48,
-                  bgcolor: 'transparent',
-                  color: 'text.primary',
+                  width: 56,
+                  height: 56,
+                  bgcolor: '#FFFFFF',
                   border: '1px solid',
-                  borderColor: 'transparent',
+                  borderColor: 'divider',
+                  borderRadius: 2,
                   mb: 3,
+                  p: 1,
                   '&:hover': {
-                    bgcolor: 'action.hover',
-                    borderColor: 'divider'
+                    bgcolor: '#F9FAFB',
+                    borderColor: '#D1D5DB'
                   }
                 }}
               >
                 <Box
+                  component="img"
+                  src="/assets/images/extended_logo_black_white.png"
+                  alt="Equitle"
                   sx={{
-                    width: 24,
-                    height: 24,
-                    position: 'relative',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '12px',
-                      height: '12px',
-                      bgcolor: 'currentColor',
-                      borderRadius: '50% 50% 50% 0%',
-                      transform: 'rotate(-45deg)'
-                    },
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      top: '6px',
-                      left: '6px',
-                      width: '6px',
-                      height: '6px',
-                      bgcolor: 'currentColor',
-                      borderRadius: '2px'
-                    }
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    filter: 'brightness(0)'
                   }}
-                >
-                  {/* D shape */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: '2px',
-                      left: '2px',
-                      width: '8px',
-                      height: '8px',
-                      border: '2px solid currentColor',
-                      borderRadius: '50% 0% 50% 50%',
-                      borderRight: 'none',
-                      borderBottom: 'none'
-                    }}
-                  />
-                  {/* Corner squares */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: '8px',
-                      left: '8px',
-                      width: '4px',
-                      height: '4px',
-                      bgcolor: 'currentColor',
-                      borderRadius: '1px'
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: '12px',
-                      left: '8px',
-                      width: '4px',
-                      height: '4px',
-                      bgcolor: 'currentColor',
-                      borderRadius: '1px'
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: '8px',
-                      left: '12px',
-                      width: '4px',
-                      height: '4px',
-                      bgcolor: 'currentColor',
-                      borderRadius: '1px'
-                    }}
-                  />
-                </Box>
+                />
               </IconButton>
             </Tooltip>
 
@@ -860,12 +794,6 @@ export default function Layout() {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/profile'); }}>
-          <ListItemIcon>
-            <PersonIcon fontSize="small" />
-          </ListItemIcon>
-          Profile
-        </MenuItem>
         <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
@@ -966,14 +894,6 @@ export default function Layout() {
             {/* Mobile Profile Section */}
             <Divider sx={{ my: 2 }} />
             <List>
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => { setMobileDrawerOpen(false); navigate('/profile'); }}>
-                  <ListItemIcon>
-                    <PersonIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Profile" />
-                </ListItemButton>
-              </ListItem>
               <ListItem disablePadding>
                 <ListItemButton onClick={() => { setMobileDrawerOpen(false); navigate('/settings'); }}>
                   <ListItemIcon>
