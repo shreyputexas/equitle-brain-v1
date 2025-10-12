@@ -189,20 +189,20 @@ export default function Product() {
       answer: 'Equitle uses advanced machine learning algorithms trained on private equity data to identify patterns, assess risks, and predict outcomes. Our AI continuously learns from your firm\'s investment patterns and market data to provide increasingly accurate insights.'
     },
     {
-      question: 'What integrations are available?',
-      answer: 'Equitle integrates with leading CRMs (Salesforce, HubSpot), data rooms (Datasite, Intralinks), financial data providers (PitchBook, Preqin), and productivity tools (Microsoft 365, Google Workspace). We also offer API access for custom integrations.'
+      question: 'How do the automated voicemails work?',
+      answer: 'Equitle sends automated voicemails to your prospects in your voice, with a personalized message based on the prospect\'s data and interaction history. The main goal is to book a follow up call with the prospect.'
     },
     {
-      question: 'How secure is my data?',
-      answer: 'Your data security is our top priority. We use bank-grade encryption, maintain SOC 2 Type II compliance, and offer data residency options. All data is encrypted in transit and at rest, with comprehensive audit trails and access controls.'
+      question: 'What integrations are available?',
+      answer: 'Equitle integrates with scraping tools (Apollo, Grata, ZoomInfo), your productivity tools (Microsoft 365, Google Workspace), and your financial data providers (PitchBook, Preqin, Bloomberg, FactSet).'
     },
     {
       question: 'Can I customize workflows?',
-      answer: 'Yes, Equitle is highly customizable. You can create custom workflows, fields, reports, and dashboards tailored to your firm\'s specific processes. Our workflow automation engine can be configured to match your existing procedures.'
+      answer: 'Yes, Equitle is highly customizable. You can create custom workflows, fields, reports, and dashboards tailored to your firm\'s specific processes. Our entire platform is built for API-first architecture to tailor to your existing processes.'
     },
     {
-      question: 'What support is included?',
-      answer: 'All plans include comprehensive onboarding, training, and ongoing support. Our customer success team provides dedicated support, regular check-ins, and best practice guidance to ensure you get maximum value from the platform.'
+      question: 'How does investor communication work?',
+      answer: 'Searchers have a hard time dealing with investor relations while sourcing a deal. Equitle updates your investors on your progress, spending, and pipeline on a frequency decided by you.'
     }
   ];
 

@@ -28,6 +28,10 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# Firebase credentials (sensitive)
+*firebase-adminsdk*.json
+firebase-service-account.json
+
 # IDE
 .vscode/
 .idea/

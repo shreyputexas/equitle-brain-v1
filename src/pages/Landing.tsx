@@ -67,10 +67,35 @@ import Footer from '../components/Footer';
 export default function Landing() {
   const navigate = useNavigate();
   const [openDemo, setOpenDemo] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [fade, setFade] = useState(true);
+  
+  const cyclingWords = [
+    'Voicemails',
+    'Investor Communication',
+    'Data Scraping',
+    'Outreach',
+    'Data Population',
+    'Deal Tracking'
+  ];
 
   useEffect(() => {
     document.title = 'Home - Equitle';
   }, []);
+
+  // Cycle through words with fade animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setCurrentWordIndex((prevIndex) => (prevIndex + 1) % cyclingWords.length);
+        setFade(true);
+      }, 500);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [cyclingWords.length]);
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -128,8 +153,8 @@ export default function Landing() {
     {
       title: 'Sourcing',
       icon: <SourcingIcon />,
-      description: 'Outreach, agentic calls, and relationship management',
-      features: ['Outreach automation', 'Agentic calls', 'Relationship management']
+      description: 'Outreach, agentic voicemails, and relationship management',
+      features: ['Outreach automation', 'Agentic voicemails', 'Relationship management']
     },
     {
       title: 'Fundraising',
@@ -170,20 +195,25 @@ export default function Landing() {
                     mb: 3
                   }}
                 >
-                  AI-Native Software Built for
-                  <Box 
-                    component="span" 
-                    sx={{ 
-                      background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent'
-                    }}
-                  >
-                    {' '}Sourcing
-                  </Box>
+                   Close Faster with Automated
+                    <Box 
+                      component="span" 
+                      sx={{ 
+                        display: 'block',
+                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        minHeight: { xs: '3rem', md: '4.5rem' },
+                        opacity: fade ? 1 : 0,
+                        transform: fade ? 'translateY(0)' : 'translateY(-10px)',
+                        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                      }}
+                    >
+                      {cyclingWords[currentWordIndex]}
+                    </Box>
                 </Typography>
                 <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
-                  Focus on relationships and deal analysis, not administrative tasks. The only CRM designed specifically for sourcing, helping you acquire great companies.
+                  AI-native software designed to automate your search, helping you acquire great companies.
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
                   <Button 
