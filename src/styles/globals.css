@@ -12,9 +12,9 @@ body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #FFFFFF;
+  background: #F9FAFB;
   min-height: 100vh;
-  color: #000000;
+  color: #111827;
   overflow-x: hidden;
   position: relative;
 }
@@ -26,45 +26,45 @@ body::before {
   left: 0;
   right: 0;
   height: 100vh;
-  background: #FFFFFF;
+  background: #F9FAFB;
   pointer-events: none;
   z-index: -1;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F5F5F5;
-  border-radius: 4px;
+  background: #F9FAFB;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000000;
-  border-radius: 4px;
-  border: 1px solid #FFFFFF;
+  background: #D1D5DB;
+  border-radius: 5px;
+  border: 2px solid #F9FAFB;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  background: #9CA3AF;
 }
 
 ::selection {
-  background: rgba(0, 0, 0, 0.1);
-  color: #000000;
+  background: rgba(0, 0, 0, 0.08);
+  color: #111827;
 }
 
 .gradient-text {
-  color: #000000;
+  color: #111827;
   font-weight: 600;
 }
 
 .glass-effect {
   background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .shimmer {
@@ -82,10 +82,10 @@ body::before {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(94, 92, 230, 0.15),
+    rgba(0, 0, 0, 0.04),
     transparent
   );
-  animation: shimmer 2.5s infinite;
+  animation: shimmer 2s infinite;
 }
 
 @keyframes shimmer {
@@ -98,13 +98,13 @@ body::before {
 }
 
 .fade-in {
-  animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -113,13 +113,13 @@ body::before {
 }
 
 .slide-up {
-  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideUp 0.3s ease-out;
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -128,13 +128,13 @@ body::before {
 }
 
 .scale-in {
-  animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: scaleIn 0.2s ease-out;
 }
 
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
@@ -144,23 +144,24 @@ body::before {
 
 .glow {
   box-shadow: 
-    0 0 20px rgba(94, 92, 230, 0.3),
-    0 0 40px rgba(94, 92, 230, 0.2),
-    0 0 60px rgba(94, 92, 230, 0.1);
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .hover-lift {
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .hover-lift:hover {
   transform: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-color: #D1D5DB;
 }
 
 .hover-scale {
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   cursor: pointer;
 }
 
@@ -169,22 +170,22 @@ body::before {
 }
 
 .subtle-border {
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  transition: border 0.2s ease;
+  border: 1px solid #E5E7EB;
+  transition: border-color 0.15s ease;
 }
 
 .subtle-border:hover {
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-color: #D1D5DB;
 }
 
 .premium-shadow {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
 .premium-shadow-hover {
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.15s ease;
 }
 
 .premium-shadow-hover:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
