@@ -1025,10 +1025,10 @@ router.post('/search-contacts', async (req, res) => {
 
     // Validate criteria based on contact type
     if (contactType === 'people') {
-      if (!thesisCriteria || (!thesisCriteria.industries && !thesisCriteria.subindustries)) {
+      if (!thesisCriteria || !thesisCriteria.industries) {
         return res.status(400).json({
           success: false,
-          error: 'At least Industries or Subindustries must be provided for people search'
+          error: 'Industry must be provided for people search'
         });
       }
     } else if (contactType === 'brokers') {
@@ -1069,7 +1069,7 @@ router.post('/search-contacts', async (req, res) => {
     });
 
     let searchParams: any = {
-      per_page: Math.min(contactsToFind || 10, 50), // Limit to 50 max
+      per_page: Math.min(contactsToFind || 10, 100), // Limit to 100
       page: 1,
       reveal_personal_emails: true
     };
@@ -1078,32 +1078,89 @@ router.post('/search-contacts', async (req, res) => {
 
     // Handle different contact types
     if (contactType === 'people') {
-      // People at companies search
+      // TWO-STEP APPROACH: 
+      // Step 1: Find organizations matching industry/location
+      // Step 2: Find people at those organizations
+      
+      logger.info('Starting two-step organization + people search', { thesisCriteria });
+      
+      // Step 1: Search for organizations using the FULL industry string from dropdown
+      const orgSearchParams: any = {
+        per_page: Math.min(contactsToFind * 3 || 30, 100),
+        page: 1
+      };
+      
+      // Use the exact industry value from the dropdown (e.g., "Healthcare SaaS", "Fintech", "Real Estate Technology")
       if (thesisCriteria.industries) {
-        searchParams.person_titles = [
-          'CEO', 'CTO', 'VP', 'Director', 'Manager', 'Founder', 'President'
-        ];
-        
-        // Add industry-specific titles
-        if (thesisCriteria.industries.toLowerCase().includes('healthcare')) {
-          searchParams.person_titles.push('Chief Medical Officer', 'Medical Director', 'Healthcare Director');
-        }
-        if (thesisCriteria.industries.toLowerCase().includes('tech')) {
-          searchParams.person_titles.push('Chief Technology Officer', 'VP Engineering', 'Head of Engineering');
-        }
+        orgSearchParams.q_organization_keyword_tags = [thesisCriteria.industries];
+        logger.info(`Searching for companies in: ${thesisCriteria.industries}`);
       }
-
+      
       if (thesisCriteria.location) {
-        searchParams.organization_locations = [thesisCriteria.location];
+        orgSearchParams.organization_locations = [thesisCriteria.location];
       }
-
+      
       // Add company size based on revenue/EBITDA
       if (thesisCriteria.revenue || thesisCriteria.ebitda) {
-        searchParams.organization_num_employees_ranges = ['51,100', '101,200', '201,500', '501,1000'];
+        orgSearchParams.organization_num_employees_ranges = ['51,100', '101,200', '201,500', '501,1000'];
       }
-
-      const results = await apolloService.searchPeople(searchParams);
-      searchResults = results.people || [];
+      
+      logger.info('Step 1: Searching for organizations', { orgSearchParams });
+      
+      const organizations = await apolloService.searchOrganizations(orgSearchParams);
+      
+      logger.info(`Found ${organizations.length} organizations, now finding people at each...`);
+      
+      // Step 2: For each organization, find key people (decision makers only)
+      const targetTitles = [
+        'CEO', 'Chief Executive Officer', 
+        'Founder', 'Co-Founder',
+        'President',
+        'Managing Director'
+      ];
+      
+      // Add industry-specific decision maker titles based on the FULL industry string
+      const industryLower = thesisCriteria.industries.toLowerCase();
+      if (industryLower.includes('healthcare') || industryLower.includes('medical') || industryLower.includes('hospital')) {
+        targetTitles.push('Chief Medical Officer', 'Medical Director');
+      }
+      if (industryLower.includes('tech') || industryLower.includes('saas') || industryLower.includes('software')) {
+        targetTitles.push('CTO', 'Chief Technology Officer');
+      }
+      if (industryLower.includes('finance') || industryLower.includes('banking') || industryLower.includes('investment')) {
+        targetTitles.push('Chief Financial Officer', 'CFO');
+      }
+      
+      const allPeopleResults: any[] = [];
+      const maxPeoplePerCompany = 2;
+      
+      // Search for people at each organization
+      for (const org of organizations.slice(0, contactsToFind * 2)) {
+        try {
+          const peopleAtOrg = await apolloService.searchPeopleAtCompany({
+            organization_name: org.name,
+            domain: org.primary_domain,
+            person_titles: targetTitles,
+            per_page: maxPeoplePerCompany
+          });
+          
+          if (peopleAtOrg && peopleAtOrg.length > 0) {
+            allPeopleResults.push(...peopleAtOrg.slice(0, maxPeoplePerCompany));
+            logger.info(`Found ${peopleAtOrg.length} decision makers at ${org.name}`);
+          }
+          
+          // Stop once we have enough contacts
+          if (allPeopleResults.length >= contactsToFind) {
+            break;
+          }
+        } catch (error: any) {
+          logger.warn(`Failed to find people at ${org.name}:`, error.message);
+          continue;
+        }
+      }
+      
+      searchResults = allPeopleResults.slice(0, contactsToFind);
+      logger.info(`Two-step search complete. Found ${searchResults.length} decision makers across ${new Set(searchResults.map((p: any) => p.organization?.name)).size} companies`);
 
     } else if (contactType === 'brokers') {
       // Brokers search - use structured criteria
@@ -2438,5 +2495,72 @@ function calculateSeniorityScore(title: string): number {
   // Default for other titles
   return 25;
 }
+
+/**
+ * POST /api/data-enrichment/search-organizations
+ * Search for organizations using Apollo - simple industry + location search
+ */
+router.post('/search-organizations', async (req, res) => {
+  try {
+    const { searchCriteria, orgsToFind, apiKey } = req.body;
+
+    if (!apiKey) {
+      return res.status(400).json({ success: false, error: 'API key is required' });
+    }
+
+    if (!searchCriteria.industries || !searchCriteria.industries.trim()) {
+      return res.status(400).json({ success: false, error: 'Industries is required' });
+    }
+
+    logger.info('Organization search request', { searchCriteria, orgsToFind });
+
+    const apolloService = new ApolloService(apiKey);
+
+    // Use Apollo's actual working parameters for organization search
+    const searchParams: any = {
+      per_page: Math.min(orgsToFind || 10, 100),
+      page: 1
+    };
+
+    // Use q_keywords for general keyword search that includes industry
+    // This actually searches company descriptions, industries, and keywords
+    searchParams.q_keywords = searchCriteria.industries.trim();
+
+    if (searchCriteria.location && searchCriteria.location.trim()) {
+      searchParams.organization_locations = [searchCriteria.location.trim()];
+    }
+
+    logger.info('Searching Apollo with params:', searchParams);
+
+    const organizations = await apolloService.searchOrganizations(searchParams);
+
+    logger.info(`Found ${organizations.length} organizations`);
+
+    res.json({
+      success: true,
+      organizations: organizations.map((org: any) => ({
+        id: org.id,
+        name: org.name,
+        website: org.website_url || org.primary_domain,
+        industry: org.industry,
+        location: org.city ? `${org.city}, ${org.state || ''}` : org.state,
+        employeeCount: org.estimated_num_employees,
+        revenue: org.annual_revenue,
+        ceo: org.ceo_name,
+        foundedYear: org.founded_year
+      })),
+      summary: {
+        total: organizations.length,
+        averageRevenue: 'N/A',
+        averageEmployeeCount: 'N/A',
+        topIndustries: []
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Organization search failed', { error: error.message });
+    res.status(500).json({ success: false, error: 'Failed to search organizations: ' + error.message });
+  }
+});
 
 export default router;

@@ -72,6 +72,11 @@ interface Message {
 
 const navigationItems = [
   {
+    text: 'Scraping',
+    icon: <AnalyticsIcon />,
+    path: '/data-enrichment'
+  },
+  {
     text: 'Outreach',
     icon: <DealsIcon />,
     subItems: [
@@ -81,7 +86,7 @@ const navigationItems = [
     ]
   },
   {
-    text: 'Fundraising',
+    text: 'Investors',
     icon: <FundraisingIcon />,
     subItems: [
       { text: 'Limited Partners', path: '/fundraising/limited-partners' },
@@ -102,11 +107,6 @@ const navigationItems = [
       { text: 'Analytics', path: '/brain', action: 'analytics' },
       { text: 'Generate Report', path: '/brain', action: 'report' }
     ]
-  },
-  {
-    text: 'Scraping',
-    icon: <AnalyticsIcon />,
-    path: '/data-enrichment'
   }
 ];
 
@@ -441,14 +441,14 @@ export default function Layout() {
                         bgcolor: 'transparent',
                         color: location.pathname === item.path || 
                                (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
-                               (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
+                               (item.text === 'Investors' && location.pathname.startsWith('/fundraising')) ||
                                (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'text.primary',
                         width: 48,
                         height: 48,
                         border: '1px solid',
                         borderColor: location.pathname === item.path || 
                                      (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
-                                     (item.text === 'Fundraising' && location.pathname.startsWith('/fundraising')) ||
+                                     (item.text === 'Investors' && location.pathname.startsWith('/fundraising')) ||
                                      (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'transparent',
                         '&:hover': {
                           bgcolor: 'action.hover'

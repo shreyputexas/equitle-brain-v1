@@ -16,10 +16,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001, // frontend runs here
+    port: 3001,
+    strictPort: true, // Don't try another port if 3001 is taken
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:4001', // backend runs here
+        target: 'http://127.0.0.1:4001',
         changeOrigin: true,
       },
     },
