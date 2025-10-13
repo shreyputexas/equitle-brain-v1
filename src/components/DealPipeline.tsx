@@ -680,7 +680,7 @@ export default function DealPipeline({
         borderRadius: 0
       }}>
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'white', fontFamily: '"Space Grotesk", sans-serif' }}>
             Deal Pipeline
           </Typography>
         </Box>

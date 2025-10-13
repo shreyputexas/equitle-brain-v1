@@ -70,17 +70,20 @@ const theme = createTheme({
       letterSpacing: '-0.01em'
     },
     h4: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontSize: '1.25rem',
       fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: '0em'
     },
     h5: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontSize: '1.125rem',
       fontWeight: 600,
       lineHeight: 1.5
     },
     h6: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontSize: '1rem',
       fontWeight: 600,
       lineHeight: 1.5

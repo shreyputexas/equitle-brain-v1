@@ -103,7 +103,6 @@ interface ThesisCriteria {
   ebitda: string;
   revenue: string;
   industries: string;
-  subindustries: string;
   location: string;
   growth: string;
 }
@@ -266,7 +265,6 @@ export default function DataEnrichment() {
       ebitda: '',
       revenue: '',
       industries: '',
-      subindustries: '',
       location: '',
       growth: ''
     };
@@ -540,8 +538,8 @@ export default function DataEnrichment() {
 
     // Validate criteria based on contact type
     if (contactSearchType === 'people') {
-      if (!thesisCriteria.industries.trim() && !thesisCriteria.subindustries.trim()) {
-        setMessage('Please enter at least Industries or Subindustries');
+      if (!thesisCriteria.industries.trim()) {
+        setMessage('Please select an industry');
         setShowError(true);
         return;
       }
@@ -747,14 +745,14 @@ export default function DataEnrichment() {
         setIsKeyValid(true);
         localStorage.setItem('isKeyValid', 'true');
         localStorage.setItem('selectedProvider', selectedProvider);
-        setMessage(`✅ ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is valid and ready to use!`);
+        setMessage(`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key is valid and ready to use!`);
         setShowSuccess(true);
         setShowApiKeyDialog(false);
       } else {
         setIsKeyValid(false);
         localStorage.setItem('isKeyValid', 'false');
         const providerName = selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1);
-        setMessage(`❌ Invalid ${providerName} API key. Please check your API key and permissions.`);
+        setMessage(`Invalid ${providerName} API key. Please check your API key and permissions.`);
         setShowError(true);
       }
     } catch (error: any) {
@@ -766,7 +764,7 @@ export default function DataEnrichment() {
         name: error.name,
         stack: error.stack
       });
-      setMessage(`❌ Failed to validate API key: ${error.message || 'Network error - check if server is running on port 4001'}`);
+      setMessage(`Failed to validate API key: ${error.message || 'Network error - check if server is running on port 4001'}`);
       setShowError(true);
     } finally {
       setIsValidatingKey(false);
@@ -915,7 +913,7 @@ export default function DataEnrichment() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
         <Box>
         <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            Data Enrichment
+            Data Management
         </Typography>
         <Typography variant="body1" color="text.secondary">
             Enrich and discover contact data using {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API
@@ -1578,25 +1576,105 @@ export default function DataEnrichment() {
               {contactSearchType === 'people' && (
                 <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                      label="Industries *"
-                    placeholder="e.g., Healthcare, Technology, Finance"
-                    value={thesisCriteria.industries}
-                    onChange={(e) => handleThesisCriteriaChange('industries', e.target.value)}
-                    helperText="Target industries (comma-separated)"
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Subindustries"
-                      placeholder="e.g., SaaS, Fintech, MedTech"
-                    value={thesisCriteria.subindustries}
-                    onChange={(e) => handleThesisCriteriaChange('subindustries', e.target.value)}
-                    helperText="Specific subindustries or focus areas"
-                  />
+                  <FormControl fullWidth required>
+                    <InputLabel>Industry *</InputLabel>
+                    <Select
+                      value={thesisCriteria.industries}
+                      onChange={(e) => handleThesisCriteriaChange('industries', e.target.value)}
+                      label="Industry *"
+                    >
+                      <MenuItem value="">Select an industry</MenuItem>
+                      
+                      {/* Healthcare */}
+                      <MenuItem value="Hospital & Health Care">Hospital & Health Care</MenuItem>
+                      <MenuItem value="Healthcare SaaS">Healthcare SaaS</MenuItem>
+                      <MenuItem value="Medical Devices">Medical Devices</MenuItem>
+                      <MenuItem value="Biotechnology">Biotechnology</MenuItem>
+                      <MenuItem value="Pharmaceuticals">Pharmaceuticals</MenuItem>
+                      <MenuItem value="Mental Health Care">Mental Health Care</MenuItem>
+                      <MenuItem value="Health Wellness and Fitness">Health Wellness and Fitness</MenuItem>
+                      
+                      {/* Technology */}
+                      <MenuItem value="Information Technology and Services">Information Technology and Services</MenuItem>
+                      <MenuItem value="Computer Software">Computer Software</MenuItem>
+                      <MenuItem value="SaaS">SaaS</MenuItem>
+                      <MenuItem value="Internet">Internet</MenuItem>
+                      <MenuItem value="Telecommunications">Telecommunications</MenuItem>
+                      <MenuItem value="Computer Hardware">Computer Hardware</MenuItem>
+                      <MenuItem value="Computer Networking">Computer Networking</MenuItem>
+                      <MenuItem value="Cybersecurity">Cybersecurity</MenuItem>
+                      <MenuItem value="Artificial Intelligence">Artificial Intelligence</MenuItem>
+                      
+                      {/* Financial Services */}
+                      <MenuItem value="Financial Services">Financial Services</MenuItem>
+                      <MenuItem value="Banking">Banking</MenuItem>
+                      <MenuItem value="Investment Banking">Investment Banking</MenuItem>
+                      <MenuItem value="Investment Management">Investment Management</MenuItem>
+                      <MenuItem value="Venture Capital & Private Equity">Venture Capital & Private Equity</MenuItem>
+                      <MenuItem value="Insurance">Insurance</MenuItem>
+                      <MenuItem value="Fintech">Fintech</MenuItem>
+                      <MenuItem value="Accounting">Accounting</MenuItem>
+                      <MenuItem value="Accounting SaaS">Accounting SaaS</MenuItem>
+                      
+                      {/* Real Estate */}
+                      <MenuItem value="Real Estate">Real Estate</MenuItem>
+                      <MenuItem value="Commercial Real Estate">Commercial Real Estate</MenuItem>
+                      <MenuItem value="Real Estate Technology">Real Estate Technology</MenuItem>
+                      <MenuItem value="Construction">Construction</MenuItem>
+                      <MenuItem value="Architecture & Planning">Architecture & Planning</MenuItem>
+                      
+                      {/* Manufacturing & Industrial */}
+                      <MenuItem value="Manufacturing">Manufacturing</MenuItem>
+                      <MenuItem value="Industrial Automation">Industrial Automation</MenuItem>
+                      <MenuItem value="Automotive">Automotive</MenuItem>
+                      <MenuItem value="Aviation & Aerospace">Aviation & Aerospace</MenuItem>
+                      <MenuItem value="Mechanical or Industrial Engineering">Mechanical or Industrial Engineering</MenuItem>
+                      
+                      {/* Consumer & Retail */}
+                      <MenuItem value="Retail">Retail</MenuItem>
+                      <MenuItem value="E-commerce">E-commerce</MenuItem>
+                      <MenuItem value="Consumer Goods">Consumer Goods</MenuItem>
+                      <MenuItem value="Food & Beverages">Food & Beverages</MenuItem>
+                      <MenuItem value="Restaurants">Restaurants</MenuItem>
+                      <MenuItem value="Apparel & Fashion">Apparel & Fashion</MenuItem>
+                      
+                      {/* Professional Services */}
+                      <MenuItem value="Management Consulting">Management Consulting</MenuItem>
+                      <MenuItem value="Marketing and Advertising">Marketing and Advertising</MenuItem>
+                      <MenuItem value="Public Relations and Communications">Public Relations and Communications</MenuItem>
+                      <MenuItem value="Legal Services">Legal Services</MenuItem>
+                      <MenuItem value="Human Resources">Human Resources</MenuItem>
+                      
+                      {/* Education & Research */}
+                      <MenuItem value="Education">Education</MenuItem>
+                      <MenuItem value="E-Learning">E-Learning</MenuItem>
+                      <MenuItem value="Research">Research</MenuItem>
+                      <MenuItem value="Higher Education">Higher Education</MenuItem>
+                      
+                      {/* Energy & Utilities */}
+                      <MenuItem value="Oil & Energy">Oil & Energy</MenuItem>
+                      <MenuItem value="Renewables & Environment">Renewables & Environment</MenuItem>
+                      <MenuItem value="Utilities">Utilities</MenuItem>
+                      
+                      {/* Media & Entertainment */}
+                      <MenuItem value="Media Production">Media Production</MenuItem>
+                      <MenuItem value="Entertainment">Entertainment</MenuItem>
+                      <MenuItem value="Publishing">Publishing</MenuItem>
+                      <MenuItem value="Broadcast Media">Broadcast Media</MenuItem>
+                      <MenuItem value="Gaming">Gaming</MenuItem>
+                      
+                      {/* Transportation & Logistics */}
+                      <MenuItem value="Transportation/Trucking/Railroad">Transportation/Trucking/Railroad</MenuItem>
+                      <MenuItem value="Logistics and Supply Chain">Logistics and Supply Chain</MenuItem>
+                      <MenuItem value="Warehousing">Warehousing</MenuItem>
+                      
+                      {/* Other */}
+                      <MenuItem value="Nonprofit Organization Management">Nonprofit Organization Management</MenuItem>
+                      <MenuItem value="Government Administration">Government Administration</MenuItem>
+                      <MenuItem value="Sports">Sports</MenuItem>
+                      <MenuItem value="Hospitality">Hospitality</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12}>
                   <TextField

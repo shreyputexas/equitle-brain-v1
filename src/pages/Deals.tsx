@@ -168,6 +168,104 @@ export default function Deals() {
   const [dealToEdit, setDealToEdit] = useState<ApiDeal | null>(null);
   const [emailAlertsOpen, setEmailAlertsOpen] = useState(false);
   const [processingEmails, setProcessingEmails] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [scheduledCount, setScheduledCount] = useState(0);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [schedulePickerOpen, setSchedulePickerOpen] = useState(false);
+  const [schedulingItemId, setSchedulingItemId] = useState<string | null>(null);
+  const [schedulingMultiple, setSchedulingMultiple] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [automatedOutreachItems, setAutomatedOutreachItems] = useState([
+    {
+      id: '1',
+      contact: {
+        name: 'Sarah Johnson',
+        role: 'CEO',
+        company: 'Tech Innovations Inc',
+        email: 'sarah.johnson@techinnovations.com',
+        phone: '+1 (555) 123-4567'
+      },
+      research: 'Recently closed $15M Series A. Company focuses on AI-driven analytics for healthcare. Sarah has 15+ years experience in healthtech. Previously worked at major healthcare providers.',
+      message: `Hi Sarah,
+
+I noticed Tech Innovations recently closed your Series A round - congratulations on this milestone!
+
+Given your focus on AI-driven healthcare analytics, I wanted to reach out about a potential partnership opportunity. We work with several companies in the healthtech space and have helped them scale their analytics infrastructure.
+
+Would you be open to a brief call next week to explore if there's a potential fit?
+
+Best regards`,
+      status: 'pending' as 'pending' | 'approved' | 'declined',
+      scheduledDate: undefined as Date | undefined
+    },
+    {
+      id: '2',
+      contact: {
+        name: 'Michael Chen',
+        role: 'VP of Business Development',
+        company: 'DataFlow Systems',
+        email: 'michael.chen@dataflow.io',
+        phone: '+1 (555) 234-5678'
+      },
+      research: 'DataFlow raised $8M seed round 6 months ago. Specializes in real-time data processing. Michael previously led BD at two successful SaaS exits. Active on LinkedIn discussing data infrastructure.',
+      message: `Hi Michael,
+
+I came across DataFlow's recent work in real-time data processing and was impressed by your team's approach to solving latency challenges.
+
+Your background in scaling BD teams at successful SaaS companies caught my attention. I'd love to discuss how we might collaborate on expanding your enterprise customer base.
+
+Are you available for a quick call this week?
+
+Cheers`,
+      status: 'pending' as 'pending' | 'approved' | 'declined',
+      scheduledDate: undefined as Date | undefined
+    },
+    {
+      id: '3',
+      contact: {
+        name: 'Emily Rodriguez',
+        role: 'Head of Partnerships',
+        company: 'CloudSecure Pro',
+        email: 'emily@cloudsecurepro.com',
+        phone: '+1 (555) 345-6789'
+      },
+      research: 'CloudSecure recently expanded to European markets. Emily joined 3 months ago from a major cloud security provider. Company has 200+ enterprise clients and growing rapidly. Strong presence at industry conferences.',
+      message: `Hi Emily,
+
+Welcome to CloudSecure! I saw your recent move from your previous role and wanted to connect.
+
+With CloudSecure's expansion into Europe and your experience in enterprise partnerships, I believe there could be strong synergies with our network of European security-conscious enterprises.
+
+Would you be interested in exploring potential collaboration opportunities?
+
+Best`,
+      status: 'pending' as 'pending' | 'approved' | 'declined',
+      scheduledDate: undefined as Date | undefined
+    },
+    {
+      id: '4',
+      contact: {
+        name: 'David Park',
+        role: 'Founder & CTO',
+        company: 'QuantumLabs',
+        email: 'david@quantumlabs.tech',
+        phone: '+1 (555) 456-7890'
+      },
+      research: 'QuantumLabs developing quantum computing solutions for financial modeling. David has PhD in quantum physics from MIT. Company bootstrapped but seeking Series A investors. Strong technical team of 15 engineers.',
+      message: `Hi David,
+
+Your work on quantum computing applications for financial modeling is fascinating. The technical depth of your team and your MIT background suggest you're building something truly innovative.
+
+I'd love to learn more about QuantumLabs' roadmap and discuss potential investment opportunities as you prepare for your Series A.
+
+Would you have time for a conversation?
+
+Regards`,
+      status: 'pending' as 'pending' | 'approved' | 'declined',
+      scheduledDate: undefined as Date | undefined
+    }
+  ]);
 
   // Use real API for deals data
   const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
@@ -202,6 +300,50 @@ export default function Deals() {
     } finally {
       setProcessingEmails(false);
     }
+  };
+
+  const handleOpenSchedulePicker = (itemId: string | null, isMultiple: boolean = false) => {
+    setSchedulingItemId(itemId);
+    setSchedulingMultiple(isMultiple);
+    
+    // Set default to tomorrow at 9 AM
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    
+    const dateStr = tomorrow.toISOString().split('T')[0];
+    const timeStr = '09:00';
+    
+    setScheduleDate(dateStr);
+    setScheduleTime(timeStr);
+    setSchedulePickerOpen(true);
+  };
+
+  const handleConfirmSchedule = () => {
+    if (!scheduleDate || !scheduleTime) {
+      alert('Please select both date and time');
+      return;
+    }
+
+    const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+
+    if (schedulingMultiple) {
+      // Approve all pending items
+      const approvedCount = automatedOutreachItems.filter(item => item.status === 'pending').length;
+      setAutomatedOutreachItems(prev => prev.map(item => 
+        item.status === 'pending' ? { ...item, status: 'approved', scheduledDate: scheduledDateTime } : item
+      ));
+      setScheduledCount(approvedCount);
+    } else if (schedulingItemId) {
+      // Approve single item
+      setAutomatedOutreachItems(prev => prev.map(item => 
+        item.id === schedulingItemId ? { ...item, status: 'approved', scheduledDate: scheduledDateTime } : item
+      ));
+      setScheduledCount(1);
+    }
+
+    setSchedulePickerOpen(false);
+    setScheduleDialogOpen(true);
   };
 
   const handleMenuClose = () => {
@@ -1095,35 +1237,261 @@ export default function Deals() {
       )}
 
       {viewMode === 'pipeline' ? (
-        <Box sx={{ position: 'relative' }}>
-          <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
-            <Tooltip title="Email Alerts">
-              <IconButton
-                onClick={() => setEmailAlertsOpen(true)}
-                size="small"
-                sx={{
-                  bgcolor: '#000000',
-                  color: 'white',
-                  width: 20,
-                  height: 20,
-                  '&:hover': {
-                    bgcolor: '#333333'
-                  }
-                }}
-              >
-                <EmailIcon sx={{ fontSize: 12 }} />
-              </IconButton>
-            </Tooltip>
+        <>
+          <Box sx={{ position: 'relative' }}>
+            <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
+              <Tooltip title="Email Alerts">
+                <IconButton
+                  onClick={() => setEmailAlertsOpen(true)}
+                  size="small"
+                  sx={{
+                    bgcolor: '#000000',
+                    color: 'white',
+                    width: 20,
+                    height: 20,
+                    '&:hover': {
+                      bgcolor: '#333333'
+                    }
+                  }}
+                >
+                  <EmailIcon sx={{ fontSize: 12 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <DealPipeline
+              deals={filteredDeals}
+              loading={loading}
+              error={error}
+              onRefresh={refreshDeals}
+              onEditDeal={handleEditDeal}
+              onDeleteDeal={handleDeleteDeal}
+            />
           </Box>
-          <DealPipeline
-            deals={filteredDeals}
-            loading={loading}
-            error={error}
-            onRefresh={refreshDeals}
-            onEditDeal={handleEditDeal}
-            onDeleteDeal={handleDeleteDeal}
-          />
-        </Box>
+
+        {/* Automated Outreach Section */}
+        <Paper sx={{ mt: 0.5, overflow: 'hidden' }}>
+            {/* Black Header Section */}
+            <Box sx={{ p: 2.5, bgcolor: '#000000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'white', fontSize: '1.125rem' }}>
+                  Automated Outreach
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                  Automated messages based on company research ready for approval
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    setAutomatedOutreachItems(prev => prev.map(item => ({ ...item, status: 'declined' })));
+                  }}
+                  sx={{ 
+                    borderColor: 'rgba(255, 255, 255, 0.3)', 
+                    color: 'white',
+                    '&:hover': {
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                      bgcolor: 'rgba(255, 255, 255, 0.05)'
+                    }
+                  }}
+                >
+                  Decline All
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={() => handleOpenSchedulePicker(null, true)}
+                  sx={{
+                    bgcolor: 'white',
+                    color: '#000000',
+                    '&:hover': {
+                      bgcolor: '#F3F4F6'
+                    }
+                  }}
+                >
+                  Approve All ({automatedOutreachItems.filter(item => item.status === 'pending').length})
+                </Button>
+              </Box>
+            </Box>
+
+            {/* White Content Section */}
+            <Box sx={{ p: 2.5, maxHeight: '600px', overflowY: 'auto', bgcolor: 'background.paper' }}>
+              {automatedOutreachItems.map((item, index) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    p: 2,
+                    mb: 1.5,
+                    border: '1px solid',
+                    borderColor: item.status === 'approved' 
+                      ? 'success.main' 
+                      : item.status === 'declined' 
+                      ? 'error.main' 
+                      : 'divider',
+                    borderRadius: 1.5,
+                    bgcolor: item.status === 'approved' 
+                      ? '#F0FDF4' 
+                      : item.status === 'declined' 
+                      ? '#FEF2F2' 
+                      : 'background.paper',
+                    opacity: item.status !== 'pending' ? 0.7 : 1,
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                      borderColor: item.status === 'pending' ? '#D1D5DB' : undefined,
+                      bgcolor: item.status === 'pending' ? '#F9FAFB' : undefined
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                    {/* Contact Info */}
+                    <Avatar sx={{ bgcolor: '#000000', width: 36, height: 36, flexShrink: 0 }}>
+                      {item.contact.name.split(' ').map(n => n[0]).join('')}
+                    </Avatar>
+                    
+                    {/* Content */}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                          {item.contact.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          • {item.contact.role} at {item.contact.company}
+                        </Typography>
+                        {item.status !== 'pending' && (
+                          <Chip
+                            label={item.status === 'approved' ? 'Scheduled' : 'Declined'}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.6875rem',
+                              bgcolor: item.status === 'approved' ? 'success.main' : 'error.main',
+                              color: 'white',
+                              fontWeight: 600,
+                              ml: 'auto'
+                            }}
+                          />
+                        )}
+                      </Box>
+                      
+                      {/* Email and Phone */}
+                      <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <EmailIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {item.contact.email}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <PhoneIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {item.contact.phone}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, lineHeight: 1.4 }}>
+                        {item.research}
+                      </Typography>
+                      
+                      {/* Editable Message Box */}
+                      {editingMessageId === item.id ? (
+                        <TextField
+                          fullWidth
+                          multiline
+                          rows={6}
+                          value={item.message}
+                          onChange={(e) => {
+                            setAutomatedOutreachItems(prev => prev.map(outreach => 
+                              outreach.id === item.id ? { ...outreach, message: e.target.value } : outreach
+                            ));
+                          }}
+                          onBlur={() => setEditingMessageId(null)}
+                          autoFocus
+                          sx={{ 
+                            mb: 1,
+                            '& .MuiOutlinedInput-root': {
+                              bgcolor: '#FFFFFF',
+                              fontSize: '0.8125rem',
+                              lineHeight: 1.5
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Box 
+                          onClick={() => setEditingMessageId(item.id)}
+                          sx={{ 
+                            p: 1.5, 
+                            bgcolor: '#F9FAFB', 
+                            borderRadius: 1, 
+                            border: '1px solid', 
+                            borderColor: 'divider',
+                            mb: 1,
+                            cursor: 'text',
+                            transition: 'all 0.15s ease',
+                            '&:hover': {
+                              bgcolor: '#FFFFFF',
+                              borderColor: '#D1D5DB'
+                            }
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ lineHeight: 1.5, fontSize: '0.8125rem', whiteSpace: 'pre-line' }}>
+                            {item.message}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Action Buttons */}
+                    {item.status === 'pending' && (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                        <Tooltip title="Decline">
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setAutomatedOutreachItems(prev => prev.map(outreach => 
+                                outreach.id === item.id ? { ...outreach, status: 'declined' } : outreach
+                              ));
+                            }}
+                            sx={{ 
+                              color: 'error.main',
+                              border: '1px solid',
+                              borderColor: 'error.main',
+                              width: 32,
+                              height: 32,
+                              '&:hover': {
+                                bgcolor: '#FEE2E2'
+                              }
+                            }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Approve & Schedule">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenSchedulePicker(item.id, false)}
+                            sx={{ 
+                              color: 'white',
+                              bgcolor: 'success.main',
+                              width: 32,
+                              height: 32,
+                              '&:hover': {
+                                bgcolor: 'success.dark'
+                              }
+                            }}
+                          >
+                            <Box sx={{ fontSize: '1.2rem', fontWeight: 'bold' }}>✓</Box>
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        </>
       ) : (
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -1568,6 +1936,238 @@ export default function Deals() {
           handleCloseEditModal();
         }}
       />
+
+      {/* Schedule Picker Dialog */}
+      <Dialog
+        open={schedulePickerOpen}
+        onClose={() => setSchedulePickerOpen(false)}
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+            Schedule Email{schedulingMultiple ? 's' : ''}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Select when you want {schedulingMultiple ? 'these emails' : 'this email'} to be sent
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CalendarIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                Date
+              </Typography>
+              <TextField
+                type="date"
+                fullWidth
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+                InputLabelProps={{
+                  shrink: true
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'white',
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    transition: 'all 0.15s ease',
+                    '& fieldset': {
+                      border: 'none'
+                    },
+                    '&:hover': {
+                      bgcolor: '#F9FAFB',
+                      borderColor: '#D1D5DB'
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: 'white',
+                      borderColor: '#000000',
+                      boxShadow: '0 0 0 1px #000000'
+                    }
+                  },
+                  '& .MuiOutlinedInput-input': {
+                    padding: '14px 16px',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    '&::-webkit-calendar-picker-indicator': {
+                      cursor: 'pointer',
+                      filter: 'invert(0)',
+                      opacity: 0.6,
+                      transition: 'opacity 0.15s ease',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }
+                  }
+                }}
+              />
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <TimeIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                Time
+              </Typography>
+              <TextField
+                type="time"
+                fullWidth
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+                InputLabelProps={{
+                  shrink: true
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: 'white',
+                    borderRadius: 1.5,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    transition: 'all 0.15s ease',
+                    '& fieldset': {
+                      border: 'none'
+                    },
+                    '&:hover': {
+                      bgcolor: '#F9FAFB',
+                      borderColor: '#D1D5DB'
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: 'white',
+                      borderColor: '#000000',
+                      boxShadow: '0 0 0 1px #000000'
+                    }
+                  },
+                  '& .MuiOutlinedInput-input': {
+                    padding: '14px 16px',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    '&::-webkit-calendar-picker-indicator': {
+                      cursor: 'pointer',
+                      filter: 'invert(0)',
+                      opacity: 0.6,
+                      transition: 'opacity 0.15s ease',
+                      '&:hover': {
+                        opacity: 1
+                      }
+                    }
+                  }
+                }}
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+          <Button
+            onClick={() => setSchedulePickerOpen(false)}
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmSchedule}
+            sx={{ px: 3 }}
+          >
+            Schedule {schedulingMultiple ? `${automatedOutreachItems.filter(item => item.status === 'pending').length} Emails` : 'Email'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Schedule Confirmation Dialog */}
+      <Dialog
+        open={scheduleDialogOpen}
+        onClose={() => setScheduleDialogOpen(false)}
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)'
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 4, textAlign: 'center' }}>
+          <Box
+            sx={{
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              bgcolor: '#DCFCE7',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}
+          >
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                bgcolor: 'success.main',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <EmailIcon sx={{ color: 'white', fontSize: 24 }} />
+            </Box>
+          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, fontFamily: '"Space Grotesk", sans-serif' }}>
+            Email{scheduledCount > 1 ? 's' : ''} Scheduled!
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            {scheduledCount} {scheduledCount === 1 ? 'email has' : 'emails have'} been scheduled for delivery
+          </Typography>
+          <Box
+            sx={{
+              p: 2.5,
+              bgcolor: '#F9FAFB',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              mb: 3
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+              Send Time
+            </Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif' }}>
+              {scheduleDate && scheduleTime ? (
+                `${new Date(`${scheduleDate}T${scheduleTime}`).toLocaleDateString('en-US', { 
+                  weekday: 'long',
+                  month: 'short', 
+                  day: 'numeric'
+                })} at ${new Date(`${scheduleDate}T${scheduleTime}`).toLocaleTimeString('en-US', { 
+                  hour: 'numeric', 
+                  minute: '2-digit',
+                  hour12: true
+                })}`
+              ) : (
+                'Not scheduled'
+              )}
+            </Typography>
+          </Box>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => setScheduleDialogOpen(false)}
+            sx={{ py: 1.5 }}
+          >
+            Got it
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       {/* Email Alerts Modal */}
       <Dialog
