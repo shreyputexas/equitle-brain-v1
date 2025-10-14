@@ -21,6 +21,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import OAuthCallback from './pages/OAuthCallback';
 import VoiceCalls from './pages/VoiceCalls';
+import MassVoicemail from './pages/MassVoicemail';
 import Investors from './pages/Investors';
 import Brokers from './pages/Brokers';
 import DataEnrichment from './pages/DataEnrichment';
@@ -72,6 +73,7 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="voice-calls" element={<VoiceCalls />} />
+              <Route path="mass-voicemail" element={<MassVoicemail />} />
               <Route path="data-enrichment" element={<DataEnrichment />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
