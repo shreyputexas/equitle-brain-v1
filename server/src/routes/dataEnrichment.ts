@@ -1084,25 +1084,65 @@ router.post('/search-contacts', async (req, res) => {
       
       logger.info('Starting two-step organization + people search', { thesisCriteria });
       
-      // Step 1: Search for organizations using the FULL industry string from dropdown
+      // Step 1: Search for organizations using Apollo-compatible parameters
       const orgSearchParams: any = {
         per_page: Math.min(contactsToFind * 3 || 30, 100),
         page: 1
       };
-      
-      // Use the exact industry value from the dropdown (e.g., "Healthcare SaaS", "Fintech", "Real Estate Technology")
+
+      // Industry - Use the exact industry value from the dropdown
       if (thesisCriteria.industries) {
         orgSearchParams.q_organization_keyword_tags = [thesisCriteria.industries];
         logger.info(`Searching for companies in: ${thesisCriteria.industries}`);
       }
-      
+
+      // Location - Geographic filter
       if (thesisCriteria.location) {
         orgSearchParams.organization_locations = [thesisCriteria.location];
+        logger.info(`Location filter: ${thesisCriteria.location}`);
       }
-      
-      // Add company size based on revenue/EBITDA
-      if (thesisCriteria.revenue || thesisCriteria.ebitda) {
-        orgSearchParams.organization_num_employees_ranges = ['51,100', '101,200', '201,500', '501,1000'];
+
+      // Company Size (Employee Range) - Direct Apollo parameter
+      if (thesisCriteria.companySizeRange) {
+        const sizeRange = thesisCriteria.companySizeRange.split(',');
+        if (sizeRange.length === 2) {
+          orgSearchParams.organization_num_employees_ranges = [thesisCriteria.companySizeRange];
+          logger.info(`Company size filter: ${thesisCriteria.companySizeRange} employees`);
+        }
+      }
+
+      // Technologies - Companies using specific tech stack
+      if (thesisCriteria.technologies) {
+        // Split by comma for multiple technologies
+        const techList = thesisCriteria.technologies.split(',').map((t: string) => t.trim());
+        orgSearchParams.technologies = techList;
+        logger.info(`Technology filter: ${techList.join(', ')}`);
+      }
+
+      // Funding Stage - Map to Apollo parameters
+      if (thesisCriteria.fundingStage) {
+        // Apollo uses funding_stage_list parameter
+        const fundingStageMap: any = {
+          'seed': ['seed'],
+          'series-a': ['series_a'],
+          'series-b': ['series_b'],
+          'series-c': ['series_c', 'series_d', 'series_e'],
+          'growth': ['growth'],
+          'private-equity': ['private_equity'],
+          'public': ['public'],
+          'bootstrapped': ['bootstrapped']
+        };
+
+        if (fundingStageMap[thesisCriteria.fundingStage]) {
+          orgSearchParams.funding_stage_list = fundingStageMap[thesisCriteria.fundingStage];
+          logger.info(`Funding stage filter: ${thesisCriteria.fundingStage}`);
+        }
+      }
+
+      // Job Departments - Filter by companies hiring in specific departments
+      if (thesisCriteria.jobDepartments) {
+        orgSearchParams.organization_job_titles = [thesisCriteria.jobDepartments];
+        logger.info(`Hiring department filter: ${thesisCriteria.jobDepartments}`);
       }
       
       logger.info('Step 1: Searching for organizations', { orgSearchParams });

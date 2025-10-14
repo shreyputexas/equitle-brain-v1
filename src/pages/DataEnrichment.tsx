@@ -100,11 +100,12 @@ interface ScrapingResults {
 }
 
 interface ThesisCriteria {
-  ebitda: string;
-  revenue: string;
   industries: string;
   location: string;
-  growth: string;
+  companySizeRange: string;
+  fundingStage: string;
+  technologies: string;
+  jobDepartments: string;
 }
 
 interface DiscoveredContact {
@@ -262,11 +263,12 @@ export default function DataEnrichment() {
       }
     }
     return {
-      ebitda: '',
-      revenue: '',
       industries: '',
       location: '',
-      growth: ''
+      companySizeRange: '',
+      fundingStage: '',
+      technologies: '',
+      jobDepartments: ''
     };
   });
   const [discoveredContacts, setDiscoveredContacts] = useState<DiscoveredContact[]>([]);
@@ -584,9 +586,41 @@ export default function DataEnrichment() {
       const data = await response.json();
       
       if (data.success) {
-        setDiscoveredContacts(data.contacts || []);
+        const contacts = data.contacts || [];
+        setDiscoveredContacts(contacts);
         setDiscoveryResults(data);
-        setMessage(`Found ${data.contacts?.length || 0} contacts matching your thesis criteria`);
+        
+        // Automatically save discovered contacts to the database
+        if (contacts.length > 0) {
+          try {
+            const saveResponse = await fetch('/api/firebase/contacts/bulk-save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                contacts: contacts,
+                contactType: contactSearchType // 'people', 'broker', or 'investor'
+              })
+            });
+            
+            const saveData = await saveResponse.json();
+            console.log('Bulk save response:', saveData);
+            
+            if (saveResponse.ok && saveData.success) {
+              setMessage(`✅ Found and saved ${saveData.saved} contacts to your Contacts page!`);
+            } else {
+              console.error('Failed to save contacts:', saveData);
+              setMessage(`Found ${contacts.length} contacts, but failed to save them: ${saveData.error || 'Unknown error'}`);
+            }
+          } catch (saveError) {
+            console.error('Error auto-saving contacts:', saveError);
+            setMessage(`Found ${contacts.length} contacts, but failed to auto-save them. Check console for details.`);
+          }
+        } else {
+          setMessage('No contacts found matching your criteria');
+        }
+        
         setShowSuccess(true);
       } else {
         setMessage(data.error || 'Failed to discover contacts');
@@ -1548,9 +1582,14 @@ export default function DataEnrichment() {
               {/* People at Companies Form */}
               {contactSearchType === 'people' && (
                 <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Find people at companies that match your investment thesis criteria.
-                  </Typography>
+                  <Alert severity="info" sx={{ mb: 3 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                      Apollo-Powered Search Parameters
+                    </Typography>
+                    <Typography variant="body2">
+                      These filters use Apollo's database to find the most accurate results. Hover over the <InfoIcon sx={{ fontSize: 16, verticalAlign: 'middle' }} /> icons to learn what each parameter indicates about a company's scale, growth, and investment potential.
+                    </Typography>
+                  </Alert>
                 </>
               )}
 
@@ -1576,14 +1615,15 @@ export default function DataEnrichment() {
               {contactSearchType === 'people' && (
                 <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Industry *</InputLabel>
-                    <Select
-                      value={thesisCriteria.industries}
-                      onChange={(e) => handleThesisCriteriaChange('industries', e.target.value)}
-                      label="Industry *"
-                    >
-                      <MenuItem value="">Select an industry</MenuItem>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FormControl fullWidth required>
+                      <InputLabel>Industry *</InputLabel>
+                      <Select
+                        value={thesisCriteria.industries}
+                        onChange={(e) => handleThesisCriteriaChange('industries', e.target.value)}
+                        label="Industry *"
+                      >
+                        <MenuItem value="">Select an industry</MenuItem>
                       
                       {/* Healthcare */}
                       <MenuItem value="Hospital & Health Care">Hospital & Health Care</MenuItem>
@@ -1674,52 +1714,130 @@ export default function DataEnrichment() {
                       <MenuItem value="Sports">Sports</MenuItem>
                       <MenuItem value="Hospitality">Hospitality</MenuItem>
                     </Select>
-                  </FormControl>
+                    </FormControl>
+                    <Tooltip title="The industry or sector the company operates in. Apollo searches company profiles and keywords to match this.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </Grid>
+
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Location"
-                    placeholder="e.g., U.S.-based, California, New York"
-                    value={thesisCriteria.location}
-                    onChange={(e) => handleThesisCriteriaChange('location', e.target.value)}
-                    helperText="Geographic location criteria"
-                  />
-                </Grid>
-                  <Grid item xs={6}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TextField
                       fullWidth
-                      label="EBITDA"
-                      placeholder="e.g., $3M+, $5M+, $10M+"
-                      value={thesisCriteria.ebitda}
-                      onChange={(e) => handleThesisCriteriaChange('ebitda', e.target.value)}
-                      helperText="Minimum EBITDA requirements"
+                      label="Location"
+                      placeholder="e.g., California, New York, Texas"
+                      value={thesisCriteria.location}
+                      onChange={(e) => handleThesisCriteriaChange('location', e.target.value)}
                     />
-                  </Grid>
-                  <Grid item xs={6}>
+                    <Tooltip title="Geographic location where the company is headquartered or has offices. Can indicate: market focus, talent access, regulatory environment, and cost structure.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Company Size (Employees)</InputLabel>
+                      <Select
+                        value={thesisCriteria.companySizeRange}
+                        onChange={(e) => handleThesisCriteriaChange('companySizeRange', e.target.value)}
+                        label="Company Size (Employees)"
+                      >
+                        <MenuItem value="">Any Size</MenuItem>
+                        <MenuItem value="1,10">1-10 employees (Seed/Startup)</MenuItem>
+                        <MenuItem value="11,50">11-50 employees (Early Stage)</MenuItem>
+                        <MenuItem value="51,200">51-200 employees (Growth Stage)</MenuItem>
+                        <MenuItem value="201,500">201-500 employees (Mid-Market)</MenuItem>
+                        <MenuItem value="501,1000">501-1,000 employees (Large)</MenuItem>
+                        <MenuItem value="1001,5000">1,001-5,000 employees (Enterprise)</MenuItem>
+                        <MenuItem value="5001,10000">5,001-10,000 employees (Large Enterprise)</MenuItem>
+                        <MenuItem value="10001,max">10,000+ employees (Fortune 500)</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Tooltip title="Number of employees. Indicates: company maturity, revenue scale (~$100K-200K revenue per employee is typical), organizational complexity, and decision-making speed.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Funding/Growth Stage</InputLabel>
+                      <Select
+                        value={thesisCriteria.fundingStage}
+                        onChange={(e) => handleThesisCriteriaChange('fundingStage', e.target.value)}
+                        label="Funding/Growth Stage"
+                      >
+                        <MenuItem value="">Any Stage</MenuItem>
+                        <MenuItem value="seed">Seed Stage</MenuItem>
+                        <MenuItem value="series-a">Series A</MenuItem>
+                        <MenuItem value="series-b">Series B</MenuItem>
+                        <MenuItem value="series-c">Series C+</MenuItem>
+                        <MenuItem value="growth">Growth Stage</MenuItem>
+                        <MenuItem value="private-equity">Private Equity Backed</MenuItem>
+                        <MenuItem value="public">Public Company</MenuItem>
+                        <MenuItem value="bootstrapped">Bootstrapped/Profitable</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Tooltip title="Funding and growth stage. Indicates: capital availability, growth trajectory, investor backing, profitability focus, and acquisition readiness. Note: Data may be limited for private companies.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TextField
                       fullWidth
-                      label="Revenue"
-                      placeholder="e.g., $10M-$20M, $20M-$50M, $50M+"
-                      value={thesisCriteria.revenue}
-                      onChange={(e) => handleThesisCriteriaChange('revenue', e.target.value)}
-                      helperText="Revenue range criteria"
+                      label="Technologies Used (Optional)"
+                      placeholder="e.g., Salesforce, AWS, HubSpot, Stripe"
+                      value={thesisCriteria.technologies}
+                      onChange={(e) => handleThesisCriteriaChange('technologies', e.target.value)}
                     />
-                  </Grid>
+                    <Tooltip title="Technology stack the company uses (e.g., Salesforce, AWS, HubSpot). Indicates: technical sophistication, digital maturity, infrastructure spend, and operational complexity. Companies using modern tech stacks often have higher valuations.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Grid>
+
                 <Grid item xs={12}>
-                  <FormControl fullWidth>
-                    <InputLabel>Growth Rate</InputLabel>
-                    <Select
-                      value={thesisCriteria.growth}
-                      onChange={(e) => handleThesisCriteriaChange('growth', e.target.value)}
-                      label="Growth Rate"
-                    >
-                      <MenuItem value="">Any</MenuItem>
-                      <MenuItem value="single">Single-digit growth</MenuItem>
-                      <MenuItem value="double">Double-digit growth</MenuItem>
-                      <MenuItem value="high">High growth (20%+)</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Hiring Departments (Optional)</InputLabel>
+                      <Select
+                        value={thesisCriteria.jobDepartments}
+                        onChange={(e) => handleThesisCriteriaChange('jobDepartments', e.target.value)}
+                        label="Hiring Departments (Optional)"
+                      >
+                        <MenuItem value="">Any Department</MenuItem>
+                        <MenuItem value="sales">Sales</MenuItem>
+                        <MenuItem value="engineering">Engineering</MenuItem>
+                        <MenuItem value="marketing">Marketing</MenuItem>
+                        <MenuItem value="operations">Operations</MenuItem>
+                        <MenuItem value="finance">Finance</MenuItem>
+                        <MenuItem value="customer success">Customer Success</MenuItem>
+                        <MenuItem value="product">Product</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Tooltip title="Departments actively hiring. Indicates: company growth areas, strategic priorities, and expansion stage. Heavy sales hiring = revenue growth focus. Engineering hiring = product development. Multiple departments = rapid scaling.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
@@ -2021,7 +2139,8 @@ export default function DataEnrichment() {
                         <TableCell>Title</TableCell>
                         <TableCell>Company</TableCell>
                         <TableCell>Email</TableCell>
-                        <TableCell>Status</TableCell>
+                        <TableCell>Phone</TableCell>
+                        <TableCell>LinkedIn</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -2045,23 +2164,45 @@ export default function DataEnrichment() {
                           <TableCell>{contact.title}</TableCell>
                           <TableCell>{contact.company}</TableCell>
                           <TableCell>
-                            {contact.email ? (
+                            {contact.email && contact.email !== 'email_not_unlocked' && !contact.email.includes('email_not_unlocked') ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 <EmailIcon sx={{ fontSize: 16, color: 'success.main' }} />
                                 <Typography variant="body2">{contact.email}</Typography>
                               </Box>
                             ) : (
                               <Typography variant="body2" color="text.secondary">
-                                No email
+                                Not Found
                               </Typography>
                             )}
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={contact.email_unlocked ? 'Unlocked' : 'Locked'}
-                              color={contact.email_unlocked ? 'success' : 'warning'}
-                              size="small"
-                            />
+                            {contact.phone ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <PhoneIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                                <Typography variant="body2">{contact.phone}</Typography>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                Not Found
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {contact.linkedin_url ? (
+                              <IconButton
+                                size="small"
+                                component="a"
+                                href={contact.linkedin_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <LinkedInIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                              </IconButton>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                Not Found
+                              </Typography>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

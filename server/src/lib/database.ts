@@ -1,4 +1,3 @@
-// Temporary placeholder for legacy database imports
-// This is being replaced by Firebase
-
+// Prisma has been replaced by Firebase
+// This file is kept for legacy compatibility but returns null
 export default null;

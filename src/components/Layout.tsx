@@ -53,7 +53,8 @@ import {
   Analytics as AnalyticsIcon,
   Assessment as ReportIcon,
   Phone as PhoneIcon,
-  DataUsage as DataEnrichmentIcon
+  DataUsage as DataEnrichmentIcon,
+  Contacts as ContactsIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -75,6 +76,11 @@ const navigationItems = [
     text: 'Scraping',
     icon: <AnalyticsIcon />,
     path: '/data-enrichment'
+  },
+  {
+    text: 'Contacts',
+    icon: <ContactsIcon />,
+    path: '/contacts'
   },
   {
     text: 'Outreach',
