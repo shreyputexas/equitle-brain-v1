@@ -36,6 +36,7 @@ import dataEnrichmentRoutes from './routes/dataEnrichment';
 import apolloRoutes from './routes/apollo';
 import voiceAgentRoutes from './routes/voiceAgent';
 import campaignRoutes from './routes/campaigns';
+import massVoicemailRoutes from './routes/massVoicemail';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -225,6 +226,8 @@ app.use('/api/apollo', apolloRoutes);
 app.use('/api/voice-agent', voiceAgentRoutes);
 // Campaign routes for mass voicemail
 app.use('/api/campaigns', campaignRoutes);
+// Mass voicemail routes
+app.use('/api/mass-voicemail', massVoicemailRoutes);
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);

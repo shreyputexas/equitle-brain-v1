@@ -101,36 +101,34 @@ export class ElevenLabsService {
         textLength: request.text.length
       });
 
-      const voice = ElevenLabs.init({
-        apiKey: this.apiKey,
+      // Use direct API call instead of the init method
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${request.voice_id}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': this.apiKey,
+        },
+        body: JSON.stringify({
+          text: request.text,
+          model_id: request.model_id || 'eleven_multilingual_v2',
+          voice_settings: {
+            stability: request.voice_settings?.stability || 0.5,
+            similarity_boost: request.voice_settings?.similarity_boost || 0.75,
+            style: request.voice_settings?.style || 0.0,
+            use_speaker_boost: request.voice_settings?.use_speaker_boost || true
+          }
+        })
       });
 
-      const response = await voice.textToSpeech({
-        voiceId: request.voice_id,
-        text: request.text,
-        modelId: request.model_id || 'eleven_multilingual_v2',
-        voiceSettings: request.voice_settings || {
-          stability: 0.5,
-          similarityBoost: 0.75,
-          style: 0.0,
-          useSpeakerBoost: true
-        }
-      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`ElevenLabs TTS API error: ${response.status} - ${errorText}`);
+      }
 
       // Convert response to Buffer
-      if (response instanceof Readable) {
-        const chunks: Buffer[] = [];
-        for await (const chunk of response) {
-          chunks.push(chunk);
-        }
-        return Buffer.concat(chunks);
-      } else if (response instanceof ArrayBuffer) {
-        return Buffer.from(response);
-      } else if (Buffer.isBuffer(response)) {
-        return response;
-      } else {
-        throw new Error('Unexpected response type from ElevenLabs');
-      }
+      const audioBuffer = await response.arrayBuffer();
+      return Buffer.from(audioBuffer);
     } catch (error) {
       logger.error('Failed to generate speech', error);
       throw new Error(`Failed to generate speech: ${(error as Error).message}`);
