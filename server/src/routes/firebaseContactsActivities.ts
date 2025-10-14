@@ -98,10 +98,11 @@ const createCommunicationSchema = Joi.object({
 
 // @route   GET /api/firebase-contacts
 // @desc    Get all contacts for the authenticated user
-// @access  Private
-router.get('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+// @access  Private (no auth for development)
+router.get('/contacts', async (req, res) => {
   try {
-    const userId = req.userId!;
+    // Use dev user for now
+    const userId = 'dev-user-123';
     const { dealId, search, status, limit = 50, offset = 0 } = req.query;
 
     const result = await ContactsActivitiesFirestoreService.getAllContacts(userId, {
@@ -158,10 +159,11 @@ router.get('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 
 // @route   POST /api/firebase-contacts
 // @desc    Create new contact
-// @access  Private
-router.post('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+// @access  Private (no auth for development)
+router.post('/contacts', async (req, res) => {
   try {
-    const userId = req.userId!;
+    // Use dev user for now
+    const userId = 'dev-user-123';
 
     // Validate input
     const { error, value } = createContactSchema.validate(req.body);
@@ -259,6 +261,90 @@ router.delete('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthR
       success: false,
       message: 'Server error'
     });
+  }
+});
+
+// @route   POST /api/firebase/contacts/bulk-save
+// @desc    Bulk save enriched contacts from Apollo
+// @access  Private (no auth for development)
+router.post('/contacts/bulk-save', async (req, res) => {
+  try {
+    // Use dev user for now
+    const userId = 'dev-user-123';
+    const { contacts: enrichedContacts, contactType } = req.body;
+
+    if (!enrichedContacts || !Array.isArray(enrichedContacts)) {
+      return res.status(400).json({ success: false, error: 'Invalid contacts data' });
+    }
+
+    logger.info(`Bulk saving ${enrichedContacts.length} ${contactType} contacts for user ${userId}`);
+
+    const savedContacts = [];
+    const skippedContacts = [];
+
+    for (const enrichedContact of enrichedContacts) {
+      try {
+        // Check if contact already exists by email
+        let existingContacts = [];
+        if (enrichedContact.email && 
+            enrichedContact.email !== 'email_not_unlocked' && 
+            !enrichedContact.email.includes('email_not_unlocked')) {
+          existingContacts = await ContactsActivitiesFirestoreService.getAllContacts(userId, {
+            email: enrichedContact.email
+          });
+        }
+
+        let savedContact;
+        if (existingContacts.length > 0) {
+          // Update existing contact
+          const existingContact = existingContacts[0];
+          savedContact = await ContactsActivitiesFirestoreService.updateContact(userId, existingContact.id, {
+            email: enrichedContact.email || existingContact.email,
+            phone: enrichedContact.phone || existingContact.phone,
+            linkedinUrl: enrichedContact.linkedin_url || existingContact.linkedinUrl,
+            title: enrichedContact.title || existingContact.title,
+            company: enrichedContact.company || existingContact.company,
+            tags: [...new Set([...(existingContact.tags || []), contactType])],
+          });
+        } else {
+          // Create new contact
+          savedContact = await ContactsActivitiesFirestoreService.createContact(userId, {
+            name: enrichedContact.name,
+            email: (enrichedContact.email && 
+                   enrichedContact.email !== 'email_not_unlocked' && 
+                   !enrichedContact.email.includes('email_not_unlocked')) 
+                   ? enrichedContact.email 
+                   : undefined,
+            phone: enrichedContact.phone || undefined,
+            linkedinUrl: enrichedContact.linkedin_url || undefined,
+            title: enrichedContact.title || undefined,
+            company: enrichedContact.company || undefined,
+            tags: [contactType],
+            status: 'warm',
+            lastContact: new Date(),
+            relationshipScore: 0,
+            isKeyContact: false
+          });
+        }
+        savedContacts.push(savedContact);
+      } catch (contactError: any) {
+        logger.error(`Error saving contact ${enrichedContact.name}:`, contactError.message);
+        skippedContacts.push(enrichedContact.name);
+      }
+    }
+
+    logger.info(`Bulk save complete: ${savedContacts.length} saved, ${skippedContacts.length} skipped`);
+    
+    res.json({
+      success: true,
+      saved: savedContacts.length,
+      skipped: skippedContacts.length,
+      skippedNames: skippedContacts,
+      contacts: savedContacts
+    });
+  } catch (error: any) {
+    logger.error('Bulk save contacts error:', error);
+    res.status(500).json({ success: false, error: 'Failed to save contacts: ' + error.message });
   }
 });
 

@@ -77,7 +77,7 @@ function App() {
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/outreach/deals" />} />
               <Route path="companies" element={<Navigate to="/outreach/deals" />} />
-              <Route path="contacts" element={<Navigate to="/outreach/deals" />} />
+              <Route path="contacts" element={<Contacts />} />
               <Route path="investor-relations" element={<Navigate to="/fundraising/limited-partners" />} />
               <Route path="brain" element={<Brain />} />
               <Route path="reports" element={<Navigate to="/fundraising/funds" />} />

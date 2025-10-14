@@ -24,7 +24,7 @@ import firebaseFundsRoutes from './routes/firebaseFunds';
 // import lpGroupsRoutes from './routes/lp-groups'; // Temporarily disabled due to Prisma dependency
 import firebaseLpGroupsRoutes from './routes/firebaseLpGroups';
 import companyRoutes from './routes/companies';
-// import contactRoutes from './routes/contacts'; // Temporarily disabled due to Prisma dependency
+// import contactRoutes from './routes/contacts'; // Disabled - uses Prisma, replaced by Firebase
 import firebaseContactsActivitiesRoutes from './routes/firebaseContactsActivities';
 import firebaseDocumentsRoutes from './routes/firebaseDocuments';
 import firebaseEmailsRoutes from './routes/firebaseEmails';
@@ -145,9 +145,7 @@ app.use('/api/email-processing', emailProccesingRoutes);
 // New Firebase LP groups routes
 app.use('/api/firebase-lp-groups', firebaseLpGroupsRoutes);
 app.use('/api/companies', firebaseAuthMiddleware, companyRoutes);
-// Legacy Prisma contacts routes (will be deprecated)
-// app.use('/api/contacts', contactRoutes); // Temporarily disabled due to Prisma dependency
-// New Firebase contacts, activities, and communications routes
+// New Firebase contacts, activities, and communications routes (replaces Prisma contacts)
 app.use('/api/firebase', firebaseContactsActivitiesRoutes);
 // New Firebase documents routes
 app.use('/api/firebase-documents', firebaseDocumentsRoutes);
