@@ -25,7 +25,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  useTheme
 } from '@mui/material';
 import {
   AttachMoney as DealsIcon,
@@ -117,6 +118,7 @@ const navigationItems = [
 ];
 
 export default function Layout() {
+  const theme = useTheme();
   const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
   const [navMenuAnchors, setNavMenuAnchors] = useState<{ [key: string]: HTMLElement | null }>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -630,7 +632,7 @@ export default function Layout() {
               alt="Equitle"
               sx={{
                 height: { xs: '2rem', md: '2.5rem' },
-                filter: 'brightness(0)',
+                filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
                 opacity: 0.95,
                 objectFit: 'contain',
                 mr: 4,
@@ -841,9 +843,9 @@ export default function Layout() {
               component="img"
               src="/assets/images/extended_logo_black_white.png"
               alt="Equitle"
-          sx={{
+              sx={{
                 height: '2rem',
-                filter: 'brightness(0) invert(1)',
+                filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
                 opacity: 0.95,
                 objectFit: 'contain',
                 cursor: 'pointer'

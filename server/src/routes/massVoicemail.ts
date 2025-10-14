@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import * as XLSX from 'xlsx';
 import { ElevenLabsService } from '../services/elevenlabs.service';
+import { SlybroadcastService } from '../services/slybroadcast.service';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -647,6 +648,137 @@ router.get('/mp3/:campaignId/:filename', async (req: Request, res: Response) => 
   } catch (error) {
     logger.error('Failed to serve MP3 file:', error);
     res.status(500).json({ message: 'Failed to serve MP3 file' });
+  }
+});
+
+// Send voicemail campaign using Slybroadcast
+router.post('/campaigns/:id/send-voicemails', async (req, res) => {
+  try {
+    const { id: campaignId } = req.params;
+    const { callerIdNumber, callerIdName } = req.body;
+
+    logger.info('📞 Starting voicemail delivery for campaign', {
+      campaignId,
+      callerIdNumber,
+      callerIdName
+    });
+
+    // Get campaign from memory (in a real app, this would be from database)
+    const campaign = campaigns.get(campaignId);
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    if (campaign.status !== 'completed') {
+      return res.status(400).json({ error: 'Campaign must be completed before sending voicemails' });
+    }
+
+    // Initialize Slybroadcast service
+    const slybroadcastService = new SlybroadcastService();
+
+    // Test Slybroadcast connection first
+    const connectionTest = await slybroadcastService.testConnection();
+    if (!connectionTest) {
+      return res.status(500).json({ error: 'Unable to connect to Slybroadcast. Please check credentials.' });
+    }
+
+    // Get the MP3 file path
+    const campaignDir = path.join('uploads/campaigns', campaignId);
+    const mp3Files = fs.readdirSync(campaignDir).filter(file => file.endsWith('.mp3'));
+
+    if (mp3Files.length === 0) {
+      return res.status(400).json({ error: 'No MP3 files found for this campaign' });
+    }
+
+    // For now, use the first MP3 file (in future, could send individual files per contact)
+    const mp3FilePath = path.join(campaignDir, mp3Files[0]);
+
+    // Format and validate phone numbers
+    const phoneNumbers = campaign.contacts.map((contact: Contact) => contact.phone?.toString() || '');
+    const { valid: validPhones, invalid: invalidPhones } = slybroadcastService.validatePhoneNumbers(phoneNumbers);
+
+    logger.info('📋 Phone number validation results', {
+      total: phoneNumbers.length,
+      valid: validPhones.length,
+      invalid: invalidPhones.length,
+      invalidNumbers: invalidPhones
+    });
+
+    if (validPhones.length === 0) {
+      return res.status(400).json({
+        error: 'No valid phone numbers found',
+        invalidNumbers: invalidPhones
+      });
+    }
+
+    // Send voicemail campaign
+    const result = await slybroadcastService.sendVoicemailCampaign({
+      phoneNumbers: validPhones,
+      mp3FilePath,
+      callerIdNumber,
+      callerIdName,
+      title: campaign.name
+    });
+
+    if (result.success) {
+      // Update campaign status (in a real app, save to database)
+      campaign.voicemailStatus = 'sent';
+      campaign.voicemailBroadcastId = result.broadcastId;
+      campaign.validPhones = validPhones;
+      campaign.invalidPhones = invalidPhones;
+      campaign.voicemailSentAt = new Date().toISOString();
+
+      logger.info('🎉 Voicemail campaign sent successfully', {
+        campaignId,
+        broadcastId: result.broadcastId,
+        validPhones: validPhones.length,
+        invalidPhones: invalidPhones.length
+      });
+
+      res.json({
+        success: true,
+        message: 'Voicemail campaign sent successfully',
+        broadcastId: result.broadcastId,
+        sentTo: validPhones.length,
+        invalidNumbers: invalidPhones,
+        campaignUpdate: {
+          voicemailStatus: 'sent',
+          voicemailBroadcastId: result.broadcastId,
+          voicemailSentAt: campaign.voicemailSentAt
+        }
+      });
+    } else {
+      logger.error('❌ Failed to send voicemail campaign', { error: result.error });
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to send voicemail campaign'
+      });
+    }
+
+  } catch (error) {
+    logger.error('❌ Error sending voicemail campaign', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test Slybroadcast connection
+router.get('/test-slybroadcast', async (req, res) => {
+  try {
+    const slybroadcastService = new SlybroadcastService();
+    const isConnected = await slybroadcastService.testConnection();
+
+    res.json({
+      success: true,
+      connected: isConnected,
+      message: isConnected ? 'Slybroadcast connection successful' : 'Slybroadcast connection failed - check credentials'
+    });
+  } catch (error) {
+    logger.error('Error testing Slybroadcast connection', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test Slybroadcast connection'
+    });
   }
 });
 
