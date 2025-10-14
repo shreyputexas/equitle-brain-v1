@@ -16,7 +16,11 @@ import {
   ListItemText,
   IconButton,
   LinearProgress,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   CloudUpload,
@@ -24,7 +28,8 @@ import {
   Delete,
   FileDownload,
   Campaign,
-  RecordVoiceOver
+  RecordVoiceOver,
+  Phone
 } from '@mui/icons-material';
 
 interface TabPanelProps {
@@ -89,6 +94,13 @@ const MassVoicemail: React.FC = () => {
   const [selectedVoiceId, setSelectedVoiceId] = useState('');
   const [contactsFile, setContactsFile] = useState<File | null>(null);
   const [parsedContacts, setParsedContacts] = useState<any[]>([]);
+
+  // Voicemail sending state
+  const [voicemailDialog, setVoicemailDialog] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [callerIdNumber, setCallerIdNumber] = useState('');
+  const [callerIdName, setCallerIdName] = useState('');
+  const [isSendingVoicemails, setIsSendingVoicemails] = useState(false);
 
   useEffect(() => {
     loadVoiceClones();
@@ -203,6 +215,47 @@ const MassVoicemail: React.FC = () => {
     } catch (error) {
       console.error('Failed to create campaign:', error);
     }
+  };
+
+  const sendVoicemails = async () => {
+    if (!selectedCampaign) return;
+
+    setIsSendingVoicemails(true);
+
+    try {
+      const response = await fetch(`http://localhost:4001/api/mass-voicemail/campaigns/${selectedCampaign.id}/send-voicemails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          callerIdNumber,
+          callerIdName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`Voicemails sent successfully! Broadcast ID: ${data.broadcastId}\nSent to ${data.sentTo} numbers.`);
+        setVoicemailDialog(false);
+        setCallerIdNumber('');
+        setCallerIdName('');
+        loadCampaigns(); // Refresh campaigns to show updated status
+      } else {
+        alert(`Failed to send voicemails: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to send voicemails:', error);
+      alert('Failed to send voicemails. Please try again.');
+    } finally {
+      setIsSendingVoicemails(false);
+    }
+  };
+
+  const openVoicemailDialog = (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    setVoicemailDialog(true);
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -472,18 +525,31 @@ const MassVoicemail: React.FC = () => {
                       )}
 
                       {campaign.status === 'completed' && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<FileDownload />}
-                          onClick={() => {
-                            // Use the existing campaigns download endpoint
-                            window.open(`http://localhost:4001/api/mass-voicemail/campaigns/${campaign.id}/download`, '_blank');
-                          }}
-                          sx={{ mt: 1 }}
-                        >
-                          Download MP3
-                        </Button>
+                        <>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<FileDownload />}
+                            onClick={() => {
+                              // Use the existing campaigns download endpoint
+                              window.open(`http://localhost:4001/api/mass-voicemail/campaigns/${campaign.id}/download`, '_blank');
+                            }}
+                            sx={{ mt: 1 }}
+                          >
+                            Download MP3
+                          </Button>
+
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<Phone />}
+                            onClick={() => openVoicemailDialog(campaign)}
+                            sx={{ mt: 1 }}
+                            color="success"
+                          >
+                            Send Voicemails
+                          </Button>
+                        </>
                       )}
 
                       {campaign.last_updated && (
@@ -499,6 +565,54 @@ const MassVoicemail: React.FC = () => {
           </Grid>
         </TabPanel>
       </Paper>
+
+      {/* Voicemail Sending Dialog */}
+      <Dialog open={voicemailDialog} onClose={() => setVoicemailDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Send Voicemails - {selectedCampaign?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            This will send personalized voicemails to {selectedCampaign?.total_contacts} contacts using Slybroadcast.
+          </Typography>
+
+          <TextField
+            fullWidth
+            label="Caller ID Number (Optional)"
+            value={callerIdNumber}
+            onChange={(e) => setCallerIdNumber(e.target.value)}
+            placeholder="e.g. 5551234567"
+            helperText="10-digit US phone number that will appear as the caller"
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            fullWidth
+            label="Caller ID Name (Optional)"
+            value={callerIdName}
+            onChange={(e) => setCallerIdName(e.target.value)}
+            placeholder="e.g. Your Company Name"
+            helperText="Name that will appear on the recipient's phone"
+            sx={{ mb: 2 }}
+          />
+
+          <Alert severity="info">
+            <strong>Important:</strong> Make sure you have valid Slybroadcast credentials configured.
+            This will charge your Slybroadcast account approximately $0.06-$0.12 per voicemail.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVoicemailDialog(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={sendVoicemails}
+            disabled={isSendingVoicemails}
+            startIcon={<Phone />}
+          >
+            {isSendingVoicemails ? 'Sending...' : 'Send Voicemails'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
