@@ -78,6 +78,7 @@ import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 import DealPipeline from '../components/DealPipeline';
 import EmailAlerts from '../components/EmailAlerts';
+import WebsiteScraper from '../components/WebsiteScraper';
 import { emailProcessingApi } from '../services/emailProcessingApi';
 
 type ViewMode = 'grid' | 'list' | 'pipeline';
@@ -1491,6 +1492,9 @@ Regards`,
               ))}
             </Box>
           </Paper>
+
+          {/* Website Scraper Section */}
+          <WebsiteScraper />
         </>
       ) : (
         <Paper sx={{ p: 3 }}>

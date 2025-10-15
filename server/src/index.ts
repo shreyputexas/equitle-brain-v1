@@ -37,6 +37,7 @@ import apolloRoutes from './routes/apollo';
 import voiceAgentRoutes from './routes/voiceAgent';
 import campaignRoutes from './routes/campaigns';
 import massVoicemailRoutes from './routes/massVoicemail';
+import websiteScraperRoutes from './routes/websiteScraper';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -228,6 +229,8 @@ app.use('/api/voice-agent', voiceAgentRoutes);
 app.use('/api/campaigns', campaignRoutes);
 // Mass voicemail routes
 app.use('/api/mass-voicemail', massVoicemailRoutes);
+// Website scraper routes - no auth required for testing
+app.use('/api/scraper', websiteScraperRoutes);
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);

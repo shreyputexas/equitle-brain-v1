@@ -1,0 +1,77 @@
+[
+  {
+    "success": true,
+    "profile": {
+      "name": "Sarah Johnson",
+      "title": "VP of Engineering",
+      "company": "TechStartup Inc",
+      "location": "San Francisco, CA",
+      "industry": "Technology",
+      "linkedin_url": "https://linkedin.com/in/sarah-johnson-ai"
+    },
+    "analysis": {
+      "connection_strength": "weak",
+      "personalization_level": "high",
+      "key_insights": [
+        "Relevant industry: Technology",
+        "Technical background - AI/ML relevant",
+        "Startup/tech company experience"
+      ],
+      "recommended_approach": "warm_introduction"
+    },
+    "message": {
+      "subject": "Introduction from a mutual connection",
+      "body": "Hi Sarah,\n\na mutual connection suggested I reach out to you regarding your work at TechStartup Inc.\n\nI'm the founder of Equitle, an AI-powered platform that's helping private equity firms automate their deal sourcing and due diligence processes. Given your expertise in Technology and your role as VP of Engineering, I thought you might be interested in learning about how we're using AI to transform the investment process.\n\nWe've already helped several firms reduce their deal evaluation time by 60% while improving accuracy. I'd love to share some insights about our approach and see if there might be opportunities for collaboration.\n\nWould you be available for a brief call this week?\n\nBest regards,\nShariq Hafizi\nFounder & CEO, Equitle\n\nLooking forward to connecting!"
+    },
+    "generated_at": "2025-10-14T23:51:06.646795"
+  },
+  {
+    "success": true,
+    "profile": {
+      "name": "Michael Chen",
+      "title": "Investment Director",
+      "company": "Venture Capital Partners",
+      "location": "New York, NY",
+      "industry": "Finance",
+      "linkedin_url": "https://linkedin.com/in/michael-chen-vc"
+    },
+    "analysis": {
+      "connection_strength": "weak",
+      "personalization_level": "high",
+      "key_insights": [
+        "Relevant industry: Finance"
+      ],
+      "recommended_approach": "cold_outreach"
+    },
+    "message": {
+      "subject": "Quick question about Venture Capital Partners",
+      "body": "Hi Michael,\n\nI came across your profile and was impressed by your work at Venture Capital Partners as a Investment Director. \nI noticed you have experience with Financial Analysis, Due Diligence, Portfolio Management, which is exactly what we're working on at Equitle.\n\nI'm reaching out because we're building an AI-powered investment platform that helps private equity firms streamline their deal sourcing and due diligence process. Given your background in Finance, I thought you might find our approach interesting.\n\nWould you be open to a brief 15-minute call this week to discuss how we're using AI to revolutionize the investment process?\n\nBest regards,\nShariq Hafizi\nFounder & CEO, Equitle\n\nP.S. I'd love to share some insights about how AI is transforming the investment landscape."
+    },
+    "generated_at": "2025-10-14T23:51:06.646833"
+  },
+  {
+    "success": true,
+    "profile": {
+      "name": "Dr. Emily Rodriguez",
+      "title": "Chief Medical Officer",
+      "company": "HealthTech Solutions",
+      "location": "Boston, MA",
+      "industry": "Healthcare",
+      "linkedin_url": "https://linkedin.com/in/emily-rodriguez-md"
+    },
+    "analysis": {
+      "connection_strength": "weak",
+      "personalization_level": "high",
+      "key_insights": [
+        "Relevant industry: Healthcare",
+        "Startup/tech company experience"
+      ],
+      "recommended_approach": "warm_introduction"
+    },
+    "message": {
+      "subject": "Introduction from a mutual connection",
+      "body": "Hi Dr.,\n\na mutual connection suggested I reach out to you regarding your work at HealthTech Solutions.\n\nI'm the founder of Equitle, an AI-powered platform that's helping private equity firms automate their deal sourcing and due diligence processes. Given your expertise in Healthcare and your role as Chief Medical Officer, I thought you might be interested in learning about how we're using AI to transform the investment process.\n\nWe've already helped several firms reduce their deal evaluation time by 60% while improving accuracy. I'd love to share some insights about our approach and see if there might be opportunities for collaboration.\n\nWould you be available for a brief call this week?\n\nBest regards,\nShariq Hafizi\nFounder & CEO, Equitle\n\nLooking forward to connecting!"
+    },
+    "generated_at": "2025-10-14T23:51:06.646846"
+  }
+]
