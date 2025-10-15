@@ -38,6 +38,7 @@ import voiceAgentRoutes from './routes/voiceAgent';
 import campaignRoutes from './routes/campaigns';
 import massVoicemailRoutes from './routes/massVoicemail';
 import websiteScraperRoutes from './routes/websiteScraper';
+import linkedinOutreachRoutes from './routes/linkedinOutreach';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -231,6 +232,8 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/mass-voicemail', massVoicemailRoutes);
 // Website scraper routes - no auth required for testing
 app.use('/api/scraper', websiteScraperRoutes);
+// LinkedIn outreach routes - no auth required for testing
+app.use('/api/linkedin-outreach', linkedinOutreachRoutes);
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);

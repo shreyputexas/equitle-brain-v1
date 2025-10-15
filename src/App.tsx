@@ -26,6 +26,7 @@ import Investors from './pages/Investors';
 import Brokers from './pages/Brokers';
 import DataEnrichment from './pages/DataEnrichment';
 import MyThesis from './pages/MyThesis';
+import LinkedInEntry from './pages/LinkedInEntry';
 
 function App() {
   return (
@@ -77,6 +78,7 @@ function App() {
               <Route path="mass-voicemail" element={<MassVoicemail />} />
               <Route path="data-enrichment" element={<DataEnrichment />} />
               <Route path="my-thesis" element={<MyThesis />} />
+              <Route path="linkedin-entry" element={<LinkedInEntry />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/outreach/deals" />} />
