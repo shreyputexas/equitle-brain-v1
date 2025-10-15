@@ -57,7 +57,8 @@ import {
   DataUsage as DataEnrichmentIcon,
   Contacts as ContactsIcon,
   Assignment as ThesisIcon,
-  LinkedIn as LinkedInIcon
+  LinkedIn as LinkedInIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -814,6 +815,12 @@ export default function Layout() {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
+        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/profile'); }}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          My Profile
+        </MenuItem>
         <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
