@@ -295,6 +295,9 @@ router.post('/contacts/bulk-save', async (req, res) => {
         }
 
         let savedContact;
+        // Use contactType from the enrichedContact if available, otherwise use the default
+        const finalContactType = enrichedContact.contactType || contactType;
+        
         if (existingContacts.length > 0) {
           // Update existing contact
           const existingContact = existingContacts[0];
@@ -304,7 +307,8 @@ router.post('/contacts/bulk-save', async (req, res) => {
             linkedinUrl: enrichedContact.linkedin_url || existingContact.linkedinUrl,
             title: enrichedContact.title || existingContact.title,
             company: enrichedContact.company || existingContact.company,
-            tags: [...new Set([...(existingContact.tags || []), contactType])],
+            notes: enrichedContact.notes || existingContact.notes,
+            tags: [...new Set([...(existingContact.tags || []), finalContactType, ...(enrichedContact.tags || [])])],
           });
         } else {
           // Create new contact
@@ -319,7 +323,8 @@ router.post('/contacts/bulk-save', async (req, res) => {
             linkedinUrl: enrichedContact.linkedin_url || undefined,
             title: enrichedContact.title || undefined,
             company: enrichedContact.company || undefined,
-            tags: [contactType],
+            notes: enrichedContact.notes || undefined,
+            tags: [finalContactType, ...(enrichedContact.tags || [])].filter(Boolean),
             status: 'warm',
             lastContact: new Date(),
             relationshipScore: 0,
