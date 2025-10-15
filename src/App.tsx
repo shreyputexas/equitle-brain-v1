@@ -25,6 +25,7 @@ import MassVoicemail from './pages/MassVoicemail';
 import Investors from './pages/Investors';
 import Brokers from './pages/Brokers';
 import DataEnrichment from './pages/DataEnrichment';
+import MyThesis from './pages/MyThesis';
 
 function App() {
   return (
@@ -75,6 +76,7 @@ function App() {
               <Route path="voice-calls" element={<VoiceCalls />} />
               <Route path="mass-voicemail" element={<MassVoicemail />} />
               <Route path="data-enrichment" element={<DataEnrichment />} />
+              <Route path="my-thesis" element={<MyThesis />} />
 
               {/* Legacy routes - keeping for backward compatibility */}
               <Route path="dashboard" element={<Navigate to="/outreach/deals" />} />
