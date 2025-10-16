@@ -19,9 +19,11 @@ import integrationService, { Integration } from '../services/integrationService'
 import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
 import IntegrationCard from '../components/integrations/IntegrationCard';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Settings() {
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { user } = useAuth();
   const location = useLocation();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,12 @@ export default function Settings() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only load integrations if user is authenticated
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     // Check for integration callback status first
     const urlParams = new URLSearchParams(window.location.search);
     const integrationStatus = urlParams.get('integration');
@@ -50,12 +58,21 @@ export default function Settings() {
       // Only load integrations if we're not handling a callback
       loadIntegrations();
     }
-  }, []);
+  }, [user]);
 
   const loadIntegrations = async () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Check if token is available
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No authentication token available');
+        setIntegrations([]);
+        return;
+      }
+      
       const data = await integrationService.getIntegrations();
       setIntegrations(data);
     } catch (err) {

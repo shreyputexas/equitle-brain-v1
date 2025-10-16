@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4001/api';
-
 export interface Integration {
   id: string;
   provider: 'google';
@@ -100,7 +98,7 @@ class IntegrationService {
 
   async getIntegrations(): Promise<Integration[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/integrations`, {
+      const response = await axios.get('/api/integrations', {
         headers: this.getAuthHeaders()
       });
       // Handle both response formats
@@ -118,7 +116,7 @@ class IntegrationService {
   async connectGoogle(types: string[]): Promise<{ authUrl: string }> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/integrations/google/connect`,
+        '/api/integrations/google/connect',
         { types },
         { headers: this.getAuthHeaders() }
       );
@@ -136,7 +134,7 @@ class IntegrationService {
 
   async disconnectIntegration(integrationId: string): Promise<void> {
     try {
-      await axios.delete(`${API_BASE_URL}/integrations/${integrationId}`, {
+      await axios.delete(`/api/integrations/${integrationId}`, {
         headers: this.getAuthHeaders()
       });
     } catch (error) {
@@ -147,7 +145,7 @@ class IntegrationService {
 
   async getDriveFiles(): Promise<DriveFile[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/integrations/google/drive/files`, {
+      const response = await axios.get(`/api/integrations/google/drive/files`, {
         headers: this.getAuthHeaders()
       });
       return (response.data as { data: DriveFile[] }).data;
@@ -159,7 +157,7 @@ class IntegrationService {
 
   async getDriveFolders(): Promise<DriveFile[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/integrations/google/drive/folders`, {
+      const response = await axios.get(`/api/integrations/google/drive/folders`, {
         headers: this.getAuthHeaders()
       });
       return (response.data as { data: DriveFile[] }).data;
@@ -176,7 +174,7 @@ class IntegrationService {
       if (timeMax) params.append('timeMax', timeMax);
       
       const response = await axios.get(
-        `${API_BASE_URL}/integrations/google/calendar/events?${params}`,
+        `/api/integrations/google/calendar/events?${params}`,
         { headers: this.getAuthHeaders() }
       );
       return (response.data as { data: CalendarEvent[] }).data;
@@ -203,7 +201,7 @@ class IntegrationService {
   }): Promise<CalendarEvent> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/integrations/google/calendar/events`,
+        `/api/integrations/google/calendar/events`,
         eventData,
         { headers: this.getAuthHeaders() }
       );
@@ -279,7 +277,7 @@ class IntegrationService {
       if (options.pageToken) params.append('pageToken', options.pageToken);
 
       const response = await axios.get(
-        `${API_BASE_URL}/integrations/google/gmail/messages?${params}`,
+        `/api/integrations/google/gmail/messages?${params}`,
         { headers: this.getAuthHeaders() }
       );
       return (response.data as { data: { messages: GmailMessage[]; nextPageToken?: string; resultSizeEstimate: number } }).data;
@@ -301,7 +299,7 @@ class IntegrationService {
   }): Promise<GmailMessage> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/integrations/google/gmail/send`,
+        `/api/integrations/google/gmail/send`,
         emailData,
         { headers: this.getAuthHeaders() }
       );
@@ -315,7 +313,7 @@ class IntegrationService {
   async getGmailLabels(): Promise<GmailLabel[]> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/integrations/google/gmail/labels`,
+        `/api/integrations/google/gmail/labels`,
         { headers: this.getAuthHeaders() }
       );
       return (response.data as { data: GmailLabel[] }).data;
@@ -328,7 +326,7 @@ class IntegrationService {
   async markGmailAsRead(messageId: string): Promise<void> {
     try {
       await axios.post(
-        `${API_BASE_URL}/integrations/google/gmail/messages/${messageId}/read`,
+        `/api/integrations/google/gmail/messages/${messageId}/read`,
         {},
         { headers: this.getAuthHeaders() }
       );

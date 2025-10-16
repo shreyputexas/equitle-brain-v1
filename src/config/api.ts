@@ -10,8 +10,8 @@ const getApiBaseUrl = () => {
     // Production: Use your production API domain
     return 'https://api.equitle.com';
   } else {
-    // Development: Use localhost
-    return 'http://localhost:4001';
+    // Development: Use relative URL to leverage Vite proxy
+    return '';
   }
 };
 
@@ -21,6 +21,10 @@ export const API_BASE_URL = getApiBaseUrl();
 export const getApiUrl = (endpoint: string) => {
   // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  // In development with empty base URL, just prepend /api/
+  if (API_BASE_URL === '') {
+    return `/api/${cleanEndpoint}`;
+  }
   return `${API_BASE_URL}/api/${cleanEndpoint}`;
 };
 
