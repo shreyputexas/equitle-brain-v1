@@ -69,8 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Configure axios base URL
-  axios.defaults.baseURL = `${API_BASE_URL}/api`;
+  // Don't set axios base URL globally - let individual services handle their own paths
+  // axios.defaults.baseURL = API_BASE_URL;
 
   useEffect(() => {
     // Development mode: bypass Firebase auth and use mock user
