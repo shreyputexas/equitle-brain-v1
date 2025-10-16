@@ -75,7 +75,7 @@ export default function Product() {
 
   const features = [
     {
-      category: 'Scraping',
+      category: 'Lead Generation',
       icon: <ScrapingIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [

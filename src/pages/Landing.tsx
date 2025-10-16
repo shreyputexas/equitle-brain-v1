@@ -73,7 +73,7 @@ export default function Landing() {
   const cyclingWords = [
     'Voicemails',
     'Investor Communication',
-    'Data Scraping',
+    'Lead Generation',
     'Outreach',
     'Data Population',
     'Deal Tracking'
@@ -147,8 +147,8 @@ export default function Landing() {
     {
       title: 'Lead Generation',
       icon: <LeadGenerationIcon />,
-      description: 'The software scrapes private market contacts for you and finds missing data',
-      features: ['Contact scraping', 'Data enrichment', 'Missing data discovery']
+      description: 'The software finds private market contacts for you and finds missing data',
+      features: ['Finds contacts', 'Data enrichment', 'Missing data discovery']
     },
     {
       title: 'Sourcing',
