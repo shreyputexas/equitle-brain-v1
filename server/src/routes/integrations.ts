@@ -350,6 +350,46 @@ router.get('/google/drive/files', auth, async (req, res) => {
   }
 });
 
+// Get Google Drive folders (requires auth)
+router.get('/google/drive/folders', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const driveIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'google',
+      type: 'drive',
+      isActive: true
+    });
+
+    if (!driveIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Google Drive integration not found. Please connect your Google Drive account first.'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(driveIntegration);
+    const folders = await GoogleDriveService.getFolders(validAccessToken);
+
+    res.json({
+      success: true,
+      data: folders
+    });
+  } catch (error) {
+    logger.error('Error fetching Drive folders:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch Google Drive folders',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get Google Calendar events (requires auth)
 router.get('/google/calendar/events', auth, async (req, res) => {
   try {
