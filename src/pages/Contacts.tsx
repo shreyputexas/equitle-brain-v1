@@ -87,6 +87,9 @@ const Contacts: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [addMenuAnchorEl, setAddMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<{contactId: string, field: string} | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
   
@@ -155,7 +158,8 @@ const Contacts: React.FC = () => {
 
   const handleAddContact = async () => {
     try {
-      const response = await axios.post('/api/firebase/contacts', {
+      setError(null); // Clear any previous errors
+      const contactData = {
         name: `${newContact.first_name} ${newContact.last_name}`.trim(),
         email: newContact.email,
         phone: newContact.phone,
@@ -164,38 +168,128 @@ const Contacts: React.FC = () => {
         company: newContact.company,
         tags: [newContact.type, ...newContact.tags],
         status: 'warm'
-      });
+      };
+      
+      // Validate required fields
+      if (!contactData.name.trim()) {
+        setError('Name is required');
+        return;
+      }
+      if (!contactData.email.trim()) {
+        setError('Email is required');
+        return;
+      }
+      
+      console.log('Sending contact data:', contactData);
+      
+      const response = await axios.post('/api/firebase/contacts', contactData);
+      
+      console.log('API Response:', response.data);
       
       // Add the new contact with proper type mapping
+      const contactResponse = response.data.data?.contact || response.data.data;
       const addedContact = {
-        ...response.data.data,
+        ...contactResponse,
         first_name: newContact.first_name,
         last_name: newContact.last_name,
-        linkedin_url: response.data.data.linkedinUrl,
+        linkedin_url: contactResponse?.linkedinUrl,
         type: newContact.type
       };
       
-      setContacts([addedContact, ...contacts]);
-      setAddDialogOpen(false);
-      
-      // Reset form
-      setNewContact({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        linkedin_url: '',
-        title: '',
-        company: '',
-        type: 'deal',
-        city: '',
-        state: '',
-        tags: []
-      });
+      // Only update state if we have valid contact data
+      if (contactResponse && contactResponse.id) {
+        setContacts([addedContact, ...contacts]);
+        setAddDialogOpen(false);
+        
+        // Reset form
+        setNewContact({
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone: '',
+          linkedin_url: '',
+          title: '',
+          company: '',
+          type: 'deal',
+          city: '',
+          state: '',
+          tags: []
+        });
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err: any) {
       console.error('Error adding contact:', err);
-      setError(err.response?.data?.message || 'Failed to add contact');
+      console.error('Error response:', err.response?.data);
+      
+      if (err.response?.data?.details) {
+        setError(`Validation error: ${err.response.data.details.join(', ')}`);
+      } else {
+        setError(err.response?.data?.message || err.response?.data?.error || 'Failed to add contact');
+      }
     }
+  };
+
+  const handleDeleteContact = async () => {
+    if (!selectedContactId) return;
+    
+    try {
+      setError(null);
+      await axios.delete(`/api/firebase/contacts/${selectedContactId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
+        }
+      });
+      
+      // Remove the contact from the local state
+      setContacts(contacts.filter(contact => contact.id !== selectedContactId));
+      setAnchorEl(null);
+      setSelectedContactId(null);
+    } catch (err: any) {
+      console.error('Error deleting contact:', err);
+      setError(err.response?.data?.message || 'Failed to delete contact');
+    }
+  };
+
+  const handleStartEdit = (contactId: string, field: string, currentValue: string) => {
+    setEditingField({ contactId, field });
+    setEditingValue(currentValue || '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingField) return;
+
+    try {
+      setError(null);
+      
+      // Prepare the update data
+      const updateData: any = {};
+      updateData[editingField.field] = editingValue;
+
+      await axios.put(`/api/firebase/contacts/${editingField.contactId}`, updateData, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
+        }
+      });
+
+      // Update the local state
+      setContacts(contacts.map(contact => 
+        contact.id === editingField.contactId 
+          ? { ...contact, [editingField.field]: editingValue }
+          : contact
+      ));
+
+      setEditingField(null);
+      setEditingValue('');
+    } catch (err: any) {
+      console.error('Error updating contact:', err);
+      setError(err.response?.data?.message || 'Failed to update contact');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditingValue('');
   };
 
   const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -398,6 +492,94 @@ const Contacts: React.FC = () => {
     return { total, deals, investors, brokers, withEmail };
   };
 
+  // Editable cell component
+  const EditableCell = ({ contactId, field, value, onSave, onCancel }: {
+    contactId: string;
+    field: string;
+    value: string;
+    onSave: () => void;
+    onCancel: () => void;
+  }) => {
+    const isEditing = editingField?.contactId === contactId && editingField?.field === field;
+    
+    if (isEditing) {
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.5, 
+          width: '100%',
+          maxWidth: '100%',
+          minHeight: '32px'
+        }}>
+          <TextField
+            value={editingValue}
+            onChange={(e) => setEditingValue(e.target.value)}
+            size="small"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onSave();
+              } else if (e.key === 'Escape') {
+                onCancel();
+              }
+            }}
+            sx={{ 
+              flex: 1,
+              '& .MuiInputBase-root': {
+                height: '28px',
+                fontSize: '0.8125rem'
+              },
+              '& .MuiInputBase-input': {
+                padding: '4px 8px'
+              }
+            }}
+          />
+          <IconButton size="small" onClick={onSave} color="primary" sx={{ minWidth: '24px', width: '24px', height: '24px' }}>
+            ✓
+          </IconButton>
+          <IconButton size="small" onClick={onCancel} color="error" sx={{ minWidth: '24px', width: '24px', height: '24px' }}>
+            ✕
+          </IconButton>
+        </Box>
+      );
+    }
+    
+    return (
+      <Box
+        onDoubleClick={() => handleStartEdit(contactId, field, value)}
+        sx={{ 
+          cursor: 'pointer', 
+          '&:hover': { backgroundColor: 'action.hover' },
+          padding: '4px 8px',
+          borderRadius: 1,
+          minHeight: '32px',
+          maxHeight: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          width: '100%',
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            fontSize: '0.8125rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            width: '100%'
+          }}
+        >
+          {value || <span style={{ color: '#999', fontStyle: 'italic' }}>Click to edit</span>}
+        </Typography>
+      </Box>
+    );
+  };
+
   const columns: GridColDef[] = [
     {
       field: 'name',
@@ -428,25 +610,14 @@ const Contacts: React.FC = () => {
           >
             {params.row.first_name?.[0]}{params.row.last_name?.[0]}
           </Avatar>
-          <Box sx={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            minWidth: 0
-          }}>
-            <Typography
-              variant="body2"
-              sx={{
-                fontWeight: 600,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                lineHeight: 1.2
-              }}
-            >
-              {params.row.name}
-            </Typography>
+          <Box sx={{ flex: 1 }}>
+            <EditableCell
+              contactId={params.row.id}
+              field="name"
+              value={params.row.name}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
+            />
             {params.row.status && (
               <Chip
                 label={params.row.status}
@@ -496,14 +667,24 @@ const Contacts: React.FC = () => {
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <EmailIcon sx={{ fontSize: 16, color: 'success.main' }} />
-              <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>{email}</Typography>
+              <EditableCell
+                contactId={params.row.id}
+                field="email"
+                value={email}
+                onSave={handleSaveEdit}
+                onCancel={handleCancelEdit}
+              />
             </Box>
           );
         }
         return (
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
-            Not Available
-          </Typography>
+          <EditableCell
+            contactId={params.row.id}
+            field="email"
+            value=""
+            onSave={handleSaveEdit}
+            onCancel={handleCancelEdit}
+          />
         );
       },
     },
@@ -518,14 +699,24 @@ const Contacts: React.FC = () => {
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <PhoneIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-              <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>{phone}</Typography>
+              <EditableCell
+                contactId={params.row.id}
+                field="phone"
+                value={phone}
+                onSave={handleSaveEdit}
+                onCancel={handleCancelEdit}
+              />
             </Box>
           );
         }
         return (
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
-            Not Available
-          </Typography>
+          <EditableCell
+            contactId={params.row.id}
+            field="phone"
+            value=""
+            onSave={handleSaveEdit}
+            onCancel={handleCancelEdit}
+          />
         );
       },
     },
@@ -536,18 +727,13 @@ const Contacts: React.FC = () => {
       flex: 1,
       minWidth: 220,
       renderCell: (params) => (
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          sx={{
-            fontSize: '0.8125rem',
-            whiteSpace: 'normal',
-            wordWrap: 'break-word',
-            lineHeight: 1.3
-          }}
-        >
-          {params.row.title || '-'}
-        </Typography>
+        <EditableCell
+          contactId={params.row.id}
+          field="title"
+          value={params.row.title || ''}
+          onSave={handleSaveEdit}
+          onCancel={handleCancelEdit}
+        />
       ),
     },
     {
@@ -560,25 +746,25 @@ const Contacts: React.FC = () => {
         if (params.row.company) {
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary', flexShrink: 0 }} />
-              <Typography
-                variant="body2"
-                sx={{
-                  fontSize: '0.8125rem',
-                  whiteSpace: 'normal',
-                  wordWrap: 'break-word',
-                  lineHeight: 1.3
-                }}
-              >
-                {params.row.company}
-              </Typography>
+              <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <EditableCell
+                contactId={params.row.id}
+                field="company"
+                value={params.row.company}
+                onSave={handleSaveEdit}
+                onCancel={handleCancelEdit}
+              />
             </Box>
           );
         }
         return (
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
-            -
-          </Typography>
+          <EditableCell
+            contactId={params.row.id}
+            field="company"
+            value=""
+            onSave={handleSaveEdit}
+            onCancel={handleCancelEdit}
+          />
         );
       },
     },
@@ -592,9 +778,13 @@ const Contacts: React.FC = () => {
           .filter(Boolean)
           .join(', ');
         return (
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
-            {location || '-'}
-          </Typography>
+          <EditableCell
+            contactId={params.row.id}
+            field="city"
+            value={params.row.city || ''}
+            onSave={handleSaveEdit}
+            onCancel={handleCancelEdit}
+          />
         );
       },
     },
@@ -664,7 +854,10 @@ const Contacts: React.FC = () => {
       renderCell: (params) => (
         <IconButton
           size="small"
-          onClick={(e) => setAnchorEl(e.currentTarget)}
+          onClick={(e) => {
+            setSelectedContactId(params.row.id);
+            setAnchorEl(e.currentTarget);
+          }}
         >
           <MoreVertIcon fontSize="small" />
         </IconButton>
@@ -1200,7 +1393,7 @@ const Contacts: React.FC = () => {
           Add Tag
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => setAnchorEl(null)} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={handleDeleteContact} sx={{ color: 'error.main' }}>
           <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
           Delete
         </MenuItem>

@@ -98,11 +98,10 @@ const createCommunicationSchema = Joi.object({
 
 // @route   GET /api/firebase-contacts
 // @desc    Get all contacts for the authenticated user
-// @access  Private (no auth for development)
-router.get('/contacts', async (req, res) => {
+// @access  Private
+router.get('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
   try {
-    // Use dev user for now
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
     const { dealId, search, status, limit = 50, offset = 0 } = req.query;
 
     const result = await ContactsActivitiesFirestoreService.getAllContacts(userId, {
@@ -159,11 +158,10 @@ router.get('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 
 // @route   POST /api/firebase-contacts
 // @desc    Create new contact
-// @access  Private (no auth for development)
-router.post('/contacts', async (req, res) => {
+// @access  Private
+router.post('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
   try {
-    // Use dev user for now
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
 
     // Validate input
     const { error, value } = createContactSchema.validate(req.body);
@@ -266,11 +264,10 @@ router.delete('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthR
 
 // @route   POST /api/firebase/contacts/bulk-save
 // @desc    Bulk save enriched contacts from Apollo
-// @access  Private (no auth for development)
-router.post('/contacts/bulk-save', async (req, res) => {
+// @access  Private
+router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
   try {
-    // Use dev user for now
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
     const { contacts: enrichedContacts, contactType } = req.body;
 
     if (!enrichedContacts || !Array.isArray(enrichedContacts)) {
@@ -284,6 +281,8 @@ router.post('/contacts/bulk-save', async (req, res) => {
 
     for (const enrichedContact of enrichedContacts) {
       try {
+        logger.info(`Processing contact: ${enrichedContact.name}`, { enrichedContact });
+        
         // Check if contact already exists by email
         let existingContacts = [];
         if (enrichedContact.email && 
@@ -312,28 +311,34 @@ router.post('/contacts/bulk-save', async (req, res) => {
           });
         } else {
           // Create new contact
-          savedContact = await ContactsActivitiesFirestoreService.createContact(userId, {
+          const contactData: any = {
             name: enrichedContact.name,
-            email: (enrichedContact.email && 
-                   enrichedContact.email !== 'email_not_unlocked' && 
-                   !enrichedContact.email.includes('email_not_unlocked')) 
-                   ? enrichedContact.email 
-                   : undefined,
-            phone: enrichedContact.phone || undefined,
-            linkedinUrl: enrichedContact.linkedin_url || undefined,
-            title: enrichedContact.title || undefined,
-            company: enrichedContact.company || undefined,
-            notes: enrichedContact.notes || undefined,
             tags: [finalContactType, ...(enrichedContact.tags || [])].filter(Boolean),
             status: 'warm',
             lastContact: new Date(),
             relationshipScore: 0,
             isKeyContact: false
-          });
+          };
+          
+          // Only add fields that have values (not undefined)
+          if (enrichedContact.email && 
+              enrichedContact.email !== 'email_not_unlocked' && 
+              !enrichedContact.email.includes('email_not_unlocked')) {
+            contactData.email = enrichedContact.email;
+          }
+          if (enrichedContact.phone) contactData.phone = enrichedContact.phone;
+          if (enrichedContact.linkedin_url) contactData.linkedinUrl = enrichedContact.linkedin_url;
+          if (enrichedContact.title) contactData.title = enrichedContact.title;
+          if (enrichedContact.company) contactData.company = enrichedContact.company;
+          if (enrichedContact.notes) contactData.notes = enrichedContact.notes;
+          
+          logger.info(`Creating contact with data:`, contactData);
+          savedContact = await ContactsActivitiesFirestoreService.createContact(userId, contactData);
         }
         savedContacts.push(savedContact);
+        logger.info(`Successfully saved contact: ${enrichedContact.name}`);
       } catch (contactError: any) {
-        logger.error(`Error saving contact ${enrichedContact.name}:`, contactError.message);
+        logger.error(`Error saving contact ${enrichedContact.name}:`, contactError);
         skippedContacts.push(enrichedContact.name);
       }
     }
