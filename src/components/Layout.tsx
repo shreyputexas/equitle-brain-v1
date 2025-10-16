@@ -55,7 +55,8 @@ import {
   Assessment as ReportIcon,
   Phone as PhoneIcon,
   DataUsage as DataEnrichmentIcon,
-  Contacts as ContactsIcon
+  Contacts as ContactsIcon,
+  Assignment as ThesisIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
@@ -82,6 +83,11 @@ const navigationItems = [
     text: 'Contacts',
     icon: <ContactsIcon />,
     path: '/contacts'
+  },
+  {
+    text: 'My Thesis',
+    icon: <ThesisIcon />,
+    path: '/my-thesis'
   },
   {
     text: 'Outreach',

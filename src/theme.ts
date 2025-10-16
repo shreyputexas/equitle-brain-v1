@@ -202,39 +202,6 @@ const theme = createTheme({
         }
       }
     },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-root': {
-            backgroundColor: '#FFFFFF',
-            borderRadius: 6,
-            fontSize: '0.875rem',
-            transition: 'all 0.15s ease',
-            '& fieldset': {
-              borderColor: '#D1D5DB',
-              borderWidth: '1px'
-            },
-            '&:hover fieldset': {
-              borderColor: '#9CA3AF'
-            },
-            '&.Mui-focused': {
-              backgroundColor: '#FFFFFF',
-              '& fieldset': {
-                borderColor: '#000000',
-                borderWidth: '2px'
-              }
-            }
-          },
-          '& .MuiInputLabel-root': {
-            fontSize: '0.875rem',
-            color: '#6B7280',
-            '&.Mui-focused': {
-              color: '#000000'
-            }
-          }
-        }
-      }
-    },
     MuiChip: {
       styleOverrides: {
         root: {
@@ -367,6 +334,53 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderColor: '#F3F4F6'
+        }
+      }
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: '#FFFFFF',
+            borderRadius: 6,
+            fontSize: '0.875rem',
+            transition: 'all 0.15s ease',
+            '& fieldset': {
+              borderColor: '#D1D5DB',
+              borderWidth: '1px'
+            },
+            '&:hover fieldset': {
+              borderColor: '#9CA3AF'
+            },
+            '&.Mui-focused': {
+              backgroundColor: '#FFFFFF',
+              '& fieldset': {
+                borderColor: '#000000',
+                borderWidth: '2px'
+              }
+            },
+            // Remove number input spinners globally
+            '& input[type=number]': {
+              MozAppearance: 'textfield',
+              WebkitAppearance: 'none',
+              appearance: 'none'
+            },
+            '& input[type=number]::-webkit-outer-spin-button': {
+              WebkitAppearance: 'none',
+              margin: 0
+            },
+            '& input[type=number]::-webkit-inner-spin-button': {
+              WebkitAppearance: 'none',
+              margin: 0
+            }
+          },
+          '& .MuiInputLabel-root': {
+            fontSize: '0.875rem',
+            color: '#6B7280',
+            '&.Mui-focused': {
+              color: '#000000'
+            }
+          }
         }
       }
     }

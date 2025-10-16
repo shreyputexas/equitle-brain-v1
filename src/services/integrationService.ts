@@ -157,6 +157,18 @@ class IntegrationService {
     }
   }
 
+  async getDriveFolders(): Promise<DriveFile[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/integrations/google/drive/folders`, {
+        headers: this.getAuthHeaders()
+      });
+      return (response.data as { data: DriveFile[] }).data;
+    } catch (error) {
+      console.error('Error fetching Drive folders:', error);
+      throw error;
+    }
+  }
+
   async getCalendarEvents(timeMin?: string, timeMax?: string): Promise<CalendarEvent[]> {
     try {
       const params = new URLSearchParams();

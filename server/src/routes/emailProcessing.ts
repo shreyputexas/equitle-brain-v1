@@ -73,5 +73,48 @@ router.get('/processed-emails', firebaseAuthMiddleware, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to get processed emails' });
   }
 });
+// @route   POST /api/email-processing/test-ai-public
+// @desc    Test OpenAI email analysis with sample email (no auth required)
+// @access  Public
+router.post('/test-ai-public', async (req, res) => {
+  try {
+    const { subject, content, sender } = req.body;
+    
+    if (!subject || !content) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Subject and content are required' 
+      });
+    }
 
+    // Create a mock email object for testing
+    const mockEmail = {
+      id: 'test-email-' + Date.now(),
+      subject: subject,
+      content: content,
+      sender: sender || 'test@example.com',
+      timestamp: new Date(),
+      source: 'test'
+    };
+
+    // Test the AI analysis
+    const analysis = await EmailAutoProcessor['analyzeEmailContent'](mockEmail);
+    
+    res.json({
+      success: true,
+      data: {
+        email: mockEmail,
+        analysis: analysis,
+        message: 'AI analysis completed successfully'
+      }
+    });
+  } catch (error) {
+    logger.error('Test AI analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to test AI analysis',
+      details: error.message 
+    });
+  }
+});
 export default router;

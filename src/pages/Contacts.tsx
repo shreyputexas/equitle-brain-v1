@@ -26,7 +26,8 @@ import {
   Divider,
   Tab,
   Tabs,
-  Badge
+  Badge,
+  ListItemIcon
 } from '@mui/material';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import SearchIcon from '@mui/icons-material/Search';
@@ -46,6 +47,8 @@ import GroupIcon from '@mui/icons-material/Group';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import axios from 'axios';
 
 type ContactType = 'all' | 'deal' | 'investor' | 'broker';
@@ -80,8 +83,12 @@ const Contacts: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<ContactType>('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [addMenuAnchorEl, setAddMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvPreview, setCsvPreview] = useState<any[]>([]);
   
   // New contact form state
   const [newContact, setNewContact] = useState({
@@ -101,24 +108,21 @@ const Contacts: React.FC = () => {
   useEffect(() => {
     fetchContacts();
     
-    // Set up auto-refresh every 10 seconds to catch new contacts
-    const intervalId = setInterval(() => {
-      fetchContacts();
-    }, 10000);
+    // Auto-refresh disabled - use manual refresh button instead
+    // const intervalId = setInterval(() => {
+    //   fetchContacts();
+    // }, 10000);
     
-    return () => clearInterval(intervalId);
+    // return () => clearInterval(intervalId);
   }, []);
 
   const fetchContacts = async () => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Fetching contacts from /api/firebase/contacts...');
       const response = await axios.get('/api/firebase/contacts');
-      console.log('Response received:', response.data);
       // Map contacts and determine type from tags
       const contactsList = response.data.data?.contacts || response.data.data || [];
-      console.log('Contacts list:', contactsList);
       const contactsWithTypes = contactsList.map((contact: any) => {
         // Determine contact type from tags
         let contactType: ContactType = 'deal';
@@ -139,14 +143,10 @@ const Contacts: React.FC = () => {
           tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
         };
       });
-      console.log('Setting contacts:', contactsWithTypes);
       setContacts(contactsWithTypes);
-      console.log('✅ Contacts loaded successfully');
     } catch (err: any) {
-      console.error('❌ Error fetching contacts:', err);
-      console.error('Error details:', err.response?.data);
+      console.error('Error fetching contacts:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to load contacts';
-      console.error('Error message:', errorMessage);
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -195,6 +195,124 @@ const Contacts: React.FC = () => {
     } catch (err: any) {
       console.error('Error adding contact:', err);
       setError(err.response?.data?.message || 'Failed to add contact');
+    }
+  };
+
+  const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCsvFile(file);
+      
+      // Parse CSV and show preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) return;
+        
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        // Parse rows (show first 5 as preview)
+        const preview = lines.slice(1, 6).map(line => {
+          const values = line.split(',').map(v => v.trim());
+          const row: any = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index] || '';
+          });
+          return row;
+        });
+        
+        setCsvPreview(preview);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleImportCsv = async () => {
+    if (!csvFile) return;
+    
+    setLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+          setError('CSV file is empty');
+          setLoading(false);
+          return;
+        }
+        
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        // Parse all rows
+        const contactsToImport = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+          const row: any = {};
+          headers.forEach((header, index) => {
+            row[header] = values[index] || '';
+          });
+          return row;
+        });
+        
+        // Import contacts via bulk-save API
+        const response = await axios.post('/api/firebase/contacts/bulk-save', {
+          contacts: contactsToImport.map((c: any) => {
+            // Parse type field (defaults to 'deal' if not specified or invalid)
+            let contactType = 'people';
+            const typeValue = (c.type || '').toLowerCase().trim();
+            if (typeValue.includes('broker')) {
+              contactType = 'broker';
+            } else if (typeValue.includes('investor')) {
+              contactType = 'investor';
+            } else if (typeValue.includes('deal') || typeValue.includes('target')) {
+              contactType = 'people';
+            }
+            
+            // Parse location
+            let city, state;
+            if (c.location) {
+              const locationParts = c.location.split(',').map((p: string) => p.trim());
+              city = locationParts[0] || undefined;
+              state = locationParts[1] || undefined;
+            }
+            
+            return {
+              name: c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim(),
+              email: c.email || undefined,
+              phone: c.phone || undefined,
+              linkedin_url: c.linkedin || c.linkedin_url || c['linkedin url'] || undefined,
+              title: c.title || undefined,
+              company: c.company || undefined,
+              city: city || c.city || undefined,
+              state: state || c.state || undefined,
+              tags: c.tags ? c.tags.split(';').map((t: string) => t.trim()).filter(Boolean) : [],
+              notes: c['interaction history'] || c.notes || undefined,
+              contactType: contactType
+            };
+          }),
+          contactType: 'people' // Default fallback
+        });
+        
+        if (response.data.success) {
+          await fetchContacts();
+          setCsvDialogOpen(false);
+          setCsvFile(null);
+          setCsvPreview([]);
+          setError(null);
+          alert(`Successfully imported ${response.data.saved} contacts!`);
+        }
+      };
+      reader.readAsText(csvFile);
+    } catch (err: any) {
+      console.error('Error importing CSV:', err);
+      setError(err.response?.data?.message || 'Failed to import CSV');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -284,7 +402,9 @@ const Contacts: React.FC = () => {
     {
       field: 'name',
       headerName: 'Name',
-      width: 220,
+      width: 240,
+      flex: 1,
+      minWidth: 200,
       renderCell: (params) => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Avatar
@@ -324,7 +444,8 @@ const Contacts: React.FC = () => {
     {
       field: 'type',
       headerName: 'Type',
-      width: 140,
+      width: 130,
+      minWidth: 120,
       renderCell: (params) => (
         <Chip
           label={getTypeLabel(params.row.type || 'deal')}
@@ -342,7 +463,9 @@ const Contacts: React.FC = () => {
     {
       field: 'email',
       headerName: 'Email',
-      width: 200,
+      width: 250,
+      flex: 0.8,
+      minWidth: 200,
       renderCell: (params) => {
         const email = params.row.email;
         if (email && email !== 'email_not_unlocked' && !email.includes('email_not_unlocked')) {
@@ -363,7 +486,8 @@ const Contacts: React.FC = () => {
     {
       field: 'phone',
       headerName: 'Phone',
-      width: 140,
+      width: 160,
+      minWidth: 140,
       renderCell: (params) => {
         const phone = params.row.phone;
         if (phone) {
@@ -384,7 +508,9 @@ const Contacts: React.FC = () => {
     {
       field: 'title',
       headerName: 'Title',
-      width: 180,
+      width: 200,
+      flex: 0.6,
+      minWidth: 150,
       renderCell: (params) => (
         <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
           {params.row.title || '-'}
@@ -394,7 +520,9 @@ const Contacts: React.FC = () => {
     {
       field: 'company',
       headerName: 'Company',
-      width: 180,
+      width: 200,
+      flex: 0.7,
+      minWidth: 150,
       renderCell: (params) => {
         if (params.row.company) {
           return (
@@ -414,7 +542,8 @@ const Contacts: React.FC = () => {
     {
       field: 'location',
       headerName: 'Location',
-      width: 150,
+      width: 180,
+      minWidth: 140,
       renderCell: (params) => {
         const location = [params.row.city, params.row.state]
           .filter(Boolean)
@@ -429,7 +558,9 @@ const Contacts: React.FC = () => {
     {
       field: 'tags',
       headerName: 'Tags',
-      width: 180,
+      width: 200,
+      flex: 0.5,
+      minWidth: 160,
       renderCell: (params) => {
         const tags = params.row.tags || [];
         if (tags.length === 0) return <Typography variant="body2" color="text.secondary">-</Typography>;
@@ -458,7 +589,8 @@ const Contacts: React.FC = () => {
     {
       field: 'linkedin_url',
       headerName: 'LinkedIn',
-      width: 90,
+      width: 100,
+      minWidth: 90,
       renderCell: (params) => {
         const linkedinUrl = params.row.linkedin_url;
         if (linkedinUrl) {
@@ -484,7 +616,8 @@ const Contacts: React.FC = () => {
     {
       field: 'actions',
       headerName: 'History',
-      width: 80,
+      width: 100,
+      minWidth: 90,
       renderCell: (params) => (
         <IconButton
           size="small"
@@ -539,20 +672,53 @@ const Contacts: React.FC = () => {
           >
             Export CSV
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<PersonAddIcon />}
-            onClick={() => setAddDialogOpen(true)}
-            sx={{
-              bgcolor: '#000000',
-              color: '#ffffff',
-              '&:hover': {
-                bgcolor: '#333333',
-              },
-            }}
-          >
-            Add Contact
-          </Button>
+          <Box sx={{ display: 'flex' }}>
+            <Button
+              variant="contained"
+              startIcon={<PersonAddIcon />}
+              onClick={(e) => setAddMenuAnchorEl(e.currentTarget)}
+              endIcon={<ArrowDropDownIcon />}
+              sx={{
+                bgcolor: '#000000',
+                color: '#ffffff',
+                '&:hover': {
+                  bgcolor: '#333333',
+                },
+              }}
+            >
+              
+            </Button>
+            <Menu
+              anchorEl={addMenuAnchorEl}
+              open={Boolean(addMenuAnchorEl)}
+              onClose={() => setAddMenuAnchorEl(null)}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <MenuItem 
+                onClick={() => { 
+                  setAddMenuAnchorEl(null); 
+                  setAddDialogOpen(true); 
+                }}
+              >
+                <ListItemIcon>
+                  <PersonAddIcon fontSize="small" />
+                </ListItemIcon>
+                Add Single Contact
+              </MenuItem>
+              <MenuItem 
+                onClick={() => { 
+                  setAddMenuAnchorEl(null); 
+                  setCsvDialogOpen(true); 
+                }}
+              >
+                <ListItemIcon>
+                  <UploadFileIcon fontSize="small" />
+                </ListItemIcon>
+                Import from CSV
+              </MenuItem>
+            </Menu>
+          </Box>
         </Box>
       </Box>
 
@@ -744,6 +910,7 @@ const Contacts: React.FC = () => {
             disableRowSelectionOnClick
             onRowSelectionModelChange={(newSelection) => setSelectedRows(newSelection)}
             pageSizeOptions={[10, 25, 50, 100]}
+            disableColumnMenu={false}
             initialState={{
               pagination: {
                 paginationModel: { pageSize: 25 },
@@ -918,6 +1085,140 @@ const Contacts: React.FC = () => {
           Delete
         </MenuItem>
       </Menu>
+
+      {/* CSV Import Dialog */}
+      <Dialog 
+        open={csvDialogOpen} 
+        onClose={() => {
+          setCsvDialogOpen(false);
+          setCsvFile(null);
+          setCsvPreview([]);
+        }} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+            Import Contacts from CSV
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Required columns: <strong>name, email</strong>
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.75rem' }}>
+            Optional: type (deal/broker/investor), phone, title, company, location, tags (semicolon-separated), linkedin, interaction history
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 2 }}>
+          {/* CSV Format Example */}
+          <Box sx={{ mb: 2, p: 2, bgcolor: '#F9FAFB', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
+              Example CSV Format:
+            </Typography>
+            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', fontSize: '0.7rem', whiteSpace: 'pre', overflowX: 'auto' }}>
+              {`name,type,email,phone,title,company,location,tags,linkedin,interaction history
+John Doe,deal,john@example.com,555-1234,CEO,Tech Corp,"San Francisco, CA",vip;tech,linkedin.com/in/johndoe,Met at conference
+Jane Smith,investor,jane@fund.com,555-5678,Partner,VC Fund,"New York, NY",investor;fintech,linkedin.com/in/janesmith,Pitch meeting scheduled`}
+            </Typography>
+          </Box>
+
+          <Box sx={{ mb: 3 }}>
+            <input
+              accept=".csv"
+              style={{ display: 'none' }}
+              id="csv-upload"
+              type="file"
+              onChange={handleCsvFileChange}
+            />
+            <label htmlFor="csv-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<UploadFileIcon />}
+                fullWidth
+                sx={{
+                  py: 2,
+                  borderColor: 'divider',
+                  borderStyle: 'dashed',
+                  '&:hover': {
+                    borderColor: '#D1D5DB',
+                    bgcolor: '#F9FAFB'
+                  }
+                }}
+              >
+                {csvFile ? csvFile.name : 'Choose CSV File'}
+              </Button>
+            </label>
+          </Box>
+
+          {csvPreview.length > 0 && (
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Preview (first 5 rows):
+              </Typography>
+              <Box sx={{ 
+                border: '1px solid', 
+                borderColor: 'divider', 
+                borderRadius: 1, 
+                overflow: 'auto',
+                maxHeight: 300
+              }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F9FAFB' }}>
+                      {Object.keys(csvPreview[0]).map((header) => (
+                        <th key={header} style={{ 
+                          padding: '8px', 
+                          textAlign: 'left', 
+                          borderBottom: '1px solid #E5E7EB',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          textTransform: 'uppercase'
+                        }}>
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvPreview.map((row, index) => (
+                      <tr key={index} style={{ borderBottom: '1px solid #F3F4F6' }}>
+                        {Object.values(row).map((value: any, colIndex) => (
+                          <td key={colIndex} style={{ 
+                            padding: '8px', 
+                            fontSize: '0.8125rem'
+                          }}>
+                            {value}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+          <Button 
+            onClick={() => {
+              setCsvDialogOpen(false);
+              setCsvFile(null);
+              setCsvPreview([]);
+            }} 
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleImportCsv}
+            disabled={!csvFile || loading}
+            sx={{ px: 3 }}
+          >
+            {loading ? 'Importing...' : 'Import Contacts'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
