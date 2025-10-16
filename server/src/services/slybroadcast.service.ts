@@ -1,4 +1,3 @@
-import FormData from 'form-data';
 import fs from 'fs';
 import logger from '../utils/logger';
 
@@ -25,7 +24,7 @@ export interface DeliveryResult {
 export class SlybroadcastService {
   private email: string;
   private password: string;
-  private baseUrl = 'https://www.slybroadcast.com';
+  private baseUrl = 'https://www.mobile-sphere.com';
 
   constructor() {
     this.email = process.env.SLYBROADCAST_EMAIL || '';
@@ -64,33 +63,57 @@ export class SlybroadcastService {
         };
       }
 
-      // Create form data for Slybroadcast API
-      const formData = new FormData();
+      // Required date parameter (immediate delivery)
+      const now = new Date();
+      const easternTime = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).formatToParts(now);
 
-      // Authentication
-      formData.append('c_email', this.email);
-      formData.append('c_password', this.password);
+      const dateStr = `${easternTime.find(p => p.type === 'month')?.value}/${easternTime.find(p => p.type === 'day')?.value}/${easternTime.find(p => p.type === 'year')?.value} ${easternTime.find(p => p.type === 'hour')?.value}:${easternTime.find(p => p.type === 'minute')?.value}`;
 
-      // Campaign details
-      formData.append('c_title', request.title || 'Voice Campaign');
-      formData.append('c_phone', request.phoneNumbers.join(','));
+      // Read the audio file as base64
+      const audioBuffer = fs.readFileSync(request.mp3FilePath);
+      const audioBase64 = audioBuffer.toString('base64');
 
-      // Caller ID (optional)
+      // Create URL-encoded form data (as expected by their API)
+      const formParams = new URLSearchParams();
+      formParams.append('c_uid', this.email);
+      formParams.append('c_password', this.password);
+      formParams.append('c_phone', request.phoneNumbers.join(','));
+      formParams.append('c_date', dateStr);
+
+      // Try using c_record_audio with base64 data instead of c_url
+      formParams.append('c_record_audio', audioBase64);
+
       if (request.callerIdNumber) {
-        formData.append('c_callerid', request.callerIdNumber);
-      }
-      if (request.callerIdName) {
-        formData.append('c_callerid_name', request.callerIdName);
+        formParams.append('c_callerID', request.callerIdNumber);
       }
 
-      // Audio file
-      formData.append('c_audio', fs.createReadStream(request.mp3FilePath));
+      // Debug log the form data
+      logger.info('📤 Sending URL-encoded form data to Slybroadcast', {
+        email: this.email,
+        phoneNumbers: request.phoneNumbers.join(','),
+        date: dateStr,
+        callerID: request.callerIdNumber || 'none',
+        audioFile: request.mp3FilePath,
+        audioSize: audioBuffer.length,
+        base64Length: audioBase64.length
+      });
 
-      // Send request to Slybroadcast
-      const response = await fetch(`${this.baseUrl}/slynew/campaign/voicebroadcast.php`, {
+      // Send request to Slybroadcast with URL-encoded form data
+      const response = await fetch(`${this.baseUrl}/gateway/vmb.php`, {
         method: 'POST',
-        body: formData,
-        headers: formData.getHeaders()
+        body: formParams.toString(),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Equitle-VoicemailService/1.0'
+        }
       });
 
       const responseText = await response.text();
@@ -149,24 +172,10 @@ export class SlybroadcastService {
         return false;
       }
 
-      // Simple test request to verify credentials
-      const formData = new FormData();
-      formData.append('c_email', this.email);
-      formData.append('c_password', this.password);
-
-      const response = await fetch(`${this.baseUrl}/slynew/campaign/test.php`, {
-        method: 'POST',
-        body: formData,
-        headers: formData.getHeaders()
-      });
-
-      if (response.ok) {
-        logger.info('✅ Slybroadcast connection test successful');
-        return true;
-      } else {
-        logger.error('❌ Slybroadcast connection test failed', { status: response.status });
-        return false;
-      }
+      // Slybroadcast doesn't have a dedicated test endpoint
+      // We'll just check if credentials are configured
+      logger.info('✅ Slybroadcast credentials are configured and ready');
+      return true;
     } catch (error) {
       logger.error('❌ Slybroadcast connection test failed', error);
       return false;
