@@ -575,7 +575,7 @@ export default function DataEnrichment() {
         searchPayload.investorCriteria = investorSearchCriteria;
       }
 
-      const response = await fetch('http://localhost:4001/api/data-enrichment/search-contacts', {
+      const response = await fetch('/api/data-enrichment/search-contacts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -596,7 +596,8 @@ export default function DataEnrichment() {
             const saveResponse = await fetch('/api/firebase/contacts/bulk-save', {
               method: 'POST',
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
               },
               body: JSON.stringify({
                 contacts: contacts,
