@@ -619,7 +619,7 @@ export default function Layout() {
           </>
         ) : (
           /* Top Mode - Traditional */
-          <Toolbar>
+          <Toolbar sx={{ px: { xs: 2, md: 3 }, minHeight: '64px !important' }}>
             {/* Mobile Menu Button */}
             <IconButton
               color="inherit"
@@ -648,9 +648,9 @@ export default function Layout() {
             />
 
             {/* Desktop Navigation Menu */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1 }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1, gap: 1 }}>
               {navigationItems.map((item) => (
-                <Box key={item.text} sx={{ mr: 2 }}>
+                <Box key={item.text}>
                   {item.subItems ? (
                     <>
                       <Button
@@ -661,6 +661,8 @@ export default function Layout() {
                           color: 'text.primary',
                           textTransform: 'none',
                           fontWeight: 500,
+                          px: 2,
+                          py: 1,
                           '&:hover': {
                             bgcolor: 'action.hover'
                           }
@@ -694,6 +696,8 @@ export default function Layout() {
                         color: location.pathname === item.path ? 'primary.main' : 'text.primary',
                         textTransform: 'none',
                         fontWeight: location.pathname === item.path ? 600 : 500,
+                        px: 2,
+                        py: 1,
                         '&:hover': {
                           bgcolor: 'action.hover'
                         }
@@ -710,8 +714,8 @@ export default function Layout() {
             <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }} />
 
             {/* Layout Toggle */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 2 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 3 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1 }}>
                 Layout:
               </Typography>
               <Button
@@ -758,7 +762,7 @@ export default function Layout() {
                 onClick={() => setQuickLookupOpen(true)}
                 sx={{
                   display: { xs: 'none', md: 'flex' },
-                  mr: 2,
+                  mr: 3,
                   bgcolor: 'background.default',
                   border: '1px solid',
                   borderColor: 'divider',
@@ -772,7 +776,7 @@ export default function Layout() {
             </Tooltip>
 
             {/* Right side - Profile with Notifications */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 'fit-content' }}>
               <Tooltip title="Profile">
                 <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0, position: 'relative' }}>
                   <Badge 
