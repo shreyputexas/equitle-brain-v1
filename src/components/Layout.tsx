@@ -114,12 +114,7 @@ const navigationItems = [
   {
     text: 'Brain',
     icon: <BrainIcon />,
-    subItems: [
-      { text: 'Ask About Deal', path: '/brain', action: 'ask-deal' },
-      { text: 'Follow Up', path: '/brain', action: 'follow-up' },
-      { text: 'Analytics', path: '/brain', action: 'analytics' },
-      { text: 'Generate Report', path: '/brain', action: 'report' }
-    ]
+    path: '/brain'
   }
 ];
 
@@ -961,20 +956,20 @@ export default function Layout() {
             <IconButton
               onClick={handleBrainChatToggle}
               sx={{
-                width: 64,
-                height: 64,
+                width: 32,
+                height: 32,
                 bgcolor: 'primary.main',
                 color: 'white',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
                 '&:hover': {
                   bgcolor: 'primary.dark',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.4)'
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
                 },
                 transition: 'all 0.3s ease'
               }}
             >
-              <MicIcon sx={{ fontSize: 28 }} />
+              <MicIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
         ) : (
