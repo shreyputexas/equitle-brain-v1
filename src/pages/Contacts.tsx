@@ -564,14 +564,16 @@ const Contacts: React.FC = () => {
           whiteSpace: 'nowrap'
         }}
       >
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            fontSize: '0.8125rem',
+        <Typography
+          variant="body2"
+          sx={{
+            fontSize: field === 'name' ? '0.875rem' : '0.8125rem',
+            fontWeight: field === 'name' ? 600 : 400,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            width: '100%'
+            width: '100%',
+            lineHeight: field === 'name' ? 1.2 : 1.4
           }}
         >
           {value || <span style={{ color: '#999', fontStyle: 'italic' }}>Click to edit</span>}
@@ -610,7 +612,13 @@ const Contacts: React.FC = () => {
           >
             {params.row.first_name?.[0]}{params.row.last_name?.[0]}
           </Avatar>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minWidth: 0
+          }}>
             <EditableCell
               contactId={params.row.id}
               field="name"
