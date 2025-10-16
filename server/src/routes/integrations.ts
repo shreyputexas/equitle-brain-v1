@@ -10,7 +10,7 @@ import logger from '../utils/logger';
 const router = express.Router();
 
 // Helper function to ensure valid access token
-async function ensureValidAccessToken(integration: { expiresAt: Date | null; refreshToken?: string; accessToken: string; id: string }) {
+async function ensureValidAccessToken(integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) {
   if (!integration.accessToken) {
     throw new Error('No access token available');
   }
@@ -117,9 +117,10 @@ router.get('/', auth, async (req, res) => {
 
 // Initiate Google OAuth flow (requires auth)
 router.post('/google/connect', auth, async (req, res) => {
+  const { types } = req.body; // ['profile', 'drive', 'calendar', 'gmail']
+  const userId = (req as FirebaseAuthRequest).userId;
+
   try {
-    const { types } = req.body; // ['profile', 'drive', 'calendar', 'gmail']
-    const userId = (req as FirebaseAuthRequest).userId;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });

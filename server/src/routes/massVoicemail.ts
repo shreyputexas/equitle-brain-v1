@@ -47,6 +47,11 @@ interface Campaign {
   created_at: string;
   contacts: Contact[];
   generated_files: string[];
+  voicemailStatus?: string;
+  voicemailBroadcastId?: string;
+  validPhones?: string[];
+  invalidPhones?: string[];
+  voicemailSentAt?: string;
 }
 
 // In-memory storage for demo (replace with database later)
@@ -652,7 +657,7 @@ router.get('/mp3/:campaignId/:filename', async (req: Request, res: Response) => 
 });
 
 // Send voicemail campaign using Slybroadcast
-router.post('/campaigns/:id/send-voicemails', async (req, res) => {
+router.post('/campaigns/:id/send-voicemails', async (req: Request, res: Response) => {
   try {
     const { id: campaignId } = req.params;
     const { callerIdNumber, callerIdName } = req.body;
@@ -664,7 +669,7 @@ router.post('/campaigns/:id/send-voicemails', async (req, res) => {
     });
 
     // Get campaign from memory (in a real app, this would be from database)
-    const campaign = campaigns.get(campaignId);
+    const campaign = campaigns.find(c => c.id === campaignId);
 
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
@@ -763,7 +768,7 @@ router.post('/campaigns/:id/send-voicemails', async (req, res) => {
 });
 
 // Test Slybroadcast connection
-router.get('/test-slybroadcast', async (req, res) => {
+router.get('/test-slybroadcast', async (req: Request, res: Response) => {
   try {
     const slybroadcastService = new SlybroadcastService();
     const isConnected = await slybroadcastService.testConnection();

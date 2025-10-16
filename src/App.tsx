@@ -6,6 +6,7 @@ import { BrainProvider } from './contexts/BrainContext';
 import { AppThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -31,6 +32,7 @@ function App() {
     <AppThemeProvider>
       <AuthProvider>
         <BrainProvider>
+          <ScrollToTop />
           <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
             {/* Authentication routes */}

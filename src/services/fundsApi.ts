@@ -46,6 +46,11 @@ export interface CreateFundRequest {
 }
 
 interface ApiResponse<T> {
+  success?: boolean;
+  data?: {
+    funds?: T[];
+    fund?: T;
+  };
   funds?: T[];
   fund?: T;
   message?: string;
@@ -70,7 +75,7 @@ class FundsApiService {
       });
       // Firebase API returns { success: true, data: { funds: [] } }
       // but frontend expects { funds: [] }
-      return response.data.data.funds || [];
+      return response.data.data?.funds || response.data.funds || [];
     } catch (error) {
       console.error('Error fetching funds:', error);
       throw error;
@@ -84,7 +89,7 @@ class FundsApiService {
       });
       // Firebase API returns { success: true, data: { fund: {} } }
       // but frontend expects { fund: {} }
-      return response.data.data.fund!;
+      return response.data.data?.fund || response.data.fund!;
     } catch (error) {
       console.error('Error creating fund:', error);
       throw error;
@@ -98,7 +103,7 @@ class FundsApiService {
       });
       // Firebase API returns { success: true, data: { fund: {} } }
       // but frontend expects { fund: {} }
-      return response.data.data.fund!;
+      return response.data.data?.fund || response.data.fund!;
     } catch (error) {
       console.error('Error fetching fund:', error);
       throw error;
@@ -112,7 +117,7 @@ class FundsApiService {
       });
       // Firebase API returns { success: true, data: { fund: {} } }
       // but frontend expects { fund: {} }
-      return response.data.data.fund!;
+      return response.data.data?.fund || response.data.fund!;
     } catch (error) {
       console.error('Error updating fund:', error);
       throw error;
