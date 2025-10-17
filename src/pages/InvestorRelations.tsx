@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ReportModal from '../components/ReportModal';
 import EmailUpdateModal from '../components/EmailUpdateModal';
 import NewLPModal from '../components/NewLPModal';
+import EditLPModal from '../components/EditLPModal';
 import ManageGroupsModal from '../components/ManageGroupsModal';
 import EntityManagementModal from '../components/EntityManagementModal';
 import InvestorsApiService, { Investor } from '../services/investorsApi';
@@ -137,6 +138,8 @@ export default function InvestorRelations() {
   const [error, setError] = useState<string | null>(null);
   const [selectedInvestorId, setSelectedInvestorId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedInvestorForEdit, setSelectedInvestorForEdit] = useState<any>(null);
   
   // Filter states
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -148,7 +151,16 @@ export default function InvestorRelations() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching investors...');
       const investorsData = await InvestorsApiService.getInvestors();
+      console.log('Received investors data:', investorsData);
+
+      // Ensure we have an array
+      if (!Array.isArray(investorsData)) {
+        console.warn('Investors data is not an array:', investorsData);
+        setInvestors([]);
+        return;
+      }
 
       // Transform API data to match UI expectations
       const transformedInvestors = investorsData.map(investor => ({
@@ -157,14 +169,16 @@ export default function InvestorRelations() {
         called: investor.totalCalled || 0,
         // Map database fields to UI expectations
         name: investor.name,
-        type: investor.type.replace('_', ' '),
-        status: investor.status
+        type: investor.type?.replace('_', ' ') || 'Unknown',
+        status: investor.status || 'active'
       }));
 
+      console.log('Transformed investors:', transformedInvestors);
       setInvestors(transformedInvestors);
     } catch (err: any) {
       console.error('Error fetching investors:', err);
       setError(err.message || 'Failed to fetch investors');
+      setInvestors([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -349,6 +363,23 @@ export default function InvestorRelations() {
   const handleCancelDelete = () => {
     setDeleteConfirmOpen(false);
     setSelectedInvestorId(null); // Reset selected investor
+  };
+
+  const handleEditInvestor = () => {
+    if (selectedInvestorId) {
+      const investor = investors.find(inv => inv.id === selectedInvestorId);
+      if (investor) {
+        setSelectedInvestorForEdit(investor);
+        setEditModalOpen(true);
+      }
+    }
+    setAnchorEl(null);
+  };
+
+  const handleEditSuccess = () => {
+    setEditModalOpen(false);
+    setSelectedInvestorForEdit(null);
+    fetchInvestors(); // Refresh the investors list
   };
 
   return (
@@ -1300,13 +1331,21 @@ export default function InvestorRelations() {
         onSuccess={handleNewLPSuccess}
       />
 
+      {/* Edit LP Modal */}
+      <EditLPModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+        investor={selectedInvestorForEdit}
+      />
+
       {/* Investors Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleEditInvestor}>
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Edit Investor
         </MenuItem>
