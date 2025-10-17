@@ -28,6 +28,7 @@ import companyRoutes from './routes/companies';
 import firebaseContactsActivitiesRoutes from './routes/firebaseContactsActivities';
 import firebaseDocumentsRoutes from './routes/firebaseDocuments';
 import firebaseEmailsRoutes from './routes/firebaseEmails';
+import searcherProfilesRoutes from './routes/searcherProfiles';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import googleWorkspaceRoutes from './routes/googleWorkspace';
@@ -152,6 +153,8 @@ app.use('/api/firebase', firebaseContactsActivitiesRoutes);
 app.use('/api/firebase-documents', firebaseDocumentsRoutes);
 // New Firebase emails routes
 app.use('/api/firebase-emails', firebaseEmailsRoutes);
+// Searcher profiles routes
+app.use('/api/searcher-profiles', searcherProfilesRoutes);
 app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
