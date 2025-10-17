@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import integrationService from '../services/integrationService';
+import { db } from '../lib/firebase';
+import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, Timestamp, getDoc } from 'firebase/firestore';
+import { onePagerApi, OnePagerRequest } from '../services/onePagerApi';
 import {
   Box,
   Typography,
@@ -61,11 +64,11 @@ import {
   Info as InfoIcon,
   Search as SearchIcon,
   Refresh as RefreshIcon,
+  Close as CloseIcon,
   Check as CheckIcon,
   CloudUpload as CloudUploadIcon,
   Folder as FolderIcon,
-  AttachFile as AttachFileIcon,
-  Close as CloseIcon
+  AttachFile as AttachFileIcon
 } from '@mui/icons-material';
 
 interface InvestmentCriteria {
@@ -117,59 +120,11 @@ interface OnePagerData {
 }
 
 const MyThesis: React.FC = () => {
-  const [theses, setTheses] = useState<InvestmentThesis[]>([
-    {
-      id: '1',
-      name: 'Tech Growth Thesis',
-      criteria: [
-        {
-          id: '1',
-          category: 'Financial',
-          field: 'Revenue',
-          value: 10000000,
-          operator: '>=',
-          weight: 30
-        },
-        {
-          id: '2',
-          category: 'Financial',
-          field: 'EBITDA',
-          value: 2000000,
-          operator: '>=',
-          weight: 25
-        },
-        {
-          id: '3',
-          category: 'Market',
-          field: 'Industry',
-          value: 'Technology',
-          operator: '=',
-          weight: 20
-        },
-        {
-          id: '4',
-          category: 'Geographic',
-          field: 'Location',
-          value: 'North America',
-          operator: '=',
-          weight: 15
-        },
-        {
-          id: '5',
-          category: 'Team',
-          field: 'Employee Count',
-          value: 50,
-          operator: '>=',
-          weight: 10
-        }
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ]);
-
-  const [currentThesisId, setCurrentThesisId] = useState<string>('1');
+  const [theses, setTheses] = useState<InvestmentThesis[]>([]);
+  const [currentThesisId, setCurrentThesisId] = useState<string>('');
   const [criteria, setCriteria] = useState<InvestmentCriteria[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [newCriteria, setNewCriteria] = useState<Partial<InvestmentCriteria>>({
     category: 'Financial',
@@ -192,6 +147,14 @@ const MyThesis: React.FC = () => {
   const [generatedOnePager, setGeneratedOnePager] = useState<OnePagerData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Personal Pitch One Pager Generator state
+  const [selectedThesisForPitch, setSelectedThesisForPitch] = useState('');
+  const [selectedSearchers, setSelectedSearchers] = useState<string[]>([]);
+  const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
+  const [searcherProfiles, setSearcherProfiles] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('basic');
+  const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [showDataSourceDialog, setShowDataSourceDialog] = useState(false);
   const [selectedGoogleDriveFolder, setSelectedGoogleDriveFolder] = useState<string>('');
@@ -203,6 +166,107 @@ const MyThesis: React.FC = () => {
   const operators = ['>=', '<=', '=', '!=', 'contains', 'not contains'];
   const valuationTypes = ['Enterprise Value', 'Equity Value'];
 
+  // Load theses on component mount
+  useEffect(() => {
+    const loadTheses = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const thesesRef = collection(db, 'users', userId, 'investmentTheses');
+        const q = query(thesesRef, orderBy('createdAt', 'asc'));
+        const snapshot = await getDocs(q);
+        const loadedTheses = snapshot.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name,
+            criteria: data.criteria || [],
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          } as InvestmentThesis;
+        });
+
+        // If no theses exist, create a default one
+        if (loadedTheses.length === 0) {
+          const now = Timestamp.now();
+          const docRef = await addDoc(thesesRef, {
+            name: 'Tech Growth Thesis',
+            criteria: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          const defaultThesis = {
+            id: docRef.id,
+            name: 'Tech Growth Thesis',
+            criteria: [],
+            createdAt: now.toDate(),
+            updatedAt: now.toDate()
+          };
+          setTheses([defaultThesis]);
+          setCurrentThesisId(defaultThesis.id);
+          setCriteria([]);
+        } else {
+          setTheses(loadedTheses);
+          setCurrentThesisId(loadedTheses[0].id);
+          setCriteria(loadedTheses[0].criteria);
+        }
+      } catch (error: any) {
+        console.error('Error loading theses:', error);
+        setError('Failed to load investment theses');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTheses();
+  }, []);
+
+  // Load searcher profiles
+  useEffect(() => {
+    const loadSearcherProfiles = async () => {
+      try {
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const profilesRef = collection(db, 'users', userId, 'searcherProfiles');
+        const snapshot = await getDocs(profilesRef);
+        const profiles = snapshot.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        }));
+        setSearcherProfiles(profiles);
+      } catch (error) {
+        console.error('Error loading searcher profiles:', error);
+      }
+    };
+
+    loadSearcherProfiles();
+  }, []);
+
+  // Refresh searcher profiles when page regains focus (user returns from profile page)
+  useEffect(() => {
+    const handleFocus = () => {
+      const loadSearcherProfiles = async () => {
+        try {
+          const userId = localStorage.getItem('userId') || 'dev-user-123';
+          const profilesRef = collection(db, 'users', userId, 'searcherProfiles');
+          const snapshot = await getDocs(profilesRef);
+          const profiles = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+          }));
+          setSearcherProfiles(profiles);
+        } catch (error) {
+          console.error('Error loading searcher profiles:', error);
+        }
+      };
+      loadSearcherProfiles();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
   const getTotalWeight = () => {
     return criteria.reduce((sum, criterion) => sum + criterion.weight, 0);
   };
@@ -211,35 +275,37 @@ const MyThesis: React.FC = () => {
     return 100 - getTotalWeight();
   };
 
-  const handleAddCriteria = () => {
+  const handleAddCriteria = async () => {
     if (newCriteria.field && newCriteria.value !== '') {
       const newWeight = newCriteria.weight || 10;
       const currentTotal = getTotalWeight();
-      
+
+      let updatedCriteria: InvestmentCriteria[];
+
       if (editingCriteria) {
         // Update existing criteria
         const existingCriterion = criteria.find(c => c.id === editingCriteria);
         const weightDifference = newWeight - (existingCriterion?.weight || 0);
         const newTotal = currentTotal + weightDifference;
-        
+
         if (newTotal > 100) {
           alert(`Total weight cannot exceed 100%. Current total would be ${newTotal}%. Please reduce the weight.`);
           return;
         }
-        
-        setCriteria(criteria.map(c => 
-          c.id === editingCriteria 
+
+        updatedCriteria = criteria.map(c =>
+          c.id === editingCriteria
             ? {
                 ...c,
                 category: newCriteria.category || 'Financial',
-                field: newCriteria.field,
-                value: newCriteria.value,
+                field: newCriteria.field || '',
+                value: newCriteria.value || '',
                 operator: newCriteria.operator || '>=',
                 weight: newWeight,
                 valuationType: newCriteria.valuationType
               }
             : c
-        ));
+        );
         setEditingCriteria(null);
       } else {
         // Add new criteria
@@ -247,19 +313,22 @@ const MyThesis: React.FC = () => {
           alert(`Total weight cannot exceed 100%. Current total is ${currentTotal}%. Please reduce the weight to ${100 - currentTotal}% or less.`);
           return;
         }
-        
+
         const newCriterion: InvestmentCriteria = {
           id: Date.now().toString(),
           category: newCriteria.category || 'Financial',
-          field: newCriteria.field,
-          value: newCriteria.value,
+          field: newCriteria.field || '',
+          value: newCriteria.value || '',
           operator: newCriteria.operator || '>=',
           weight: newWeight,
           valuationType: newCriteria.valuationType
         };
-        setCriteria([...criteria, newCriterion]);
+        updatedCriteria = [...criteria, newCriterion];
       }
-      
+
+      // Update state
+      setCriteria(updatedCriteria);
+
       // Reset form
       setNewCriteria({
         category: 'Financial',
@@ -270,6 +339,9 @@ const MyThesis: React.FC = () => {
         valuationType: undefined
       });
       setShowAddCriteria(false);
+
+      // Save immediately to Firebase
+      await handleUpdateThesisWithCriteria(updatedCriteria);
     }
   };
 
@@ -300,15 +372,19 @@ const MyThesis: React.FC = () => {
     setShowAddCriteria(true);
   };
 
-  const handleDeleteCriteria = (id: string) => {
-    setCriteria(criteria.filter(c => c.id !== id));
+  const handleDeleteCriteria = async (id: string) => {
+    const updatedCriteria = criteria.filter(c => c.id !== id);
+    setCriteria(updatedCriteria);
+
+    // Save immediately with updated criteria
+    await handleUpdateThesisWithCriteria(updatedCriteria);
   };
 
   const handleWeightEdit = (criterionId: string, currentWeight: number) => {
     setEditingWeight(criterionId);
   };
 
-  const handleWeightChange = (criterionId: string, newWeight: number) => {
+  const handleWeightChange = async (criterionId: string, newWeight: number) => {
     const currentTotal = getTotalWeight();
     const existingCriterion = criteria.find(c => c.id === criterionId);
     const weightDifference = newWeight - (existingCriterion?.weight || 0);
@@ -324,12 +400,16 @@ const MyThesis: React.FC = () => {
       return;
     }
 
-    setCriteria(criteria.map(c => 
-      c.id === criterionId 
+    const updatedCriteria = criteria.map(c =>
+      c.id === criterionId
         ? { ...c, weight: newWeight }
         : c
-    ));
+    );
+    setCriteria(updatedCriteria);
     setEditingWeight(null);
+
+    // Save immediately with updated criteria
+    await handleUpdateThesisWithCriteria(updatedCriteria);
   };
 
   const handleWeightKeyPress = (e: React.KeyboardEvent, criterionId: string) => {
@@ -362,34 +442,59 @@ const MyThesis: React.FC = () => {
     }
   };
 
-  const handleCreateNewThesis = () => {
+  const handleCreateNewThesis = async () => {
     if (newThesisName.trim()) {
-      const newThesis: InvestmentThesis = {
-        id: Date.now().toString(),
-        name: newThesisName.trim(),
-        criteria: templateThesisId ? 
-          [...theses.find(t => t.id === templateThesisId)?.criteria || []] : 
-          [],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      
-      setTheses([...theses, newThesis]);
-      setCurrentThesisId(newThesis.id);
-      setCriteria([...newThesis.criteria]);
-      setNewThesisName('');
-      setTemplateThesisId('');
-      setShowNewThesisDialog(false);
+      try {
+        const templateCriteria = templateThesisId ?
+          [...theses.find(t => t.id === templateThesisId)?.criteria || []] :
+          [];
+
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const now = Timestamp.now();
+        const thesesRef = collection(db, 'users', userId, 'investmentTheses');
+        const docRef = await addDoc(thesesRef, {
+          name: newThesisName.trim(),
+          criteria: templateCriteria,
+          createdAt: now,
+          updatedAt: now
+        });
+        const newThesis = {
+          id: docRef.id,
+          name: newThesisName.trim(),
+          criteria: templateCriteria,
+          createdAt: now.toDate(),
+          updatedAt: now.toDate()
+        };
+
+        setTheses([...theses, newThesis]);
+        setCurrentThesisId(newThesis.id);
+        setCriteria([...newThesis.criteria]);
+        setNewThesisName('');
+        setTemplateThesisId('');
+        setShowNewThesisDialog(false);
+      } catch (error) {
+        console.error('Error creating thesis:', error);
+        alert('Failed to create thesis. Please try again.');
+      }
     }
   };
 
-  const handleDeleteThesis = (thesisId: string) => {
+  const handleDeleteThesis = async (thesisId: string) => {
     if (theses.length > 1) {
-      const updatedTheses = theses.filter(t => t.id !== thesisId);
-      setTheses(updatedTheses);
-      if (currentThesisId === thesisId) {
-        setCurrentThesisId(updatedTheses[0].id);
-        setCriteria([...updatedTheses[0].criteria]);
+      try {
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
+        await deleteDoc(thesisRef);
+
+        const updatedTheses = theses.filter(t => t.id !== thesisId);
+        setTheses(updatedTheses);
+        if (currentThesisId === thesisId) {
+          setCurrentThesisId(updatedTheses[0].id);
+          setCriteria([...updatedTheses[0].criteria]);
+        }
+      } catch (error) {
+        console.error('Error deleting thesis:', error);
+        alert('Failed to delete thesis. Please try again.');
       }
     }
   };
@@ -400,15 +505,28 @@ const MyThesis: React.FC = () => {
     setEditingThesisNameValue(currentName);
   };
 
-  const handleSaveThesisName = (thesisId: string) => {
+  const handleSaveThesisName = async (thesisId: string) => {
     if (editingThesisNameValue.trim()) {
-      setTheses(theses.map(t => 
-        t.id === thesisId 
-          ? { ...t, name: editingThesisNameValue.trim(), updatedAt: new Date() }
-          : t
-      ));
-      setEditingThesisName(null);
-      setEditingThesisNameValue('');
+      try {
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const now = Timestamp.now();
+        const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
+        await updateDoc(thesisRef, {
+          name: editingThesisNameValue.trim(),
+          updatedAt: now
+        });
+
+        setTheses(theses.map(t =>
+          t.id === thesisId
+            ? { ...t, name: editingThesisNameValue.trim(), updatedAt: now.toDate() }
+            : t
+        ));
+        setEditingThesisName(null);
+        setEditingThesisNameValue('');
+      } catch (error) {
+        console.error('Error updating thesis name:', error);
+        alert('Failed to update thesis name. Please try again.');
+      }
     }
   };
 
@@ -425,18 +543,107 @@ const MyThesis: React.FC = () => {
     }
   };
 
-  const handleUpdateThesis = () => {
-    setTheses(theses.map(t => 
-      t.id === currentThesisId 
-        ? { ...t, criteria: [...criteria], updatedAt: new Date() }
-        : t
-    ));
+  const handleUpdateThesis = async () => {
+    try {
+      console.log('Auto-saving thesis with criteria:', criteria);
+      // Update the thesis in Firebase
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const now = Timestamp.now();
+      const thesisRef = doc(db, 'users', userId, 'investmentTheses', currentThesisId);
+      await updateDoc(thesisRef, {
+        criteria: [...criteria],
+        updatedAt: now
+      });
+
+      console.log('Successfully auto-saved thesis in Firebase');
+
+      // Update local state
+      setTheses(theses.map(t =>
+        t.id === currentThesisId
+          ? { ...t, criteria: [...criteria], updatedAt: now.toDate() }
+          : t
+      ));
+    } catch (error) {
+      console.error('Error auto-saving thesis:', error);
+      // Still update local state even if save fails
+      setTheses(theses.map(t =>
+        t.id === currentThesisId
+          ? { ...t, criteria: [...criteria], updatedAt: new Date() }
+          : t
+      ));
+    }
   };
 
-  // Update criteria when it changes
-  React.useEffect(() => {
-    handleUpdateThesis();
-  }, [criteria]);
+  const handleUpdateThesisWithCriteria = async (criteriaToSave: InvestmentCriteria[]) => {
+    if (!currentThesisId) {
+      console.error('❌ Cannot save: no thesis selected');
+      alert('Error: No thesis selected. Please select a thesis first.');
+      return;
+    }
+
+    try {
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const now = Timestamp.now();
+      const thesisRef = doc(db, 'users', userId, 'investmentTheses', currentThesisId);
+
+      // Clean criteria to remove undefined values (Firebase doesn't support undefined)
+      const cleanedCriteria = criteriaToSave.map(criterion => {
+        const cleaned: any = {
+          id: criterion.id,
+          category: criterion.category,
+          field: criterion.field,
+          value: criterion.value,
+          operator: criterion.operator,
+          weight: criterion.weight
+        };
+
+        // Only add valuationType if it's defined
+        if (criterion.valuationType !== undefined) {
+          cleaned.valuationType = criterion.valuationType;
+        }
+
+        return cleaned;
+      });
+
+      console.log('💾 Saving to Firebase:', {
+        userId,
+        thesisId: currentThesisId,
+        criteriaCount: cleanedCriteria.length,
+        criteria: cleanedCriteria
+      });
+
+      await updateDoc(thesisRef, {
+        criteria: cleanedCriteria,
+        updatedAt: now
+      });
+
+      console.log('✅ Successfully saved thesis to Firebase');
+
+      // Update local state
+      setTheses(theses.map(t =>
+        t.id === currentThesisId
+          ? { ...t, criteria: criteriaToSave, updatedAt: now.toDate() }
+          : t
+      ));
+    } catch (error: any) {
+      console.error('❌ Error saving thesis to Firebase:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+      alert(`Failed to save changes to Firebase: ${error.message || 'Unknown error'}. Please check the console for details.`);
+      // Still update local state even if save fails
+      setTheses(theses.map(t =>
+        t.id === currentThesisId
+          ? { ...t, criteria: criteriaToSave, updatedAt: new Date() }
+          : t
+      ));
+    }
+  };
+
+  // Auto-save is now handled directly in the functions above
 
   const handleGenerateOnePager = async () => {
     if (!selectedCompany.trim()) {
@@ -446,6 +653,84 @@ const MyThesis: React.FC = () => {
 
     // Show data source selection dialog first
     setShowDataSourceDialog(true);
+  };
+
+  const handleGeneratePersonalPitch = async () => {
+    if (!selectedThesisForPitch) {
+      alert('Please select a thesis to base the pitch on');
+      return;
+    }
+    if (selectedSearchers.length === 0) {
+      alert('Please select at least one searcher profile');
+      return;
+    }
+
+    setIsGeneratingPitch(true);
+    try {
+      // Get the selected thesis data
+      const selectedThesis = theses.find(t => t.id === selectedThesisForPitch);
+      if (!selectedThesis) {
+        alert('Selected thesis not found');
+        return;
+      }
+
+      // Get the selected searcher profiles
+      const selectedSearcherProfiles = searcherProfiles.filter(profile => 
+        selectedSearchers.includes(profile.id)
+      );
+
+      // Get team connection from Firebase
+      let teamConnection = '';
+      try {
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const teamConnectionRef = doc(db, 'users', userId, 'teamConnection', 'connection');
+        const teamConnectionDoc = await getDoc(teamConnectionRef);
+        if (teamConnectionDoc.exists()) {
+          teamConnection = teamConnectionDoc.data().connection || '';
+        }
+      } catch (error) {
+        console.warn('Could not load team connection:', error);
+      }
+
+      // Prepare the request
+      const request: OnePagerRequest = {
+        searcherProfiles: selectedSearcherProfiles,
+        thesisData: {
+          name: selectedThesis.name,
+          criteria: selectedThesis.criteria.map(c => ({
+            ...c,
+            value: c.value.toString()
+          }))
+        },
+        teamConnection: teamConnection || undefined
+      };
+
+      console.log('Generating personal pitch with:', request);
+
+      // Generate and download the DOCX file
+      const docxBlob = await onePagerApi.generateDocx(request);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(docxBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `search-fund-pitch-${Date.now()}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('Personal pitch generated and downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating personal pitch:', error);
+      alert('Failed to generate personal pitch. Please try again.');
+    } finally {
+      setIsGeneratingPitch(false);
+    }
+  };
+
+  const handlePreviewTemplate = () => {
+    setShowTemplatePreview(true);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -590,6 +875,89 @@ const MyThesis: React.FC = () => {
     return 'Poor';
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Box sx={{ textAlign: 'center' }}>
+          <LinearProgress sx={{ mb: 2, width: 300 }} />
+          <Typography variant="body1" color="text.secondary">
+            Loading investment theses...
+          </Typography>
+        </Box>
+      </Box>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    const handleRetry = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const thesesRef = collection(db, 'users', userId, 'investmentTheses');
+        const q = query(thesesRef, orderBy('createdAt', 'asc'));
+        const snapshot = await getDocs(q);
+        const loadedTheses = snapshot.docs.map(d => {
+          const data = d.data();
+          return {
+            id: d.id,
+            name: data.name,
+            criteria: data.criteria || [],
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          } as InvestmentThesis;
+        });
+
+        if (loadedTheses.length === 0) {
+          const now = Timestamp.now();
+          const docRef = await addDoc(thesesRef, {
+            name: 'Tech Growth Thesis',
+            criteria: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          const defaultThesis = {
+            id: docRef.id,
+            name: 'Tech Growth Thesis',
+            criteria: [],
+            createdAt: now.toDate(),
+            updatedAt: now.toDate()
+          };
+          setTheses([defaultThesis]);
+          setCurrentThesisId(defaultThesis.id);
+          setCriteria([]);
+        } else {
+          setTheses(loadedTheses);
+          setCurrentThesisId(loadedTheses[0].id);
+          setCriteria(loadedTheses[0].criteria);
+        }
+      } catch (error: any) {
+        console.error('Error loading theses:', error);
+        setError('Failed to load investment theses. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+        <Button
+          variant="contained"
+          onClick={handleRetry}
+          sx={{ bgcolor: '#000000', color: 'white', '&:hover': { bgcolor: '#333333' } }}
+        >
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
@@ -675,6 +1043,7 @@ const MyThesis: React.FC = () => {
               </Typography>
             </Box>
             <Button
+              variant="contained"
               startIcon={<AddIcon />}
               onClick={handleOpenAddCriteria}
               disabled={getTotalWeight() >= 100}
@@ -1188,6 +1557,133 @@ const MyThesis: React.FC = () => {
               <LinearProgress sx={{ mb: 1 }} />
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                 Analyzing company data and generating comprehensive report...
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Personal Pitch One Pager Generator */}
+      <Card sx={{ mt: 4 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#000000' }}>
+            Personal Pitch One-Pager Generator
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Select Thesis</InputLabel>
+                <Select
+                  value={selectedThesisForPitch}
+                  onChange={(e) => setSelectedThesisForPitch(e.target.value)}
+                  label="Select Thesis"
+                >
+                  {theses.map((thesis) => (
+                    <MenuItem key={thesis.id} value={thesis.id}>
+                      {thesis.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Select Searcher Profiles</InputLabel>
+                <Select
+                  multiple
+                  value={selectedSearchers}
+                  onChange={(e) => setSelectedSearchers(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                  label="Select Searcher Profiles"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const profile = searcherProfiles.find(p => p.id === value);
+                        return <Chip key={value} label={profile?.name || value} size="small" />;
+                      })}
+                    </Box>
+                  )}
+                >
+                  {searcherProfiles.length > 0 ? (
+                    searcherProfiles.map((profile) => (
+                      <MenuItem key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>No searcher profiles found. Create one in My Profile.</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Select Template</InputLabel>
+                <Select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  label="Select Template"
+                >
+                  <MenuItem value="basic">Basic Template</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          {/* Template Preview Section */}
+          <Box sx={{ mt: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Preview template before generating:
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handlePreviewTemplate}
+                sx={{
+                  borderColor: '#000000',
+                  color: '#000000',
+                  '&:hover': {
+                    borderColor: '#333333',
+                    bgcolor: '#F5F5F5'
+                  }
+                }}
+              >
+                Preview Template
+              </Button>
+            </Box>
+          </Box>
+
+
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+            <Button
+              variant="contained"
+              startIcon={<AutoAwesomeIcon />}
+              onClick={handleGeneratePersonalPitch}
+              disabled={
+                isGeneratingPitch || 
+                !selectedThesisForPitch || 
+                selectedSearchers.length === 0
+              }
+              size="large"
+              sx={{
+                bgcolor: '#000000',
+                color: 'white',
+                px: 4,
+                py: 1.5,
+                '&:hover': { bgcolor: '#333333' },
+                '&:disabled': { bgcolor: '#9CA3AF' }
+              }}
+            >
+              {isGeneratingPitch ? 'Generating...' : 'Generate One-Pager'}
+            </Button>
+          </Box>
+
+          {isGeneratingPitch && (
+            <Box sx={{ mt: 3 }}>
+              <LinearProgress sx={{ mb: 1 }} />
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                Generating your personal pitch one-pager...
               </Typography>
             </Box>
           )}
@@ -2251,6 +2747,53 @@ const MyThesis: React.FC = () => {
             }}
           >
             Generate One-Pager
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Template Preview Dialog */}
+      <Dialog
+        open={showTemplatePreview}
+        onClose={() => setShowTemplatePreview(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { height: '90vh' }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Template Preview - {selectedTemplate === 'basic' ? 'Basic Template' : selectedTemplate}
+          </Typography>
+          <IconButton onClick={() => setShowTemplatePreview(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ height: '100%', width: '100%' }}>
+            <iframe
+              src={`/.claude/one_pager_templates/${selectedTemplate}.pdf`}
+              width="100%"
+              height="100%"
+              style={{ border: 'none' }}
+              title="Template Preview"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setShowTemplatePreview(false)}
+            variant="outlined"
+            sx={{
+              borderColor: '#000000',
+              color: '#000000',
+              '&:hover': {
+                borderColor: '#333333',
+                bgcolor: '#F5F5F5'
+              }
+            }}
+          >
+            Close Preview
           </Button>
         </DialogActions>
       </Dialog>
