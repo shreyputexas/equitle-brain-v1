@@ -14,15 +14,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Chip
 } from '@mui/material';
 import {
   Person as PersonIcon,
-  Work as WorkIcon,
-  School as SchoolIcon,
   LocationOn as LocationIcon,
-  Psychology as PsychologyIcon,
-  Article as ArticleIcon,
   Schedule as ScheduleIcon,
   Business as BusinessIcon
 } from '@mui/icons-material';
@@ -38,25 +35,36 @@ interface LinkedInData {
   outreachType: string;
 }
 
+interface LinkedInProfileData {
+  rawLinkedInText: string;
+  websiteUrl: string;
+  callPreference: string;
+  outreachType: string;
+}
+
 const LinkedInEntry: React.FC = () => {
-  const [formData, setFormData] = useState<LinkedInData>({
-    interest: '',
-    aboutMe: '',
-    experience: '',
-    latestPost: '',
-    education: '',
-    location: '',
+  const [formData, setFormData] = useState<LinkedInProfileData>({
+    rawLinkedInText: '',
+    websiteUrl: '',
     callPreference: '',
     outreachType: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [websiteUrl, setWebsiteUrl] = useState('');
   const [generatedMessage, setGeneratedMessage] = useState<any>(null);
 
-  const handleInputChange = (field: keyof LinkedInData) => (
-    event: React.ChangeEvent<HTMLInputElement>
+  const handleInputChange = (field: keyof LinkedInProfileData) => (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+  };
+
+  const handleSelectChange = (field: keyof LinkedInProfileData) => (
+    event: any
   ) => {
     setFormData(prev => ({
       ...prev,
@@ -69,10 +77,28 @@ const LinkedInEntry: React.FC = () => {
     setIsSubmitting(true);
     setMessage(null);
 
-    if (!websiteUrl) {
+    if (!formData.rawLinkedInText) {
       setMessage({
         type: 'error',
-        text: 'Please enter a website URL to scrape.'
+        text: 'Please paste the LinkedIn profile data.'
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.callPreference) {
+      setMessage({
+        type: 'error',
+        text: 'Please select a call preference.'
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.outreachType) {
+      setMessage({
+        type: 'error',
+        text: 'Please select an outreach type.'
       });
       setIsSubmitting(false);
       return;
@@ -85,8 +111,7 @@ const LinkedInEntry: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          linkedinData: formData,
-          websiteUrl: websiteUrl
+          linkedinProfileData: formData
         })
       });
 
@@ -94,10 +119,18 @@ const LinkedInEntry: React.FC = () => {
 
       if (result.success) {
         setGeneratedMessage(result.data);
-        setMessage({
-          type: 'success',
-          text: 'Personalized message generated successfully!'
-        });
+        
+        if (result.data.mode === 'profile-only') {
+          setMessage({
+            type: 'success',
+            text: 'Personalized message generated from LinkedIn profile! (No website data included)'
+          });
+        } else {
+          setMessage({
+            type: 'success',
+            text: 'Personalized message generated with company research!'
+          });
+        }
       } else {
         setMessage({
           type: 'error',
@@ -113,57 +146,6 @@ const LinkedInEntry: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
-  const formFields = [
-    {
-      key: 'interest' as keyof LinkedInData,
-      label: 'Interest',
-      placeholder: 'What are you passionate about? What drives you professionally?',
-      icon: <PsychologyIcon />,
-      multiline: true,
-      rows: 3
-    },
-    {
-      key: 'aboutMe' as keyof LinkedInData,
-      label: 'About Me',
-      placeholder: 'Tell us about yourself, your background, and what makes you unique...',
-      icon: <PersonIcon />,
-      multiline: true,
-      rows: 4
-    },
-    {
-      key: 'experience' as keyof LinkedInData,
-      label: 'Experience',
-      placeholder: 'Describe your professional experience, key achievements, and career highlights...',
-      icon: <WorkIcon />,
-      multiline: true,
-      rows: 4
-    },
-    {
-      key: 'latestPost' as keyof LinkedInData,
-      label: 'Latest Post',
-      placeholder: 'Share your most recent LinkedIn post or professional update...',
-      icon: <ArticleIcon />,
-      multiline: true,
-      rows: 3
-    },
-    {
-      key: 'education' as keyof LinkedInData,
-      label: 'Education',
-      placeholder: 'Your educational background, degrees, certifications, etc.',
-      icon: <SchoolIcon />,
-      multiline: true,
-      rows: 2
-    },
-    {
-      key: 'location' as keyof LinkedInData,
-      label: 'Location',
-      placeholder: 'City, State/Country',
-      icon: <LocationIcon />,
-      multiline: false,
-      rows: 1
-    }
-  ];
 
   const callPreferenceOptions = [
     'Monday morning',
@@ -191,10 +173,18 @@ const LinkedInEntry: React.FC = () => {
         LinkedIn Profile Entry
       </Typography>
       
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Enter your LinkedIn profile information to generate personalized outreach messages. 
-        This data will be combined with company website information to create custom messages.
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+        Copy and paste a LinkedIn profile (Ctrl+A on the profile page) to generate personalized outreach messages. 
+        The AI will extract the profile information and create custom messages.
       </Typography>
+
+      <Alert severity="info" sx={{ mb: 4 }}>
+        <Typography variant="body2">
+          <strong>Two modes available:</strong><br/>
+          • <strong>With Website URL:</strong> Generate message with detailed company research (scrapes website)<br/>
+          • <strong>Without Website URL:</strong> Generate message based only on LinkedIn profile
+        </Typography>
+      </Alert>
 
       {message && (
         <Alert severity={message.type} sx={{ mb: 3 }}>
@@ -204,7 +194,41 @@ const LinkedInEntry: React.FC = () => {
 
       <form onSubmit={handleSubmit}>
         <Grid container spacing={3}>
-          {/* Website URL Input */}
+          {/* LinkedIn Profile Data */}
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <PersonIcon />
+                  <Typography variant="h6" sx={{ ml: 1 }}>
+                    LinkedIn Profile Data *
+                  </Typography>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Go to the LinkedIn profile you want to reach out to, press Ctrl+A to select all, then Ctrl+C to copy, and paste it here.
+                </Typography>
+                
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={8}
+                  value={formData.rawLinkedInText}
+                  onChange={handleInputChange('rawLinkedInText')}
+                  placeholder="Paste the entire LinkedIn profile page content here (Ctrl+A, Ctrl+C, Ctrl+V)..."
+                  variant="outlined"
+                  required
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    }
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Website URL Input - Now Optional */}
           <Grid item xs={12}>
             <Card>
               <CardContent>
@@ -213,13 +237,23 @@ const LinkedInEntry: React.FC = () => {
                   <Typography variant="h6" sx={{ ml: 1 }}>
                     Target Website URL
                   </Typography>
+                  <Chip 
+                    label="Optional" 
+                    size="small" 
+                    sx={{ ml: 2 }}
+                    color="default"
+                  />
                 </Box>
+                
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Enter the company's website URL to include detailed company research in your message. Leave blank to generate a message based only on the LinkedIn profile.
+                </Typography>
                 
                 <TextField
                   fullWidth
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  placeholder="https://example.com (the company website to scrape)"
+                  value={formData.websiteUrl}
+                  onChange={handleInputChange('websiteUrl')}
+                  placeholder="https://example.com (optional - leave blank to skip company research)"
                   variant="outlined"
                   sx={{
                     '& .MuiOutlinedInput-root': {
@@ -231,36 +265,6 @@ const LinkedInEntry: React.FC = () => {
             </Card>
           </Grid>
 
-          {formFields.map((field) => (
-            <Grid item xs={12} key={field.key}>
-              <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    {field.icon}
-                    <Typography variant="h6" sx={{ ml: 1 }}>
-                      {field.label}
-                    </Typography>
-                  </Box>
-                  
-                  <TextField
-                    fullWidth
-                    multiline={field.multiline}
-                    rows={field.rows}
-                    value={formData[field.key]}
-                    onChange={handleInputChange(field.key)}
-                    placeholder={field.placeholder}
-                    variant="outlined"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                      }
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-
           {/* Call Preference Dropdown */}
           <Grid item xs={12}>
             <Card>
@@ -268,15 +272,15 @@ const LinkedInEntry: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <ScheduleIcon />
                   <Typography variant="h6" sx={{ ml: 1 }}>
-                    Call Preference
+                    Call Preference *
                   </Typography>
                 </Box>
                 
-                <FormControl fullWidth>
+                <FormControl fullWidth required>
                   <InputLabel>When would you like to schedule a call?</InputLabel>
                   <Select
                     value={formData.callPreference}
-                    onChange={(e) => setFormData(prev => ({ ...prev, callPreference: e.target.value }))}
+                    onChange={handleSelectChange('callPreference')}
                     label="When would you like to schedule a call?"
                     sx={{
                       backgroundColor: 'rgba(0, 0, 0, 0.02)',
@@ -300,15 +304,15 @@ const LinkedInEntry: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <BusinessIcon />
                   <Typography variant="h6" sx={{ ml: 1 }}>
-                    Outreach Type
+                    Outreach Type *
                   </Typography>
                 </Box>
                 
-                <FormControl fullWidth>
+                <FormControl fullWidth required>
                   <InputLabel>What's your primary interest?</InputLabel>
                   <Select
                     value={formData.outreachType}
-                    onChange={(e) => setFormData(prev => ({ ...prev, outreachType: e.target.value }))}
+                    onChange={handleSelectChange('outreachType')}
                     label="What's your primary interest?"
                     sx={{
                       backgroundColor: 'rgba(0, 0, 0, 0.02)',
@@ -348,7 +352,7 @@ const LinkedInEntry: React.FC = () => {
             {isSubmitting ? (
               <>
                 <CircularProgress size={20} sx={{ mr: 1, color: '#fff' }} />
-                Processing...
+                {formData.websiteUrl ? 'Researching & Generating...' : 'Generating...'}
               </>
             ) : (
               'Generate Personalized Message'
@@ -360,9 +364,27 @@ const LinkedInEntry: React.FC = () => {
       {/* Generated Message Display */}
       {generatedMessage && (
         <Box sx={{ mt: 4 }}>
-          <Typography variant="h5" gutterBottom>
-            Generated Personalized Message
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h5" gutterBottom>
+              Generated Personalized Message
+            </Typography>
+            {generatedMessage.mode === 'profile-only' && (
+              <Chip 
+                label="Profile Only Mode" 
+                color="info" 
+                size="small" 
+                sx={{ ml: 2 }}
+              />
+            )}
+            {generatedMessage.mode === 'full-research' && (
+              <Chip 
+                label="Full Research Mode" 
+                color="success" 
+                size="small" 
+                sx={{ ml: 2 }}
+              />
+            )}
+          </Box>
           
           <Card sx={{ mb: 3 }}>
             <CardContent>
@@ -378,23 +400,37 @@ const LinkedInEntry: React.FC = () => {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Approach: {generatedMessage.message.approach}
+                Approach
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {generatedMessage.message.approach}
               </Typography>
             </CardContent>
           </Card>
 
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Company Information
+          {generatedMessage.companyInfo && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Company Information (Researched)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Company: {generatedMessage.companyInfo.name}<br/>
+                  URL: {generatedMessage.companyInfo.url}<br/>
+                  Text Extracted: {generatedMessage.companyInfo.textLength} characters
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+
+          {!generatedMessage.companyInfo && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                This message was generated using only the LinkedIn profile data. 
+                Add a website URL to include detailed company research in future messages.
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Company: {generatedMessage.companyInfo.name}<br/>
-                URL: {generatedMessage.companyInfo.url}<br/>
-                Text Length: {generatedMessage.companyInfo.textLength} characters
-              </Typography>
-            </CardContent>
-          </Card>
+            </Alert>
+          )}
         </Box>
       )}
 
@@ -404,13 +440,24 @@ const LinkedInEntry: React.FC = () => {
         <Typography variant="h6" gutterBottom>
           How This Works
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          1. Enter your LinkedIn profile information above<br/>
-          2. Enter the target company's website URL<br/>
-          3. The system will crawl the company's About/Team pages<br/>
-          4. AI will analyze both your profile and company information<br/>
-          5. A personalized outreach message will be generated<br/>
-          6. You can customize and send the message
+        <Typography variant="body2" color="text.secondary" component="div">
+          <strong>With Website URL (Full Research Mode):</strong>
+          <ol style={{ marginTop: '8px', marginBottom: '16px' }}>
+            <li>Enter LinkedIn profile data</li>
+            <li>Enter target company's website URL</li>
+            <li>System crawls the company's About/Team pages</li>
+            <li>AI analyzes both profile and company information</li>
+            <li>Personalized message with detailed company insights is generated</li>
+          </ol>
+          
+          <strong>Without Website URL (Profile Only Mode):</strong>
+          <ol style={{ marginTop: '8px' }}>
+            <li>Enter LinkedIn profile data only</li>
+            <li>Select call preference and outreach type</li>
+            <li>AI analyzes the LinkedIn profile</li>
+            <li>Personalized message based on profile alone is generated</li>
+            <li>Faster generation, no web scraping required</li>
+          </ol>
         </Typography>
       </Paper>
     </Box>

@@ -34,7 +34,7 @@ class WebsiteScraper:
     def find_relevant_pages(self, base_url: str) -> List[str]:
         """Find relevant pages like About, Team, Leadership from the homepage"""
 
-        print(f"🔎 Looking for relevant pages on {base_url}...")
+        print(f"Looking for relevant pages on {base_url}...")
 
         relevant_keywords = [
             'about', 'team', 'our-team', 'leadership', 'our-story',
@@ -72,19 +72,19 @@ class WebsiteScraper:
                 if any(keyword in url_path or keyword in link_text for keyword in relevant_keywords):
                     if full_url not in relevant_urls:
                         relevant_urls.append(full_url)
-                        print(f"  ✓ Found: {full_url}")
+                        print(f"  Found: {full_url}")
 
-            print(f"📋 Found {len(relevant_urls)} relevant page(s)")
+            print(f"Found {len(relevant_urls)} relevant page(s)")
             return relevant_urls[:5]  # Limit to 5 pages to avoid too many requests
 
         except Exception as e:
-            print(f"⚠️  Error finding pages: {str(e)}")
+            print(f"Error finding pages: {str(e)}")
             return [base_url]  # Fallback to just the base URL
 
     def scrape_website_with_crawl(self, base_url: str) -> Optional[CompanyInfo]:
         """Scrape website by automatically finding and crawling About/Team pages"""
 
-        print(f"\n🌐 Starting crawl from: {base_url}")
+        print(f"\nStarting crawl from: {base_url}")
         print("=" * 60)
 
         # Find relevant pages
@@ -95,7 +95,7 @@ class WebsiteScraper:
         company_name = ""
 
         for url in relevant_urls:
-            print(f"\n🔍 Scraping: {url}")
+            print(f"\nScraping: {url}")
 
             try:
                 response = self.session.get(url, timeout=10)
@@ -110,10 +110,10 @@ class WebsiteScraper:
                 page_text = self._extract_page_text(soup)
                 if page_text:
                     all_text.append(page_text)
-                    print(f"  ✓ Extracted {len(page_text)} characters")
+                    print(f"  Extracted {len(page_text)} characters")
 
             except Exception as e:
-                print(f"  ⚠️  Error scraping {url}: {str(e)}")
+                print(f"  Error scraping {url}: {str(e)}")
                 continue
 
         # Combine all text
@@ -127,8 +127,8 @@ class WebsiteScraper:
             scraped_at=datetime.now().isoformat()
         )
 
-        print(f"\n✅ Crawl complete! Scraped {len(relevant_urls)} pages")
-        print(f"📄 Total text extracted: {len(combined_text)} characters")
+        print(f"\nCrawl complete! Scraped {len(relevant_urls)} pages")
+        print(f"Total text extracted: {len(combined_text)} characters")
         return company_info
 
     def _extract_page_text(self, soup: BeautifulSoup) -> str:
@@ -178,25 +178,25 @@ class WebsiteScraper:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
-        print(f"💾 Saved to: {filename}")
+        print(f"Saved to: {filename}")
         return filename
 
     def print_summary(self, company_info: CompanyInfo):
         """Print a summary of scraped information"""
 
-        print(f"\n📊 SCRAPING SUMMARY")
+        print(f"\nSCRAPING SUMMARY")
         print("=" * 60)
         print(f"Company: {company_info.company_name}")
         print(f"URL: {company_info.url}")
         print(f"Text extracted: {len(company_info.about_text)} characters")
-        print(f"\n📄 Sample text (first 500 chars):")
+        print(f"\nSample text (first 500 chars):")
         print(f"{company_info.about_text[:500]}...")
         print("=" * 60)
 
 def main():
     """Test the scraper with intelligent crawling"""
 
-    print("🌐 WEBSITE SCRAPER WITH AUTO-CRAWL TEST")
+    print("WEBSITE SCRAPER WITH AUTO-CRAWL TEST")
     print("=" * 60)
 
     # Initialize scraper
@@ -215,9 +215,9 @@ def main():
         # Save to JSON
         scraper.save_to_json(company_info)
 
-        print("\n✅ Scraping completed successfully!")
+        print("\nScraping completed successfully!")
     else:
-        print("\n❌ Scraping failed!")
+        print("\nScraping failed!")
 
 if __name__ == "__main__":
     main()
