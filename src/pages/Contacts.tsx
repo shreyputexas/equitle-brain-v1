@@ -564,14 +564,16 @@ const Contacts: React.FC = () => {
           whiteSpace: 'nowrap'
         }}
       >
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            fontSize: '0.8125rem',
+        <Typography
+          variant="body2"
+          sx={{
+            fontSize: field === 'name' ? '0.875rem' : '0.8125rem',
+            fontWeight: field === 'name' ? 600 : 400,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            width: '100%'
+            width: '100%',
+            lineHeight: field === 'name' ? 1.2 : 1.4
           }}
         >
           {value || <span style={{ color: '#999', fontStyle: 'italic' }}>Click to edit</span>}
@@ -588,7 +590,14 @@ const Contacts: React.FC = () => {
       flex: 1,
       minWidth: 200,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          width: '100%',
+          height: '100%',
+          py: 1
+        }}>
           <Avatar
             src={params.row.photo_url}
             alt={params.row.name}
@@ -597,12 +606,19 @@ const Contacts: React.FC = () => {
               height: 36,
               bgcolor: '#000000',
               color: '#ffffff',
-              fontSize: '0.875rem'
+              fontSize: '0.875rem',
+              flexShrink: 0
             }}
           >
             {params.row.first_name?.[0]}{params.row.last_name?.[0]}
           </Avatar>
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            minWidth: 0
+          }}>
             <EditableCell
               contactId={params.row.id}
               field="name"
@@ -611,15 +627,16 @@ const Contacts: React.FC = () => {
               onCancel={handleCancelEdit}
             />
             {params.row.status && (
-              <Chip 
-                label={params.row.status} 
+              <Chip
+                label={params.row.status}
                 size="small"
-                sx={{ 
-                  height: 16, 
+                sx={{
+                  height: 16,
                   fontSize: '0.65rem',
                   mt: 0.25,
                   bgcolor: params.row.status === 'active' ? '#DCFCE7' : '#F3F4F6',
-                  color: params.row.status === 'active' ? '#166534' : '#6B7280'
+                  color: params.row.status === 'active' ? '#166534' : '#6B7280',
+                  alignSelf: 'flex-start'
                 }}
               />
             )}
@@ -714,9 +731,9 @@ const Contacts: React.FC = () => {
     {
       field: 'title',
       headerName: 'Title',
-      width: 200,
-      flex: 0.6,
-      minWidth: 150,
+      width: 280,
+      flex: 1,
+      minWidth: 220,
       renderCell: (params) => (
         <EditableCell
           contactId={params.row.id}
@@ -730,9 +747,9 @@ const Contacts: React.FC = () => {
     {
       field: 'company',
       headerName: 'Company',
-      width: 200,
-      flex: 0.7,
-      minWidth: 150,
+      width: 250,
+      flex: 1,
+      minWidth: 200,
       renderCell: (params) => {
         if (params.row.company) {
           return (
@@ -1135,6 +1152,7 @@ const Contacts: React.FC = () => {
             loading={loading}
             checkboxSelection
             disableRowSelectionOnClick
+            rowHeight={70}
             onRowSelectionModelChange={(newSelection) => setSelectedRows(newSelection)}
             pageSizeOptions={[10, 25, 50, 100]}
             disableColumnMenu={false}
@@ -1147,16 +1165,92 @@ const Contacts: React.FC = () => {
               border: 'none',
               '& .MuiDataGrid-cell': {
                 borderColor: 'divider',
-                fontSize: '0.8125rem'
+                fontSize: '0.8125rem',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center'
               },
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: '#F9FAFB',
                 borderColor: 'divider',
                 fontSize: '0.8125rem',
-                fontWeight: 600
+                fontWeight: 600,
+                height: '72px !important',
+                minHeight: '72px !important'
               },
-              '& .MuiDataGrid-row:hover': {
-                bgcolor: '#F9FAFB'
+              '& .MuiDataGrid-columnHeader': {
+                padding: '12px 16px'
+              },
+              '& .MuiDataGrid-columnHeader--checkboxSelection': {
+                padding: '16px 20px',
+                minWidth: '80px !important',
+                width: '80px !important',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                '& .MuiCheckbox-root': {
+                  padding: '4px',
+                  width: '18px !important',
+                  height: '18px !important',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '18px'
+                  }
+                }
+              },
+              '& .MuiDataGrid-cellCheckbox': {
+                padding: '12px 20px',
+                minWidth: '80px !important',
+                width: '80px !important',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                '& .MuiCheckbox-root': {
+                  padding: '4px',
+                  width: '18px !important',
+                  height: '18px !important',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '18px'
+                  }
+                }
+              },
+              '& .MuiDataGrid-row': {
+                '&:hover': {
+                  bgcolor: '#F9FAFB'
+                },
+                '&.Mui-selected': {
+                  bgcolor: '#EBF8FF',
+                  '&:hover': {
+                    bgcolor: '#DBEAFE'
+                  }
+                }
+              },
+              '& .MuiDataGrid-virtualScroller': {
+                overflowX: 'auto'
+              },
+              '& .MuiDataGrid-checkboxInput': {
+                width: '18px !important',
+                height: '18px !important',
+                '& .MuiSvgIcon-root': {
+                  fontSize: '18px'
+                }
+              },
+              '& .MuiDataGrid-columnHeaderCheckbox': {
+                '& .MuiCheckbox-root': {
+                  width: '18px !important',
+                  height: '18px !important',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '18px'
+                  }
+                }
+              },
+              '& .MuiDataGrid-cellCheckbox': {
+                '& .MuiCheckbox-root': {
+                  width: '18px !important',
+                  height: '18px !important',
+                  '& .MuiSvgIcon-root': {
+                    fontSize: '18px'
+                  }
+                }
               }
             }}
           />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,19 +23,20 @@ import {
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  Group as GroupIcon,
+  Edit as EditIcon,
   AttachMoney as MoneyIcon,
   Business as BusinessIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
   LocationOn as LocationIcon
 } from '@mui/icons-material';
-import InvestorsApiService from '../services/investorsApi';
+import InvestorsApiService, { Investor } from '../services/investorsApi';
 
-interface NewLPModalProps {
+interface EditLPModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  investor: Investor | null;
 }
 
 const investorTypes = [
@@ -70,7 +71,7 @@ const currencies = [
   { value: 'CAD', label: 'Canadian Dollar (CAD)' }
 ];
 
-export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps) {
+export default function EditLPModal({ open, onClose, onSuccess, investor }: EditLPModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -92,6 +93,28 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [preferenceInput, setPreferenceInput] = useState('');
+
+  useEffect(() => {
+    if (investor && open) {
+      setFormData({
+        name: investor.name || '',
+        type: investor.type || '',
+        region: investor.location || '',
+        commitment: investor.totalCommitment?.toString() || '',
+        currency: investor.metadata?.currency || 'USD',
+        contactName: investor.metadata?.contactName || '',
+        contactEmail: investor.metadata?.contactEmail || '',
+        contactPhone: investor.metadata?.contactPhone || '',
+        address: investor.metadata?.address || '',
+        website: investor.website || '',
+        description: investor.description || '',
+        investmentPreferences: investor.tags || [],
+        isQualifiedInvestor: investor.metadata?.isQualifiedInvestor ?? true,
+        requiresReporting: investor.metadata?.requiresReporting ?? true,
+        taxExempt: investor.metadata?.taxExempt ?? false
+      });
+    }
+  }, [investor, open]);
 
   const handleChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
     setFormData(prev => ({
@@ -125,11 +148,12 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
   };
 
   const handleSubmit = async () => {
+    if (!investor) return;
+
     try {
       setLoading(true);
       setError('');
 
-      // Validate required fields
       if (!formData.name.trim()) {
         setError('Investor name is required');
         return;
@@ -151,55 +175,33 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
         return;
       }
 
-      const lpData = {
+      const updateData = {
         name: formData.name.trim(),
         type: formData.type,
-        region: formData.region,
-        commitment: Number(formData.commitment),
-        called: 0, // Start with 0 called amount
-        currency: formData.currency,
-        contactName: formData.contactName.trim(),
-        contactEmail: formData.contactEmail.trim(),
-        ...(formData.contactPhone.trim() && { contactPhone: formData.contactPhone.trim() }),
-        ...(formData.address.trim() && { address: formData.address.trim() }),
+        location: formData.region,
+        totalCommitment: Number(formData.commitment),
         ...(formData.website.trim() && { website: formData.website.trim() }),
         ...(formData.description.trim() && { description: formData.description.trim() }),
-        ...(formData.investmentPreferences && formData.investmentPreferences.length > 0 && { investmentPreferences: formData.investmentPreferences }),
-        isQualifiedInvestor: formData.isQualifiedInvestor,
-        requiresReporting: formData.requiresReporting,
-        taxExempt: formData.taxExempt,
-        status: 'active',
-        onboardingDate: new Date().toISOString(),
-        entities: [] // Will be populated later as entities are added
+        ...(formData.investmentPreferences && formData.investmentPreferences.length > 0 && { tags: formData.investmentPreferences }),
+        metadata: {
+          currency: formData.currency,
+          contactName: formData.contactName.trim(),
+          contactEmail: formData.contactEmail.trim(),
+          ...(formData.contactPhone.trim() && { contactPhone: formData.contactPhone.trim() }),
+          ...(formData.address.trim() && { address: formData.address.trim() }),
+          isQualifiedInvestor: formData.isQualifiedInvestor,
+          requiresReporting: formData.requiresReporting,
+          taxExempt: formData.taxExempt
+        }
       };
 
-      // Use the proper API service
-      await InvestorsApiService.createInvestor(lpData);
-
-      // Reset form
-      setFormData({
-        name: '',
-        type: '',
-        region: '',
-        commitment: '',
-        currency: 'USD',
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
-        address: '',
-        website: '',
-        description: '',
-        investmentPreferences: [],
-        isQualifiedInvestor: true,
-        requiresReporting: true,
-        taxExempt: false
-      });
+      await InvestorsApiService.updateInvestor(investor.id, updateData);
 
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Error adding limited partner:', err);
-      setError(err.message || 'Failed to add limited partner');
+      console.error('Error updating investor:', err);
+      setError(err.message || 'Failed to update investor');
     } finally {
       setLoading(false);
     }
@@ -240,9 +242,9 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
         py: 2
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <GroupIcon />
+          <EditIcon />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Add New Limited Partner
+            Edit Limited Partner
           </Typography>
         </Box>
         <IconButton onClick={handleClose} sx={{ color: 'white' }} disabled={loading}>
@@ -258,7 +260,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
         )}
 
         <Grid container spacing={3} sx={{ mt: 4 }}>
-          {/* Investor Name */}
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -281,7 +282,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Investor Type */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required disabled={loading}>
               <InputLabel sx={{ color: '#333333', fontWeight: 500 }}>Investor Type</InputLabel>
@@ -299,7 +299,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             </FormControl>
           </Grid>
 
-          {/* Region */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth disabled={loading}>
               <InputLabel sx={{ color: '#333333', fontWeight: 500 }}>Region</InputLabel>
@@ -317,7 +316,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             </FormControl>
           </Grid>
 
-          {/* Commitment Amount */}
           <Grid item xs={12} sm={8}>
             <TextField
               fullWidth
@@ -346,7 +344,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Currency */}
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth disabled={loading}>
               <InputLabel sx={{ color: '#333333', fontWeight: 500 }}>Currency</InputLabel>
@@ -364,14 +361,12 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             </FormControl>
           </Grid>
 
-          {/* Contact Information Section */}
           <Grid item xs={12}>
             <Typography variant="h6" sx={{ fontWeight: 600, mt: 2, mb: 1 }}>
               Primary Contact Information
             </Typography>
           </Grid>
 
-          {/* Contact Name */}
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -387,7 +382,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Contact Email */}
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -410,7 +404,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Contact Phone */}
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -431,7 +424,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Website */}
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -446,7 +438,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Address */}
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -468,7 +459,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             />
           </Grid>
 
-          {/* Investment Preferences */}
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
               Investment Preferences
@@ -504,7 +494,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             </Box>
           </Grid>
 
-          {/* LP Characteristics */}
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
               LP Characteristics
@@ -543,7 +532,6 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
             </Box>
           </Grid>
 
-          {/* Description */}
           <Grid item xs={12}>
             <TextField
               fullWidth
@@ -581,9 +569,9 @@ export default function NewLPModal({ open, onClose, onSuccess }: NewLPModalProps
               bgcolor: '#333333'
             }
           }}
-          startIcon={loading ? <CircularProgress size={20} /> : <GroupIcon />}
+          startIcon={loading ? <CircularProgress size={20} /> : <EditIcon />}
         >
-          {loading ? 'Adding...' : 'Add Limited Partner'}
+          {loading ? 'Updating...' : 'Update Limited Partner'}
         </Button>
       </DialogActions>
     </Dialog>

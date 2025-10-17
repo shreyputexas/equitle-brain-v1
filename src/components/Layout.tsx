@@ -115,12 +115,7 @@ const navigationItems = [
   {
     text: 'Brain',
     icon: <BrainIcon />,
-    subItems: [
-      { text: 'Ask About Deal', path: '/brain', action: 'ask-deal' },
-      { text: 'Follow Up', path: '/brain', action: 'follow-up' },
-      { text: 'Analytics', path: '/brain', action: 'analytics' },
-      { text: 'Generate Report', path: '/brain', action: 'report' }
-    ]
+    path: '/brain'
   }
 ];
 
@@ -620,7 +615,7 @@ export default function Layout() {
           </>
         ) : (
           /* Top Mode - Traditional */
-          <Toolbar>
+          <Toolbar sx={{ px: { xs: 2, md: 3 }, minHeight: '64px !important' }}>
             {/* Mobile Menu Button */}
             <IconButton
               color="inherit"
@@ -649,9 +644,9 @@ export default function Layout() {
             />
 
             {/* Desktop Navigation Menu */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1 }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1, gap: 1 }}>
               {navigationItems.map((item) => (
-                <Box key={item.text} sx={{ mr: 2 }}>
+                <Box key={item.text}>
                   {item.subItems ? (
                     <>
                       <Button
@@ -662,6 +657,8 @@ export default function Layout() {
                           color: 'text.primary',
                           textTransform: 'none',
                           fontWeight: 500,
+                          px: 2,
+                          py: 1,
                           '&:hover': {
                             bgcolor: 'action.hover'
                           }
@@ -695,6 +692,8 @@ export default function Layout() {
                         color: location.pathname === item.path ? 'primary.main' : 'text.primary',
                         textTransform: 'none',
                         fontWeight: location.pathname === item.path ? 600 : 500,
+                        px: 2,
+                        py: 1,
                         '&:hover': {
                           bgcolor: 'action.hover'
                         }
@@ -711,8 +710,8 @@ export default function Layout() {
             <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }} />
 
             {/* Layout Toggle */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 2 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 3 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1 }}>
                 Layout:
               </Typography>
               <Button
@@ -759,7 +758,7 @@ export default function Layout() {
                 onClick={() => setQuickLookupOpen(true)}
                 sx={{
                   display: { xs: 'none', md: 'flex' },
-                  mr: 2,
+                  mr: 3,
                   bgcolor: 'background.default',
                   border: '1px solid',
                   borderColor: 'divider',
@@ -773,7 +772,7 @@ export default function Layout() {
             </Tooltip>
 
             {/* Right side - Profile with Notifications */}
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 'fit-content' }}>
               <Tooltip title="Profile">
                 <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0, position: 'relative' }}>
                   <Badge 
@@ -964,20 +963,20 @@ export default function Layout() {
             <IconButton
               onClick={handleBrainChatToggle}
               sx={{
-                width: 64,
-                height: 64,
+                width: 32,
+                height: 32,
                 bgcolor: 'primary.main',
                 color: 'white',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
                 '&:hover': {
                   bgcolor: 'primary.dark',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.4)'
+                  transform: 'scale(1.05)',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
                 },
                 transition: 'all 0.3s ease'
               }}
             >
-              <MicIcon sx={{ fontSize: 28 }} />
+              <MicIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
         ) : (
