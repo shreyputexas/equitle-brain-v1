@@ -36,6 +36,7 @@ import {
   Search as SearchIcon,
   Logout as LogoutIcon,
   People as RelationshipsIcon,
+  Person as PersonIcon,
   AccountBalance as LimitedPartnersIcon,
   BusinessCenter as FundsIcon,
   KeyboardArrowDown as ArrowDownIcon,
@@ -808,6 +809,12 @@ export default function Layout() {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
+        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/profile'); }}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          My Profile
+        </MenuItem>
         <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
