@@ -29,6 +29,8 @@ import firebaseContactsActivitiesRoutes from './routes/firebaseContactsActivitie
 import firebaseDocumentsRoutes from './routes/firebaseDocuments';
 import firebaseEmailsRoutes from './routes/firebaseEmails';
 import searcherProfilesRoutes from './routes/searcherProfiles';
+import thesisRoutes from './routes/thesis';
+import onePagerRoutes from './routes/onePager';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import googleWorkspaceRoutes from './routes/googleWorkspace';
@@ -155,6 +157,10 @@ app.use('/api/firebase-documents', firebaseDocumentsRoutes);
 app.use('/api/firebase-emails', firebaseEmailsRoutes);
 // Searcher profiles routes
 app.use('/api/searcher-profiles', searcherProfilesRoutes);
+// Investment thesis routes
+app.use('/api/thesis', thesisRoutes);
+// One-pager generation routes
+app.use('/api/one-pager', onePagerRoutes);
 app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
