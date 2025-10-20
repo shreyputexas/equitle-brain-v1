@@ -33,6 +33,7 @@ export interface SearcherProfile {
   education: Education[];
   experience: Experience[];
   avatar?: string;
+  headshotUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }

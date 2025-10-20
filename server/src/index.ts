@@ -8,6 +8,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { WebSocketServer } from 'ws';
@@ -31,6 +32,7 @@ import firebaseEmailsRoutes from './routes/firebaseEmails';
 import searcherProfilesRoutes from './routes/searcherProfiles';
 import thesisRoutes from './routes/thesis';
 import onePagerRoutes from './routes/onePager';
+import headshotsRoutes from './routes/headshots';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import googleWorkspaceRoutes from './routes/googleWorkspace';
@@ -102,7 +104,19 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.'
 });
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "http://localhost:4001", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https:", "data:"],
+      connectSrc: ["'self'", "http://localhost:4001"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(compression());
 app.use(cors({
   origin: [
@@ -115,6 +129,14 @@ app.use(cors({
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory with CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -161,6 +183,8 @@ app.use('/api/searcher-profiles', searcherProfilesRoutes);
 app.use('/api/thesis', thesisRoutes);
 // One-pager generation routes
 app.use('/api/one-pager', onePagerRoutes);
+// Headshot upload routes
+app.use('/api/headshots', headshotsRoutes);
 app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
