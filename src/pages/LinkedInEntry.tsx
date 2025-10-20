@@ -138,9 +138,11 @@ const LinkedInEntry: React.FC = () => {
         });
       }
     } catch (error) {
+      console.error('❌ Error generating message:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setMessage({
         type: 'error',
-        text: 'Error generating message. Please try again.'
+        text: `Error generating message: ${errorMessage}. Please try again.`
       });
     } finally {
       setIsSubmitting(false);

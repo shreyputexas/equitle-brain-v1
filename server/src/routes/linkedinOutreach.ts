@@ -96,8 +96,8 @@ else:
     print(json.dumps({'error': 'Failed to scrape website'}))
 `;
 
-  // Execute website scraper
-  const scraper = spawn('python', ['-c', scrapeCode]);
+  // Execute website scraper (use python3 on macOS)
+  const scraper = spawn('python3', ['-c', scrapeCode]);
   
   let scraperOutput = '';
   let scraperError = '';

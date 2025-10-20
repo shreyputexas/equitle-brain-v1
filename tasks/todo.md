@@ -1,3 +1,16 @@
+# LinkedIn Outreach Message Generation - Fixed
+
+## Issue Fixed
+**Problem**: "Error generating message" when trying to generate personalized LinkedIn outreach messages with website data.
+
+**Root Cause**: Server was trying to spawn `python` command which doesn't exist on macOS (should be `python3`). This caused the website scraper to fail and crash the server.
+
+**Solution**: Changed `spawn('python', ...)` to `spawn('python3', ...)` in `server/src/routes/linkedinOutreach.ts:100`
+
+**Status**: ✅ Fixed and tested. Server now running successfully.
+
+---
+
 # Pivot from LinkedIn to Website Scraping - Task Plan
 
 ## Problem Analysis
