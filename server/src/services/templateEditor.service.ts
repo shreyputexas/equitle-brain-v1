@@ -188,6 +188,12 @@ export class TemplateEditorService {
 
       console.log('Modified document.xml length:', modifiedXml.length);
 
+      // Handle image replacements
+      console.log('Processing image replacements...');
+      console.log('Data structure for images:', JSON.stringify(data, null, 2));
+      console.log('Searcher profiles for images:', data.searcherProfiles);
+      await this.replaceImages(zip, data);
+
       // Update the ZIP with the modified document.xml
       zip.file('word/document.xml', modifiedXml);
 
@@ -201,6 +207,103 @@ export class TemplateEditorService {
     } catch (error) {
       console.error('Error in replaceTextInDocx:', error);
       throw error;
+    }
+  }
+
+  private async replaceImages(zip: any, data: TemplateData): Promise<void> {
+    try {
+      console.log('=== STARTING IMAGE REPLACEMENT PROCESS ===');
+      console.log('Starting image replacement process...');
+      
+      // Get searcher headshots
+      const searcherProfiles = data.searcherProfiles || [];
+      console.log(`Found ${searcherProfiles.length} searcher profiles`);
+      
+      if (searcherProfiles.length === 0) {
+        console.log('No searcher profiles found, skipping image replacement');
+        return;
+      }
+      
+      // Replace images in order (image1.png, image2.png, etc.)
+      for (let i = 0; i < searcherProfiles.length && i < 2; i++) {
+        const searcher = searcherProfiles[i];
+        const imagePath = `word/media/image${i + 1}.png`;
+        
+        console.log(`Processing image ${i + 1} for searcher: ${searcher.name}`);
+        console.log(`Headshot URL: ${searcher.headshotUrl}`);
+        
+        if (searcher.headshotUrl) {
+          try {
+            // Download the headshot image
+            const imageBuffer = await this.downloadImage(searcher.headshotUrl);
+            if (imageBuffer) {
+              // Replace the image in the ZIP
+              zip.file(imagePath, imageBuffer);
+              console.log(`Successfully replaced ${imagePath} with headshot for ${searcher.name}`);
+            } else {
+              console.log(`Failed to download image for ${searcher.name}`);
+            }
+          } catch (error) {
+            console.error(`Error processing image for ${searcher.name}:`, error);
+          }
+        } else {
+          console.log(`No headshot URL provided for ${searcher.name}`);
+        }
+      }
+      
+      console.log('=== IMAGE REPLACEMENT PROCESS COMPLETED ===');
+    } catch (error) {
+      console.error('=== ERROR IN IMAGE REPLACEMENT ===');
+      console.error('Error in replaceImages:', error);
+      // Don't throw error - continue with text-only replacement if images fail
+    }
+  }
+
+  private async downloadImage(imageUrl: string): Promise<Buffer | null> {
+    try {
+      console.log(`Loading image from: ${imageUrl}`);
+      
+      // Handle both HTTP URLs and local file paths
+      if (imageUrl.startsWith('http')) {
+        // HTTP download
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+          console.error(`Failed to download image: ${response.status} ${response.statusText}`);
+          return null;
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        console.log(`Image downloaded successfully, size: ${buffer.length} bytes`);
+        return buffer;
+      } else {
+        // Local file system
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Convert URL to local file path
+        let filePath = imageUrl;
+        if (imageUrl.startsWith('/uploads/')) {
+          filePath = path.join(process.cwd(), imageUrl);
+        } else if (imageUrl.includes('uploads/')) {
+          filePath = path.join(process.cwd(), imageUrl);
+        }
+        
+        console.log(`Reading local file: ${filePath}`);
+        
+        if (!fs.existsSync(filePath)) {
+          console.error(`File not found: ${filePath}`);
+          return null;
+        }
+        
+        const buffer = fs.readFileSync(filePath);
+        console.log(`Local image loaded successfully, size: ${buffer.length} bytes`);
+        return buffer;
+      }
+    } catch (error) {
+      console.error(`Error loading image: ${error.message}`);
+      return null;
     }
   }
 

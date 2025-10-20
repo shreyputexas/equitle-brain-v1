@@ -69,13 +69,44 @@ router.post('/test-generate', async (req, res) => {
       userId: mockUser.uid
     };
 
-    // Call the actual generation service
-    const result = await onePagerGenerationService.generateDocxWithTemplate({
-      searcherProfiles,
-      thesisData,
-      teamConnection,
-      template: template || 'navy_blue'
-    });
+            // Generate content first
+            const content = await onePagerGenerationService.generateContent({
+              searcherProfiles: [
+                {
+                  name: "Shariq Hafizi",
+                  title: "Founder",
+                  headshotUrl: "/uploads/headshots/test-headshot-1.jpg"
+                },
+                {
+                  name: "Hazyk Obaid", 
+                  title: "Co-Founder",
+                  headshotUrl: "/uploads/headshots/test-headshot-2.jpg"
+                }
+              ],
+              thesisData,
+              teamConnection,
+              template: template || 'navy_blue'
+            });
+
+            // Call the actual generation service with content
+            const result = await onePagerGenerationService.generateDocxWithTemplate({
+              searcherProfiles: [
+                {
+                  name: "Shariq Hafizi",
+                  title: "Founder",
+                  headshotUrl: "/uploads/headshots/test-headshot-1.jpg" // Local file path
+                },
+                {
+                  name: "Hazyk Obaid", 
+                  title: "Co-Founder",
+                  headshotUrl: "/uploads/headshots/test-headshot-2.jpg" // Local file path
+                }
+              ],
+              thesisData,
+              teamConnection,
+              template: template || 'navy_blue',
+              content // Pass the generated content
+            });
 
     console.log('Generation result size:', result.length);
     console.log('=== END DEBUG ===');
