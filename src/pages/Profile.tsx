@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { headshotsApi } from '../services/headshotsApi';
+import { logosApi } from '../services/logosApi';
 import { HeadshotCropper } from '../components/HeadshotCropper';
 import {
   Box,
@@ -126,6 +127,12 @@ export default function Profile() {
     imageSrc: string;
   } | null>(null);
 
+  // Logo upload state
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [searchFundLogo, setSearchFundLogo] = useState<string | null>(null);
+  const [searchFundName, setSearchFundName] = useState('');
+  const [searchFundWebsite, setSearchFundWebsite] = useState('');
+
   // Load team connection from Firebase
   useEffect(() => {
     const loadTeamConnection = async () => {
@@ -143,6 +150,28 @@ export default function Profile() {
     };
 
     loadTeamConnection();
+  }, []);
+
+  // Load search fund logo and name from Firebase
+  useEffect(() => {
+    const loadSearchFundData = async () => {
+      try {
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userRef = doc(db, 'users', userId);
+        const docSnap = await getDoc(userRef);
+        
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          setSearchFundLogo(userData.searchFundLogo || null);
+          setSearchFundName(userData.searchFundName || '');
+          setSearchFundWebsite(userData.searchFundWebsite || '');
+        }
+      } catch (error) {
+        console.error('Error loading search fund data:', error);
+      }
+    };
+
+    loadSearchFundData();
   }, []);
 
   const handleAddSearcher = async () => {
@@ -503,6 +532,93 @@ export default function Profile() {
     }
   };
 
+  // Logo upload handlers
+  const handleLogoFileSelect = async (file: File) => {
+    try {
+      setUploadingLogo(true);
+      setError('');
+
+      const response = await logosApi.uploadLogo(file);
+      
+      if (response.success) {
+        // Update the local logo state
+        setSearchFundLogo(response.imageUrl);
+        
+        setSuccess('Logo uploaded successfully!');
+      } else {
+        setError(response.message || 'Failed to upload logo');
+      }
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      setError(error.message || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoDelete = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await logosApi.deleteLogo();
+      
+      if (response.success) {
+        setSearchFundLogo(null);
+        setSuccess('Logo deleted successfully!');
+      } else {
+        setError(response.message || 'Failed to delete logo');
+      }
+    } catch (error: any) {
+      console.error('Error deleting logo:', error);
+      setError(error.message || 'Failed to delete logo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchFundNameSave = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, {
+        searchFundName: searchFundName,
+        updatedAt: new Date()
+      }, { merge: true });
+      
+      setSuccess('Search fund name saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving search fund name:', error);
+      setError('Failed to save search fund name');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchFundWebsiteSave = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, {
+        searchFundWebsite: searchFundWebsite,
+        updatedAt: new Date()
+      }, { merge: true });
+      
+      setSuccess('Search fund website saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving search fund website:', error);
+      setError('Failed to save search fund website');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetEducationForm = () => {
     setEducationForm({
       institution: '',
@@ -598,6 +714,174 @@ export default function Profile() {
           <CircularProgress />
         </Box>
       )}
+
+      {/* Search Fund Information */}
+      <Paper sx={{ p: 4, mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: '#000000', mb: 1 }}>
+              Search Fund Information
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Set your search fund name and upload logo for use in documents and materials
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Search Fund Name */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
+            Search Fund Name
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Enter your search fund name"
+              value={searchFundName}
+              onChange={(e) => setSearchFundName(e.target.value)}
+              sx={{ maxWidth: 400 }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchFundNameSave}
+              disabled={loading || !searchFundName.trim()}
+              sx={{ 
+                bgcolor: '#000000', 
+                '&:hover': { bgcolor: '#333333' },
+                minWidth: 120
+              }}
+            >
+              {loading ? 'Saving...' : 'Save Name'}
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Search Fund Website */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
+            Search Fund Website
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Enter your search fund website (e.g., https://example.com)"
+              value={searchFundWebsite}
+              onChange={(e) => setSearchFundWebsite(e.target.value)}
+              sx={{ maxWidth: 400 }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchFundWebsiteSave}
+              disabled={loading || !searchFundWebsite.trim()}
+              sx={{ 
+                bgcolor: '#000000', 
+                '&:hover': { bgcolor: '#333333' },
+                minWidth: 120
+              }}
+            >
+              {loading ? 'Saving...' : 'Save Website'}
+            </Button>
+          </Box>
+        </Box>
+
+        <Divider sx={{ mb: 4 }} />
+
+        {/* Search Fund Logo */}
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
+            Search Fund Logo
+          </Typography>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          {/* Logo Display */}
+          <Box sx={{ position: 'relative' }}>
+            {searchFundLogo ? (
+              <Box
+                component="img"
+                src={getAbsoluteHeadshotUrl(searchFundLogo)}
+                alt="Search Fund Logo"
+                sx={{
+                  width: 120,
+                  height: 120,
+                  objectFit: 'contain',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: 2,
+                  bgcolor: '#fafafa',
+                  p: 1
+                }}
+                onLoad={() => console.log('✅ Logo loaded successfully:', getAbsoluteHeadshotUrl(searchFundLogo))}
+                onError={(e) => {
+                  console.log('❌ Logo failed to load:', getAbsoluteHeadshotUrl(searchFundLogo));
+                  console.log('❌ Error details:', e);
+                }}
+              />
+            ) : (
+              <Box
+                sx={{
+                  width: 120,
+                  height: 120,
+                  border: '2px dashed #e0e0e0',
+                  borderRadius: 2,
+                  bgcolor: '#fafafa',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'column',
+                  gap: 1
+                }}
+              >
+                <PhotoCameraIcon sx={{ fontSize: 32, color: '#9e9e9e' }} />
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  No Logo
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* Logo Actions */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <input
+              accept="image/*"
+              style={{ display: 'none' }}
+              id="logo-upload"
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleLogoFileSelect(file);
+                }
+              }}
+            />
+            <label htmlFor="logo-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<PhotoCameraIcon />}
+                disabled={uploadingLogo}
+                sx={{ minWidth: 140 }}
+              >
+                {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+              </Button>
+            </label>
+            
+            {searchFundLogo && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={handleLogoDelete}
+                disabled={loading}
+                sx={{ minWidth: 140 }}
+              >
+                Delete Logo
+              </Button>
+            )}
+          </Box>
+          </Box>
+        </Box>
+      </Paper>
 
       {/* Searcher Profiles */}
       <Paper sx={{ p: 4, position: 'relative' }}>
@@ -1313,6 +1597,7 @@ export default function Profile() {
           searcherName={croppingImage.searcherName}
         />
       )}
+
     </Box>
   );
 }
