@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { headshotsApi } from '../services/headshotsApi';
+import { HeadshotCropper } from '../components/HeadshotCropper';
 import {
   Box,
   Typography,
@@ -43,11 +45,26 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   Save as SaveIcon,
-  Cancel as CancelIcon
+  Cancel as CancelIcon,
+  PhotoCamera as PhotoCameraIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';
 
+
+// Helper function to ensure headshot URL is absolute
+const getAbsoluteHeadshotUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+
+  // If URL is already absolute, return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // If URL is relative, prepend the base URL
+  const baseUrl = 'http://localhost:4001';
+  return `${baseUrl}${url}`;
+};
 
 export default function Profile() {
   const { user } = useAuth();
@@ -100,6 +117,14 @@ export default function Profile() {
 
   // Team connection state
   const [teamConnection, setTeamConnection] = useState('');
+
+  // Headshot upload state
+  const [uploadingHeadshot, setUploadingHeadshot] = useState<string | null>(null);
+  const [croppingImage, setCroppingImage] = useState<{
+    searcherId: string;
+    searcherName: string;
+    imageSrc: string;
+  } | null>(null);
 
   // Load team connection from Firebase
   useEffect(() => {
@@ -180,8 +205,8 @@ export default function Profile() {
         console.error('Error updating searcher profile:', error);
         setError(error.response?.data?.message || 'Failed to update searcher profile');
     } finally {
-        setLoading(false);
-      }
+      setLoading(false);
+    }
     }
   };
 
@@ -389,6 +414,95 @@ export default function Profile() {
     }
   };
 
+  const handleHeadshotFileSelect = (searcherId: string, file: File) => {
+    const searcher = searchers.find(s => s.id === searcherId);
+    if (!searcher) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageSrc = e.target?.result as string;
+      setCroppingImage({
+        searcherId,
+        searcherName: searcher.name,
+        imageSrc
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = async (croppedImageBlob: Blob) => {
+    if (!croppingImage) return;
+
+    try {
+      setUploadingHeadshot(croppingImage.searcherId);
+      setError('');
+
+      // Create a File object from the blob
+      const croppedFile = new File([croppedImageBlob], 'headshot.jpg', {
+        type: 'image/jpeg'
+      });
+
+      const response = await headshotsApi.uploadHeadshot(croppingImage.searcherId, croppedFile);
+      console.log('📤 Upload response:', response);
+      
+      if (response.success) {
+        // Update the local searcher data with the new headshot URL
+        console.log('🔄 Updating searcher with headshot URL:', response.imageUrl);
+        setSearchers(searchers.map(searcher => 
+          searcher.id === croppingImage.searcherId 
+            ? { ...searcher, headshotUrl: response.imageUrl }
+            : searcher
+        ));
+        
+        setSuccess('Headshot uploaded successfully!');
+        
+        // Reload searcher profiles to get the updated data from the database
+        try {
+          const profiles = await searcherProfilesApi.getSearcherProfiles();
+          console.log('🔄 Reloaded searcher profiles after upload:', profiles);
+          setSearchers(profiles);
+        } catch (reloadError) {
+          console.error('Error reloading searcher profiles:', reloadError);
+        }
+      } else {
+        setError(response.message || 'Failed to upload headshot');
+      }
+    } catch (error: any) {
+      console.error('Error uploading headshot:', error);
+      setError(error.message || 'Failed to upload headshot');
+    } finally {
+      setUploadingHeadshot(null);
+      setCroppingImage(null);
+    }
+  };
+
+  const handleHeadshotDelete = async (searcherId: string) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await headshotsApi.deleteHeadshot(searcherId);
+      
+      if (response.success) {
+        // Update the local searcher data to remove the headshot URL
+        setSearchers(searchers.map(searcher => 
+          searcher.id === searcherId 
+            ? { ...searcher, headshotUrl: undefined }
+            : searcher
+        ));
+        
+        setSuccess('Headshot deleted successfully!');
+      } else {
+        setError(response.message || 'Failed to delete headshot');
+      }
+    } catch (error: any) {
+      console.error('Error deleting headshot:', error);
+      setError(error.message || 'Failed to delete headshot');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetEducationForm = () => {
     setEducationForm({
       institution: '',
@@ -427,8 +541,26 @@ export default function Profile() {
     const loadSearcherProfiles = async () => {
       try {
         setLoading(true);
-        const profiles = await searcherProfilesApi.getSearcherProfiles();
-        setSearchers(profiles);
+      const profiles = await searcherProfilesApi.getSearcherProfiles();
+      console.log('Loaded searcher profiles:', profiles);
+      profiles.forEach(profile => {
+        console.log(`🔍 Profile ${profile.name}:`, {
+          id: profile.id,
+          headshotUrl: profile.headshotUrl,
+          hasHeadshot: !!profile.headshotUrl,
+          fullProfile: profile
+        });
+        
+        // Test if the image URL is accessible
+        if (profile.headshotUrl) {
+          const testImg = new Image();
+          const absoluteUrl = getAbsoluteHeadshotUrl(profile.headshotUrl);
+          testImg.onload = () => console.log(`✅ Test image loaded: ${absoluteUrl}`);
+          testImg.onerror = () => console.log(`❌ Test image failed: ${absoluteUrl}`);
+          testImg.src = absoluteUrl || '';
+        }
+      });
+      setSearchers(profiles);
       } catch (error: any) {
         console.error('Error loading searcher profiles:', error);
         setError(error.response?.data?.message || 'Failed to load searcher profiles');
@@ -486,7 +618,7 @@ export default function Profile() {
         </Box>
         {searchers.length === 0 ? (
           <Card 
-            variant="outlined" 
+                variant="outlined"
             sx={{ 
               textAlign: 'center', 
               py: 6,
@@ -502,8 +634,8 @@ export default function Profile() {
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
                 Create your first searcher profile to start generating personalized pitches
               </Typography>
-              <Button
-                variant="contained"
+                <Button
+                  variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setIsAddingSearcher(true)}
                 size="large"
@@ -515,7 +647,7 @@ export default function Profile() {
                 }}
               >
                 Add First Searcher
-              </Button>
+                </Button>
             </CardContent>
           </Card>
         ) : (
@@ -535,18 +667,84 @@ export default function Profile() {
                 >
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                      <Avatar 
-                        sx={{ 
-                          mr: 2, 
-                          bgcolor: '#000000', 
-                          width: 56, 
-                          height: 56,
-                          fontSize: '1.25rem',
-                          fontWeight: 600
-                        }}
-                      >
-                        {searcher.name.charAt(0).toUpperCase()}
-                      </Avatar>
+                      <Box sx={{ position: 'relative', mr: 2 }}>
+                        <Avatar
+                          src={getAbsoluteHeadshotUrl(searcher.headshotUrl)}
+                          sx={{
+                            bgcolor: '#000000',
+                            width: 56,
+                            height: 56,
+                            fontSize: '1.25rem',
+                            fontWeight: 600
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Avatar image loaded successfully:', getAbsoluteHeadshotUrl(searcher.headshotUrl));
+                          }}
+                          onError={(e) => {
+                            console.log('❌ Avatar image failed to load:', getAbsoluteHeadshotUrl(searcher.headshotUrl));
+                            console.log('❌ Error details:', e);
+                          }}
+                        >
+                          {searcher.name.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <input
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          id={`headshot-upload-${searcher.id}`}
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleHeadshotFileSelect(searcher.id, file);
+                            }
+                          }}
+                        />
+                        <label htmlFor={`headshot-upload-${searcher.id}`}>
+                          <IconButton
+                            component="span"
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              bottom: -5,
+                              right: -5,
+                              bgcolor: '#000000',
+                              color: 'white',
+                              '&:hover': {
+                                bgcolor: '#333333'
+                              },
+                              width: 24,
+                              height: 24
+                            }}
+                            disabled={uploadingHeadshot === searcher.id}
+                          >
+                            {uploadingHeadshot === searcher.id ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : (
+                              <PhotoCameraIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </label>
+                        {searcher.headshotUrl && (
+                          <IconButton
+                            size="small"
+                            onClick={() => handleHeadshotDelete(searcher.id)}
+                            sx={{
+                              position: 'absolute',
+                              top: -5,
+                              right: -5,
+                              bgcolor: 'error.main',
+                              color: 'white',
+                              '&:hover': {
+                                bgcolor: 'error.dark'
+                              },
+                              width: 20,
+                              height: 20
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
                           {searcher.name}
@@ -630,8 +828,8 @@ export default function Profile() {
         
         {/* Add Searcher Profile Button - Always visible */}
         <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-          <Button
-            variant="outlined"
+                <Button
+                  variant="outlined"
             startIcon={<AddIcon />}
             onClick={() => setIsAddingSearcher(true)}
             size="large"
@@ -647,8 +845,8 @@ export default function Profile() {
             }}
           >
             Add Searcher Profile
-          </Button>
-        </Box>
+                </Button>
+              </Box>
 
         {/* Team Connection Section - Only show if multiple searchers */}
         {searchers.length > 1 && (
@@ -698,7 +896,7 @@ export default function Profile() {
                 >
                   {loading ? 'Saving...' : 'Save Team Connection'}
                 </Button>
-              </Box>
+          </Box>
             </CardContent>
           </Card>
         )}
@@ -799,14 +997,14 @@ export default function Profile() {
                 <Typography variant="h6" sx={{ color: '#000000' }}>
                   Education
                 </Typography>
-                <Button
-                  variant="outlined"
+              <Button
+                variant="outlined"
                   startIcon={<AddIcon />}
                   onClick={() => setIsAddingEducation(true)}
                   size="small"
-                >
+              >
                   Add Education
-                </Button>
+              </Button>
               </Box>
               
               {searcherForm.education && searcherForm.education.length > 0 ? (
@@ -895,12 +1093,12 @@ export default function Profile() {
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
-          <Button
-            variant="outlined"
+                <Button
+                  variant="outlined"
             onClick={handleCancelAdd}
-          >
-            Cancel
-          </Button>
+                >
+                  Cancel
+                </Button>
           <Button
             variant="contained"
             onClick={isEditingSearcher ? handleUpdateSearcher : handleAddSearcher}
@@ -943,7 +1141,7 @@ export default function Profile() {
                 onChange={(e) => setEducationForm({ ...educationForm, field: e.target.value })}
                 required
               />
-            </Grid>
+          </Grid>
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
@@ -1104,6 +1302,17 @@ export default function Profile() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Headshot Cropper Dialog */}
+      {croppingImage && (
+        <HeadshotCropper
+          open={!!croppingImage}
+          onClose={() => setCroppingImage(null)}
+          imageSrc={croppingImage.imageSrc}
+          onCropFinish={handleCropComplete}
+          searcherName={croppingImage.searcherName}
+        />
+      )}
     </Box>
   );
 }

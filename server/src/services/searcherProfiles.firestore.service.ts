@@ -28,6 +28,7 @@ export interface SearcherProfile {
     achievements?: string;
   }>;
   avatar?: string;
+  headshotUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
