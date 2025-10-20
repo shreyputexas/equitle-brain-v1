@@ -132,6 +132,8 @@ export default function Profile() {
   const [searchFundLogo, setSearchFundLogo] = useState<string | null>(null);
   const [searchFundName, setSearchFundName] = useState('');
   const [searchFundWebsite, setSearchFundWebsite] = useState('');
+  const [searchFundAddress, setSearchFundAddress] = useState('');
+  const [searchFundEmail, setSearchFundEmail] = useState('');
 
   // Load team connection from Firebase
   useEffect(() => {
@@ -165,6 +167,8 @@ export default function Profile() {
           setSearchFundLogo(userData.searchFundLogo || null);
           setSearchFundName(userData.searchFundName || '');
           setSearchFundWebsite(userData.searchFundWebsite || '');
+          setSearchFundAddress(userData.searchFundAddress || '');
+          setSearchFundEmail(userData.searchFundEmail || '');
         }
       } catch (error) {
         console.error('Error loading search fund data:', error);
@@ -367,7 +371,7 @@ export default function Profile() {
     setSearcherForm({
       name: '',
       title: '',
-      bio: '',
+      bio: '', 
       why: '',
       education: [],
       experience: []
@@ -619,6 +623,48 @@ export default function Profile() {
     }
   };
 
+  const handleSearchFundAddressSave = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, {
+        searchFundAddress: searchFundAddress,
+        updatedAt: new Date()
+      }, { merge: true });
+      
+      setSuccess('Search fund address saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving search fund address:', error);
+      setError('Failed to save search fund address');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchFundEmailSave = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, {
+        searchFundEmail: searchFundEmail,
+        updatedAt: new Date()
+      }, { merge: true });
+      
+      setSuccess('Search fund email saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving search fund email:', error);
+      setError('Failed to save search fund email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetEducationForm = () => {
     setEducationForm({
       institution: '',
@@ -782,6 +828,64 @@ export default function Profile() {
               }}
             >
               {loading ? 'Saving...' : 'Save Website'}
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Search Fund Address */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
+            Office Address
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Enter your office address"
+              value={searchFundAddress}
+              onChange={(e) => setSearchFundAddress(e.target.value)}
+              sx={{ maxWidth: 400 }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchFundAddressSave}
+              disabled={loading || !searchFundAddress.trim()}
+              sx={{ 
+                bgcolor: '#000000', 
+                '&:hover': { bgcolor: '#333333' },
+                minWidth: 120
+              }}
+            >
+              {loading ? 'Saving...' : 'Save Address'}
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Search Fund Email */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
+            Contact Email
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Enter your contact email"
+              value={searchFundEmail}
+              onChange={(e) => setSearchFundEmail(e.target.value)}
+              sx={{ maxWidth: 400 }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchFundEmailSave}
+              disabled={loading || !searchFundEmail.trim()}
+              sx={{ 
+                bgcolor: '#000000', 
+                '&:hover': { bgcolor: '#333333' },
+                minWidth: 120
+              }}
+            >
+              {loading ? 'Saving...' : 'Save Email'}
             </Button>
           </Box>
         </Box>
