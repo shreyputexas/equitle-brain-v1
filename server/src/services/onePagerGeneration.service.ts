@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import fs from 'fs';
 import path from 'path';
+import { templateEditorService, TemplateData } from './templateEditor.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -13,6 +14,7 @@ export interface SearcherProfile {
   title: string;
   bio: string;
   why: string;
+  headshotUrl?: string;
   education: Array<{
     id: string;
     institution: string;
@@ -54,6 +56,12 @@ export interface OnePagerRequest {
   searcherProfiles: SearcherProfile[];
   thesisData: ThesisData;
   teamConnection?: string;
+  template?: string;
+  searchFundName?: string;
+  searchFundWebsite?: string;
+  searchFundLogo?: string;
+  searchFundAddress?: string;
+  searchFundEmail?: string;
 }
 
 export interface OnePagerContent {
@@ -68,6 +76,7 @@ export class OnePagerGenerationService {
     const prompt = this.buildPrompt(request);
     
     try {
+      console.log('Calling OpenAI API for content generation...');
       const completion = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
@@ -84,11 +93,18 @@ export class OnePagerGenerationService {
         max_tokens: 2000
       });
 
+      console.log('OpenAI API call successful');
       const content = completion.choices[0].message.content;
       return this.parseContent(content);
-    } catch (error) {
-      console.error('Error generating one-pager content:', error);
-      throw new Error('Failed to generate one-pager content');
+    } catch (error: any) {
+      console.error('=== OPENAI API ERROR ===');
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error type:', error?.type);
+      console.error('Error status:', error?.status);
+      console.error('Full error:', error);
+      console.error('========================');
+      throw new Error(`Failed to generate one-pager content: ${error?.message || error}`);
     }
   }
 
@@ -348,6 +364,31 @@ OUR_STORIES:
     });
 
     return await Packer.toBuffer(doc);
+  }
+
+  async generateDocxWithTemplate(request: OnePagerRequest, content: OnePagerContent): Promise<Buffer> {
+    // Check if template is specified and not basic
+    if (request.template && request.template !== 'basic') {
+      const templateData: TemplateData = {
+        searchFundName: request.searchFundName || 'Search Fund',
+        searchFundWebsite: request.searchFundWebsite || '',
+        searchFundLogo: request.searchFundLogo,
+        searchFundAddress: request.searchFundAddress,
+        searchFundEmail: request.searchFundEmail,
+        searcherProfiles: request.searcherProfiles.map(profile => ({
+          name: profile.name,
+          title: profile.title,
+          headshotUrl: profile.headshotUrl
+        })),
+        content
+      };
+
+      return await templateEditorService.editTemplate(request.template, templateData);
+    }
+
+    // Fall back to basic template for 'basic' or no template specified
+    const searcherNames = request.searcherProfiles.map(profile => profile.name);
+    return await this.generateDocx(content, searcherNames);
   }
 }
 

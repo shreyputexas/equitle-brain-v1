@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import integrationService from '../services/integrationService';
 import { db } from '../lib/firebase';
 import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, Timestamp, getDoc } from 'firebase/firestore';
-import { onePagerApi, OnePagerRequest } from '../services/onePagerApi';
+import { onePagerApi } from '../services/onePagerApi';
+import type { OnePagerRequest } from '../services/onePagerApi';
 import {
   Box,
   Typography,
@@ -702,7 +703,8 @@ const MyThesis: React.FC = () => {
             value: c.value.toString()
           }))
         },
-        teamConnection: teamConnection || undefined
+        teamConnection: teamConnection || undefined,
+        template: selectedTemplate
       };
 
       console.log('Generating personal pitch with:', request);
@@ -1625,6 +1627,7 @@ const MyThesis: React.FC = () => {
                   label="Select Template"
                 >
                   <MenuItem value="basic">Basic Template</MenuItem>
+                  <MenuItem value="navy_blue">Navy Blue</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -2763,7 +2766,7 @@ const MyThesis: React.FC = () => {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Template Preview - {selectedTemplate === 'basic' ? 'Basic Template' : selectedTemplate}
+            Template Preview - {selectedTemplate === 'basic' ? 'Basic Template' : selectedTemplate === 'navy_blue' ? 'Navy Blue' : selectedTemplate}
           </Typography>
           <IconButton onClick={() => setShowTemplatePreview(false)}>
             <CloseIcon />

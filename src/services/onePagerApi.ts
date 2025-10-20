@@ -6,6 +6,7 @@ export interface SearcherProfile {
   title: string;
   bio: string;
   why: string;
+  headshotUrl?: string;
   education: Array<{
     id: string;
     institution: string;
@@ -47,6 +48,12 @@ export interface OnePagerRequest {
   searcherProfiles: SearcherProfile[];
   thesisData: ThesisData;
   teamConnection?: string;
+  template?: string; // Template name for document generation
+  searchFundName?: string;
+  searchFundWebsite?: string;
+  searchFundLogo?: string;
+  searchFundAddress?: string;
+  searchFundEmail?: string;
 }
 
 export interface OnePagerContent {
@@ -92,7 +99,20 @@ class OnePagerApi {
       return response.data;
     } catch (error: any) {
       console.error('Error generating one-pager DOCX:', error);
-      throw new Error(error.response?.data?.message || 'Failed to generate one-pager DOCX');
+
+      // Try to extract error message from blob response
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const errorData = JSON.parse(text);
+          console.error('Server error details:', errorData);
+          throw new Error(errorData.error || errorData.message || 'Failed to generate one-pager DOCX');
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+        }
+      }
+
+      throw new Error(error.response?.data?.message || error.message || 'Failed to generate one-pager DOCX');
     }
   }
 }
