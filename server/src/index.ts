@@ -33,6 +33,7 @@ import searcherProfilesRoutes from './routes/searcherProfiles';
 import thesisRoutes from './routes/thesis';
 import onePagerRoutes from './routes/onePager';
 import headshotsRoutes from './routes/headshots';
+import logosRoutes from './routes/logos';
 import reportRoutes from './routes/reports';
 import integrationRoutes from './routes/integrations';
 import googleWorkspaceRoutes from './routes/googleWorkspace';
@@ -185,6 +186,7 @@ app.use('/api/thesis', thesisRoutes);
 app.use('/api/one-pager', onePagerRoutes);
 // Headshot upload routes
 app.use('/api/headshots', headshotsRoutes);
+app.use('/api/logos', logosRoutes);
 app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
