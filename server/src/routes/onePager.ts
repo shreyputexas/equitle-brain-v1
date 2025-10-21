@@ -2,7 +2,6 @@ import express from 'express';
 import { onePagerGenerationService, OnePagerRequest } from '../services/onePagerGeneration.service';
 import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
-import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const router = express.Router();
@@ -32,6 +31,44 @@ router.get('/test-template', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Debug endpoint to check user profile data
+router.get('/debug-user-data', async (req, res) => {
+  try {
+    const userId = 'dev-user-123';
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      res.json({
+        success: true,
+        userId,
+        userData: {
+          searchFundName: userData?.searchFundName,
+          searchFundWebsite: userData?.searchFundWebsite,
+          searchFundLogo: userData?.searchFundLogo,
+          searchFundAddress: userData?.searchFundAddress,
+          searchFundEmail: userData?.searchFundEmail,
+          // Show all available fields
+          allFields: Object.keys(userData || {})
+        }
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'User document not found',
+        userId
+      });
+    }
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 
 // DEBUG: Test template generation without auth
 router.post('/test-generate', async (req, res) => {
@@ -69,20 +106,71 @@ router.post('/test-generate', async (req, res) => {
       userId: mockUser.uid
     };
 
-            // Generate content first
-            const content = await onePagerGenerationService.generateContent({
-              searcherProfiles: [
+            // Get actual searcher profiles from database
+            const userId = 'dev-user-123';
+            const searcherProfilesRef = db.collection('users').doc(userId).collection('searcherProfiles');
+            const searcherProfilesSnapshot = await searcherProfilesRef.get();
+            
+            let actualSearcherProfiles = [];
+            if (!searcherProfilesSnapshot.empty) {
+              actualSearcherProfiles = searcherProfilesSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+            }
+            
+            // Fallback to test data if no profiles found
+            if (actualSearcherProfiles.length === 0) {
+              actualSearcherProfiles = [
                 {
                   name: "Shariq Hafizi",
                   title: "Founder",
-                  headshotUrl: "/uploads/headshots/test-headshot-1.jpg"
+                  headshotUrl: "uploads/headshots/test-headshot-1.jpg"
                 },
                 {
                   name: "Hazyk Obaid", 
                   title: "Co-Founder",
-                  headshotUrl: "/uploads/headshots/test-headshot-2.jpg"
+                  headshotUrl: "uploads/headshots/test-headshot-2.jpg"
                 }
-              ],
+              ];
+            }
+
+            // Get search fund data from user profile
+            let searchFundName = '';
+            let searchFundWebsite = '';
+            let searchFundLogo = '';
+            let searchFundAddress = '';
+            let searchFundEmail = '';
+
+            try {
+              const userRef = db.collection('users').doc(userId);
+              const userDoc = await userRef.get();
+              
+              if (userDoc.exists) {
+                const userData = userDoc.data();
+                searchFundName = userData?.searchFundName || '';
+                searchFundWebsite = userData?.searchFundWebsite || '';
+                searchFundLogo = userData?.searchFundLogo || '';
+                searchFundAddress = userData?.searchFundAddress || '';
+                searchFundEmail = userData?.searchFundEmail || '';
+                
+                console.log('=== FETCHED USER DATA ===');
+                console.log('searchFundName:', searchFundName);
+                console.log('searchFundWebsite:', searchFundWebsite);
+                console.log('searchFundAddress:', searchFundAddress);
+                console.log('searchFundEmail:', searchFundEmail);
+                console.log('searchFundLogo:', searchFundLogo);
+                console.log('=== END USER DATA ===');
+              } else {
+                console.log('User document not found');
+              }
+            } catch (error) {
+              console.log('Could not fetch user data:', error.message);
+            }
+
+            // Generate content first
+            const content = await onePagerGenerationService.generateContent({
+              searcherProfiles: actualSearcherProfiles,
               thesisData,
               teamConnection,
               template: template || 'navy_blue'
@@ -90,18 +178,12 @@ router.post('/test-generate', async (req, res) => {
 
             // Call the actual generation service with content
             const result = await onePagerGenerationService.generateDocxWithTemplate({
-              searcherProfiles: [
-                {
-                  name: "Shariq Hafizi",
-                  title: "Founder",
-                  headshotUrl: "/uploads/headshots/test-headshot-1.jpg" // Local file path
-                },
-                {
-                  name: "Hazyk Obaid", 
-                  title: "Co-Founder",
-                  headshotUrl: "/uploads/headshots/test-headshot-2.jpg" // Local file path
-                }
-              ],
+              searcherProfiles: actualSearcherProfiles,
+              searchFundName,
+              searchFundWebsite,
+              searchFundLogo,
+              searchFundAddress,
+              searchFundEmail,
               thesisData,
               teamConnection,
               template: template || 'navy_blue',
@@ -163,16 +245,16 @@ router.post('/generate', firebaseAuthMiddleware, async (req, res) => {
 
     try {
       const userId = req.user?.uid || 'dev-user-123';
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
       
-      if (userDoc.exists()) {
+      if (userDoc.exists) {
         const userData = userDoc.data();
-        searchFundName = userData.searchFundName || '';
-        searchFundWebsite = userData.searchFundWebsite || '';
-        searchFundLogo = userData.searchFundLogo || '';
-        searchFundAddress = userData.searchFundAddress || '';
-        searchFundEmail = userData.searchFundEmail || '';
+        searchFundName = userData?.searchFundName || '';
+        searchFundWebsite = userData?.searchFundWebsite || '';
+        searchFundLogo = userData?.searchFundLogo || '';
+        searchFundAddress = userData?.searchFundAddress || '';
+        searchFundEmail = userData?.searchFundEmail || '';
       }
     } catch (error) {
       logger.warn('Could not fetch user data for template', { error: error.message });

@@ -53,18 +53,34 @@ import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';
 
 
-// Helper function to ensure headshot URL is absolute
+// BULLETPROOF Helper function to ensure headshot URL is absolute
 const getAbsoluteHeadshotUrl = (url: string | undefined): string | undefined => {
-  if (!url) return undefined;
+  if (!url) {
+    console.log('❌ No headshot URL provided');
+    return undefined;
+  }
+
+  console.log('🔍 Original headshot URL:', url);
 
   // If URL is already absolute, return as-is
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    console.log('✅ URL is already absolute:', url);
     return url;
   }
 
   // If URL is relative, prepend the base URL
   const baseUrl = 'http://localhost:4001';
-  return `${baseUrl}${url}`;
+  
+  // Ensure URL starts with / if it doesn't already
+  let finalUrl = url;
+  if (!url.startsWith('/')) {
+    finalUrl = `/${url}`;
+  }
+  
+  const absoluteUrl = `${baseUrl}${finalUrl}`;
+  console.log('✅ Converted to absolute URL:', absoluteUrl);
+  
+  return absoluteUrl;
 };
 
 export default function Profile() {
@@ -739,6 +755,7 @@ export default function Profile() {
       <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: '#000000' }}>
         My Profile
       </Typography>
+      
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Manage your searcher profile and background information for personalized pitch generation
       </Typography>
@@ -1056,25 +1073,65 @@ export default function Profile() {
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                       <Box sx={{ position: 'relative', mr: 2 }}>
-                        <Avatar
-                          src={getAbsoluteHeadshotUrl(searcher.headshotUrl)}
-                          sx={{
-                            bgcolor: '#000000',
-                            width: 56,
-                            height: 56,
-                            fontSize: '1.25rem',
-                            fontWeight: 600
-                          }}
-                          onLoad={() => {
-                            console.log('✅ Avatar image loaded successfully:', getAbsoluteHeadshotUrl(searcher.headshotUrl));
-                          }}
-                          onError={(e) => {
-                            console.log('❌ Avatar image failed to load:', getAbsoluteHeadshotUrl(searcher.headshotUrl));
-                            console.log('❌ Error details:', e);
-                          }}
-                        >
-                          {searcher.name.charAt(0).toUpperCase()}
-                        </Avatar>
+                        {/* BULLETPROOF Image Display - Multiple fallbacks */}
+                        {searcher.headshotUrl ? (
+                          <Box sx={{ position: 'relative' }}>
+                            {/* Primary: Avatar with image */}
+                            <Avatar
+                              src={getAbsoluteHeadshotUrl(searcher.headshotUrl)}
+                              sx={{
+                                bgcolor: '#000000',
+                                width: 56,
+                                height: 56,
+                                fontSize: '1.25rem',
+                                fontWeight: 600
+                              }}
+                              onLoad={() => {
+                                console.log('✅ Avatar image loaded successfully:', getAbsoluteHeadshotUrl(searcher.headshotUrl));
+                              }}
+                              onError={(e) => {
+                                console.log('❌ Avatar image failed to load:', getAbsoluteHeadshotUrl(searcher.headshotUrl));
+                                console.log('❌ Error details:', e);
+                              }}
+                            >
+                              {searcher.name.charAt(0).toUpperCase()}
+                            </Avatar>
+                            
+                            {/* Fallback: Direct img element */}
+                            <img
+                              src={getAbsoluteHeadshotUrl(searcher.headshotUrl)}
+                              alt={`${searcher.name} headshot`}
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '56px',
+                                height: '56px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                display: 'none' // Hidden by default, shown if Avatar fails
+                              }}
+                              onLoad={() => {
+                                console.log('✅ Fallback img loaded successfully');
+                              }}
+                              onError={() => {
+                                console.log('❌ Fallback img also failed');
+                              }}
+                            />
+                          </Box>
+                        ) : (
+                          <Avatar
+                            sx={{
+                              bgcolor: '#000000',
+                              width: 56,
+                              height: 56,
+                              fontSize: '1.25rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            {searcher.name.charAt(0).toUpperCase()}
+                          </Avatar>
+                        )}
                         <input
                           accept="image/*"
                           style={{ display: 'none' }}

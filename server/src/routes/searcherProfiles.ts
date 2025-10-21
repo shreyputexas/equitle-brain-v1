@@ -5,6 +5,150 @@ import logger from '../utils/logger';
 
 const router = express.Router();
 
+// DEBUG: Test endpoint to check searcher profiles without auth
+router.get('/debug', async (req, res) => {
+  try {
+    const userId = 'dev-user-123';
+    
+    // Get REAL searcher profiles from database
+    const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
+    
+    console.log('=== DEBUG SEARCHER PROFILES (REAL DATA) ===');
+    console.log('Found profiles:', searcherProfiles.length);
+    searcherProfiles.forEach((profile, index) => {
+      console.log(`Profile ${index + 1}:`, {
+        id: profile.id,
+        name: profile.name,
+        title: profile.title,
+        headshotUrl: profile.headshotUrl
+      });
+    });
+    console.log('=== END DEBUG ===');
+    
+    res.json({
+      success: true,
+      data: {
+        searcherProfiles,
+        total: searcherProfiles.length
+      }
+    });
+  } catch (error) {
+    console.error('Error getting searcher profiles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get searcher profiles',
+      error: error.message
+    });
+  }
+});
+
+// DEBUG: Update searcher profiles with test headshot URLs
+router.post('/debug/update-headshots', async (req, res) => {
+  try {
+    const userId = 'dev-user-123';
+    const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
+    
+    console.log('=== UPDATING SEARCHER PROFILES WITH HEADSHOTS ===');
+    
+    for (let i = 0; i < searcherProfiles.length; i++) {
+      const profile = searcherProfiles[i];
+      const headshotUrl = `uploads/headshots/test-headshot-${i + 1}.jpg`;
+      
+      console.log(`Updating profile ${i + 1} (${profile.name}) with headshot: ${headshotUrl}`);
+      
+      // Update the profile with the headshot URL
+      await SearcherProfilesFirestoreService.updateSearcherProfile(userId, profile.id, {
+        headshotUrl: headshotUrl
+      });
+    }
+    
+    console.log('=== HEADSHOT UPDATE COMPLETED ===');
+    
+    res.json({
+      success: true,
+      message: `Updated ${searcherProfiles.length} searcher profiles with headshot URLs`
+    });
+  } catch (error) {
+    console.error('Error updating searcher profiles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update searcher profiles',
+      error: error.message
+    });
+  }
+});
+
+// DEBUG: Test image URLs
+router.get('/debug/test-images', async (req, res) => {
+  try {
+    const userId = 'dev-user-123';
+    const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
+    
+    console.log('=== TESTING IMAGE URLS ===');
+    
+    const testResults = [];
+    
+    for (const profile of searcherProfiles) {
+      const relativeUrl = profile.headshotUrl;
+      const absoluteUrl = `http://localhost:4001/${relativeUrl}`;
+      
+      console.log(`Testing image for ${profile.name}:`);
+      console.log(`  Relative URL: ${relativeUrl}`);
+      console.log(`  Absolute URL: ${absoluteUrl}`);
+      
+      // Test if the image is accessible
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const fullPath = path.join(process.cwd(), relativeUrl);
+        
+        if (fs.existsSync(fullPath)) {
+          console.log(`  ✅ File exists at: ${fullPath}`);
+          testResults.push({
+            name: profile.name,
+            relativeUrl,
+            absoluteUrl,
+            fileExists: true,
+            filePath: fullPath
+          });
+        } else {
+          console.log(`  ❌ File does not exist at: ${fullPath}`);
+          testResults.push({
+            name: profile.name,
+            relativeUrl,
+            absoluteUrl,
+            fileExists: false,
+            filePath: fullPath
+          });
+        }
+      } catch (error) {
+        console.log(`  ❌ Error checking file: ${error.message}`);
+        testResults.push({
+          name: profile.name,
+          relativeUrl,
+          absoluteUrl,
+          fileExists: false,
+          error: error.message
+        });
+      }
+    }
+    
+    console.log('=== IMAGE URL TEST COMPLETE ===');
+    
+    res.json({
+      success: true,
+      testResults,
+      message: 'Image URL test completed'
+    });
+  } catch (error) {
+    console.error('Error testing image URLs:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Get all searcher profiles for a user
 router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
   try {
