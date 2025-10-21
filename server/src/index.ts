@@ -144,6 +144,18 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(uploadsPath));
 
+// Serve static files from one_pager_templates directory with CORS headers
+const templatesPath = path.join(process.cwd(), 'equitle-brain-v1/one_pager_templates');
+console.log('Templates path:', templatesPath);
+console.log('Templates exist:', fs.existsSync(templatesPath));
+
+app.use('/.claude/one_pager_templates', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+}, express.static(templatesPath));
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
