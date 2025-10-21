@@ -112,16 +112,16 @@ export class OnePagerGenerationService {
     const searcherProfilesText = request.searcherProfiles.map(profile => 
       `Name: ${profile.name}
 Title: ${profile.title}
-Bio: ${profile.bio}
-Why: ${profile.why}
-Education: ${profile.education.map(edu => `${edu.degree} in ${edu.field} from ${edu.institution}`).join(', ')}
-Experience: ${profile.experience.map(exp => `${exp.position} at ${exp.company}`).join(', ')}`
+Bio: ${profile.bio || 'Not provided'}
+Why: ${profile.why || 'Not provided'}
+Education: ${profile.education?.map(edu => `${edu.degree} in ${edu.field} from ${edu.institution}`).join(', ') || 'Not provided'}
+Experience: ${profile.experience?.map(exp => `${exp.position} at ${exp.company}`).join(', ') || 'Not provided'}`
     ).join('\n\n---\n\n');
 
     const thesisText = `Thesis: ${request.thesisData.name}
-Criteria: ${request.thesisData.criteria.map(c => 
+Criteria: ${request.thesisData.criteria?.map(c => 
       `${c.field} ${c.operator} ${c.value} (${c.weight}% weight)`
-    ).join(', ')}`;
+    ).join(', ') || 'Not specified'}`;
 
     const teamConnectionText = request.teamConnection ? 
       `Team Connection: ${request.teamConnection}` : '';

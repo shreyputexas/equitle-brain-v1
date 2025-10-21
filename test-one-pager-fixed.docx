@@ -1,0 +1,1 @@
+{"success":false,"error":"Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore","stack":"FirebaseError: Expected first argument to collection() to be a CollectionReference, a DocumentReference or FirebaseFirestore"}

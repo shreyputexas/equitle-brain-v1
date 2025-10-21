@@ -7,7 +7,7 @@ import logger from '../utils/logger';
 // Configure multer for headshots
 const headshotStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/headshots');
+    const uploadDir = path.join(process.cwd(), 'uploads/headshots');
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
@@ -26,7 +26,7 @@ const headshotStorage = multer.diskStorage({
 // Configure multer for logos
 const logoStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/logos');
+    const uploadDir = path.join(process.cwd(), 'uploads/logos');
     
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadDir)) {
@@ -70,9 +70,8 @@ export const logoUpload = multer({
 export class ImageUploadService {
   async uploadHeadshot(file: Express.Multer.File, searcherId: string): Promise<string> {
     try {
-      // Generate a public URL for the uploaded image with full base URL
-      const baseUrl = process.env.BASE_URL || 'http://localhost:4001';
-      const imageUrl = `${baseUrl}/uploads/headshots/${file.filename}`;
+      // Return relative URL for consistency with existing system
+      const imageUrl = `uploads/headshots/${file.filename}`;
 
       logger.info('Headshot uploaded successfully', {
         searcherId,
@@ -95,9 +94,9 @@ export class ImageUploadService {
   async deleteHeadshot(imageUrl: string): Promise<void> {
     try {
       // Handle both full URLs and relative paths
-      if (imageUrl && (imageUrl.includes('/uploads/headshots/') || imageUrl.startsWith('/uploads/headshots/'))) {
+      if (imageUrl && (imageUrl.includes('uploads/headshots/') || imageUrl.includes('/uploads/headshots/'))) {
         const filename = path.basename(imageUrl);
-        const filePath = path.join(__dirname, '../../uploads/headshots', filename);
+        const filePath = path.join(process.cwd(), 'uploads/headshots', filename);
 
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
