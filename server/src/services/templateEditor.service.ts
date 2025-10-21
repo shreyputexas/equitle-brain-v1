@@ -104,14 +104,29 @@ export class TemplateEditorService {
       });
     }
 
-    // Step 2: Merge text across runs that might contain placeholder fragments
-    // This is trickier - we need to find text that looks like it's split across runs
-    // Pattern: <w:t>text1</w:t></w:r><w:r><w:t>text2</w:t> -> merge to <w:t>text1text2</w:t>
-    // But we can't just remove tags - we need to merge the content
+    // Step 2: Remove spaces from inside placeholders
+    // Template might have { placeholder } instead of {placeholder}
+    // This regex finds { text } pattern and removes the spaces
+    normalized = normalized.replace(/\{\s+([a-zA-Z0-9]+)\s+\}/g, '{$1}');
 
-    // For now, skip this step as it's causing issues - the within-run merging should be enough
-    // The issue is that we'd need to track and merge actual text content across runs
-    // which is complex. Let's rely on the first normalization step.
+    // Step 3: Merge placeholders split across runs with spell-check markers
+    // Pattern: <w:t>{</w:t>...</w:r>...<w:r>...<w:t>placeholder</w:t>...</w:r>...<w:r>...<w:t>}</w:t>
+    // We need to merge these into a single <w:t>{placeholder}</w:t>
+
+    // This regex looks for { text } pattern across different runs and merges them
+    // It's more flexible and handles various XML structures
+    const beforeMerge = normalized;
+    normalized = normalized.replace(/<w:t>\{<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>\}<\/w:t>/g,
+      '<w:t>{$1}</w:t>');
+
+    if (beforeMerge.length !== normalized.length) {
+      console.log(`✅ Merged ${(beforeMerge.length - normalized.length)} characters of split placeholders`);
+    } else {
+      console.log(`⚠️ No split placeholders found to merge`);
+      // Log a sample of the XML to help debug
+      const sample = normalized.substring(normalized.indexOf('searchFundName') - 200, normalized.indexOf('searchFundName') + 200);
+      console.log('Sample XML around searchFundName:', sample);
+    }
 
     return normalized;
   }
@@ -169,14 +184,18 @@ export class TemplateEditorService {
         '{searchFundWebsite}': data.searchFundWebsite || '',
         '{searchFundEmail}': data.searchFundEmail || '',
         '{searchFundAddress}': data.searchFundAddress || '',
-        
+
         // Content sections - using the actual placeholders from the template
         '{whyWorkWithUs}': data.content?.whyWorkWithUs || '',
         '{investmentCriteria}': data.content?.investmentCriteria || '',
         '{industriesWeServe}': data.content?.industriesWeServe || '',
         '{ourStories}': data.content?.ourStories || '',
         '{ourStory}': data.content?.ourStories || '',
-        
+
+        // Individual searcher stories - for navy_blue template
+        '{searcherStory1}': data.content?.searcherStory1 || '',
+        '{searcherStory2}': data.content?.searcherStory2 || '',
+
         // Searcher information - these might not be in the template but good to have
         '{searcher1Name}': data.searcherProfiles?.[0]?.name || '',
         '{searcher2Name}': data.searcherProfiles?.[1]?.name || '',

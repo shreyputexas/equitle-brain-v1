@@ -69,14 +69,29 @@ export interface OnePagerContent {
   investmentCriteria: string;
   industriesWeServe: string;
   ourStories: string;
+  searcherStory1: string;
+  searcherStory2: string;
 }
 
 export class OnePagerGenerationService {
   async generateContent(request: OnePagerRequest): Promise<OnePagerContent> {
     const prompt = this.buildPrompt(request);
-    
+
     try {
       console.log('Calling OpenAI API for content generation...');
+      console.log('=== SEARCHER PROFILES DATA ===');
+      console.log('Number of profiles:', request.searcherProfiles?.length || 0);
+      request.searcherProfiles?.forEach((profile, idx) => {
+        console.log(`Profile ${idx + 1}:`, {
+          name: profile.name,
+          title: profile.title,
+          hasBio: !!profile.bio,
+          hasWhy: !!profile.why,
+          educationCount: profile.education?.length || 0,
+          experienceCount: profile.experience?.length || 0
+        });
+      });
+      console.log('=== END SEARCHER PROFILES DATA ===');
       const completion = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
@@ -95,7 +110,20 @@ export class OnePagerGenerationService {
 
       console.log('OpenAI API call successful');
       const content = completion.choices[0].message.content;
-      return this.parseContent(content);
+      console.log('=== OPENAI RESPONSE ===');
+      console.log('Raw content length:', content?.length);
+      console.log('Full raw content:', content);
+      // Save to file for inspection
+      require('fs').writeFileSync('/tmp/openai-response.txt', content || '');
+      console.log('=== END OPENAI RESPONSE ===');
+      const parsed = this.parseContent(content, request);
+      console.log('=== PARSED CONTENT ===');
+      console.log('searcherStory1 length:', parsed.searcherStory1?.length || 0);
+      console.log('searcherStory2 length:', parsed.searcherStory2?.length || 0);
+      console.log('searcherStory1 preview:', parsed.searcherStory1?.substring(0, 100) || 'EMPTY');
+      console.log('searcherStory2 preview:', parsed.searcherStory2?.substring(0, 100) || 'EMPTY');
+      console.log('=== END PARSED CONTENT ===');
+      return parsed;
     } catch (error: any) {
       console.error('=== OPENAI API ERROR ===');
       console.error('Error message:', error?.message);
@@ -182,6 +210,22 @@ ${teamConnectionText}
    - **MAKE IT MEMORABLE**: Use storytelling that investors will remember
    - **SHOW AUTHENTICITY**: Be genuine about your relationship and shared vision
 
+5. **"Searcher Story 1"** (3-4 lines maximum):
+   - Write a personal story for the FIRST searcher (${request.searcherProfiles?.[0]?.name || 'Searcher 1'}, ${request.searcherProfiles?.[0]?.title || 'Founder'})
+   - If detailed profile information is available, focus on their individual journey, background, and what drives them
+   - If profile details are limited, write an engaging narrative about their role, expertise, and vision for the search
+   - Make it personal and compelling regardless of available data
+   - Show their passion and why they're pursuing this search
+   - IMPORTANT: ALWAYS generate this section even if profile data is limited
+
+6. **"Searcher Story 2"** (3-4 lines maximum):
+   - Write a personal story for the SECOND searcher (${request.searcherProfiles?.[1]?.name || 'Searcher 2'}, ${request.searcherProfiles?.[1]?.title || 'Co-Founder'})
+   - If detailed profile information is available, focus on their individual journey, background, and what drives them
+   - If profile details are limited, write an engaging narrative about their role, expertise, and vision for the search
+   - Make it personal and compelling regardless of available data
+   - Show their passion and why they're pursuing this search
+   - IMPORTANT: ALWAYS generate this section even if profile data is limited
+
 **TONE AND STYLE:**
 - **PASSIONATE AND ENTHUSIASTIC**: Show genuine excitement and energy
 - **PERSONAL AND AUTHENTIC**: Use emotional language that connects with investors
@@ -195,7 +239,9 @@ ${teamConnectionText}
 **OUTPUT FORMAT:**
 Provide the content in the exact format requested, with clear section headers and line count compliance. Each section should be ready to insert directly into the one-pager template.
 
-Format your response as:
+IMPORTANT: Do NOT use markdown formatting (**, *, etc.) in the section headers. Use plain text only.
+
+Format your response EXACTLY as shown below (no asterisks, no bold, just plain text):
 WHY_WORK_WITH_US:
 [content]
 
@@ -206,22 +252,35 @@ INDUSTRIES_WE_SERVE:
 [content]
 
 OUR_STORIES:
+[content]
+
+SEARCHER_STORY_1:
+[content]
+
+SEARCHER_STORY_2:
 [content]`;
   }
 
-  private parseContent(content: string): OnePagerContent {
-    const sections = content.split(/\n(?=[A-Z_]+:)/);
+  private parseContent(content: string, request: OnePagerRequest): OnePagerContent {
+    // Split on one or more newlines followed by section headers (includes digits for SEARCHER_STORY_1, etc.)
+    const sections = content.split(/\n+(?=[A-Z_0-9]+:)/);
+    console.log('=== PARSING SECTIONS ===');
+    console.log('Number of sections:', sections.length);
     const result: OnePagerContent = {
       whyWorkWithUs: '',
       investmentCriteria: '',
       industriesWeServe: '',
-      ourStories: ''
+      ourStories: '',
+      searcherStory1: '',
+      searcherStory2: ''
     };
 
-    sections.forEach(section => {
+    sections.forEach((section, idx) => {
       const lines = section.split('\n');
-      const header = lines[0].replace(':', '').trim();
+      // Strip markdown formatting (**, *, etc.) from header but keep underscores, remove colon
+      const header = lines[0].replace(/\*/g, '').replace(':', '').trim();
       const content = lines.slice(1).join('\n').trim();
+      console.log(`Section ${idx}: header="${header}", content length=${content.length}`);
 
       switch (header) {
         case 'WHY_WORK_WITH_US':
@@ -236,8 +295,25 @@ OUR_STORIES:
         case 'OUR_STORIES':
           result.ourStories = content;
           break;
+        case 'SEARCHER_STORY_1':
+          result.searcherStory1 = content;
+          break;
+        case 'SEARCHER_STORY_2':
+          result.searcherStory2 = content;
+          break;
       }
     });
+
+    // Fallback: If OpenAI didn't generate searcher stories, create placeholder content
+    if (!result.searcherStory1 && request.searcherProfiles?.[0]) {
+      const profile1 = request.searcherProfiles[0];
+      result.searcherStory1 = `${profile1.name}, ${profile1.title}, brings a wealth of experience and passion to this search. With a deep commitment to identifying and scaling businesses, ${profile1.name} is dedicated to driving growth and creating lasting value in the companies we acquire.`;
+    }
+
+    if (!result.searcherStory2 && request.searcherProfiles?.[1]) {
+      const profile2 = request.searcherProfiles[1];
+      result.searcherStory2 = `${profile2.name}, ${profile2.title}, combines strategic insight with hands-on operational expertise. ${profile2.name}'s vision and drive complement our team perfectly, ensuring we can execute on our acquisition strategy and build exceptional businesses together.`;
+    }
 
     return result;
   }
