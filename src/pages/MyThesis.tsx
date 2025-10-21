@@ -163,6 +163,14 @@ const MyThesis: React.FC = () => {
   const [googleDriveFolders, setGoogleDriveFolders] = useState<string[]>([]);
   const [loadingFolders, setLoadingFolders] = useState(false);
 
+  // Industry Overview One Pager Generator state
+  const [selectedThesisForIndustry, setSelectedThesisForIndustry] = useState('');
+  const [isGeneratingIndustry, setIsGeneratingIndustry] = useState(false);
+  const [selectedIndustryTemplate, setSelectedIndustryTemplate] = useState('basic');
+  const [showIndustryTemplatePreview, setShowIndustryTemplatePreview] = useState(false);
+  const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
+  const [selectedIndustry, setSelectedIndustry] = useState('');
+
   const categories = ['Financial', 'Market', 'Geographic', 'Team', 'Technology', 'Operational', 'Valuation', 'Subindustry', 'Growth Rate'];
   const operators = ['>=', '<=', '=', '!=', 'contains', 'not contains'];
   const valuationTypes = ['Enterprise Value', 'Equity Value'];
@@ -731,8 +739,124 @@ const MyThesis: React.FC = () => {
     }
   };
 
+  const handleGenerateIndustryOverview = async () => {
+    if (!selectedThesisForIndustry) {
+      alert('Please select a thesis to base the industry overview on');
+      return;
+    }
+
+    if (availableIndustries.length > 1 && !selectedIndustry) {
+      alert('Please select an industry to generate the overview for');
+      return;
+    }
+
+    setIsGeneratingIndustry(true);
+    try {
+      // Get the selected thesis data
+      const selectedThesis = theses.find(t => t.id === selectedThesisForIndustry);
+      if (!selectedThesis) {
+        alert('Selected thesis not found');
+        return;
+      }
+
+      console.log('Generating industry research with thesis:', selectedThesis.name);
+      if (selectedIndustry) {
+        console.log('Focused on industry:', selectedIndustry);
+      }
+      
+      // Prepare the thesis data for the API
+      const thesisData = {
+        name: selectedThesis.name,
+        criteria: selectedThesis.criteria.map(c => ({
+          ...c,
+          value: c.value.toString()
+        }))
+      };
+
+      // Call the industry research API
+      const response = await fetch('/api/one-pager/generate-industry-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
+          thesisData,
+          selectedIndustry: selectedIndustry || null
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to generate industry research');
+      }
+
+      // Get the file blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `industry-research-${selectedThesis.name.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('Industry research report generated and downloaded successfully!');
+      
+    } catch (error) {
+      console.error('Error generating industry overview:', error);
+      alert(`Error generating industry overview: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingIndustry(false);
+    }
+  };
+
   const handlePreviewTemplate = () => {
     setShowTemplatePreview(true);
+  };
+
+  const handlePreviewIndustryTemplate = () => {
+    setShowIndustryTemplatePreview(true);
+  };
+
+  // Extract industries/subindustries from thesis criteria
+  const extractIndustriesFromThesis = (thesis: any) => {
+    const industries = new Set<string>();
+    
+    thesis.criteria.forEach((criteria: any) => {
+      if (criteria.category === 'Subindustry') {
+        // Extract industry from criteria value
+        const industryValue = criteria.value.toString();
+        if (industryValue && industryValue !== '') {
+          industries.add(industryValue);
+        }
+      }
+    });
+    
+    return Array.from(industries);
+  };
+
+  // Handle thesis selection for industry research
+  const handleThesisSelectionForIndustry = (thesisId: string) => {
+    setSelectedThesisForIndustry(thesisId);
+    
+    const thesis = theses.find(t => t.id === thesisId);
+    if (thesis) {
+      const industries = extractIndustriesFromThesis(thesis);
+      setAvailableIndustries(industries);
+      
+      // If only one industry, auto-select it
+      if (industries.length === 1) {
+        setSelectedIndustry(industries[0]);
+      } else if (industries.length > 1) {
+        setSelectedIndustry(''); // Reset selection for user to choose
+      } else {
+        setSelectedIndustry(''); // No specific industry found
+      }
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1687,6 +1811,159 @@ const MyThesis: React.FC = () => {
               <LinearProgress sx={{ mb: 1 }} />
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                 Generating your personal pitch one-pager...
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Industry Overview One Pager Generator */}
+      <Card sx={{ mt: 4 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#000000' }}>
+            Industry Overview One-Pager Generator
+          </Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <FormControl fullWidth>
+                <InputLabel>Select Thesis</InputLabel>
+                      <Select
+                        value={selectedThesisForIndustry}
+                        onChange={(e) => handleThesisSelectionForIndustry(e.target.value)}
+                        label="Select Thesis"
+                  sx={{
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#000000',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#333333',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#000000',
+                    },
+                  }}
+                >
+                  {theses.map((thesis) => (
+                    <MenuItem key={thesis.id} value={thesis.id}>
+                      {thesis.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+                  <Grid item xs={12} md={4}>
+                    <FormControl fullWidth>
+                      <InputLabel>Select Template</InputLabel>
+                      <Select
+                        value={selectedIndustryTemplate}
+                        onChange={(e) => setSelectedIndustryTemplate(e.target.value)}
+                        label="Select Template"
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#000000',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#333333',
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#000000',
+                          },
+                        }}
+                      >
+                        <MenuItem value="basic">Basic Template</MenuItem>
+                        <MenuItem value="industry_navy">Navy Blue</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  {availableIndustries.length > 1 && (
+                    <Grid item xs={12} md={4}>
+                      <FormControl fullWidth>
+                        <InputLabel>Select Industry</InputLabel>
+                        <Select
+                          value={selectedIndustry}
+                          onChange={(e) => setSelectedIndustry(e.target.value)}
+                          label="Select Industry"
+                          sx={{
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#000000',
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#333333',
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#000000',
+                            },
+                          }}
+                        >
+                          {availableIndustries.map((industry) => (
+                            <MenuItem key={industry} value={industry}>
+                              {industry}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  )}
+                  <Grid item xs={12} md={availableIndustries.length > 1 ? 12 : 4}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      {availableIndustries.length > 1 
+                        ? `Generate an industry overview one-pager for the selected industry based on your investment thesis criteria.`
+                        : `Generate an industry overview one-pager based on your selected investment thesis criteria and market analysis.`
+                      }
+                    </Typography>
+                  </Grid>
+          </Grid>
+
+          {/* Template Preview Section */}
+          <Box sx={{ mt: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Preview template before generating:
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handlePreviewIndustryTemplate}
+                sx={{
+                  borderColor: '#000000',
+                  color: '#000000',
+                  '&:hover': {
+                    borderColor: '#333333',
+                    bgcolor: '#F5F5F5'
+                  }
+                }}
+              >
+                Preview Template
+              </Button>
+            </Box>
+          </Box>
+
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<AutoAwesomeIcon />}
+                    onClick={handleGenerateIndustryOverview}
+                    disabled={isGeneratingIndustry || !selectedThesisForIndustry || (availableIndustries.length > 1 && !selectedIndustry)}
+                    size="large"
+                    sx={{
+                      bgcolor: '#000000',
+                      color: 'white',
+                      px: 4,
+                      py: 1.5,
+                      '&:hover': { bgcolor: '#333333' },
+                      '&:disabled': { bgcolor: '#9CA3AF' }
+                    }}
+                  >
+                    {isGeneratingIndustry ? 'Generating...' : 'Generate Industry Overview'}
+                  </Button>
+          </Box>
+
+          {isGeneratingIndustry && (
+            <Box sx={{ mt: 3 }}>
+              <LinearProgress sx={{ mb: 1 }} />
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                Generating your industry overview one-pager...
               </Typography>
             </Box>
           )}
@@ -2786,6 +3063,53 @@ const MyThesis: React.FC = () => {
         <DialogActions>
           <Button
             onClick={() => setShowTemplatePreview(false)}
+            variant="outlined"
+            sx={{
+              borderColor: '#000000',
+              color: '#000000',
+              '&:hover': {
+                borderColor: '#333333',
+                bgcolor: '#F5F5F5'
+              }
+            }}
+          >
+            Close Preview
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Industry Template Preview Dialog */}
+      <Dialog
+        open={showIndustryTemplatePreview}
+        onClose={() => setShowIndustryTemplatePreview(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { height: '90vh' }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Industry Template Preview - {selectedIndustryTemplate === 'basic' ? 'Basic Template' : selectedIndustryTemplate === 'industry_navy' ? 'Navy Blue' : selectedIndustryTemplate}
+          </Typography>
+          <IconButton onClick={() => setShowIndustryTemplatePreview(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ height: '100%', width: '100%' }}>
+            <iframe
+              src={`/.claude/one_pager_templates/${selectedIndustryTemplate === 'industry_navy' ? 'industry_navy' : selectedIndustryTemplate}.pdf`}
+              width="100%"
+              height="100%"
+              style={{ border: 'none' }}
+              title="Industry Template Preview"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setShowIndustryTemplatePreview(false)}
             variant="outlined"
             sx={{
               borderColor: '#000000',

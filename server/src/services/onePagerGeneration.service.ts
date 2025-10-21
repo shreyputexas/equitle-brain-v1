@@ -466,6 +466,330 @@ SEARCHER_STORY_2:
     const searcherNames = request.searcherProfiles.map(profile => profile.name);
     return await this.generateDocx(content, searcherNames);
   }
+
+  async generateIndustryResearchDocx(thesisData: ThesisData): Promise<Buffer> {
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          // Title
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Industry Research Report",
+                bold: true,
+                size: 32,
+              }),
+            ],
+            heading: HeadingLevel.TITLE,
+            spacing: { after: 400 },
+          }),
+
+          // Thesis Name
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Investment Thesis: ${thesisData.name}`,
+                bold: true,
+                size: 24,
+              }),
+            ],
+            heading: HeadingLevel.HEADING_1,
+            spacing: { after: 300 },
+          }),
+
+          // Investment Criteria Summary
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Investment Criteria:",
+                bold: true,
+                size: 20,
+              }),
+            ],
+            heading: HeadingLevel.HEADING_2,
+            spacing: { after: 200 },
+          }),
+
+          ...thesisData.criteria.map(criteria => 
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${criteria.category}: ${criteria.field} ${criteria.operator} ${criteria.value} (Weight: ${criteria.weight}%)`,
+                  size: 18,
+                }),
+              ],
+              spacing: { after: 100 },
+            })
+          ),
+
+          // Placeholder for AI-generated content
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "This document will be populated with AI-generated industry research content.",
+                italic: true,
+                size: 16,
+              }),
+            ],
+            spacing: { after: 400 },
+          }),
+        ],
+      }],
+    });
+
+    return await Packer.toBuffer(doc);
+  }
+
+  async generateIndustryResearchWithAI(thesisData: ThesisData, selectedIndustry?: string): Promise<Buffer> {
+    try {
+      // Create comprehensive prompt for industry research
+      const prompt = this.createIndustryResearchPrompt(thesisData, selectedIndustry);
+      
+      console.log('Industry Research Prompt:', prompt);
+      
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert investment analyst and industry researcher. Generate comprehensive industry research reports based on investment thesis criteria. Focus on providing actionable insights for private equity investment decisions."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000
+      });
+
+      const researchContent = completion.choices[0]?.message?.content || '';
+      console.log('Generated Research Content Length:', researchContent.length);
+
+      // Parse the AI response into structured content
+      const parsedContent = this.parseIndustryResearchContent(researchContent);
+
+      // Generate the document
+      return await this.generateIndustryResearchDocxWithContent(thesisData, parsedContent);
+
+    } catch (error) {
+      console.error('Error generating industry research:', error);
+      throw new Error('Failed to generate industry research report');
+    }
+  }
+
+  private createIndustryResearchPrompt(thesisData: ThesisData, selectedIndustry?: string): string {
+    const criteriaText = thesisData.criteria.map(c => 
+      `- ${c.category}: ${c.field} ${c.operator} ${c.value} (Weight: ${c.weight}%)`
+    ).join('\n');
+
+    const industryFocus = selectedIndustry 
+      ? `\n\nFOCUS: Generate this report specifically for the ${selectedIndustry} industry. All analysis should be tailored to this specific industry.`
+      : '';
+
+    return `Based on the following investment thesis, generate a comprehensive industry research report:${industryFocus}
+
+INVESTMENT THESIS: ${thesisData.name}
+
+INVESTMENT CRITERIA:
+${criteriaText}
+
+Please provide a detailed industry research report covering the following sections:
+
+1. MARKET OVERVIEW
+- Market size and growth trends
+- Key market drivers and trends
+- Geographic distribution and opportunities
+- Market segmentation and key players
+
+2. INDUSTRY CONSOLIDATION
+- Current consolidation trends and patterns
+- M&A activity and deal flow
+- Consolidation opportunities and barriers
+- Market share distribution among key players
+
+3. BARRIERS TO ENTRY
+- Capital requirements and investment needs
+- Regulatory and compliance barriers
+- Technology and expertise requirements
+- Brand recognition and customer loyalty factors
+- Distribution and supply chain barriers
+
+4. CASH FLOW CHARACTERISTICS
+- Typical cash flow patterns in the industry
+- Working capital requirements
+- Seasonality and cyclicality factors
+- Capital intensity and investment needs
+- Revenue recognition and billing patterns
+
+5. TECHNOLOGICAL ADAPTATION
+- Current technology adoption levels
+- Emerging technologies and their impact
+- Digital transformation opportunities
+- Technology barriers and requirements
+- Innovation trends and disruption risks
+
+6. KEY INVESTMENT INSIGHTS
+- Most attractive investment opportunities
+- Risk factors and mitigation strategies
+- Value creation opportunities
+- Exit strategy considerations
+- Key success factors for investments
+
+7. SOURCES
+- List credible sources and data points used
+- Include industry reports, market research, and financial data
+- Provide link to each source used in the report 
+- After statistic, put source name in parenthesis *THIS IS EXTREMELY IMPORTANT*
+
+Please ensure the report is:
+- Data-driven with specific metrics and statistics
+- Focused on private equity investment opportunities
+- Professional and comprehensive
+- Based on current market conditions and trends
+- Actionable for investment decision-making
+
+Format the response with clear section headers and bullet points for easy reading.`;
+  }
+
+  private parseIndustryResearchContent(content: string): any {
+    // Parse the AI response into structured sections
+    const sections = {
+      marketOverview: this.extractSection(content, 'MARKET OVERVIEW'),
+      industryConsolidation: this.extractSection(content, 'INDUSTRY CONSOLIDATION'),
+      barriersToEntry: this.extractSection(content, 'BARRIERS TO ENTRY'),
+      cashFlowCharacteristics: this.extractSection(content, 'CASH FLOW CHARACTERISTICS'),
+      technologicalAdaptation: this.extractSection(content, 'TECHNOLOGICAL ADAPTATION'),
+      keyInvestmentInsights: this.extractSection(content, 'KEY INVESTMENT INSIGHTS'),
+      sources: this.extractSection(content, 'SOURCES')
+    };
+
+    return sections;
+  }
+
+  private extractSection(content: string, sectionName: string): string {
+    const regex = new RegExp(`${sectionName}[\\s\\S]*?(?=\\n\\d+\\.|$)`, 'i');
+    const match = content.match(regex);
+    return match ? match[0].replace(sectionName, '').trim() : '';
+  }
+
+  private async generateIndustryResearchDocxWithContent(thesisData: ThesisData, content: any): Promise<Buffer> {
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          // Title
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Industry Research Report",
+                bold: true,
+                size: 32,
+              }),
+            ],
+            heading: HeadingLevel.TITLE,
+            spacing: { after: 400 },
+          }),
+
+          // Thesis Name
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Investment Thesis: ${thesisData.name}`,
+                bold: true,
+                size: 24,
+              }),
+            ],
+            heading: HeadingLevel.HEADING_1,
+            spacing: { after: 300 },
+          }),
+
+          // Investment Criteria Summary
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "Investment Criteria:",
+                bold: true,
+                size: 20,
+              }),
+            ],
+            heading: HeadingLevel.HEADING_2,
+            spacing: { after: 200 },
+          }),
+
+          ...thesisData.criteria.map(criteria => 
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${criteria.category}: ${criteria.field} ${criteria.operator} ${criteria.value} (Weight: ${criteria.weight}%)`,
+                  size: 18,
+                }),
+              ],
+              spacing: { after: 100 },
+            })
+          ),
+
+          // Market Overview Section
+          ...this.createSectionParagraphs("Market Overview", content.marketOverview),
+          
+          // Industry Consolidation Section
+          ...this.createSectionParagraphs("Industry Consolidation", content.industryConsolidation),
+          
+          // Barriers to Entry Section
+          ...this.createSectionParagraphs("Barriers to Entry", content.barriersToEntry),
+          
+          // Cash Flow Characteristics Section
+          ...this.createSectionParagraphs("Cash Flow Characteristics", content.cashFlowCharacteristics),
+          
+          // Technological Adaptation Section
+          ...this.createSectionParagraphs("Technological Adaptation", content.technologicalAdaptation),
+          
+          // Key Investment Insights Section
+          ...this.createSectionParagraphs("Key Investment Insights", content.keyInvestmentInsights),
+          
+          // Sources Section
+          ...this.createSectionParagraphs("Sources", content.sources),
+        ],
+      }],
+    });
+
+    return await Packer.toBuffer(doc);
+  }
+
+  private createSectionParagraphs(title: string, content: string): Paragraph[] {
+    if (!content.trim()) return [];
+
+    const paragraphs: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: title,
+            bold: true,
+            size: 20,
+          }),
+        ],
+        heading: HeadingLevel.HEADING_2,
+        spacing: { after: 200 },
+      })
+    ];
+
+    // Split content into lines and create paragraphs
+    const lines = content.split('\n').filter(line => line.trim());
+    lines.forEach(line => {
+      paragraphs.push(new Paragraph({
+        children: [
+          new TextRun({
+            text: line.trim(),
+            size: 18,
+          }),
+        ],
+        spacing: { after: 100 },
+      }));
+    });
+
+    return paragraphs;
+  }
 }
 
 export const onePagerGenerationService = new OnePagerGenerationService();
