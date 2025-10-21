@@ -271,3 +271,100 @@ Generated `test-rid13-fixed.docx` - all checks pass:
 **Total impact**: 3 lines changed in templateEditor.service.ts
 
 Document corruption issue fully resolved while preserving all working headshot logic.
+
+---
+
+## Add Separate Searcher Stories for Navy Blue Template
+
+### User Request
+User updated navy_blue.docx template to include {searcherStory1} and {searcherStory2} placeholders instead of a single combined story. Requested API call be modified to generate 2 separate stories (one for each searcher) while keeping existing functionality unchanged.
+
+### Changes Made
+
+**1. Updated OnePagerContent Interface** (`server/src/services/onePagerGeneration.service.ts:67-74`)
+   - Added `searcherStory1: string` field
+   - Added `searcherStory2: string` field
+   - Kept `ourStories: string` for backwards compatibility with other templates
+
+**2. Modified OpenAI Prompt** (`server/src/services/onePagerGeneration.service.ts:187-199`)
+   - Added section 5: "Searcher Story 1" (3-4 lines maximum)
+   - Added section 6: "Searcher Story 2" (3-4 lines maximum)
+   - Each story focuses on individual journey, background, and what drives them
+   - Uses searcher names from request data dynamically
+   - Kept "Our Stories" section for backwards compatibility
+
+**3. Updated Output Format** (`server/src/services/onePagerGeneration.service.ts:227-231`)
+   - Added `SEARCHER_STORY_1:` section to expected response
+   - Added `SEARCHER_STORY_2:` section to expected response
+   - Keeps all existing sections unchanged
+
+**4. Enhanced parseContent() Method** (`server/src/services/onePagerGeneration.service.ts:234-273`)
+   - Added `searcherStory1: ''` to result initialization
+   - Added `searcherStory2: ''` to result initialization
+   - Added `case 'SEARCHER_STORY_1':` to extract first story
+   - Added `case 'SEARCHER_STORY_2':` to extract second story
+
+**5. Added Placeholder Replacements** (`server/src/services/templateEditor.service.ts:180-182`)
+   - Added `'{searcherStory1}': data.content?.searcherStory1 || ''`
+   - Added `'{searcherStory2}': data.content?.searcherStory2 || ''`
+   - Added comment: "Individual searcher stories - for navy_blue template"
+
+### Verification ✅
+- ✅ New placeholders appear in "Available replacements" list
+- ✅ Template contains {searcherStory1} and {searcherStory2} placeholders
+- ✅ Backward compatibility maintained - `ourStories` still works for other templates
+- ✅ No existing functionality broken
+- ✅ OpenAI prompt requests 2 separate stories
+- ✅ Parser extracts both stories from API response
+
+### Impact Summary
+**Files Modified**: 2
+1. `server/src/services/onePagerGeneration.service.ts` - Added 2 new fields, updated prompt, enhanced parser
+2. `server/src/services/templateEditor.service.ts` - Added 2 new placeholder replacements
+
+**Backward Compatibility**: ✅ Full
+- Other templates still use `ourStories` placeholder
+- Navy blue template now gets 2 separate stories
+
+**Code Simplicity**: ✅ Excellent
+- Simple additions to existing structures
+- No complex logic changes
+- Clean separation of concerns
+
+---
+
+## Fix Placeholder Replacement Issue
+
+### Issue Reported
+User reported that 0 placeholders were being updated in the generated document (picture implementation was working correctly).
+
+### Root Cause
+Word was splitting placeholders across multiple XML runs with spell-check markers in between:
+```xml
+<w:t>{</w:t></w:r><w:proofErr.../><w:r><w:t>searchFundName</w:t></w:r><w:proofErr.../><w:r><w:t>}</w:t>
+```
+
+The `{`, placeholder name, and `}` were in separate `<w:r>` (run) elements, so the simple string replacement couldn't find the complete placeholder `{searchFundName}`.
+
+### Solution
+**File**: `server/src/services/templateEditor.service.ts`
+
+Added Step 3 to `normalizePlaceholders()` method (lines 112-131):
+- Uses regex to find and merge placeholders split across runs
+- Pattern: `/<w:t>\{<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>\}<\/w:t>/g`
+- Replaces matched pattern with merged placeholder: `<w:t>{$1}</w:t>`
+- Added debugging to show how many characters were merged
+
+### Verification ✅
+Generated test document - all placeholders now working:
+- ✅ {searchFundName} → "Alka Oaks Partners"
+- ✅ {searchFundWebsite} → "https://www.alkaoaks.com/"
+- ✅ {searchFundEmail} → "charlesg@alkaoaks.com"
+- ✅ {searchFundAddress} → "1900 Market Street, 8th Floor, Philadelphia, Pennsylvania"
+- ✅ Merged 3294 characters of split placeholders (confirmed in logs)
+
+**Impact**:
+- 1 file modified: `server/src/services/templateEditor.service.ts`
+- Added ~15 lines to normalization method
+- Picture implementation untouched (as requested)
+- All placeholders now work correctly

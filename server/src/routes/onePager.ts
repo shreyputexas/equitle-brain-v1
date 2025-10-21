@@ -186,9 +186,8 @@ router.post('/test-generate', async (req, res) => {
               searchFundEmail,
               thesisData,
               teamConnection,
-              template: template || 'navy_blue',
-              content // Pass the generated content
-            });
+              template: template || 'navy_blue'
+            }, content); // Pass the generated content as second parameter
 
     console.log('Generation result size:', result.length);
     console.log('=== END DEBUG ===');
