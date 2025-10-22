@@ -765,9 +765,22 @@ const MyThesis: React.FC = () => {
       }
       
       // Prepare the thesis data for the API
+      // If a specific industry is selected, filter criteria to only include that industry
+      let filteredCriteria = selectedThesis.criteria;
+      if (selectedIndustry) {
+        filteredCriteria = selectedThesis.criteria.filter(c => {
+          // Keep all non-subindustry criteria
+          if (c.category !== 'Subindustry') {
+            return true;
+          }
+          // For subindustry criteria, only keep the selected industry
+          return c.value.toString().toLowerCase().includes(selectedIndustry.toLowerCase());
+        });
+      }
+
       const thesisData = {
         name: selectedThesis.name,
-        criteria: selectedThesis.criteria.map(c => ({
+        criteria: filteredCriteria.map(c => ({
           ...c,
           value: c.value.toString()
         }))

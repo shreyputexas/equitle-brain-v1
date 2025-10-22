@@ -376,6 +376,52 @@ router.post('/content', firebaseAuthMiddleware, async (req, res) => {
   }
 });
 
+// Test endpoint for industry research (no auth required)
+router.post('/test-industry-research', async (req, res) => {
+  try {
+    const { thesisData, selectedIndustry } = req.body;
+
+    if (!thesisData || !thesisData.name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thesis data with name is required'
+      });
+    }
+
+    logger.info('Generating test industry research report', {
+      thesisName: thesisData.name,
+      selectedIndustry: selectedIndustry || 'all industries'
+    });
+
+    // Generate industry research with AI
+    const docxBuffer = await onePagerGenerationService.generateIndustryResearchWithAI(thesisData, selectedIndustry);
+
+    // Set response headers for file download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="test-industry-research-${Date.now()}.docx"`);
+    res.setHeader('Content-Length', docxBuffer.length);
+
+    // Send the file
+    res.send(docxBuffer);
+
+    logger.info('Test industry research report generated successfully', {
+      thesisName: thesisData.name,
+      docxSize: docxBuffer.length
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to generate test industry research report', {
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to generate industry research report', 
+      error: error.message 
+    });
+  }
+});
+
 // Industry Research Report Generation
 router.post('/generate-industry-research', firebaseAuthMiddleware, async (req, res) => {
   try {
