@@ -28,12 +28,11 @@ export class MicrosoftAuthService {
 
   // Microsoft Graph API scopes
   private static readonly SCOPES = {
-    profile: ['User.Read'],
-    calendar: ['User.Read', 'Calendars.ReadWrite'],
-    mail: ['User.Read', 'Mail.ReadWrite', 'Mail.Send'],
-    teams: ['User.Read', 'Chat.ReadWrite', 'Team.ReadBasic.All', 'Channel.ReadBasic.All'],
-    files: ['User.Read', 'Files.ReadWrite.All'],
-    contacts: ['User.Read', 'Contacts.ReadWrite']
+    profile: ['openid', 'User.Read'],
+    onedrive: ['openid', 'User.Read', 'Files.ReadWrite'],
+    outlook: ['openid', 'User.Read', 'Mail.ReadWrite', 'Mail.Send'],
+    teams: ['openid', 'User.Read', 'OnlineMeetings.ReadWrite'],
+    calendar: ['openid', 'User.Read', 'Calendars.ReadWrite']
   };
 
   /**
@@ -55,9 +54,18 @@ export class MicrosoftAuthService {
   /**
    * Generate Microsoft OAuth authorization URL
    */
-  static getAuthUrl(scopes: string[], userId: string): string {
+  static getAuthUrl(types: string[], userId: string): string {
     if (!this.CLIENT_ID) {
       throw new Error('Microsoft Client ID not configured');
+    }
+
+    // Get scopes for the requested types
+    const scopes = this.getScopes(types);
+    console.log('Microsoft getAuthUrl - Requested types:', types);
+    console.log('Microsoft getAuthUrl - Generated scopes:', scopes);
+    
+    if (scopes.length === 0) {
+      throw new Error('No valid scopes generated for Microsoft OAuth');
     }
 
     const baseUrl = `https://login.microsoftonline.com/${this.TENANT_ID}/oauth2/v2.0/authorize`;
@@ -66,18 +74,21 @@ export class MicrosoftAuthService {
       response_type: 'code',
       redirect_uri: this.REDIRECT_URI,
       scope: scopes.join(' '),
-      state: userId,
+      state: `${userId}:${Date.now()}`,
       response_mode: 'query',
-      prompt: 'consent'
+      prompt: 'consent',
+      access_type: 'offline'
     });
 
-    return `${baseUrl}?${params.toString()}`;
+    const authUrl = `${baseUrl}?${params.toString()}`;
+    console.log('Microsoft OAuth URL generated:', authUrl);
+    return authUrl;
   }
 
   /**
    * Exchange authorization code for access token
    */
-  static async exchangeCodeForTokens(code: string): Promise<MicrosoftTokenResponse> {
+  static async exchangeCodeForTokens(code: string, requestedScopes?: string[]): Promise<MicrosoftTokenResponse> {
     if (!this.CLIENT_ID || !this.CLIENT_SECRET) {
       throw new Error('Microsoft OAuth credentials not configured');
     }
@@ -92,6 +103,11 @@ export class MicrosoftAuthService {
         grant_type: 'authorization_code',
         redirect_uri: this.REDIRECT_URI
       });
+
+      // Add scope if provided
+      if (requestedScopes && requestedScopes.length > 0) {
+        params.append('scope', requestedScopes.join(' '));
+      }
 
       const response = await axios.post(tokenUrl, params, {
         headers: {
