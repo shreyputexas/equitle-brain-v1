@@ -15,8 +15,12 @@ import {
 } from '@mui/material';
 import {
   Google as GoogleIcon,
+  Microsoft as MicrosoftIcon,
   DriveEta as DriveIcon,
+  CloudUpload as OneDriveIcon,
   Event as CalendarIcon,
+  Email as EmailIcon,
+  VideoCall as TeamsIcon,
   Person as ProfileIcon,
   MoreVert as MoreIcon,
   CheckCircle as ConnectedIcon,
@@ -42,8 +46,11 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
     switch (type) {
       case 'profile': return <ProfileIcon />;
       case 'drive': return <DriveIcon />;
+      case 'onedrive': return <OneDriveIcon />;
       case 'calendar': return <CalendarIcon />;
-      default: return <GoogleIcon />;
+      case 'outlook': return <EmailIcon />;
+      case 'teams': return <TeamsIcon />;
+      default: return integration.provider === 'microsoft' ? <MicrosoftIcon /> : <GoogleIcon />;
     }
   };
 
@@ -51,7 +58,10 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
     switch (type) {
       case 'profile': return 'Profile';
       case 'drive': return 'Drive';
+      case 'onedrive': return 'OneDrive';
       case 'calendar': return 'Calendar';
+      case 'outlook': return 'Outlook';
+      case 'teams': return 'Teams';
       default: return type;
     }
   };
@@ -97,12 +107,12 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: '#4285f4' }}>
-              <GoogleIcon />
+            <Avatar sx={{ bgcolor: integration.provider === 'microsoft' ? '#0078d4' : '#4285f4' }}>
+              {integration.provider === 'microsoft' ? <MicrosoftIcon /> : <GoogleIcon />}
             </Avatar>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                Google {getTypeLabel(integration.type)}
+                {integration.provider === 'microsoft' ? 'Microsoft' : 'Google'} {getTypeLabel(integration.type)}
                 {integration.isActive ? (
                   <ConnectedIcon sx={{ color: 'success.main', fontSize: 20 }} />
                 ) : (
@@ -110,7 +120,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
                 )}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {integration.profile.email}
+                {integration.profile.email?.replace(/#EXT#@.*\.onmicrosoft\.com/, '') || integration.profile.email}
               </Typography>
             </Box>
           </Box>
@@ -125,9 +135,33 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
           <Typography variant="body2">
             {integration.type === 'profile' && 'Basic profile information'}
             {integration.type === 'drive' && 'File storage and management'}
+            {integration.type === 'onedrive' && 'File storage and management'}
             {integration.type === 'calendar' && 'Calendar events and scheduling'}
+            {integration.type === 'outlook' && 'Email management'}
+            {integration.type === 'teams' && 'Meeting management'}
           </Typography>
         </Box>
+
+        {/* Microsoft Other Services */}
+        {integration.provider === 'microsoft' && integration.services && integration.services.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              Other Services:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {integration.services.map((service: string, index: number) => (
+                <Chip
+                  key={index}
+                  label={getTypeLabel(service)}
+                  size="small"
+                  variant="outlined"
+                  icon={getTypeIcon(service)}
+                  sx={{ fontSize: '0.75rem' }}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
 
         <Divider sx={{ my: 2 }} />
 
@@ -148,23 +182,33 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
             Permissions:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {(Array.isArray(integration.scope) ? integration.scope : integration.scope.split(',')).slice(0, 2).map((scope: string, index: number) => (
-              <Chip
-                key={index}
-                label={scope.split('/').pop()?.replace('auth.', '') || scope}
-                size="small"
-                variant="outlined"
-                sx={{ fontSize: '0.75rem' }}
-              />
-            ))}
-            {(Array.isArray(integration.scope) ? integration.scope : integration.scope.split(',')).length > 2 && (
-              <Chip
-                label={`+${(Array.isArray(integration.scope) ? integration.scope : integration.scope.split(',')).length - 2} more`}
-                size="small"
-                variant="outlined"
-                sx={{ fontSize: '0.75rem' }}
-              />
-            )}
+            {(() => {
+              const getScopes = (): string[] => {
+                return Array.isArray(integration.scope) ? integration.scope : integration.scope.split(',');
+              };
+              const scopes = getScopes();
+              return (
+                <>
+                  {scopes.slice(0, 2).map((scope: string, index: number) => (
+                    <Chip
+                      key={index}
+                      label={scope.split('/').pop()?.replace('auth.', '') || scope}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: '0.75rem' }}
+                    />
+                  ))}
+                  {scopes.length > 2 && (
+                    <Chip
+                      label={`+${scopes.length - 2} more`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: '0.75rem' }}
+                    />
+                  )}
+                </>
+              );
+            })()}
           </Box>
         </Box>
 

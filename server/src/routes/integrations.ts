@@ -3,6 +3,7 @@ import GoogleAuthService from '../services/googleAuth';
 import GoogleDriveService from '../services/googleDrive';
 import GoogleCalendarService from '../services/googleCalendar';
 import GmailService from '../services/gmail';
+import { MicrosoftAuthService } from '../services/microsoftAuth';
 import IntegrationsFirestoreService from '../services/integrations.firestore.service';
 import { firebaseAuthMiddleware as auth, FirebaseAuthRequest } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
@@ -673,6 +674,612 @@ router.get('/google/gmail/labels', auth, async (req, res) => {
   } catch (error) {
     logger.error('Error fetching Gmail labels:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch Gmail labels' });
+  }
+});
+
+// MICROSOFT INTEGRATION ENDPOINTS
+
+// Initiate Microsoft OAuth flow (requires auth)
+router.post('/microsoft/connect', auth, async (req, res) => {
+  try {
+    const { types } = req.body; // ['profile', 'onedrive', 'outlook', 'teams']
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    if (!types || !Array.isArray(types)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Types array is required'
+      });
+    }
+
+    logger.info('Microsoft OAuth connect request', { userId, types });
+    
+    const scopes = MicrosoftAuthService.getScopes(types);
+    logger.info('Generated Microsoft scopes', { scopes });
+    
+    const authUrl = MicrosoftAuthService.getAuthUrl(types, userId);
+    logger.info('Generated Microsoft auth URL', { authUrl });
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes,
+        types
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Microsoft OAuth:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: (req as FirebaseAuthRequest).userId,
+      types: req.body?.types
+    });
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to initiate Microsoft OAuth flow' 
+    });
+  }
+});
+
+// Handle Microsoft OAuth callback (NO AUTH REQUIRED - this is the callback)
+router.get('/microsoft/callback', async (req, res) => {
+  try {
+    const { code, state, error: oauthError } = req.query;
+
+    // Handle OAuth errors from Microsoft
+    if (oauthError) {
+      logger.error('OAuth error from Microsoft:', { error: oauthError, description: req.query.error_description });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=microsoft&reason=${encodeURIComponent(oauthError as string)}`);
+    }
+
+    if (!code || !state) {
+      logger.error('Missing authorization code or state in Microsoft OAuth callback', { code: !!code, state: !!state });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=microsoft&reason=missing_parameters`);
+    }
+
+    // Extract userId from state (format: userId:timestamp)
+    const [userId, timestamp] = (state as string).split(':');
+
+    if (!userId) {
+      logger.error('Invalid state parameter format', { state });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=microsoft&reason=invalid_state`);
+    }
+
+    // Validate timestamp (should be within last 10 minutes for security)
+    const stateTimestamp = parseInt(timestamp);
+    const now = Date.now();
+    const maxAge = 10 * 60 * 1000; // 10 minutes
+
+    if (!timestamp || isNaN(stateTimestamp) || (now - stateTimestamp) > maxAge) {
+      logger.error('Expired or invalid state timestamp', {
+        timestamp,
+        stateTimestamp,
+        age: now - stateTimestamp,
+        maxAge
+      });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=microsoft&reason=expired_state`);
+    }
+
+    logger.info('Processing Microsoft OAuth callback', { userId, codeLength: (code as string).length, stateAge: now - stateTimestamp });
+
+    // Get the scopes that were requested (we need to reconstruct them)
+    const requestedTypes = ['profile', 'onedrive', 'outlook', 'teams']; // Default to all types
+    const requestedScopes = MicrosoftAuthService.getScopes(requestedTypes);
+    logger.info('Using scopes for token exchange:', { requestedScopes });
+
+    // Exchange code for tokens
+    const tokens = await MicrosoftAuthService.exchangeCodeForTokens(code as string, requestedScopes);
+    logger.info('Successfully exchanged code for Microsoft tokens', { hasAccessToken: !!tokens.access_token, hasRefreshToken: !!tokens.refresh_token });
+
+    // Get user profile
+    const profile = await MicrosoftAuthService.getUserProfile(tokens.access_token);
+    logger.info('Retrieved Microsoft user profile', { email: profile.userPrincipalName, name: profile.displayName });
+
+    // Determine integration types based on scopes
+    const scopeList = tokens.scope.split(' ');
+    const types: string[] = [];
+
+    if (scopeList.some((s: string) => s.includes('User.Read'))) types.push('profile');
+    if (scopeList.some((s: string) => s.includes('Files.ReadWrite'))) types.push('onedrive');
+    if (scopeList.some((s: string) => s.includes('Mail.ReadWrite'))) types.push('outlook');
+    if (scopeList.some((s: string) => s.includes('OnlineMeetings.ReadWrite'))) types.push('teams');
+
+    logger.info('Determined Microsoft integration types from scopes', { types, scopeCount: scopeList.length });
+
+    if (types.length === 0) {
+      logger.error('No valid Microsoft integration types found in scopes', { scopes: scopeList });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=microsoft&reason=invalid_scopes`);
+    }
+
+    // Remove existing Microsoft integrations for this user
+    const deleted = await IntegrationsFirestoreService.deleteMany({
+      userId: userId as string,
+      provider: 'microsoft'
+    });
+
+    if (deleted.count > 0) {
+      logger.info(`Removed ${deleted.count} existing Microsoft integration(s) for user ${userId}`);
+    }
+
+    // Create single Microsoft Profile integration with services array
+    const integrationData: any = {
+      userId: userId as string,
+      provider: 'microsoft',
+      type: 'profile',
+      accessToken: tokens.access_token,
+      expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+      scope: scopeList,
+      profile: {
+        email: profile.userPrincipalName,
+        name: profile.displayName
+      },
+      isActive: true,
+      services: types.filter(t => t !== 'profile')
+    };
+    
+    if (tokens.refresh_token) {
+      integrationData.refreshToken = tokens.refresh_token;
+    }
+    
+    const integration = await IntegrationsFirestoreService.create(integrationData);
+
+    logger.info('Microsoft OAuth callback completed successfully', {
+      userId,
+      integrationId: integration.id,
+      types: types,
+      services: types.filter(t => t !== 'profile')
+    });
+
+    // Redirect to settings page with success status
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=success&provider=microsoft&types=${encodeURIComponent(types.join(','))}&userId=${userId}`);
+  } catch (error) {
+    logger.error('Error handling Microsoft OAuth callback:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: req.query.state,
+      hasCode: !!req.query.code
+    });
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=microsoft&reason=server_error`);
+  }
+});
+
+// Get OneDrive files (requires auth)
+router.get('/microsoft/onedrive/files', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if OneDrive service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('onedrive')) {
+      return res.status(404).json({
+        success: false,
+        error: 'OneDrive service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to fetch OneDrive files
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children', {
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as { value?: any[] };
+    const files = data.value || [];
+
+    res.json({
+      success: true,
+      data: files
+    });
+  } catch (error) {
+    logger.error('Error fetching OneDrive files:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch OneDrive files' });
+  }
+});
+
+// Get OneDrive folders (requires auth)
+router.get('/microsoft/onedrive/folders', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if OneDrive service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('onedrive')) {
+      return res.status(404).json({
+        success: false,
+        error: 'OneDrive service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to fetch OneDrive folders
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children?$filter=folder ne null', {
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as { value?: any[] };
+    const folders = data.value || [];
+
+    res.json({
+      success: true,
+      data: folders
+    });
+  } catch (error) {
+    logger.error('Error fetching OneDrive folders:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch OneDrive folders' });
+  }
+});
+
+// Get Outlook messages (requires auth)
+router.get('/microsoft/outlook/messages', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    const { maxResults = 50, filter } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if Outlook service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('outlook')) {
+      return res.status(404).json({
+        success: false,
+        error: 'Outlook service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to fetch Outlook messages
+    let url = `https://graph.microsoft.com/v1.0/me/messages?$top=${maxResults}&$orderby=receivedDateTime desc`;
+    if (filter) {
+      url += `&$filter=${filter}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as { value?: any[] };
+    const messages = data.value || [];
+
+    res.json({
+      success: true,
+      data: messages
+    });
+  } catch (error) {
+    logger.error('Error fetching Outlook messages:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Outlook messages' });
+  }
+});
+
+// Send Outlook email (requires auth)
+router.post('/microsoft/outlook/send', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    const emailData = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if Outlook service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('outlook')) {
+      return res.status(404).json({
+        success: false,
+        error: 'Outlook service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to send email
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: {
+          subject: emailData.subject,
+          body: {
+            contentType: emailData.isHtml ? 'HTML' : 'Text',
+            content: emailData.body
+          },
+          toRecipients: Array.isArray(emailData.to) ? emailData.to.map((email: string) => ({ emailAddress: { address: email } })) : [{ emailAddress: { address: emailData.to } }]
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    res.json({
+      success: true,
+      data: { message: 'Email sent successfully' }
+    });
+  } catch (error) {
+    logger.error('Error sending Outlook email:', error);
+    res.status(500).json({ success: false, error: 'Failed to send Outlook email' });
+  }
+});
+
+// Get Teams meetings (requires auth)
+router.get('/microsoft/teams/meetings', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    const { startTime, endTime } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if Teams service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('teams')) {
+      return res.status(404).json({
+        success: false,
+        error: 'Teams service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to fetch Teams meetings
+    let url = 'https://graph.microsoft.com/v1.0/me/onlineMeetings';
+    if (startTime && endTime) {
+      url += `?$filter=startDateTime ge ${startTime} and endDateTime le ${endTime}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as { value?: any[] };
+    const meetings = data.value || [];
+
+    res.json({
+      success: true,
+      data: meetings
+    });
+  } catch (error) {
+    logger.error('Error fetching Teams meetings:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch Teams meetings' });
+  }
+});
+
+// Create Teams meeting (requires auth)
+router.post('/microsoft/teams/meetings', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    const meetingData = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if Teams service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('teams')) {
+      return res.status(404).json({
+        success: false,
+        error: 'Teams service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to create Teams meeting
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/onlineMeetings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        subject: meetingData.subject,
+        startDateTime: meetingData.start.dateTime,
+        endDateTime: meetingData.end.dateTime,
+        attendees: meetingData.attendees || []
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const meeting = await response.json();
+
+    res.json({
+      success: true,
+      data: meeting
+    });
+  } catch (error) {
+    logger.error('Error creating Teams meeting:', error);
+    res.status(500).json({ success: false, error: 'Failed to create Teams meeting' });
+  }
+});
+
+// Get deal-related Outlook emails (requires auth)
+router.get('/microsoft/outlook/deals', auth, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    const { maxResults = 50 } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
+      userId,
+      provider: 'microsoft',
+      type: 'profile',
+      isActive: true
+    });
+
+    if (!microsoftIntegration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Microsoft integration not found'
+      });
+    }
+
+    // Check if Outlook service is enabled
+    if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('outlook')) {
+      return res.status(404).json({
+        success: false,
+        error: 'Outlook service not enabled for this Microsoft integration'
+      });
+    }
+
+    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    
+    // Use Microsoft Graph API to fetch recent emails
+    const response = await fetch(`https://graph.microsoft.com/v1.0/me/messages?$top=${maxResults}&$orderby=receivedDateTime desc`, {
+      headers: {
+        'Authorization': `Bearer ${validAccessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json() as { value?: any[] };
+    const emails = data.value || [];
+
+    res.json({
+      success: true,
+      data: { emails }
+    });
+  } catch (error) {
+    logger.error('Error fetching deal-related Outlook emails:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch deal-related Outlook emails' });
   }
 });
 

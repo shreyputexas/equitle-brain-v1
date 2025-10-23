@@ -58,17 +58,23 @@ export class EmailSyncService {
 
   private static async getUsersWithEmailIntegration() {
     try {
-      // Get users who have Gmail or Outlook integrations
+      // Get users who have Gmail or Microsoft Outlook integrations
       const integrationsSnapshot = await db.collection('integrations')
         .where('isActive', '==', true)
-        .where('type', 'in', ['gmail', 'mail'])
         .get();
       
       const userIds = new Set<string>();
       integrationsSnapshot.docs.forEach(doc => {
         const data = doc.data();
         if (data.userId) {
-          userIds.add(data.userId);
+          // Check for Gmail integration
+          if (data.provider === 'google' && data.type === 'gmail') {
+            userIds.add(data.userId);
+          }
+          // Check for Microsoft Outlook integration
+          else if (data.provider === 'microsoft' && data.type === 'profile' && data.services && data.services.includes('outlook')) {
+            userIds.add(data.userId);
+          }
         }
       });
       
