@@ -18,7 +18,15 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Divider
+  Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -30,9 +38,16 @@ import {
   AttachMoney as MoneyIcon,
   ExpandMore as ExpandMoreIcon,
   Email as EmailIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Visibility as VisibilityIcon,
+  Reply as ReplyIcon,
+  Forward as ForwardIcon,
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { emailProcessingApi, ProcessedEmail } from '../services/emailProcessingApi';
+import emailCategorizationService, { CategorizedEmail } from '../services/emailCategorizationService';
 
 // Mock data for investors - empty for now
 const mockInvestors: any[] = [];
@@ -45,7 +60,7 @@ const stages = [
 
 export default function Investors() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [emails, setEmails] = useState<ProcessedEmail[]>([]);
+  const [emails, setEmails] = useState<CategorizedEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +73,9 @@ export default function Investors() {
     try {
       setLoading(true);
       setError(null);
-      const investorEmails = await emailProcessingApi.getEmailsByCategory('investor');
+      
+      // Use the same Outlook integration as Deals page
+      const investorEmails = await emailCategorizationService.getEmailsByCategory('investor', 50);
       setEmails(investorEmails);
     } catch (err) {
       console.error('Error loading investor emails:', err);
@@ -107,15 +124,58 @@ export default function Investors() {
     }
   };
 
-  const EmailCard = ({ email }: { email: ProcessedEmail }) => {
-    const sentimentStyle = getSentimentColor(email.sentiment);
+  const stripHtml = (html: string) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || '';
+  };
+
+  const EmailCard = ({ email }: { email: CategorizedEmail }) => {
+    const sentimentStyle = getSentimentColor(email.categorization.extractedData.sentiment?.toUpperCase() || 'NEUTRAL');
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [previewOpen, setPreviewOpen] = useState(false);
+
+    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+      setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+      setAnchorEl(null);
+    };
+
+    const handlePreview = () => {
+      setPreviewOpen(true);
+      handleMenuClose();
+    };
+
+    const handleReply = () => {
+      console.log('Reply to email:', email);
+      handleMenuClose();
+    };
+
+    const handleForward = () => {
+      console.log('Forward email:', email);
+      handleMenuClose();
+    };
+
+    const handleCreateDeal = () => {
+      console.log('Create deal from email:', email);
+    };
+
+    const handleStar = () => {
+      console.log('Star email:', email.id);
+      handleMenuClose();
+    };
+
+    const handleDelete = () => {
+      console.log('Delete email:', email.id);
+      handleMenuClose();
+    };
     
     return (
       <Card
         sx={{
           mb: 2,
           transition: 'all 0.3s ease',
-          cursor: 'pointer',
           bgcolor: 'white',
           border: '1px solid #d0d0d0',
           '&:hover': {
@@ -124,84 +184,165 @@ export default function Investors() {
           }
         }}
       >
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box display="flex" alignItems="center" width="100%">
-              <Avatar sx={{
-                bgcolor: sentimentStyle.bgColor,
-                color: sentimentStyle.color,
-                mr: 2,
-                width: 40,
-                height: 40
-              }}>
-                {getSentimentIcon(email.sentiment)}
-              </Avatar>
+        <Box sx={{ p: 2 }}>
+          <Box display="flex" alignItems="center" mb={2}>
+            <Avatar sx={{
+              bgcolor: sentimentStyle.bgColor,
+              color: sentimentStyle.color,
+              mr: 2,
+              width: 40,
+              height: 40
+            }}>
+              {getSentimentIcon(email.categorization.extractedData.sentiment?.toUpperCase() || 'NEUTRAL')}
+            </Avatar>
 
-              <Box flex={1}>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography variant="subtitle1" fontWeight="medium" color="#000000">
-                    {email.prospect_name || email.prospect_email}
-                  </Typography>
-                  <Chip
-                    label={email.sentiment}
-                    size="small"
-                    sx={{
-                      bgcolor: sentimentStyle.bgColor,
-                      color: sentimentStyle.color,
-                      fontWeight: 'bold'
-                    }}
-                  />
-                </Box>
-
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  {email.email_subject || 'No subject'}
+            <Box flex={1}>
+              <Box display="flex" alignItems="center" gap={1} mb={1}>
+                <Typography variant="subtitle1" fontWeight="medium" color="#000000">
+                  {email.from.emailAddress.name}
                 </Typography>
+                <Chip
+                  label={email.categorization.extractedData.sentiment || 'neutral'}
+                  size="small"
+                  sx={{
+                    bgcolor: sentimentStyle.bgColor,
+                    color: sentimentStyle.color,
+                    fontWeight: 'bold'
+                  }}
+                />
+              </Box>
 
-                <Box display="flex" alignItems="center" gap={2} mt={1}>
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(email.received_date)}
-                  </Typography>
-                  {email.source && (
-                    <Chip
-                      label={email.source}
-                      size="small"
-                      variant="outlined"
-                      sx={{ fontSize: '0.7rem' }}
-                    />
-                  )}
-                </Box>
+              <Typography variant="body2" color="text.secondary" noWrap mb={1}>
+                {email.subject || 'No subject'}
+              </Typography>
+
+              <Box display="flex" alignItems="center" gap={2}>
+                <Typography variant="caption" color="text.secondary">
+                  {formatDate(email.receivedDateTime)}
+                </Typography>
+                {email.categorization.category && (
+                  <Chip
+                    label={email.categorization.category.toUpperCase()}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.7rem' }}
+                  />
+                )}
               </Box>
             </Box>
-          </AccordionSummary>
+          </Box>
 
-          <AccordionDetails>
-            <Box>
-              <Typography variant="body2" color="text.secondary" mb={1}>
-                <strong>From:</strong> {email.prospect_email}
-              </Typography>
+          {/* Three Button Layout */}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button
+              size="small"
+              startIcon={<VisibilityIcon />}
+              onClick={handlePreview}
+              variant="outlined"
+              sx={{ flex: 1, minWidth: 'fit-content' }}
+            >
+              View
+            </Button>
+            
+            <Button
+              size="small"
+              startIcon={<BusinessIcon />}
+              onClick={handleCreateDeal}
+              color="primary"
+              variant="contained"
+              sx={{ flex: 1, minWidth: 'fit-content' }}
+            >
+              Make Deal
+            </Button>
+            
+            <Button
+              size="small"
+              endIcon={<ExpandMoreIcon />}
+              onClick={handleMenuOpen}
+              variant="outlined"
+              sx={{ flex: 1, minWidth: 'fit-content' }}
+            >
+              More Actions
+            </Button>
+          </Box>
+        </Box>
 
-              {email.email_subject && (
-                <Typography variant="body2" color="text.secondary" mb={1}>
-                  <strong>Subject:</strong> {email.email_subject}
-                </Typography>
-              )}
+        {/* More Actions Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={handleReply}>
+            <ListItemIcon>
+              <ReplyIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Reply</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleForward}>
+            <ListItemIcon>
+              <ForwardIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Forward</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleStar}>
+            <ListItemIcon>
+              <StarBorderIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Add Star</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Delete</ListItemText>
+          </MenuItem>
+        </Menu>
 
-              <Divider sx={{ my: 1 }} />
-
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                {email.email_body || 'No email content available'}
-              </Typography>
-
-              {email.confidence && (
-                <Box mt={2}>
-                  <Typography variant="caption" color="text.secondary">
-                    Confidence: {(email.confidence * 100).toFixed(0)}%
-                  </Typography>
-                </Box>
-              )}
+        {/* Email Preview Dialog */}
+        <Dialog
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <EmailIcon />
+              <Typography variant="h6">{email.subject || '(No Subject)'}</Typography>
             </Box>
-          </AccordionDetails>
-        </Accordion>
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>From:</strong> {email.from.emailAddress.address}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Received:</strong> {formatDate(email.receivedDateTime)}
+              </Typography>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+              {email.body.content ? stripHtml(email.body.content) : 'No email content available'}
+            </Typography>
+            {email.categorization.confidence && (
+              <Box mt={2}>
+                <Typography variant="caption" color="text.secondary">
+                  Confidence: {(email.categorization.confidence * 100).toFixed(0)}%
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+            <Button onClick={handleReply} variant="contained" startIcon={<ReplyIcon />}>
+              Reply
+            </Button>
+            <Button onClick={handleCreateDeal} variant="outlined" startIcon={<BusinessIcon />}>
+              Make Deal
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Card>
     );
   };
