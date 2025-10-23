@@ -37,13 +37,15 @@ const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Loading emails with limit:', limit);
       const emailData = await emailsApi.getEmails(limit);
+      console.log('Received email data:', emailData);
       setEmails(emailData);
     } catch (err) {
-      // Silently handle errors - just show empty state instead of error
-      console.log('Email alerts endpoint not ready yet:', err);
+      // Show error instead of silently handling
+      console.error('Error loading emails:', err);
       setEmails([]);
-      setError(null);
+      setError(err instanceof Error ? err.message : 'Failed to load emails');
     } finally {
       setLoading(false);
     }
