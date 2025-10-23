@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -28,7 +28,8 @@ import {
   Tabs,
   Tab,
   Alert,
-  Snackbar
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -55,6 +56,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Deal as ApiDeal } from '../services/dealsApi';
 import dealsApi from '../services/dealsApi';
+import integrationService from '../services/integrationService';
+import emailCategorizationService from '../services/emailCategorizationService';
+import OutlookEmailCard from './OutlookEmailCard';
 
 interface Person {
   id: string;
@@ -77,6 +81,26 @@ interface Person {
 interface DealWithContacts extends ApiDeal {
   people: Person[];
   sentiment?: 'good' | 'bad' | 'neutral';
+}
+
+interface OutlookEmail {
+  id: string;
+  subject: string;
+  from: {
+    emailAddress: {
+      address: string;
+      name: string;
+    };
+  };
+  receivedDateTime: string;
+  isRead: boolean;
+  hasAttachments: boolean;
+  body: {
+    content: string;
+    contentType: string;
+  };
+  importance?: 'low' | 'normal' | 'high';
+  categories?: string[];
 }
 
 interface DealPipelineProps {
@@ -209,12 +233,75 @@ export default function DealPipeline({
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  
+  // Email state management
+  const [outlookEmails, setOutlookEmails] = useState<OutlookEmail[]>([]);
+  const [emailsLoading, setEmailsLoading] = useState(false);
+  const [emailsError, setEmailsError] = useState<string | null>(null);
 
   // Transform API deals to include mock people data for now
   const dealsWithContacts: DealWithContacts[] = deals.map(deal => ({
     ...deal,
     people: mockPeople // This will be replaced with real contact data later
   }));
+
+  // Fetch Outlook emails on component mount
+  useEffect(() => {
+    fetchOutlookEmails();
+  }, []);
+
+  const fetchOutlookEmails = async () => {
+    try {
+      setEmailsLoading(true);
+      setEmailsError(null);
+      // Get deal-related emails with categorization
+      const categorizedEmails = await emailCategorizationService.getDealRelatedEmails(50);
+      setOutlookEmails(categorizedEmails);
+    } catch (error) {
+      console.error('Error fetching Outlook emails:', error);
+      setEmailsError('Failed to fetch emails. Please check your Microsoft integration.');
+    } finally {
+      setEmailsLoading(false);
+    }
+  };
+
+  const handleEmailReply = (email: OutlookEmail) => {
+    // TODO: Implement email reply functionality
+    console.log('Reply to email:', email);
+  };
+
+  const handleEmailForward = (email: OutlookEmail) => {
+    // TODO: Implement email forward functionality
+    console.log('Forward email:', email);
+  };
+
+  const handleEmailMarkAsRead = async (emailId: string) => {
+    try {
+      await integrationService.markOutlookAsRead(emailId);
+      setOutlookEmails(prev => 
+        prev.map(email => 
+          email.id === emailId ? { ...email, isRead: !email.isRead } : email
+        )
+      );
+    } catch (error) {
+      console.error('Error marking email as read:', error);
+    }
+  };
+
+  const handleEmailStar = (emailId: string) => {
+    // TODO: Implement email starring functionality
+    console.log('Star email:', emailId);
+  };
+
+  const handleEmailDelete = (emailId: string) => {
+    // TODO: Implement email deletion functionality
+    console.log('Delete email:', emailId);
+  };
+
+  const handleCreateDealFromEmail = (email: OutlookEmail) => {
+    // TODO: Implement create deal from email functionality
+    console.log('Create deal from email:', email);
+  };
 
   const getDealsForStage = (stageValue: string) => {
     // Use only real Firebase deals
@@ -804,19 +891,48 @@ export default function DealPipeline({
                 {/* Stage Deals */}
                 <Box sx={{ minHeight: 400 }}>
                   {stageDeals.length === 0 ? (
-                    <Box sx={{ 
-                      textAlign: 'center', 
-                      py: 8,
-                      border: '2px dashed',
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                      bgcolor: 'background.default'
-                    }}>
-                      <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        No deals in this stage
-                      </Typography>
-                    </Box>
+                    stage.value === 'all' && outlookEmails.length > 0 ? (
+                      <Box>
+                        {emailsLoading ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                          </Box>
+                        ) : emailsError ? (
+                          <Alert severity="error">
+                            {emailsError}
+                          </Alert>
+                        ) : (
+                          <Box>
+                            {outlookEmails.slice(0, 10).map((email) => (
+                              <OutlookEmailCard
+                                key={email.id}
+                                email={email}
+                                onReply={handleEmailReply}
+                                onForward={handleEmailForward}
+                                onMarkAsRead={handleEmailMarkAsRead}
+                                onStar={handleEmailStar}
+                                onDelete={handleEmailDelete}
+                                onCreateDeal={handleCreateDealFromEmail}
+                              />
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box sx={{ 
+                        textAlign: 'center', 
+                        py: 8,
+                        border: '2px dashed',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                        bgcolor: 'background.default'
+                      }}>
+                        <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                        <Typography variant="body2" color="text.secondary">
+                          No deals in this stage
+                        </Typography>
+                      </Box>
+                    )
                   ) : (
                     stageDeals.map((deal) => (
                       <DealCard key={deal.id} deal={deal} />

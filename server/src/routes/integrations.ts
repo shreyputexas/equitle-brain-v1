@@ -10,8 +10,8 @@ import logger from '../utils/logger';
 
 const router = express.Router();
 
-// Helper function to ensure valid access token
-async function ensureValidAccessToken(integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) {
+// Helper function to ensure valid access token for Google integrations
+async function ensureValidGoogleAccessToken(integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) {
   if (!integration.accessToken) {
     throw new Error('No access token available');
   }
@@ -23,7 +23,7 @@ async function ensureValidAccessToken(integration: { expiresAt?: Date | null; re
   // If token expires within 5 minutes, refresh it
   if (IntegrationsFirestoreService.isTokenExpiringSoon(integration.expiresAt)) {
     try {
-      logger.info(`Refreshing access token for integration ${integration.id}`);
+      logger.info(`Refreshing Google access token for integration ${integration.id}`);
       const refreshedTokens = await GoogleAuthService.refreshAccessToken(integration.refreshToken);
 
       // Update the integration with new tokens
@@ -31,10 +31,39 @@ async function ensureValidAccessToken(integration: { expiresAt?: Date | null; re
 
       return refreshedTokens.access_token;
     } catch (error) {
-      logger.error('Failed to refresh access token:', error);
-      throw new Error('Failed to refresh access token');
+      logger.error('Failed to refresh Google access token:', error);
+      throw new Error('Failed to refresh Google access token');
     }
   }
+
+  return integration.accessToken;
+}
+
+// Helper function to ensure valid access token for Microsoft integrations
+async function ensureValidMicrosoftAccessToken(integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) {
+  if (!integration.accessToken) {
+    throw new Error('No access token available');
+  }
+
+  // Check if token is expired
+  const isExpired = integration.expiresAt && integration.expiresAt.getTime() < Date.now();
+  
+  if (isExpired) {
+    logger.warn(`Microsoft access token is expired for integration ${integration.id}`, {
+      expiresAt: integration.expiresAt,
+      timeSinceExpiry: integration.expiresAt ? (Date.now() - integration.expiresAt.getTime()) / 1000 : 'unknown'
+    });
+    
+    // For now, still try to use the expired token - this will help us see the exact error
+    logger.info('Attempting to use expired token to get detailed error information');
+  }
+
+  logger.info(`Using Microsoft access token for integration ${integration.id}`, {
+    hasRefreshToken: !!integration.refreshToken,
+    expiresAt: integration.expiresAt,
+    isExpired: isExpired,
+    timeUntilExpiry: integration.expiresAt ? (integration.expiresAt.getTime() - Date.now()) / 1000 : 'unknown'
+  });
 
   return integration.accessToken;
 }
@@ -73,6 +102,35 @@ router.get('/test', async (req, res) => {
   } catch (error) {
     logger.error('Error testing Google integration setup:', error);
     res.status(500).json({ success: false, error: 'Failed to test Google integration setup' });
+  }
+});
+
+// Test endpoint to check Microsoft integration status (NO AUTH REQUIRED - debug endpoint)
+router.get('/microsoft/test', async (req, res) => {
+  try {
+    // Get all Microsoft integrations
+    const integrations = await IntegrationsFirestoreService.findMany({
+      userId: 'all', // Get all users' Microsoft integrations for testing
+      provider: 'microsoft',
+      isActive: true
+    });
+
+    res.json({
+      success: true,
+      integrations: integrations.map(integration => ({
+        id: integration.id,
+        userId: integration.userId,
+        type: integration.type,
+        hasAccessToken: !!integration.accessToken,
+        hasRefreshToken: !!integration.refreshToken,
+        expiresAt: integration.expiresAt,
+        services: (integration as any).services,
+        isExpired: integration.expiresAt ? integration.expiresAt.getTime() < Date.now() : 'unknown'
+      }))
+    });
+  } catch (error) {
+    logger.error('Microsoft integration test error:', error);
+    res.status(500).json({ success: false, error: 'Microsoft integration test failed' });
   }
 });
 
@@ -338,7 +396,7 @@ router.get('/google/drive/files', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(driveIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(driveIntegration);
     const files = await GoogleDriveService.listFiles(validAccessToken);
 
     res.json({
@@ -374,7 +432,7 @@ router.get('/google/drive/folders', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(driveIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(driveIntegration);
     const folders = await GoogleDriveService.getFolders(validAccessToken);
 
     res.json({
@@ -415,7 +473,7 @@ router.get('/google/calendar/events', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(calendarIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(calendarIntegration);
     const events = await GoogleCalendarService.listEvents(
       validAccessToken,
       {
@@ -458,7 +516,7 @@ router.post('/google/calendar/events', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(calendarIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(calendarIntegration);
     const event = await GoogleCalendarService.createEvent(
       validAccessToken,
       eventData
@@ -505,7 +563,7 @@ router.get('/google/gmail/messages', auth, async (req, res) => {
     if (pageToken) options.pageToken = pageToken as string;
     if (includeSpamTrash) options.includeSpamTrash = includeSpamTrash === 'true';
 
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(gmailIntegration);
     const messages = await GmailService.listMessages(validAccessToken, options);
 
     res.json({
@@ -542,7 +600,7 @@ router.post('/google/gmail/send', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(gmailIntegration);
     const sentMessage = await GmailService.sendEmail(validAccessToken, emailData);
 
     res.json({
@@ -580,7 +638,7 @@ router.post('/google/gmail/messages/:messageId/reply', auth, async (req, res) =>
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(gmailIntegration);
     const reply = await GmailService.replyToEmail(
       validAccessToken,
       messageId,
@@ -628,7 +686,7 @@ router.get('/google/gmail/threads', auth, async (req, res) => {
     if (pageToken) options.pageToken = pageToken as string;
     if (includeSpamTrash) options.includeSpamTrash = includeSpamTrash === 'true';
 
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(gmailIntegration);
     const threads = await GmailService.listThreads(validAccessToken, options);
 
     res.json({
@@ -664,7 +722,7 @@ router.get('/google/gmail/labels', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidGoogleAccessToken(gmailIntegration);
     const labels = await GmailService.listLabels(validAccessToken);
 
     res.json({
@@ -879,7 +937,7 @@ router.get('/microsoft/onedrive/files', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to fetch OneDrive files
     const response = await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children', {
@@ -937,7 +995,7 @@ router.get('/microsoft/onedrive/folders', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to fetch OneDrive folders
     const response = await fetch('https://graph.microsoft.com/v1.0/me/drive/root/children?$filter=folder ne null', {
@@ -996,7 +1054,7 @@ router.get('/microsoft/outlook/messages', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to fetch Outlook messages
     let url = `https://graph.microsoft.com/v1.0/me/messages?$top=${maxResults}&$orderby=receivedDateTime desc`;
@@ -1060,7 +1118,7 @@ router.post('/microsoft/outlook/send', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to send email
     const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
@@ -1127,7 +1185,7 @@ router.get('/microsoft/teams/meetings', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to fetch Teams meetings
     let url = 'https://graph.microsoft.com/v1.0/me/onlineMeetings';
@@ -1191,7 +1249,7 @@ router.post('/microsoft/teams/meetings', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to create Teams meeting
     const response = await fetch('https://graph.microsoft.com/v1.0/me/onlineMeetings', {
@@ -1256,7 +1314,7 @@ router.get('/microsoft/outlook/deals', auth, async (req, res) => {
       });
     }
 
-    const validAccessToken = await ensureValidAccessToken(microsoftIntegration);
+    const validAccessToken = await ensureValidMicrosoftAccessToken(microsoftIntegration);
     
     // Use Microsoft Graph API to fetch recent emails
     const response = await fetch(`https://graph.microsoft.com/v1.0/me/messages?$top=${maxResults}&$orderby=receivedDateTime desc`, {
