@@ -745,8 +745,16 @@ const MyThesis: React.FC = () => {
       return;
     }
 
-    if (availableIndustries.length > 1 && !selectedIndustry) {
+    // Ensure we have an industry selected
+    const industryToUse = selectedIndustry || (availableIndustries.length === 1 ? availableIndustries[0] : '');
+
+    if (!industryToUse && availableIndustries.length > 1) {
       alert('Please select an industry to generate the overview for');
+      return;
+    }
+
+    if (!industryToUse && availableIndustries.length === 0) {
+      alert('No industries found in the selected thesis. Please add industry criteria to your thesis.');
       return;
     }
 
@@ -760,21 +768,19 @@ const MyThesis: React.FC = () => {
       }
 
       console.log('Generating industry research with thesis:', selectedThesis.name);
-      if (selectedIndustry) {
-        console.log('Focused on industry:', selectedIndustry);
-      }
-      
+      console.log('Focused on industry:', industryToUse);
+
       // Prepare the thesis data for the API
       // If a specific industry is selected, filter criteria to only include that industry
       let filteredCriteria = selectedThesis.criteria;
-      if (selectedIndustry) {
+      if (industryToUse) {
         filteredCriteria = selectedThesis.criteria.filter(c => {
           // Keep all non-subindustry criteria
           if (c.category !== 'Subindustry') {
             return true;
           }
           // For subindustry criteria, only keep the selected industry
-          return c.value.toString().toLowerCase().includes(selectedIndustry.toLowerCase());
+          return c.value.toString().toLowerCase().includes(industryToUse.toLowerCase());
         });
       }
 
@@ -786,16 +792,16 @@ const MyThesis: React.FC = () => {
         }))
       };
 
-      // Call the industry research API
-      const response = await fetch('/api/one-pager/generate-industry-research', {
+      // Call the basic document generation API
+      const response = await fetch('/api/one-pager/generate-basic-document', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           thesisData,
-          selectedIndustry: selectedIndustry || null
+          selectedIndustry: industryToUse
         })
       });
 
