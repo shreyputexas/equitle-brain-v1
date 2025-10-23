@@ -379,7 +379,15 @@ router.post('/content', firebaseAuthMiddleware, async (req, res) => {
 // Test endpoint for basic document generation (no auth required)
 router.post('/test-basic-document', async (req, res) => {
   try {
-    const { thesisData, selectedIndustry } = req.body;
+    console.log('=== TEST-BASIC-DOCUMENT REQUEST ===');
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+
+    const { thesisData, selectedIndustry, template } = req.body;
+
+    console.log('Extracted template:', template);
+    console.log('Template type:', typeof template);
+    console.log('Template === "navy":', template === 'navy');
 
     if (!thesisData || !thesisData.name || !thesisData.criteria) {
       return res.status(400).json({
@@ -395,37 +403,71 @@ router.post('/test-basic-document', async (req, res) => {
       });
     }
 
-    logger.info('Generating test basic industry document', {
+    logger.info('Generating test industry document', {
       thesisName: thesisData.name,
-      selectedIndustry: selectedIndustry
+      selectedIndustry: selectedIndustry,
+      template: template || 'basic'
     });
 
-    // Generate basic document
-    const docxBuffer = await onePagerGenerationService.generateBasicDocument(thesisData, selectedIndustry);
+    // Fetch search fund data (using dev user for test)
+    let searchFundData = {
+      name: undefined,
+      website: undefined,
+      email: undefined,
+      address: undefined
+    };
+
+    try {
+      const userId = 'dev-user-123';
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        searchFundData = {
+          name: userData?.searchFundName,
+          website: userData?.searchFundWebsite,
+          email: userData?.searchFundEmail,
+          address: userData?.searchFundAddress,
+        };
+      }
+    } catch (error) {
+      console.log('Could not fetch search fund data for test, continuing without it');
+    }
+
+    // Use new method with template support
+    const docxBuffer = await onePagerGenerationService.generateIndustryResearchWithTemplate(
+      thesisData,
+      selectedIndustry,
+      template,
+      searchFundData
+    );
 
     // Set response headers for file download
+    const templateSuffix = template === 'navy' ? '-navy' : '';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="test-industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.docx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="test-industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}${templateSuffix}-${Date.now()}.docx"`);
     res.setHeader('Content-Length', docxBuffer.length);
 
     // Send the file
     res.send(docxBuffer);
 
-    logger.info('Test basic industry document generated successfully', {
+    logger.info('Test industry document generated successfully', {
       thesisName: thesisData.name,
       selectedIndustry: selectedIndustry,
+      template: template || 'basic',
       fileSize: docxBuffer.length
     });
 
   } catch (error: any) {
-    logger.error('Error generating test basic industry document', {
+    logger.error('Error generating test industry document', {
       error: error.message,
       stack: error.stack
     });
 
     res.status(500).json({
       success: false,
-      message: 'Failed to generate test basic industry document',
+      message: 'Failed to generate test industry document',
       error: error.message
     });
   }
@@ -434,7 +476,15 @@ router.post('/test-basic-document', async (req, res) => {
 // Generate basic industry research document
 router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const { thesisData, selectedIndustry } = req.body;
+    console.log('=== GENERATE-BASIC-DOCUMENT REQUEST ===');
+    console.log('Request body keys:', Object.keys(req.body));
+    console.log('Template value:', req.body.template);
+    console.log('Template type:', typeof req.body.template);
+
+    const { thesisData, selectedIndustry, template } = req.body;
+
+    console.log('Extracted template:', template);
+    console.log('Template === "navy":', template === 'navy');
 
     if (!thesisData || !thesisData.name || !thesisData.criteria) {
       return res.status(400).json({
@@ -450,32 +500,68 @@ router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res)
       });
     }
 
-    logger.info('Generating basic industry document', {
+    logger.info('Generating industry document', {
       thesisName: thesisData.name,
       selectedIndustry: selectedIndustry,
+      template: template || 'basic',
       userId: req.user?.uid
     });
 
-    // Generate basic document
-    const docxBuffer = await onePagerGenerationService.generateBasicDocument(thesisData, selectedIndustry);
+    // Fetch search fund data from user profile
+    let searchFundData = {
+      name: undefined,
+      website: undefined,
+      email: undefined,
+      address: undefined
+    };
+
+    try {
+      const userId = req.user?.uid || 'dev-user-123';
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        searchFundData = {
+          name: userData?.searchFundName,
+          website: userData?.searchFundWebsite,
+          email: userData?.searchFundEmail,
+          address: userData?.searchFundAddress,
+        };
+
+        console.log('Fetched search fund data:', searchFundData);
+      }
+    } catch (error) {
+      logger.warn('Could not fetch search fund data, continuing without it', { error: error.message });
+    }
+
+    // Generate document with template support
+    const docxBuffer = await onePagerGenerationService.generateIndustryResearchWithTemplate(
+      thesisData,
+      selectedIndustry,
+      template,
+      searchFundData
+    );
 
     // Set response headers for file download
+    const templateSuffix = template === 'navy' ? '-navy' : '';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.docx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}${templateSuffix}-${Date.now()}.docx"`);
     res.setHeader('Content-Length', docxBuffer.length);
 
     // Send the file
     res.send(docxBuffer);
 
-    logger.info('Basic industry document generated successfully', {
+    logger.info('Industry document generated successfully', {
       thesisName: thesisData.name,
       selectedIndustry: selectedIndustry,
+      template: template || 'basic',
       fileSize: docxBuffer.length,
       userId: req.user?.uid
     });
 
   } catch (error: any) {
-    logger.error('Error generating basic industry document', {
+    logger.error('Error generating industry document', {
       error: error.message,
       stack: error.stack,
       userId: req.user?.uid
@@ -483,7 +569,7 @@ router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res)
 
     res.status(500).json({
       success: false,
-      message: 'Failed to generate basic industry document',
+      message: 'Failed to generate industry document',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }

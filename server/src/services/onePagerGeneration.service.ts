@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import fs from 'fs';
 import path from 'path';
-import { templateEditorService, TemplateData } from './templateEditor.service';
+import { templateEditorService, TemplateData, IndustryTemplateData } from './templateEditor.service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -774,6 +774,300 @@ FINAL INSTRUCTIONS:
     }
 
     return paragraphs;
+  }
+
+  /**
+   * Generate industry research content using OpenAI
+   * Extracted from generateBasicDocument for reusability
+   */
+  private async generateIndustryResearchContent(
+    thesisData: ThesisData,
+    selectedIndustry: string
+  ): Promise<string> {
+    try {
+      console.log('=== GENERATING INDUSTRY RESEARCH CONTENT ===');
+      console.log('Thesis Name:', thesisData.name);
+      console.log('Selected Industry:', selectedIndustry);
+
+      if (!selectedIndustry) {
+        throw new Error('selectedIndustry is required');
+      }
+
+    // Extract key context from thesis criteria
+    const location = thesisData.criteria.find(c => c.category === 'Geographic')?.value || 'United States';
+    const ebitda = thesisData.criteria.find(c => c.field?.toLowerCase().includes('ebitda'))?.value || '5M+';
+    const growthRate = thesisData.criteria.find(c => c.category === 'Growth Rate')?.value;
+
+    const criteriaContext = thesisData.criteria.map(c =>
+      `${c.category}: ${c.field} ${c.operator} ${c.value}`
+    ).join('\n');
+
+    // Create the prompt
+    const prompt = `You are a senior private equity research analyst writing a comprehensive industry report.
+
+TARGET INDUSTRY: ${selectedIndustry}
+TARGET GEOGRAPHY: ${location}
+TARGET COMPANY SIZE: ${ebitda} EBITDA
+${growthRate ? `TARGET GROWTH RATE: ${growthRate}` : ''}
+
+INVESTMENT THESIS CONTEXT:
+${thesisData.name}
+${criteriaContext}
+
+CRITICAL REQUIREMENTS:
+1. Write ONLY about ${selectedIndustry} - no other industries
+2. Be HIGHLY SPECIFIC - use real company names, real deals, real data
+3. Focus on ${location} when discussing geography, M&A activity, and opportunities
+4. Focus on companies in the ${ebitda} EBITDA range
+5. Provide ANALYSIS and INSIGHTS, not just facts
+6. Include 2024 data and recent developments
+7. Cite EVERY statistic with real sources: (Source: Company/Report Name, Year)
+
+DEPTH REQUIREMENTS:
+- Don't write generic statements - be specific
+- Include actual company examples operating in ${selectedIndustry}
+- Reference specific M&A deals in ${selectedIndustry}, especially in ${location}
+- Provide your analytical perspective on trends and opportunities
+- Explain WHY things are happening, not just WHAT is happening
+
+SECTIONS TO WRITE (all about ${selectedIndustry} in ${location}):
+
+1. INDUSTRY
+Write exactly: "${selectedIndustry}"
+
+2. MARKET OVERVIEW (for ${selectedIndustry} in ${location})
+Write a detailed 5-6 sentence analysis of the ${selectedIndustry} market, then provide 8-10 comprehensive bullet points.
+
+3. M&A ACTIVITY AND CONSOLIDATION (for ${selectedIndustry} in ${location})
+Write a detailed 5-6 sentence analysis of consolidation trends, then provide 8-10 detailed bullets.
+
+4. BARRIERS TO ENTRY AND DEFENSIBILITY (for ${selectedIndustry} in ${location})
+Write a detailed 5-6 sentence analysis of barriers to entry, then provide 8-10 detailed bullets.
+
+5. FINANCIAL PROFILE AND UNIT ECONOMICS (for ${selectedIndustry} companies)
+Write a detailed 5-6 sentence analysis of the financial characteristics, then provide 8-10 detailed bullets.
+
+6. TECHNOLOGY AND INNOVATION TRENDS (for ${selectedIndustry})
+Write a detailed 5-6 sentence analysis of technology trends, then provide 8-10 detailed bullets.
+
+7. INVESTMENT OPPORTUNITY AND VALUE CREATION (for ${selectedIndustry} in ${location})
+Write a detailed 5-6 sentence investment recommendation, then provide 8-10 detailed bullets.
+
+FINAL INSTRUCTIONS:
+- This is a COMPREHENSIVE report - be detailed and specific
+- Write ONLY about ${selectedIndustry} in ${location}
+- Include specific company names, deal names, and real data points
+- Cite EVERY statistic: (Source: Report/Company Name, Year)
+- Provide analysis and insights, not just facts
+- Think like a senior PE analyst making an investment recommendation
+- Use 2024 data wherever possible`;
+
+    console.log('Calling OpenAI API for industry research content...');
+
+    // Call OpenAI API
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a senior private equity research analyst at a top-tier firm. Write comprehensive, detailed industry research reports with specific data, company names, and actionable insights."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 8000
+    });
+
+      const generatedContent = completion.choices[0]?.message?.content || '';
+      console.log('Generated Content Length:', generatedContent.length);
+
+      // Save to file for debugging
+      const fs = require('fs');
+      const debugFile = `/tmp/ai-content-${Date.now()}.txt`;
+      fs.writeFileSync(debugFile, generatedContent);
+      console.log('🔍 AI content saved to:', debugFile);
+      console.log('=== INDUSTRY RESEARCH CONTENT GENERATION COMPLETE ===');
+
+      return generatedContent;
+    } catch (error) {
+      console.error('=== ERROR IN generateIndustryResearchContent ===');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('===================================================');
+      throw new Error(`Failed to generate industry research content: ${error.message}`);
+    }
+  }
+
+  /**
+   * Parse AI-generated content into structured sections for template replacement
+   */
+  private parseIndustryContent(
+    content: string,
+    selectedIndustry: string
+  ): IndustryTemplateData {
+    console.log('=== PARSING INDUSTRY CONTENT ===');
+    console.log('Content preview (first 500 chars):');
+    console.log(content.substring(0, 500));
+    console.log('...');
+    console.log('Searching for section headers...');
+
+    const lines = content.split('\n');
+    const sections: Record<string, string[]> = {
+      industry: [],
+      marketOverview: [],
+      industryConsolidation: [],
+      entryBarrier: [],
+      financialProfile: [],
+      technology: [],
+      investmentInsight: [],
+      sources: []
+    };
+
+    let currentSection = '';
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // Detect section headers - support both numbered (1.) and markdown (##) formats
+      if (trimmedLine.match(/^(#+\s+|1\.?\s+)?(#\s+)?Home Healthcare Services$/i)) {
+        currentSection = 'industry';
+        continue;
+      } else if (trimmedLine.match(/^(##\s+|2\.?\s+)?MARKET[\s\-]+OVERVIEW/i)) {
+        currentSection = 'marketOverview';
+        continue;
+      } else if (trimmedLine.match(/^(##\s+|3\.?\s+)?(M&A|M\s*&\s*A)[\s\-]+(ACTIVITY|CONSOLIDATION)/i)) {
+        currentSection = 'industryConsolidation';
+        continue;
+      } else if (trimmedLine.match(/^(##\s+|4\.?\s+)?BARRIERS?[\s\-]+TO[\s\-]+ENTRY/i)) {
+        currentSection = 'entryBarrier';
+        continue;
+      } else if (trimmedLine.match(/^(##\s+|5\.?\s+)?FINANCIAL[\s\-]+PROFILE/i)) {
+        currentSection = 'financialProfile';
+        continue;
+      } else if (trimmedLine.match(/^(##\s+|6\.?\s+)?(TECHNOLOGY|INNOVATION)/i)) {
+        currentSection = 'technology';
+        continue;
+      } else if (trimmedLine.match(/^(##\s+|7\.?\s+)?(INVESTMENT|VALUE)/i)) {
+        currentSection = 'investmentInsight';
+        continue;
+      }
+
+      // Add content to current section
+      if (currentSection && trimmedLine) {
+        sections[currentSection].push(trimmedLine);
+      }
+    }
+
+    // Build the structured data
+    const parsedData: IndustryTemplateData = {
+      industry: selectedIndustry,
+      marketOverview: sections.marketOverview.join('\n'),
+      industryConsolidation: sections.industryConsolidation.join('\n'),
+      entryBarrier: sections.entryBarrier.join('\n'),
+      financialProfile: sections.financialProfile.join('\n'),
+      technology: sections.technology.join('\n'),
+      investmentInsight: sections.investmentInsight.join('\n'),
+      sources: sections.sources.join('\n')
+    };
+
+    console.log('Parsed sections:');
+    console.log('- Industry:', parsedData.industry);
+    console.log('- Market Overview length:', parsedData.marketOverview.length);
+    console.log('- Consolidation length:', parsedData.industryConsolidation.length);
+    console.log('- Entry Barrier length:', parsedData.entryBarrier.length);
+    console.log('- Financial Profile length:', parsedData.financialProfile.length);
+    console.log('- Technology length:', parsedData.technology.length);
+    console.log('- Investment Insight length:', parsedData.investmentInsight.length);
+    console.log('=== PARSING COMPLETE ===');
+
+    return parsedData;
+  }
+
+  /**
+   * Generate industry research document with optional template support
+   * If template is 'navy', uses the industry_navy_placeholders.docx template
+   * Otherwise, uses the basic document generation
+   */
+  async generateIndustryResearchWithTemplate(
+    thesisData: ThesisData,
+    selectedIndustry: string,
+    template?: string,
+    searchFundData?: {
+      name?: string;
+      website?: string;
+      email?: string;
+      address?: string;
+    }
+  ): Promise<Buffer> {
+    try {
+      console.log('=== GENERATE INDUSTRY RESEARCH WITH TEMPLATE ===');
+      console.log('Template parameter received:', template);
+      console.log('Template type:', typeof template);
+      console.log('Industry:', selectedIndustry);
+      console.log('Search fund data:', searchFundData);
+
+      // Generate content using OpenAI
+      console.log('Step 1: Generating content with OpenAI...');
+      const content = await this.generateIndustryResearchContent(thesisData, selectedIndustry);
+      console.log('Content generated successfully, length:', content.length);
+
+      // If navy template is requested, use template replacement
+      console.log('Checking template value...');
+      console.log('  template value:', template);
+      console.log('  template === "navy":', template === 'navy');
+      console.log('  typeof template:', typeof template);
+
+      if (template === 'navy') {
+        console.log('✅ USING NAVY TEMPLATE PATH');
+        console.log('Step 2a: Parsing content into sections...');
+
+        const parsedData = this.parseIndustryContent(content, selectedIndustry);
+        console.log('Step 2b: Content parsed successfully');
+        console.log('Parsed data keys:', Object.keys(parsedData));
+        console.log('Parsed data sample:', {
+          industry: parsedData.industry,
+          marketOverviewLength: parsedData.marketOverview?.length || 0,
+          consolidationLength: parsedData.industryConsolidation?.length || 0,
+        });
+
+        const templateData: IndustryTemplateData = {
+          ...parsedData,
+          searchFundName: searchFundData?.name,
+          searchFundWebsite: searchFundData?.website,
+          searchFundEmail: searchFundData?.email,
+          searchFundAddress: searchFundData?.address,
+        };
+
+        console.log('Step 2c: Template data prepared');
+        console.log('Search fund data:', {
+          name: searchFundData?.name,
+          website: searchFundData?.website,
+          email: searchFundData?.email,
+          address: searchFundData?.address,
+        });
+
+        console.log('Step 2d: Calling editIndustryTemplate...');
+        const result = await templateEditorService.editIndustryTemplate('industry_navy_placeholders', templateData);
+        console.log('✅ NAVY TEMPLATE COMPLETED, buffer size:', result.length);
+        return result;
+      }
+
+      // Default: use existing basic document generation
+      console.log('⚠️ USING BASIC DOCUMENT (template was:', template, ')');
+      return await this.generateBasicDocument(thesisData, selectedIndustry);
+    } catch (error) {
+      console.error('=== ERROR IN generateIndustryResearchWithTemplate ===');
+      console.error('Error:', error);
+      console.error('Template:', template);
+      console.error('Industry:', selectedIndustry);
+      console.error('Stack:', error.stack);
+      console.error('===================================================');
+      throw error;
+    }
   }
 
 }

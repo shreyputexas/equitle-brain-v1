@@ -792,6 +792,13 @@ const MyThesis: React.FC = () => {
         }))
       };
 
+      // Map frontend template value to backend template value
+      // Frontend: 'basic' or 'industry_navy'
+      // Backend: 'basic' or 'navy'
+      const templateValue = selectedIndustryTemplate === 'industry_navy' ? 'navy' : selectedIndustryTemplate;
+
+      console.log('Using template:', templateValue, '(frontend value:', selectedIndustryTemplate, ')');
+
       // Call the basic document generation API
       const response = await fetch('/api/one-pager/generate-basic-document', {
         method: 'POST',
@@ -801,7 +808,8 @@ const MyThesis: React.FC = () => {
         },
         body: JSON.stringify({
           thesisData,
-          selectedIndustry: industryToUse
+          selectedIndustry: industryToUse,
+          template: templateValue
         })
       });
 
