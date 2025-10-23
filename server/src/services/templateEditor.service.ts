@@ -18,6 +18,21 @@ export interface TemplateData {
   content: OnePagerContent;
 }
 
+export interface IndustryTemplateData {
+  industry: string;
+  marketOverview: string;
+  industryConsolidation: string;
+  entryBarrier: string;
+  financialProfile: string;
+  technology: string;
+  investmentInsight: string;
+  searchFundName?: string;
+  searchFundWebsite?: string;
+  searchFundEmail?: string;
+  searchFundAddress?: string;
+  sources?: string;
+}
+
 export class TemplateEditorService {
   private templatesPath: string;
 
@@ -129,6 +144,159 @@ export class TemplateEditorService {
     }
 
     return normalized;
+  }
+
+  async editIndustryTemplate(templateName: string, data: IndustryTemplateData): Promise<Buffer> {
+    // Write to debug file
+    const fs = require('fs');
+    const debugFiles = require('fs').readdirSync('/tmp').filter(f => f.startsWith('navy-debug-'));
+    const debugLog = debugFiles.length > 0 ? `/tmp/${debugFiles[debugFiles.length - 1]}` : `/tmp/navy-debug-fallback.log`;
+    fs.appendFileSync(debugLog, '\n\n🔵 EDIT INDUSTRY TEMPLATE CALLED\n');
+
+    console.log('=================================================================');
+    console.log('🔵 EDIT INDUSTRY TEMPLATE CALLED');
+    console.log('=================================================================');
+
+    const templatePath = path.join(this.templatesPath, `${templateName}.docx`);
+
+    fs.appendFileSync(debugLog, `Template name: ${templateName}\n`);
+    fs.appendFileSync(debugLog, `Templates path: ${this.templatesPath}\n`);
+    fs.appendFileSync(debugLog, `Full path: ${templatePath}\n`);
+    fs.appendFileSync(debugLog, `File exists: ${fs.existsSync(templatePath)}\n`);
+
+    console.log('editIndustryTemplate called with templateName:', templateName);
+    console.log('Templates base path:', this.templatesPath);
+    console.log('Full template path:', templatePath);
+    console.log('Template file exists:', fs.existsSync(templatePath));
+    console.log('Data received - industry:', data.industry);
+    console.log('Data received - marketOverview length:', data.marketOverview?.length || 0);
+    console.log('Data received - investmentInsight length:', data.investmentInsight?.length || 0);
+
+    if (!fs.existsSync(templatePath)) {
+      console.error(`❌ Template file not found: ${templatePath}`);
+      try {
+        console.error(`Templates directory contents:`, fs.readdirSync(this.templatesPath));
+      } catch (e) {
+        console.error(`Could not read templates directory:`, e.message);
+      }
+      throw new Error(`Template ${templateName} not found at ${templatePath}. Please ensure the template file exists.`);
+    }
+
+    try {
+      console.log('📖 Reading industry template file...');
+      const templateBuffer = fs.readFileSync(templatePath);
+      console.log('✅ Template file read successfully, size:', templateBuffer.length, 'bytes');
+
+      console.log('🔧 Performing text replacement for industry template...');
+      const modifiedBuffer = await this.replaceIndustryTextInDocx(templateBuffer, data);
+      console.log('✅ Industry template text replacement completed');
+      console.log('📦 Modified buffer size:', modifiedBuffer.length, 'bytes');
+      console.log('Size difference:', modifiedBuffer.length - templateBuffer.length, 'bytes');
+
+      return modifiedBuffer;
+    } catch (error) {
+      console.error('=== INDUSTRY TEMPLATE EDITING ERROR ===');
+      console.error('Template name:', templateName);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+      console.error('========================================');
+      throw new Error(`Failed to edit industry template ${templateName}: ${error.message}`);
+    }
+  }
+
+  private async replaceIndustryTextInDocx(templateBuffer: Buffer, data: IndustryTemplateData): Promise<Buffer> {
+    try {
+      const zip = await JSZip.loadAsync(templateBuffer);
+      const documentXml = await zip.file('word/document.xml')?.async('string');
+
+      if (!documentXml) {
+        throw new Error('Could not find document.xml in template');
+      }
+
+      console.log('Original document.xml length:', documentXml.length);
+
+      let modifiedXml = documentXml;
+
+      // Normalize placeholders
+      console.log('Normalizing split placeholders in XML...');
+      modifiedXml = this.normalizePlaceholders(modifiedXml);
+
+      // Helper to escape XML special characters
+      const escapeXml = (text: string): string => {
+        return text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+      };
+
+      // Build replacement map for industry template
+      // NOTE: Placeholder names must match EXACTLY what's in the template file
+      const replacements: Record<string, string> = {
+        '{industry}': data.industry || '',
+        '{marketOverview}': data.marketOverview || '',
+        '{industryConsolidation}': data.industryConsolidation || '',
+        '{entryBarrier}': data.entryBarrier || '',
+        '{financialProfile}': data.financialProfile || '',
+        '{technology}': data.technology || '',
+        '{investmentinsight}': data.investmentInsight || '', // Try lowercase (no space)
+        '{investmentInsight}': data.investmentInsight || '', // Try camelCase
+        '{investment insight}': data.investmentInsight || '', // Try with space
+        '{searchFundWebsite}': data.searchFundWebsite || '',
+        '{searchFundEmail}': data.searchFundEmail || '',
+        '{searchFundAddress}': data.searchFundAddress || '',
+        '{sources}': data.sources || '',
+      };
+
+      console.log('=== PERFORMING INDUSTRY TEMPLATE REPLACEMENTS ===');
+      console.log('Total placeholders to replace:', Object.keys(replacements).length);
+
+      let replacedCount = 0;
+      let skippedCount = 0;
+      let notFoundCount = 0;
+
+      for (const [placeholder, content] of Object.entries(replacements)) {
+        if (content && content.trim()) {
+          const escapedContent = escapeXml(content);
+          const exists = modifiedXml.includes(placeholder);
+
+          if (exists) {
+            const beforeLength = modifiedXml.length;
+            const occurrences = (modifiedXml.match(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+            modifiedXml = modifiedXml.split(placeholder).join(escapedContent);
+
+            if (modifiedXml.length !== beforeLength) {
+              console.log(`✅ Replaced ${occurrences}x: ${placeholder} (content length: ${content.length})`);
+              replacedCount++;
+            }
+          } else {
+            console.log(`⚠️ Placeholder not found in XML: ${placeholder}`);
+            notFoundCount++;
+          }
+        } else {
+          console.log(`⏭️ Skipping empty placeholder: ${placeholder}`);
+          skippedCount++;
+        }
+      }
+      console.log('=== INDUSTRY TEMPLATE REPLACEMENT SUMMARY ===');
+      console.log(`  ✅ Replaced: ${replacedCount}`);
+      console.log(`  ⚠️ Not found: ${notFoundCount}`);
+      console.log(`  ⏭️ Skipped (empty): ${skippedCount}`);
+      console.log('===============================================');
+
+      zip.file('word/document.xml', modifiedXml);
+
+      const modifiedBuffer = await zip.generateAsync({
+        type: 'nodebuffer',
+        compression: 'DEFLATE'
+      });
+
+      return modifiedBuffer;
+    } catch (error) {
+      console.error('Error in replaceIndustryTextInDocx:', error);
+      throw error;
+    }
   }
 
   private async replaceTextInDocx(templateBuffer: Buffer, data: any): Promise<Buffer> {
