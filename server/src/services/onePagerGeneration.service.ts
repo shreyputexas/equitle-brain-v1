@@ -541,109 +541,31 @@ SEARCHER_STORY_2:
     return await Packer.toBuffer(doc);
   }
 
-  async generateIndustryResearchWithAI(thesisData: ThesisData, selectedIndustry?: string): Promise<Buffer> {
+  async generateBasicDocument(thesisData: ThesisData, selectedIndustry: string): Promise<Buffer> {
     try {
-      console.log('=== INDUSTRY RESEARCH GENERATION START ===');
+      console.log('=== BASIC DOCUMENT GENERATION START ===');
       console.log('Thesis Name:', thesisData.name);
-      console.log('Selected Industry from parameter:', selectedIndustry);
-      console.log('Selected Industry type:', typeof selectedIndustry);
-      console.log('Selected Industry is null/undefined?', selectedIndustry === null || selectedIndustry === undefined);
+      console.log('Selected Industry:', selectedIndustry);
 
       if (!selectedIndustry) {
-        throw new Error('selectedIndustry is required but was not provided');
+        throw new Error('selectedIndustry is required');
       }
 
-      const prompt = this.createIndustryResearchPrompt(thesisData, selectedIndustry);
-      console.log('=== PROMPT BEING SENT ===');
-      console.log(prompt);
-      console.log('=== END PROMPT ===');
+      // Extract key context from thesis criteria
+      const location = thesisData.criteria.find(c => c.category === 'Geographic')?.value || 'United States';
+      const ebitda = thesisData.criteria.find(c => c.field?.toLowerCase().includes('ebitda'))?.value || '5M+';
+      const growthRate = thesisData.criteria.find(c => c.category === 'Growth Rate')?.value;
 
-      // Use the comprehensive prompt with detailed requirements
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          {
-            role: "system",
-            content: `You are a senior private equity research analyst at a top-tier firm.
+      const criteriaContext = thesisData.criteria.map(c =>
+        `${c.category}: ${c.field} ${c.operator} ${c.value}`
+      ).join('\n');
 
-CRITICAL INSTRUCTIONS:
-1. Write ONLY about ${selectedIndustry} - no other industries
-2. Be EXTREMELY detailed and specific
-3. Use REAL company names, REAL deal names, REAL data
-4. Include specific M&A transactions with buyer/seller names and deal values
-5. Cite EVERY statistic with real sources: (Source: Company/Report Name, Year)
-6. Provide deep analysis and insights, not superficial summaries
-7. Think like you're presenting this to a senior partner who will grill you on every detail
-8. Focus on ${selectedIndustry} companies and activity in the target geography
-9. Use 2024 data wherever possible
-10. Be comprehensive - this should be investment-grade research
-
-Your report will be evaluated on:
-- Specificity (real companies, real deals, real numbers)
-- Depth of analysis (why things are happening, not just what)
-- Citation quality (every statistic must have a real source)
-- Actionability (insights that inform investment decisions)
-- Comprehensiveness (cover all aspects thoroughly)
-
-Write a report that would impress a senior PE partner.`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 8000
-      });
-
-      const researchContent = completion.choices[0]?.message?.content || '';
-      console.log('Generated Research Content Length:', researchContent.length);
-      console.log('=== AI RESPONSE ===');
-      console.log(researchContent);
-      console.log('=== END AI RESPONSE ===');
-
-      // Save raw response for debugging
-      require('fs').writeFileSync('/tmp/industry-research-raw.txt', researchContent);
-      console.log('Raw response saved to /tmp/industry-research-raw.txt');
-
-      // Parse the AI response into structured content
-      const parsedContent = this.parseIndustryResearchContent(researchContent);
-
-      // Log parsed sections
-      console.log('=== PARSED SECTIONS ===');
-      Object.keys(parsedContent).forEach(key => {
-        console.log(`${key}: ${parsedContent[key].length} characters`);
-      });
-      console.log('=== END PARSED SECTIONS ===');
-
-      // Generate the document
-      return await this.generateIndustryResearchDocxWithContent(thesisData, parsedContent);
-
-    } catch (error) {
-      console.error('Error generating industry research:', error);
-      throw new Error('Failed to generate industry research report');
-    }
-  }
-
-  private createIndustryResearchPrompt(thesisData: ThesisData, selectedIndustry?: string): string {
-    if (!selectedIndustry) {
-      throw new Error('Selected industry is required');
-    }
-
-    // Extract key context from criteria
-    const location = thesisData.criteria.find(c => c.category === 'Geographic')?.value || 'United States';
-    const ebitda = thesisData.criteria.find(c => c.field?.toLowerCase().includes('ebitda'))?.value || '5M+';
-    const growthRate = thesisData.criteria.find(c => c.category === 'Growth Rate')?.value;
-
-    const criteriaContext = thesisData.criteria.map(c =>
-      `${c.category}: ${c.field} ${c.operator} ${c.value}`
-    ).join('\n');
-
-    return `You are a senior private equity research analyst writing a comprehensive industry report.
+      // Create the prompt using the user's template
+      const prompt = `You are a senior private equity research analyst writing a comprehensive industry report.
 
 TARGET INDUSTRY: ${selectedIndustry}
 TARGET GEOGRAPHY: ${location}
-TARGET COMPANY SIZE: $${ebitda} EBITDA
+TARGET COMPANY SIZE: ${ebitda} EBITDA
 ${growthRate ? `TARGET GROWTH RATE: ${growthRate}` : ''}
 
 INVESTMENT THESIS CONTEXT:
@@ -654,7 +576,7 @@ CRITICAL REQUIREMENTS:
 1. Write ONLY about ${selectedIndustry} - no other industries
 2. Be HIGHLY SPECIFIC - use real company names, real deals, real data
 3. Focus on ${location} when discussing geography, M&A activity, and opportunities
-4. Focus on companies in the $${ebitda} EBITDA range
+4. Focus on companies in the ${ebitda} EBITDA range
 5. Provide ANALYSIS and INSIGHTS, not just facts
 6. Include 2024 data and recent developments
 7. Cite EVERY statistic with real sources: (Source: Company/Report Name, Year)
@@ -672,130 +594,22 @@ SECTIONS TO WRITE (all about ${selectedIndustry} in ${location}):
 Write exactly: "${selectedIndustry}"
 
 2. MARKET OVERVIEW (for ${selectedIndustry} in ${location})
-Write a detailed 5-6 sentence analysis of the ${selectedIndustry} market, then provide 8-10 comprehensive bullet points:
-
-Your analysis should cover:
-- Current market size and growth trajectory for ${selectedIndustry} in ${location}
-- Specific trends shaping ${selectedIndustry} in 2024
-- Key market drivers with explanations of WHY they matter
-- Market dynamics specific to ${location}
-
-Then provide detailed bullets including:
-- Exact market size figures with growth rates (Source: Name, Year)
-- ${location}-specific market characteristics and opportunities
-- Major players in ${selectedIndustry} operating in ${location} with their market positions
-- Specific examples of successful companies in the $${ebitda} EBITDA range
-- Customer segments and demand drivers
-- Regulatory environment in ${location} affecting ${selectedIndustry}
-- Supply-demand dynamics and market saturation levels
-- 2024 developments and forward-looking trends
-
-Be specific. Use real data. Cite everything.
+Write a detailed 5-6 sentence analysis of the ${selectedIndustry} market, then provide 8-10 comprehensive bullet points.
 
 3. M&A ACTIVITY AND CONSOLIDATION (for ${selectedIndustry} in ${location})
-Write a detailed 5-6 sentence analysis of consolidation trends, then provide 8-10 detailed bullets:
-
-Your analysis should cover:
-- Current fragmentation level and consolidation trends in ${selectedIndustry}
-- Why consolidation is or isn't happening in ${selectedIndustry}
-- Strategic rationale behind recent M&A activity
-- Your perspective on future consolidation opportunities
-
-Then provide detailed bullets including:
-- Specific M&A deals in ${selectedIndustry} in ${location} in 2023-2024 with deal values and buyer/seller names (Source: Name, Year)
-- Roll-up opportunities and platform company examples
-- Private equity activity in ${selectedIndustry} - which firms are active?
-- Typical acquisition multiples for companies in the $${ebitda} EBITDA range (Source: Name, Year)
-- Competitive landscape and market share concentration
-- Strategic vs financial buyer activity
-- Cross-border M&A trends affecting ${location}
-- Barriers or drivers to further consolidation
-
-Be specific with deal names, company names, and transaction details.
+Write a detailed 5-6 sentence analysis of consolidation trends, then provide 8-10 detailed bullets.
 
 4. BARRIERS TO ENTRY AND DEFENSIBILITY (for ${selectedIndustry} in ${location})
-Write a detailed 5-6 sentence analysis of barriers to entry, then provide 8-10 detailed bullets:
-
-Your analysis should address:
-- How high are barriers to entry in ${selectedIndustry}?
-- What makes existing players defensible?
-- Why this matters for investment returns
-- ${location}-specific regulatory or market barriers
-
-Then provide detailed bullets including:
-- Specific regulatory requirements in ${location} for ${selectedIndustry} (Source: Name, Year)
-- Capital intensity and startup costs with real examples
-- Licensing, certification, or compliance requirements
-- Technology or intellectual property barriers
-- Brand recognition and customer switching costs
-- Supplier or distribution relationships required
-- Skilled labor requirements and availability in ${location}
-- Time to profitability for new entrants
-
-Use specific examples and data.
+Write a detailed 5-6 sentence analysis of barriers to entry, then provide 8-10 detailed bullets.
 
 5. FINANCIAL PROFILE AND UNIT ECONOMICS (for ${selectedIndustry} companies)
-Write a detailed 5-6 sentence analysis of the financial characteristics, then provide 8-10 detailed bullets:
-
-Your analysis should cover:
-- Typical revenue models and pricing structures in ${selectedIndustry}
-- Cash flow characteristics and working capital dynamics
-- Profitability benchmarks for companies in the $${ebitda} EBITDA range
-- Financial resilience during economic downturns
-
-Then provide detailed bullets including:
-- Typical EBITDA margins by company size with specific benchmarks (Source: Name, Year)
-- Revenue model details (recurring vs one-time, subscription vs transaction)
-- Working capital as % of revenue (Source: Name, Year)
-- Capex requirements and intensity
-- Seasonality patterns with specific months/quarters
-- Customer payment terms and DSO
-- Rule of 40 or other key metrics for ${selectedIndustry}
-- Example P&L from a representative company in the sector
-
-Be specific with percentages and financial metrics.
+Write a detailed 5-6 sentence analysis of the financial characteristics, then provide 8-10 detailed bullets.
 
 6. TECHNOLOGY AND INNOVATION TRENDS (for ${selectedIndustry})
-Write a detailed 5-6 sentence analysis of technology trends, then provide 8-10 detailed bullets:
-
-Your analysis should cover:
-- How technology is transforming ${selectedIndustry}
-- Which companies are leading vs lagging in adoption
-- Investment opportunities in technology-enabled businesses
-- Disruption risks and defensive strategies
-
-Then provide detailed bullets including:
-- Specific technologies being adopted (AI, automation, SaaS tools, etc.) with company examples
-- Digital transformation case studies in ${selectedIndustry}
-- Technology spend as % of revenue (Source: Name, Year)
-- Emerging tech vendors serving ${selectedIndustry}
-- Impact on labor costs and productivity
-- Customer-facing vs back-office technology adoption
-- PropTech/FinTech/HealthTech (as relevant) penetration rates
-- Technology-driven competitive advantages
-
-Name specific technology platforms and vendors.
+Write a detailed 5-6 sentence analysis of technology trends, then provide 8-10 detailed bullets.
 
 7. INVESTMENT OPPORTUNITY AND VALUE CREATION (for ${selectedIndustry} in ${location})
-Write a detailed 5-6 sentence investment recommendation, then provide 8-10 detailed bullets:
-
-Your analysis should include:
-- Why ${selectedIndustry} in ${location} is attractive for PE investment
-- Specific value creation levers available
-- Risk factors and how to mitigate them
-- Target company profiles and acquisition criteria
-
-Then provide detailed bullets including:
-- Platform company characteristics to target in ${selectedIndustry}
-- Add-on acquisition opportunities and bolt-on targets
-- Operational improvement levers with expected impact (e.g., "Pricing optimization: +200-300bps margin")
-- Revenue growth strategies specific to ${selectedIndustry}
-- Multiple arbitrage opportunities (e.g., buy at 4-5x, sell at 6-7x)
-- Exit strategy considerations and potential buyers
-- Key success factors for investments in ${selectedIndustry}
-- Red flags or risk factors to avoid
-
-Provide actionable investment insights with specific examples.
+Write a detailed 5-6 sentence investment recommendation, then provide 8-10 detailed bullets.
 
 FINAL INSTRUCTIONS:
 - This is a COMPREHENSIVE report - be detailed and specific
@@ -805,179 +619,163 @@ FINAL INSTRUCTIONS:
 - Provide analysis and insights, not just facts
 - Think like a senior PE analyst making an investment recommendation
 - Use 2024 data wherever possible`;
-  }
 
-  private parseIndustryResearchContent(content: string): any {
-    // Parse the AI response into structured sections based on new comprehensive format
-    const sections = {
-      industry: this.extractSection(content, 'Industry'),
-      marketOverview: this.extractSection(content, 'Market Overview'),
-      consolidationAndCompetitiveLandscape: this.extractSection(content, 'M&A Activity and Consolidation'),
-      barriersToEntry: this.extractSection(content, 'Barriers to Entry and Defensibility'),
-      cashFlowProfile: this.extractSection(content, 'Financial Profile and Unit Economics'),
-      technologyTrends: this.extractSection(content, 'Technology and Innovation Trends'),
-      investmentHighlights: this.extractSection(content, 'Investment Opportunity and Value Creation')
-    };
+      console.log('=== PROMPT BEING SENT ===');
+      console.log(prompt);
+      console.log('=== END PROMPT ===');
 
-    return sections;
-  }
+      // Call OpenAI API
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: "You are a senior private equity research analyst at a top-tier firm. Write comprehensive, detailed industry research reports with specific data, company names, and actionable insights."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 8000
+      });
 
-  private extractSection(content: string, sectionName: string): string {
-    console.log(`Extracting section: ${sectionName}`);
+      const generatedContent = completion.choices[0]?.message?.content || '';
+      console.log('Generated Content Length:', generatedContent.length);
+      console.log('=== CONTENT PREVIEW (First 2000 chars) ===');
+      console.log(generatedContent.substring(0, 2000));
+      console.log('=== END PREVIEW ===');
 
-    // Split content into lines
-    const lines = content.split('\n');
-    let sectionContent: string[] = [];
-    let inSection = false;
-
-    // Match either markdown headers (## SECTION) or numbered (2. SECTION)
-    const escapedName = sectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    let sectionHeaderPattern = new RegExp(`^#{1,3}\\s*${escapedName}|^\\d+\\.\\s*${escapedName}`, 'i');
-    let nextSectionPattern = /^#{1,3}\s+[A-Z]|^\d+\.\s+[A-Z]/;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      // Check if we found our section header
-      if (sectionHeaderPattern.test(line)) {
-        inSection = true;
-        console.log(`Found section header: ${line}`);
-        continue; // Skip the header itself
-      }
-
-      // If we're in the section and hit the next section, stop
-      if (inSection && nextSectionPattern.test(line) && !sectionHeaderPattern.test(line)) {
-        console.log(`Found next section, stopping: ${line}`);
-        break;
-      }
-
-      // Collect content if we're in the section
-      if (inSection) {
-        sectionContent.push(line);
-      }
-    }
-
-    const extracted = sectionContent.join('\n').trim();
-    console.log(`Extracted ${sectionName}, length: ${extracted.length}`);
-    return extracted;
-  }
-
-  async generateIndustryResearchDocxWithContent(thesisData: ThesisData, content: any): Promise<Buffer> {
-    const doc = new Document({
-      sections: [{
-        properties: {},
-        children: [
-          // Title
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Industry Research Report",
-                bold: true,
-                size: 32,
-              }),
-            ],
-            heading: HeadingLevel.TITLE,
-            spacing: { after: 400 },
-          }),
-
-          // Thesis Name
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Investment Thesis: " + thesisData.name,
-                bold: true,
-                size: 24,
-              }),
-            ],
-            heading: HeadingLevel.HEADING_1,
-            spacing: { after: 300 },
-          }),
-
-          // Investment Criteria Summary
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: "Investment Criteria:",
-                bold: true,
-                size: 20,
-              }),
-            ],
-            heading: HeadingLevel.HEADING_2,
-            spacing: { after: 200 },
-          }),
-
-          ...thesisData.criteria.map(criteria => 
+      // Create a simple Word document with the generated content
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            // Title
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "• " + criteria.category + ": " + criteria.field + " " + criteria.operator + " " + criteria.value + " (Weight: " + criteria.weight + "%)",
-                  size: 18,
+                  text: "Industry Research Report",
+                  bold: true,
+                  size: 32,
                 }),
               ],
-              spacing: { after: 100 },
-            })
-          ),
+              heading: HeadingLevel.TITLE,
+              spacing: { after: 400 },
+            }),
 
-          // Industry Section
-          ...this.createSectionParagraphs("Industry", content.industry),
-          
-          // Market Overview Section
-          ...this.createSectionParagraphs("Market Overview", content.marketOverview),
+            // Thesis Name
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Investment Thesis: ${thesisData.name}`,
+                  bold: true,
+                  size: 24,
+                }),
+              ],
+              heading: HeadingLevel.HEADING_1,
+              spacing: { after: 300 },
+            }),
 
-          // M&A Activity and Consolidation Section
-          ...this.createSectionParagraphs("M&A Activity and Consolidation", content.consolidationAndCompetitiveLandscape),
+            // Target Industry
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Target Industry: ${selectedIndustry}`,
+                  bold: true,
+                  size: 20,
+                }),
+              ],
+              spacing: { after: 200 },
+            }),
 
-          // Barriers to Entry and Defensibility Section
-          ...this.createSectionParagraphs("Barriers to Entry and Defensibility", content.barriersToEntry),
+            // Generated content
+            ...this.parseContentIntoParagraphs(generatedContent),
+          ],
+        }],
+      });
 
-          // Financial Profile and Unit Economics Section
-          ...this.createSectionParagraphs("Financial Profile and Unit Economics", content.cashFlowProfile),
+      console.log('=== BASIC DOCUMENT GENERATION COMPLETE ===');
+      return await Packer.toBuffer(doc);
 
-          // Technology and Innovation Trends Section
-          ...this.createSectionParagraphs("Technology and Innovation Trends", content.technologyTrends),
-
-          // Investment Opportunity and Value Creation Section
-          ...this.createSectionParagraphs("Investment Opportunity and Value Creation", content.investmentHighlights),
-        ],
-      }],
-    });
-
-    return await Packer.toBuffer(doc);
+    } catch (error) {
+      console.error('Error generating basic document:', error);
+      throw new Error('Failed to generate basic document');
+    }
   }
 
-  private createSectionParagraphs(title: string, content: string): Paragraph[] {
-    if (!content.trim()) return [];
+  private parseContentIntoParagraphs(content: string): Paragraph[] {
+    const paragraphs: Paragraph[] = [];
+    const lines = content.split('\n');
 
-    const paragraphs: Paragraph[] = [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: title,
-            bold: true,
-            size: 20,
-          }),
-        ],
-        heading: HeadingLevel.HEADING_2,
-        spacing: { after: 200 },
-      })
-    ];
+    for (const line of lines) {
+      const trimmedLine = line.trim();
 
-    // Split content into lines and create paragraphs
-    const lines = content.split('\n').filter(line => line.trim());
-    lines.forEach(line => {
-      paragraphs.push(new Paragraph({
-        children: [
-          new TextRun({
-            text: line.trim(),
-            size: 18,
-          }),
-        ],
-        spacing: { after: 100 },
-      }));
-    });
+      if (!trimmedLine) {
+        // Empty line - add spacing
+        paragraphs.push(new Paragraph({
+          children: [new TextRun({ text: '' })],
+          spacing: { after: 100 },
+        }));
+        continue;
+      }
+
+      // Check if it's a heading (starts with ## or #)
+      if (trimmedLine.startsWith('##')) {
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: trimmedLine.replace(/^#+\s*/, ''),
+              bold: true,
+              size: 24,
+            }),
+          ],
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 300, after: 200 },
+        }));
+      } else if (trimmedLine.startsWith('#')) {
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: trimmedLine.replace(/^#+\s*/, ''),
+              bold: true,
+              size: 28,
+            }),
+          ],
+          heading: HeadingLevel.HEADING_1,
+          spacing: { before: 400, after: 300 },
+        }));
+      } else if (trimmedLine.match(/^\d+\.\s+[A-Z]/)) {
+        // Numbered section heading
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: trimmedLine,
+              bold: true,
+              size: 24,
+            }),
+          ],
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 300, after: 200 },
+        }));
+      } else {
+        // Regular paragraph
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({
+              text: trimmedLine,
+              size: 20,
+            }),
+          ],
+          spacing: { after: 100 },
+        }));
+      }
+    }
 
     return paragraphs;
   }
+
 }
 
 // Export the service instance

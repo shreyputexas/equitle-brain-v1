@@ -376,54 +376,8 @@ router.post('/content', firebaseAuthMiddleware, async (req, res) => {
   }
 });
 
-// Test endpoint for industry research (no auth required)
-router.post('/test-industry-research', async (req, res) => {
-  try {
-    const { thesisData, selectedIndustry } = req.body;
-
-    if (!thesisData || !thesisData.name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Thesis data with name is required'
-      });
-    }
-
-    logger.info('Generating test industry research report', {
-      thesisName: thesisData.name,
-      selectedIndustry: selectedIndustry || 'all industries'
-    });
-
-    // Generate industry research with AI
-    const docxBuffer = await onePagerGenerationService.generateIndustryResearchWithAI(thesisData, selectedIndustry);
-
-    // Set response headers for file download
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="test-industry-research-${Date.now()}.docx"`);
-    res.setHeader('Content-Length', docxBuffer.length);
-
-    // Send the file
-    res.send(docxBuffer);
-
-    logger.info('Test industry research report generated successfully', {
-      thesisName: thesisData.name,
-      docxSize: docxBuffer.length
-    });
-
-  } catch (error: any) {
-    logger.error('Failed to generate test industry research report', {
-      error: error.message,
-      stack: error.stack
-    });
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to generate industry research report', 
-      error: error.message 
-    });
-  }
-});
-
-// Industry Research Report Generation
-router.post('/generate-industry-research', firebaseAuthMiddleware, async (req, res) => {
+// Test endpoint for basic document generation (no auth required)
+router.post('/test-basic-document', async (req, res) => {
   try {
     const { thesisData, selectedIndustry } = req.body;
 
@@ -434,32 +388,94 @@ router.post('/generate-industry-research', firebaseAuthMiddleware, async (req, r
       });
     }
 
-    logger.info('Generating industry research report', {
+    if (!selectedIndustry) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected industry is required'
+      });
+    }
+
+    logger.info('Generating test basic industry document', {
       thesisName: thesisData.name,
-      criteriaCount: thesisData.criteria.length,
-      selectedIndustry: selectedIndustry || 'all industries',
-      userId: req.user?.uid
+      selectedIndustry: selectedIndustry
     });
 
-    // Generate industry research with AI
-    const docxBuffer = await onePagerGenerationService.generateIndustryResearchWithAI(thesisData, selectedIndustry);
+    // Generate basic document
+    const docxBuffer = await onePagerGenerationService.generateBasicDocument(thesisData, selectedIndustry);
 
     // Set response headers for file download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="industry-research-${thesisData.name.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.docx"`);
+    res.setHeader('Content-Disposition', `attachment; filename="test-industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.docx"`);
     res.setHeader('Content-Length', docxBuffer.length);
 
     // Send the file
     res.send(docxBuffer);
 
-    logger.info('Industry research report generated successfully', {
+    logger.info('Test basic industry document generated successfully', {
       thesisName: thesisData.name,
+      selectedIndustry: selectedIndustry,
+      fileSize: docxBuffer.length
+    });
+
+  } catch (error: any) {
+    logger.error('Error generating test basic industry document', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate test basic industry document',
+      error: error.message
+    });
+  }
+});
+
+// Generate basic industry research document
+router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const { thesisData, selectedIndustry } = req.body;
+
+    if (!thesisData || !thesisData.name || !thesisData.criteria) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thesis data is required with name and criteria'
+      });
+    }
+
+    if (!selectedIndustry) {
+      return res.status(400).json({
+        success: false,
+        message: 'Selected industry is required'
+      });
+    }
+
+    logger.info('Generating basic industry document', {
+      thesisName: thesisData.name,
+      selectedIndustry: selectedIndustry,
+      userId: req.user?.uid
+    });
+
+    // Generate basic document
+    const docxBuffer = await onePagerGenerationService.generateBasicDocument(thesisData, selectedIndustry);
+
+    // Set response headers for file download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.docx"`);
+    res.setHeader('Content-Length', docxBuffer.length);
+
+    // Send the file
+    res.send(docxBuffer);
+
+    logger.info('Basic industry document generated successfully', {
+      thesisName: thesisData.name,
+      selectedIndustry: selectedIndustry,
       fileSize: docxBuffer.length,
       userId: req.user?.uid
     });
 
   } catch (error: any) {
-    logger.error('Error generating industry research report', {
+    logger.error('Error generating basic industry document', {
       error: error.message,
       stack: error.stack,
       userId: req.user?.uid
@@ -467,7 +483,7 @@ router.post('/generate-industry-research', firebaseAuthMiddleware, async (req, r
 
     res.status(500).json({
       success: false,
-      message: 'Failed to generate industry research report',
+      message: 'Failed to generate basic industry document',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
