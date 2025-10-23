@@ -310,7 +310,7 @@ export class EmailAutoProcessor {
       const microsoftIntegration = await IntegrationsFirestoreService.findFirst({
         userId,
         provider: 'microsoft',
-        type: 'mail',
+        type: 'profile',
         isActive: true
       });
       
@@ -319,7 +319,13 @@ export class EmailAutoProcessor {
         return [];
       }
 
-      // Use Microsoft Graph API to fetch emails
+      // Check if Outlook service is enabled
+      if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('outlook')) {
+        logger.info(`Microsoft integration does not have Outlook service for user ${userId}`);
+        return [];
+      }
+
+      // Use Microsoft Graph API to fetch emails (both read and unread)
       const response = await axios.get('https://graph.microsoft.com/v1.0/me/messages', {
         headers: {
           'Authorization': `Bearer ${microsoftIntegration.accessToken}`,
@@ -327,7 +333,6 @@ export class EmailAutoProcessor {
         },
         params: {
           $top: 50,
-          $filter: "isRead eq false",
           $orderby: "receivedDateTime desc"
         }
       });

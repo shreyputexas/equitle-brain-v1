@@ -17,6 +17,7 @@ import { Add as AddIcon } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import integrationService, { Integration } from '../services/integrationService';
 import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
+import MicrosoftConnectDialog from '../components/integrations/MicrosoftConnectDialog';
 import IntegrationCard from '../components/integrations/IntegrationCard';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +30,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [microsoftDialogOpen, setMicrosoftDialogOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,18 +43,23 @@ export default function Settings() {
     // Check for integration callback status first
     const urlParams = new URLSearchParams(window.location.search);
     const integrationStatus = urlParams.get('integration');
+    const provider = urlParams.get('provider');
     
     if (integrationStatus === 'success') {
-      setSuccess('Google integration connected successfully!');
+      const providerName = provider === 'microsoft' ? 'Microsoft' : 'Google';
+      setSuccess(`${providerName} integration connected successfully!`);
       setConnectDialogOpen(false); // Close the dialog
+      setMicrosoftDialogOpen(false); // Close Microsoft dialog
       // Remove query param
       window.history.replaceState({}, document.title, window.location.pathname);
       setTimeout(() => {
         loadIntegrations();
       }, 1000);
     } else if (integrationStatus === 'error') {
-      setError('Failed to connect Google integration. Please try again.');
+      const providerName = provider === 'microsoft' ? 'Microsoft' : 'Google';
+      setError(`Failed to connect ${providerName} integration. Please try again.`);
       setConnectDialogOpen(false); // Close the dialog
+      setMicrosoftDialogOpen(false); // Close Microsoft dialog
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       // Only load integrations if we're not handling a callback
@@ -103,6 +110,14 @@ export default function Settings() {
     }, 500);
   };
 
+  const handleMicrosoftConnectSuccess = () => {
+    setMicrosoftDialogOpen(false);
+    setSuccess('Microsoft integration connected successfully!');
+    setTimeout(() => {
+      loadIntegrations();
+    }, 500);
+  };
+
   const clearMessages = () => {
     setSuccess(null);
     setError(null);
@@ -147,14 +162,24 @@ export default function Settings() {
               Connect external services to enhance your workflow
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setConnectDialogOpen(true)}
-            sx={{ bgcolor: 'secondary.main' }}
-          >
-            Add Integration
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setConnectDialogOpen(true)}
+              sx={{ bgcolor: '#4285f4' }}
+            >
+              Connect Google
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setMicrosoftDialogOpen(true)}
+              sx={{ bgcolor: '#0078d4' }}
+            >
+              Connect Microsoft
+            </Button>
+          </Box>
         </Box>
 
         {loading ? (
@@ -167,15 +192,25 @@ export default function Settings() {
               No integrations connected
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Connect Google services to access your files, calendar, and more
+              Connect Google or Microsoft services to access your files, calendar, and more
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => setConnectDialogOpen(true)}
-            >
-              Connect Your First Service
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setConnectDialogOpen(true)}
+              >
+                Connect Google
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setMicrosoftDialogOpen(true)}
+                sx={{ borderColor: '#0078d4', color: '#0078d4' }}
+              >
+                Connect Microsoft
+              </Button>
+            </Box>
           </Box>
         ) : (
           <Grid container spacing={3}>
@@ -232,6 +267,13 @@ export default function Settings() {
         open={connectDialogOpen}
         onClose={() => setConnectDialogOpen(false)}
         onSuccess={handleConnectSuccess}
+      />
+
+      {/* Microsoft Connect Dialog */}
+      <MicrosoftConnectDialog
+        open={microsoftDialogOpen}
+        onClose={() => setMicrosoftDialogOpen(false)}
+        onSuccess={handleMicrosoftConnectSuccess}
       />
     </Box>
   );
