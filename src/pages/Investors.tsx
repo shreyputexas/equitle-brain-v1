@@ -79,7 +79,9 @@ export default function Investors() {
       setEmails(investorEmails);
     } catch (err) {
       console.error('Error loading investor emails:', err);
-      setError('Failed to load investor emails');
+      // Silently handle errors - show empty state instead of error
+      setEmails([]);
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -510,21 +512,8 @@ export default function Investors() {
         </Box>
       )}
 
-      {/* Error State */}
-      {error && (
-        <Box sx={{ px: 3, mb: 3 }}>
-          <Alert severity="error" action={
-            <Button color="inherit" size="small" onClick={loadInvestorEmails}>
-              Retry
-            </Button>
-          }>
-            {error}
-          </Alert>
-        </Box>
-      )}
-
       {/* Pipeline Columns */}
-      {!loading && !error && (
+      {!loading && (
         <Box sx={{ 
           display: 'flex', 
           gap: 1.5, 

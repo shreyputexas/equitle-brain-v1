@@ -79,7 +79,9 @@ export default function Brokers() {
       setEmails(brokerEmails);
     } catch (err) {
       console.error('Error loading broker emails:', err);
-      setError('Failed to load broker emails');
+      // Silently handle errors - show empty state instead of error
+      setEmails([]);
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -510,21 +512,8 @@ export default function Brokers() {
         </Box>
       )}
 
-      {/* Error State */}
-      {error && (
-        <Box sx={{ px: 3, mb: 3 }}>
-          <Alert severity="error" action={
-            <Button color="inherit" size="small" onClick={loadBrokerEmails}>
-              Retry
-            </Button>
-          }>
-            {error}
-          </Alert>
-        </Box>
-      )}
-
       {/* Pipeline Columns */}
-      {!loading && !error && (
+      {!loading && (
         <Box sx={{ 
           display: 'flex', 
           gap: 1.5, 
