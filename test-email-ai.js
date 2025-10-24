@@ -1,4 +1,4 @@
-// Test script for OpenAI email analysis
+  // Test script for OpenAI email analysis
 // Run this with: node test-email-ai.js
 
 const testEmails = [

@@ -5,6 +5,7 @@ import GoogleCalendarService from '../services/googleCalendar';
 import GmailService from '../services/gmail';
 import { MicrosoftAuthService } from '../services/microsoftAuth';
 import IntegrationsFirestoreService from '../services/integrations.firestore.service';
+import { EmailsFirestoreService } from '../services/emails.firestore.service';
 import { firebaseAuthMiddleware as auth, FirebaseAuthRequest } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
 
@@ -342,6 +343,51 @@ router.get('/google/callback', async (req, res) => {
   }
 });
 
+// Fix Microsoft integration - add services array if missing (requires auth)
+router.post('/:id/fix-outlook', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const integration = await IntegrationsFirestoreService.findById(id, userId);
+
+    if (!integration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Integration not found'
+      });
+    }
+
+    if (integration.provider !== 'microsoft') {
+      return res.status(400).json({
+        success: false,
+        error: 'This endpoint only works for Microsoft integrations'
+      });
+    }
+
+    logger.info('Fixing Microsoft integration - adding services array', { integrationId: id, userId });
+
+    // Update the integration to add services array with outlook
+    await IntegrationsFirestoreService.update(id, {
+      services: ['outlook', 'onedrive', 'teams'] // Add all common services
+    });
+
+    logger.info('Successfully added services array to Microsoft integration', { integrationId: id });
+
+    res.json({
+      success: true,
+      message: 'Microsoft integration fixed - Outlook service enabled'
+    });
+  } catch (error) {
+    logger.error('Error fixing Microsoft integration:', error);
+    res.status(500).json({ success: false, error: 'Failed to fix integration' });
+  }
+});
+
 // Disconnect integration (requires auth)
 router.delete('/:id', auth, async (req, res) => {
   try {
@@ -361,11 +407,19 @@ router.delete('/:id', auth, async (req, res) => {
       });
     }
 
+    logger.info('Disconnecting integration and cleaning up emails', { integrationId: id, userId });
+
+    // Delete all emails associated with this integration
+    const deletedEmailCount = await EmailsFirestoreService.deleteEmailsByIntegration(userId, id);
+    logger.info('Deleted emails for disconnected integration', { integrationId: id, deletedCount: deletedEmailCount });
+
+    // Delete the integration
     await IntegrationsFirestoreService.delete(id);
 
     res.json({
       success: true,
-      message: 'Integration disconnected successfully'
+      message: 'Integration disconnected successfully',
+      deletedEmailCount
     });
   } catch (error) {
     logger.error('Error disconnecting integration:', error);

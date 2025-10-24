@@ -2,6 +2,7 @@ import { GmailService } from './gmail';
 import { MicrosoftAuthService } from './microsoftAuth';
 import { EmailsFirestoreService } from './emails.firestore.service';
 import { IntegrationsFirestoreService } from './integrations.firestore.service';
+import { OpenAIService } from './openai.service';
 import { db, FirestoreHelpers } from '../lib/firebase';
 import logger from '../utils/logger';
 import axios from 'axios';
@@ -34,50 +35,173 @@ export class EmailAutoProcessor {
     try {
       logger.info(`Starting email processing for user ${userId}`);
       
-      // 1. Get Gmail emails
-      const gmailEmails = await this.getGmailEmails(userId);
+      // 1. Get Gmail emails with integration ID
+      const { emails: gmailEmails, integrationId: gmailIntegrationId } = await this.getGmailEmails(userId);
       
-      // 2. Get Outlook emails  
-      const outlookEmails = await this.getOutlookEmails(userId);
+      // 2. Get Outlook emails with integration ID
+      const { emails: outlookEmails, integrationId: outlookIntegrationId } = await this.getOutlookEmails(userId);
       
-      // 3. Process each email
-      const allEmails = [...gmailEmails, ...outlookEmails];
-      
-      for (const email of allEmails) {
-        await this.processEmail(email, userId);
+      // 3. Process Gmail emails
+      for (const email of gmailEmails) {
+        await this.processEmail(email, userId, gmailIntegrationId);
       }
       
-      logger.info(`Processed ${allEmails.length} emails for user ${userId}`);
+      // 4. Process Outlook emails
+      for (const email of outlookEmails) {
+        await this.processEmail(email, userId, outlookIntegrationId);
+      }
+      
+      logger.info(`Processed ${gmailEmails.length + outlookEmails.length} emails for user ${userId}`);
     } catch (error) {
       logger.error('Error processing emails:', error);
     }
   }
 
   // Process a single email
-  private static async processEmail(email: any, userId: string) {
+  private static async processEmail(email: any, userId: string, integrationId: string) {
     try {
       // 1. Analyze content with AI
       const analysis = await this.analyzeEmailContent(email);
       
-      // 2. Determine where to store it
+      // 2. Check if email is relevant - skip if not
+      if (!analysis.isRelevant) {
+        logger.info(`Skipping irrelevant email: ${email.subject} (confidence: ${analysis.confidence})`, {
+          from: email.sender,
+          category: analysis.category || 'none'
+        });
+        return; // Don't store irrelevant emails
+      }
+      
+      // 3. Check if confidence is too low - skip low-confidence emails
+      if (analysis.confidence < 0.3) {
+        logger.info(`Skipping low-confidence email: ${email.subject} (confidence: ${analysis.confidence})`);
+        return; // Don't store low-confidence emails
+      }
+      
+      // 4. Determine where to store it
       const firebasePath = this.determineFirebasePath(analysis);
       
-      // 3. Store in Firebase using existing email service
-      await this.storeInFirebase(email, analysis, firebasePath, userId);
+      // 5. Store in Firebase using existing email service with integration ID
+      await this.storeInFirebase(email, analysis, firebasePath, userId, integrationId);
       
-      logger.info(`Processed email: ${email.subject} -> ${analysis.category}/${analysis.subCategory}`);
+      logger.info(`✅ Stored email: ${email.subject} -> ${analysis.category}/${analysis.subCategory} (confidence: ${analysis.confidence})`);
     } catch (error) {
       logger.error(`Error processing email ${email.id}:`, error);
     }
   }
 
-  // AI analysis of email content
+  // AI analysis of email content with keyword fallback
   private static async analyzeEmailContent(email: any): Promise<{
     category: 'deal' | 'investor' | 'broker';
     subCategory: string;
     confidence: number;
+    isRelevant: boolean;
     extractedData: any;
   }> {
+    // Try AI analysis first
+    try {
+      logger.info('Attempting AI analysis for email', { subject: email.subject });
+      const aiResult = await this.analyzeWithAI(email);
+      logger.info('AI analysis successful', { category: aiResult.category, confidence: aiResult.confidence });
+      return aiResult;
+    } catch (error) {
+      logger.warn('AI analysis failed, falling back to keyword matching', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return this.analyzeWithKeywords(email);
+    }
+  }
+
+  // AI-powered analysis using OpenAI
+  private static async analyzeWithAI(email: any): Promise<{
+    category: 'deal' | 'investor' | 'broker';
+    subCategory: string;
+    confidence: number;
+    isRelevant: boolean;
+    extractedData: any;
+  }> {
+    const openaiService = new OpenAIService();
+    
+    const emailContent = `
+Subject: ${email.subject}
+From: ${email.sender}
+Content: ${email.content.substring(0, 2000)}
+`;
+
+    const prompt = `Analyze this business email and categorize it. Respond ONLY with valid JSON matching this exact structure:
+
+{
+  "category": "deal" | "investor" | "broker",
+  "subCategory": string (e.g., "response-received", "due-diligence", "closing" for deals; "response-received", "closing" for investors/brokers),
+  "confidence": number (0.0 to 1.0),
+  "isRelevant": boolean (true if business-related, false for spam/personal/marketing/security notifications),
+  "extractedData": {
+    "companyName": string or null,
+    "dealValue": number or null,
+    "investorName": string or null,
+    "brokerName": string or null,
+    "sentiment": "positive" | "neutral" | "negative"
+  },
+  "reasoning": string (brief explanation)
+}
+
+Categories:
+- "deal": Investment opportunities, fundraising, acquisitions, M&A discussions
+- "investor": LP communications, fund updates, investor relations, capital calls
+- "broker": Introductions from intermediaries, deal referrals, placement agents
+
+**IMPORTANT**: Set isRelevant to FALSE for:
+- Account security notifications (password resets, login alerts, 2FA, etc.)
+- Marketing emails, newsletters, promotions
+- System notifications (welcome emails, app notifications, etc.)
+- Personal emails unrelated to business
+- Spam or automated messages
+
+Only set isRelevant to TRUE for emails directly related to deals, investors, or brokers in private equity/venture capital.
+
+Email to analyze:
+${emailContent}`;
+
+    const completion = await openaiService['client'].chat.completions.create({
+      model: 'gpt-4',
+      temperature: 0.3,
+      max_tokens: 500,
+      messages: [
+        { role: 'system', content: 'You are an expert at analyzing private equity and venture capital emails. Always respond with valid JSON only.' },
+        { role: 'user', content: prompt }
+      ]
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const result = JSON.parse(response);
+    
+    // Map sentiment to legacy format
+    const sentiment = result.extractedData.sentiment === 'positive' ? 'GREEN' 
+                    : result.extractedData.sentiment === 'negative' ? 'RED' 
+                    : 'YELLOW';
+    
+    return {
+      category: result.category,
+      subCategory: result.subCategory,
+      confidence: result.confidence,
+      isRelevant: result.isRelevant ?? true, // Default to true if not provided
+      extractedData: {
+        ...result.extractedData,
+        sentiment
+      }
+    };
+  }
+
+  // Fallback keyword-based analysis
+  private static analyzeWithKeywords(email: any): {
+    category: 'deal' | 'investor' | 'broker';
+    subCategory: string;
+    confidence: number;
+    isRelevant: boolean;
+    extractedData: any;
+  } {
     const content = `${email.subject} ${email.content}`.toLowerCase();
     
     // Updated keyword lists for 3-tier classification
@@ -151,6 +275,7 @@ export class EmailAutoProcessor {
       category,
       subCategory,
       confidence,
+      isRelevant: confidence > 0.2, // Consider relevant if has some confidence
       extractedData
     };
   }
@@ -204,7 +329,8 @@ export class EmailAutoProcessor {
     email: any, 
     analysis: any, 
     firebasePath: string, 
-    userId: string
+    userId: string,
+    integrationId: string
   ) {
     // Use existing email service
     const emailData = {
@@ -218,6 +344,7 @@ export class EmailAutoProcessor {
       thread_id: email.threadId,
       status: 'processed',
       source: email.source,
+      integrationId: integrationId, // Track which integration this email came from
       category: analysis.category,
       subCategory: analysis.subCategory,
       confidence: analysis.confidence
@@ -258,7 +385,7 @@ export class EmailAutoProcessor {
   }
 
   // Get Gmail emails
-  private static async getGmailEmails(userId: string): Promise<any[]> {
+  private static async getGmailEmails(userId: string): Promise<{ emails: any[], integrationId: string }> {
     try {
       logger.info(`Fetching Gmail emails for user ${userId}`);
       
@@ -270,9 +397,9 @@ export class EmailAutoProcessor {
         isActive: true
       });
       
-      if (!gmailIntegration?.accessToken) {
+      if (!gmailIntegration?.accessToken || !gmailIntegration.id) {
         logger.info(`No active Gmail integration found for user ${userId}`);
-        return [];
+        return { emails: [], integrationId: '' };
       }
 
       // Use existing Gmail service to fetch emails
@@ -294,15 +421,15 @@ export class EmailAutoProcessor {
       }));
 
       logger.info(`Fetched ${emails.length} Gmail emails for user ${userId}`);
-      return emails;
+      return { emails, integrationId: gmailIntegration.id };
     } catch (error) {
       logger.error('Error fetching Gmail emails:', error);
-      return [];
+      return { emails: [], integrationId: '' };
     }
   }
 
   // Get Outlook emails
-  private static async getOutlookEmails(userId: string): Promise<any[]> {
+  private static async getOutlookEmails(userId: string): Promise<{ emails: any[], integrationId: string }> {
     try {
       logger.info(`Fetching Outlook emails for user ${userId}`);
       
@@ -314,15 +441,15 @@ export class EmailAutoProcessor {
         isActive: true
       });
       
-      if (!microsoftIntegration?.accessToken) {
+      if (!microsoftIntegration?.accessToken || !microsoftIntegration.id) {
         logger.info(`No active Microsoft integration found for user ${userId}`);
-        return [];
+        return { emails: [], integrationId: '' };
       }
 
       // Check if Outlook service is enabled
       if (!(microsoftIntegration as any).services || !(microsoftIntegration as any).services.includes('outlook')) {
         logger.info(`Microsoft integration does not have Outlook service for user ${userId}`);
-        return [];
+        return { emails: [], integrationId: '' };
       }
 
       // Use Microsoft Graph API to fetch emails (both read and unread)
@@ -350,10 +477,10 @@ export class EmailAutoProcessor {
       }));
 
       logger.info(`Fetched ${emails.length} Outlook emails for user ${userId}`);
-      return emails;
+      return { emails, integrationId: microsoftIntegration.id };
     } catch (error) {
       logger.error('Error fetching Outlook emails:', error);
-      return [];
+      return { emails: [], integrationId: '' };
     }
   }
 }

@@ -77,11 +77,25 @@ export default function Brokers() {
       // Use the same Outlook integration as Deals page
       const brokerEmails = await emailCategorizationService.getEmailsByCategory('broker', 50);
       setEmails(brokerEmails);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading broker emails:', err);
+<<<<<<< Updated upstream
       // Silently handle errors - show empty state instead of error
       setEmails([]);
       setError(null);
+=======
+      
+      // Provide more specific error messages
+      if (err.message?.includes('No email integration connected')) {
+        setError('Please connect Gmail or Microsoft Outlook in Settings to view broker emails');
+      } else if (err.response?.status === 401 || err.response?.status === 404) {
+        setError('Please connect an email account (Gmail or Outlook) in Settings to view broker emails');
+      } else if (err.message?.includes('No active Microsoft integration')) {
+        setError('No email integration found. Please connect Gmail or Outlook in Settings');
+      } else {
+        setError('Failed to load broker emails. Please connect Gmail or Outlook in Settings');
+      }
+>>>>>>> Stashed changes
     } finally {
       setLoading(false);
     }

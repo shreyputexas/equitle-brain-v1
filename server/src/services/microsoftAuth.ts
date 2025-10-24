@@ -26,6 +26,15 @@ export class MicrosoftAuthService {
   private static readonly REDIRECT_URI = process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:5000/api/integrations/microsoft/callback';
   private static readonly TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
 
+  // Debug: Log what we loaded
+  static {
+    console.log('🔧 Microsoft Auth Service Initialized:');
+    console.log('  CLIENT_ID:', this.CLIENT_ID ? `${this.CLIENT_ID.substring(0, 8)}...` : 'MISSING');
+    console.log('  CLIENT_SECRET:', this.CLIENT_SECRET ? 'SET' : 'MISSING');
+    console.log('  REDIRECT_URI:', this.REDIRECT_URI);
+    console.log('  TENANT_ID:', this.TENANT_ID);
+  }
+
   // Microsoft Graph API scopes
   private static readonly SCOPES = {
     profile: ['openid', 'User.Read'],
