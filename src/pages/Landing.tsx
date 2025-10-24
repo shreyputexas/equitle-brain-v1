@@ -172,27 +172,29 @@ export default function Landing() {
       {/* Hero Section */}
       <Box
         sx={{
-          minHeight: '100vh',
+          minHeight: '120vh',
           display: 'flex',
           alignItems: 'center',
           position: 'relative',
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F8FF 100%)',
+          background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
+          color: '#FFFFFF',
           pt: { xs: 12, md: 14 }
         }}
       >
-        <Container maxWidth="md">
+        <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 } }}>
           <Box sx={{ textAlign: 'center' }}>
             <Fade in timeout={1000}>
               <Box>
                 <Typography 
                   variant="h1" 
                   sx={{ 
-                    fontFamily: '"Space Grotesk", sans-serif',
-                    fontWeight: 800,
+                    fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+                    fontWeight: 600,
                     fontSize: { xs: '2.5rem', md: '4rem' },
                     lineHeight: 1.1,
-                    mb: 3
+                    mb: 3,
+                    color: '#FFFFFF'
                   }}
                 >
                    Close Faster with Automated
@@ -200,7 +202,7 @@ export default function Landing() {
                       component="span" 
                       sx={{ 
                         display: 'block',
-                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         minHeight: { xs: '3rem', md: '4.5rem' },
@@ -212,7 +214,7 @@ export default function Landing() {
                       {cyclingWords[currentWordIndex]}
                     </Box>
                 </Typography>
-                <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
+                <Typography variant="h5" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
                   AI-native software designed to automate your search, helping you acquire great companies.
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
@@ -222,9 +224,64 @@ export default function Landing() {
                     endIcon={<ArrowForwardIcon />}
                     onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                     sx={{
-                      background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                      background: `
+                        linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                      `,
+                      backdropFilter: 'blur(10px)',
+                      color: '#FFFFFF',
                       py: 1.8,
                       px: 6,
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&:hover': {
+                        background: `
+                          linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
+                          radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                          radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                        `
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: `
+                          repeating-linear-gradient(
+                            0deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(255,255,255,0.03) 2px,
+                            rgba(255,255,255,0.03) 4px
+                          ),
+                          repeating-linear-gradient(
+                            90deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(0,0,0,0.02) 2px,
+                            rgba(0,0,0,0.02) 4px
+                          )
+                        `,
+                        pointerEvents: 'none',
+                        zIndex: 1
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                        animation: 'slideShine 1.5s infinite',
+                        zIndex: 2
+                      },
                       fontSize: '1.1rem',
                       fontWeight: 600
                     }}
@@ -235,45 +292,166 @@ export default function Landing() {
               </Box>
             </Fade>
           </Box>
+          
+          {/* Demo Section - Below Text in Hero */}
+          <Box
+            sx={{
+              position: 'relative',
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              mt: 6,
+              mb: 8
+            }}
+          >
+            {/* Green Backdrop Rectangle - Behind and Below */}
+            <Box
+              sx={{
+                position: 'absolute',
+                left: '50%',
+                top: '70%',
+                transform: 'translate(-50%, -50%)',
+                width: { xs: '90%', md: '80%' },
+                height: { xs: '400px', md: '550px' },
+                background: `
+                  linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                  radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                `,
+                backdropFilter: 'blur(10px)',
+                borderRadius: '20px',
+                zIndex: 1,
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: `
+                    repeating-linear-gradient(
+                      0deg,
+                      transparent,
+                      transparent 2px,
+                      rgba(255,255,255,0.03) 2px,
+                      rgba(255,255,255,0.03) 4px
+                    ),
+                    repeating-linear-gradient(
+                      90deg,
+                      transparent,
+                      transparent 2px,
+                      rgba(0,0,0,0.02) 2px,
+                      rgba(0,0,0,0.02) 4px
+                    )
+                  `,
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                  borderRadius: '20px'
+                }
+              }}
+            />
+            
+            {/* Main Black Demo Rectangle - On Top */}
+            <Box
+              sx={{
+                position: 'relative',
+                width: { xs: '90%', md: '75%' },
+                height: { xs: '400px', md: '550px' },
+                backgroundColor: '#000000',
+                borderRadius: '12px 12px 0 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2
+              }}
+            >
+              <Typography variant="h6" sx={{ color: '#FFFFFF', textAlign: 'center' }}>
+                Demo Video Placeholder
+              </Typography>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
-
-
       {/* Use Cases Section */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
-        <Container maxWidth="lg">
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
+        <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 } }}>
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Built for Every Stage of Your Deal
             </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto' }}>
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', maxWidth: 700, mx: 'auto' }}>
               From sourcing to management, Equitle provides the tools and intelligence you need at every step
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
+          <Grid container spacing={4} justifyContent="center">
             {useCases.map((useCase, index) => (
-              <Grid item xs={12} md={4} key={index}>
+              <Grid item xs={12} md={3} key={index}>
                 <Card
                   sx={{
                     height: '100%',
                     p: 4,
                     textAlign: 'center',
-                    border: '1px solid rgba(94, 92, 230, 0.08)',
-                    borderRadius: 3,
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '2px solid #000000',
+                    borderRadius: 0,
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
                     '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
-                      border: '1px solid rgba(94, 92, 230, 0.2)'
+                      background: `
+                        linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                      `,
+                      backdropFilter: 'blur(10px)',
+                      transform: 'none',
+                      boxShadow: 'none',
+                      opacity: 0.8,
+                      '& svg': {
+                        color: '#FFFFFF'
+                      },
+                      '& button .MuiSvgIcon-root': {
+                        color: '#000000 !important'
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: `
+                          repeating-linear-gradient(
+                            0deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(255,255,255,0.03) 2px,
+                            rgba(255,255,255,0.03) 4px
+                          ),
+                          repeating-linear-gradient(
+                            90deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(0,0,0,0.02) 2px,
+                            rgba(0,0,0,0.02) 4px
+                          )
+                        `,
+                        pointerEvents: 'none',
+                        zIndex: 1
+                      }
                     }
                   }}
                 >
@@ -282,13 +460,17 @@ export default function Landing() {
                       width: 80,
                       height: 80,
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                      border: '1px solid rgba(94, 92, 230, 0.2)',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       mx: 'auto',
-                      mb: 3
+                      mb: 3,
+                      '& svg': {
+                        color: '#10B981',
+                        transition: 'color 0.3s ease'
+                      }
                     }}
                   >
                     {useCase.icon}
@@ -299,7 +481,7 @@ export default function Landing() {
                     sx={{ 
                       fontWeight: 600, 
                       mb: 2,
-                      color: '#374151'
+                      color: '#FFFFFF'
                     }}
                   >
                     {useCase.title}
@@ -308,7 +490,7 @@ export default function Landing() {
                   <Typography 
                     variant="body1" 
                     sx={{ 
-                      color: 'text.secondary', 
+                      color: 'rgba(255, 255, 255, 0.8)', 
                       mb: 3,
                       lineHeight: 1.6
                     }}
@@ -320,7 +502,7 @@ export default function Landing() {
                     {useCase.features.map((feature, idx) => (
                       <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
                         <ListItemIcon sx={{ minWidth: 32 }}>
-                          <CheckIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                          <CheckIcon sx={{ color: '#10B981', fontSize: 20 }} />
                         </ListItemIcon>
                         <ListItemText 
                           primary={feature}
@@ -328,7 +510,7 @@ export default function Landing() {
                             '& .MuiListItemText-primary': {
                               fontSize: '0.95rem',
                               fontWeight: 500,
-                              color: '#374151'
+                              color: 'rgba(255, 255, 255, 0.8)'
                             }
                           }}
                         />
@@ -341,11 +523,15 @@ export default function Landing() {
                     endIcon={<ArrowForwardIcon />}
                     sx={{ 
                       mt: 2,
-                      borderColor: '#374151',
-                      color: '#374151',
+                      backgroundColor: '#FFFFFF',
+                      color: '#000000',
+                      borderColor: '#FFFFFF',
                       '&:hover': {
-                        borderColor: '#1F2937',
-                        backgroundColor: 'rgba(55, 65, 81, 0.04)'
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#FFFFFF'
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: '#000000'
                       }
                     }}
                     onClick={() => navigate('/product')}
@@ -359,105 +545,26 @@ export default function Landing() {
         </Container>
       </Box>
 
-      {/* Features Grid */}
-      <Box sx={{ py: 12, background: 'white' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography 
-              variant="h2" 
-              sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
-                fontWeight: 700,
-                mb: 2
-              }}
-            >
-              Everything You Need to Win
-            </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-              Comprehensive tools designed by searchers, for searchers
-            </Typography>
-          </Box>
-
-          <Grid container spacing={4}>
-            {features.map((feature, index) => (
-              <Grid item xs={12} md={6} lg={4} key={index}>
-                <Card
-                    sx={{
-                      p: 4,
-                      height: '100%',
-                      border: '1px solid rgba(94, 92, 230, 0.08)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: '0 20px 40px rgba(94, 92, 230, 0.15)',
-                        border: '1px solid rgba(94, 92, 230, 0.2)',
-                        '& .feature-icon': {
-                          transform: 'scale(1.1) rotate(5deg)',
-                          color: '#9CA3AF'
-                        }
-                      }
-                    }}
-                  >
-                    <Box
-                      className="feature-icon"
-                      sx={{
-                        color: 'text.secondary',
-                        mb: 3,
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      {feature.icon}
-                    </Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                      {feature.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
-                      {feature.description}
-                    </Typography>
-                    <List dense>
-                      {feature.benefits.map((benefit, idx) => (
-                        <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
-                          <ListItemIcon sx={{ minWidth: 32 }}>
-                            <CheckIcon sx={{ fontSize: 18, color: 'success.main' }} />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={benefit}
-                            primaryTypographyProps={{
-                              fontSize: '0.875rem',
-                              color: 'text.secondary'
-                            }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-
       {/* Integration Section */}
-      <Box sx={{ py: 16, background: 'white' }}>
-        <Container maxWidth="lg">
+      <Box sx={{ py: 16, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
+        <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 } }}>
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={6}>
               <Typography 
                 variant="h2" 
                 sx={{ 
-                  fontFamily: '"Space Grotesk", sans-serif',
+                  fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                   fontWeight: 700,
                   mb: 3
                 }}
               >
-                Seamlessly Integrates with Your Stack
+                Integrate Your Stack
               </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
+              <Typography variant="h6" sx={{ color: '#FFFFFF', mb: 4, lineHeight: 1.6 }}>
                 Connect with your existing tools effortlessly. Our platform makes integration simple and straightforward, so you can focus on what matters most.
               </Typography>
               <List>
-                {['CRM & Sales Tools', 'Data & Analytics Platforms', 'Communication & Collaboration', 'Financial & Reporting Systems'].map((integration, index) => (
+                {['Data Providers', 'Google Suite', 'Microsoft 365', 'Financial & Reporting Systems'].map((integration, index) => (
                   <ListItem key={index} sx={{ px: 0 }}>
                     <ListItemIcon>
                       <CheckIcon sx={{ color: '#10B981' }} />
@@ -469,7 +576,19 @@ export default function Landing() {
               <Button 
                 variant="outlined" 
                 endIcon={<ArrowForwardIcon />}
-                sx={{ mt: 2 }}
+                sx={{ 
+                  mt: 2,
+                  backgroundColor: '#FFFFFF',
+                  color: '#000000',
+                  borderColor: '#FFFFFF',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderColor: '#FFFFFF'
+                  },
+                  '& .MuiSvgIcon-root': {
+                    color: '#000000'
+                  }
+                }}
                 onClick={() => navigate('/product')}
               >
                 Learn More About Integrations
@@ -498,19 +617,53 @@ export default function Landing() {
                     key={index}
                     sx={{
                       height: 100,
-                      borderRadius: 2,
-                      background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.05) 0%, rgba(124, 122, 237, 0.05) 100%)',
-                      border: '1px solid rgba(94, 92, 230, 0.1)',
+                      borderRadius: 0,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '2px solid #000000',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transition: 'all 0.3s ease',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
                       '&:hover': {
-                        transform: 'scale(1.05)',
-                        boxShadow: '0 8px 24px rgba(94, 92, 230, 0.15)',
+                        background: `
+                          linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                          radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                          radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                        `,
+                        backdropFilter: 'blur(10px)',
+                        transform: 'none',
+                        boxShadow: 'none',
+                        opacity: 0.8,
                         '& .integration-icon': {
-                          color: '#9CA3AF',
-                          transform: 'scale(1.1)'
+                          color: '#FFFFFF'
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: `
+                            repeating-linear-gradient(
+                              0deg,
+                              transparent,
+                              transparent 2px,
+                              rgba(255,255,255,0.03) 2px,
+                              rgba(255,255,255,0.03) 4px
+                            ),
+                            repeating-linear-gradient(
+                              90deg,
+                              transparent,
+                              transparent 2px,
+                              rgba(0,0,0,0.02) 2px,
+                              rgba(0,0,0,0.02) 4px
+                            )
+                          `,
+                          pointerEvents: 'none',
+                          zIndex: 1
                         }
                       }
                     }}
@@ -519,7 +672,7 @@ export default function Landing() {
                       className="integration-icon"
                       sx={{
                         fontSize: 40,
-                        color: 'text.secondary',
+                        color: 'rgba(255, 255, 255, 0.8)',
                         transition: 'all 0.3s ease'
                       }}
                     >
@@ -537,9 +690,51 @@ export default function Landing() {
       <Box 
         sx={{ 
           py: 16, 
-          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+          background: '#000000',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 30%, rgba(4, 120, 87, 0.1) 70%, rgba(6, 78, 59, 0.1) 100%),
+              radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(5, 150, 105, 0.03) 0%, transparent 50%),
+              radial-gradient(circle at 40% 80%, rgba(4, 120, 87, 0.02) 0%, transparent 50%)
+            `,
+            pointerEvents: 'none',
+            zIndex: 0
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(16, 185, 129, 0.02) 2px,
+                rgba(16, 185, 129, 0.02) 4px
+              ),
+              repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(5, 150, 105, 0.01) 2px,
+                rgba(5, 150, 105, 0.01) 4px
+              )
+            `,
+            pointerEvents: 'none',
+            zIndex: 0
+          }
         }}
       >
         <Container maxWidth="md">
@@ -547,16 +742,16 @@ export default function Landing() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                color: 'white',
+                color: '#FFFFFF',
                 mb: 2
               }}
             >
-              Join a Community of Searchers
+              Ready to Accelerate Your Sourcing?
             </Typography>
-            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 4 }}>
-              Connect with fellow search funders and discover how Equitle can transform your deal process
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4 }}>
+              Join a community of searchers and discover how Equitle can transform your deal process
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
               <Button 
@@ -564,14 +759,65 @@ export default function Landing() {
                 size="large"
                 onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                 sx={{
-                  background: 'white',
-                  color: 'secondary.main',
+                  background: `
+                    linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                    radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                  `,
+                  backdropFilter: 'blur(10px)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
                   py: 2,
                   px: 5,
                   fontSize: '1.1rem',
                   fontWeight: 600,
+                  position: 'relative',
+                  overflow: 'hidden',
                   '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.95)'
+                    background: `
+                      linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
+                      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                      radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                    `
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: `
+                      repeating-linear-gradient(
+                        0deg,
+                        transparent,
+                        transparent 2px,
+                        rgba(255,255,255,0.03) 2px,
+                        rgba(255,255,255,0.03) 4px
+                      ),
+                      repeating-linear-gradient(
+                        90deg,
+                        transparent,
+                        transparent 2px,
+                        rgba(0,0,0,0.02) 2px,
+                        rgba(0,0,0,0.02) 4px
+                      )
+                    `,
+                    pointerEvents: 'none',
+                    zIndex: 1
+                  },
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                    animation: 'slideShine 1.5s infinite',
+                    zIndex: 2
                   }
                 }}
               >
@@ -720,7 +966,7 @@ export default function Landing() {
               size="large"
               sx={{
                 mt: 3,
-                background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                 py: 1.5,
                 fontWeight: 600,
                 fontSize: '1.05rem'

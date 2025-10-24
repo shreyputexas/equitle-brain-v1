@@ -194,7 +194,7 @@ export default function Product() {
     },
     {
       question: 'What integrations are available?',
-      answer: 'Equitle integrates with scraping tools (Apollo, Grata, ZoomInfo), your productivity tools (Microsoft 365, Google Workspace), and your financial data providers (PitchBook, Preqin, Bloomberg, FactSet).'
+      answer: 'Equitle integrates with data providers (Apollo, Grata, ZoomInfo), your productivity tools (Microsoft 365, Google Workspace), and your financial data providers (PitchBook, Preqin, Bloomberg, FactSet).'
     },
     {
       question: 'Can I customize workflows?',
@@ -202,7 +202,7 @@ export default function Product() {
     },
     {
       question: 'How does investor communication work?',
-      answer: 'Searchers have a hard time dealing with investor relations while sourcing a deal. Equitle updates your investors on your progress, spending, and pipeline on a frequency decided by you.'
+      answer: 'Operators have a hard time dealing with investor relations while sourcing a deal. Equitle updates your investors on your progress, spending, and pipeline on a frequency decided by you.'
     }
   ];
 
@@ -215,8 +215,8 @@ export default function Product() {
         sx={{
           pt: { xs: 16, md: 20 },
           py: 8,
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F8FF 100%)',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
+          background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
+          color: '#FFFFFF'
         }}
       >
         <Container maxWidth="lg">
@@ -226,26 +226,28 @@ export default function Product() {
                 label="PRODUCT OVERVIEW" 
                 sx={{ 
                   mb: 3,
-                  background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                  border: '1px solid rgba(94, 92, 230, 0.2)',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#10B981',
                   fontWeight: 600
                 }}
               />
               <Typography 
                 variant="h1" 
                 sx={{ 
-                  fontFamily: '"Space Grotesk", sans-serif',
+                  fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                   fontWeight: 700,
                   fontSize: { xs: '2.5rem', md: '3.5rem' },
                   lineHeight: 1.2,
-                  mb: 3
+                  mb: 3,
+                  color: '#FFFFFF'
                 }}
               >
                 The Complete Platform for{' '}
                 <Box 
                   component="span" 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent'
                   }}
@@ -253,7 +255,7 @@ export default function Product() {
                   Sourcing
                 </Box>
               </Typography>
-              <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6 }}>
+              <Typography variant="h5" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4, lineHeight: 1.6 }}>
                 From calling to getting intelligence, Equitle provides the AI-powered tools and insights you need to succeed in your sourcing.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
@@ -263,9 +265,13 @@ export default function Product() {
                   endIcon={<ArrowForwardIcon />}
                   onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle?month=2025-09', '_blank')}
                   sx={{
-                    background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: '#FFFFFF',
                     py: 1.5,
-                  px: 4
+                    px: 4,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                    }
                   }}
                 >
                   Discover Equitle
@@ -334,20 +340,21 @@ export default function Product() {
       </Box>
 
       {/* Feature Categories */}
-      <Box sx={{ py: 12, background: 'white' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Comprehensive Feature Set
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Everything you need to manage your search fund operations
             </Typography>
           </Box>
@@ -356,14 +363,26 @@ export default function Product() {
             value={tabValue} 
             onChange={(e, v) => setTabValue(v)} 
             variant="fullWidth"
-            sx={{ mb: 6, '& .MuiTab-root': { minWidth: 200 } }}
+            sx={{ 
+              mb: 6, 
+              '& .MuiTab-root': { 
+                minWidth: 200,
+                color: 'rgba(255, 255, 255, 0.7)',
+                '&.Mui-selected': {
+                  color: '#10B981'
+                }
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#10B981'
+              }
+            }}
           >
             {features.map((feature, index) => (
               <Tab 
                 key={index}
                 label={feature.category} 
                 icon={React.cloneElement(feature.icon, { 
-                  sx: { fontSize: 24, color: '#9CA3AF' } 
+                  sx: { fontSize: 24, color: '#10B981' } 
                 })}
                 iconPosition="start"
                 sx={{ 
@@ -386,32 +405,67 @@ export default function Product() {
                         sx={{
                           p: 3,
                           height: '100%',
-                          border: '1px solid rgba(94, 92, 230, 0.08)',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '2px solid #000000',
+                          borderRadius: 0,
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: '0 12px 32px rgba(94, 92, 230, 0.15)',
-                            border: '1px solid rgba(156, 163, 175, 0.2)'
+                            background: `
+                              linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                              radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                              radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                            `,
+                            backdropFilter: 'blur(10px)',
+                            transform: 'none',
+                            boxShadow: 'none',
+                            opacity: 0.8,
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background: `
+                                repeating-linear-gradient(
+                                  0deg,
+                                  transparent,
+                                  transparent 2px,
+                                  rgba(255,255,255,0.03) 2px,
+                                  rgba(255,255,255,0.03) 4px
+                                ),
+                                repeating-linear-gradient(
+                                  90deg,
+                                  transparent,
+                                  transparent 2px,
+                                  rgba(0,0,0,0.02) 2px,
+                                  rgba(0,0,0,0.02) 4px
+                                )
+                              `,
+                              pointerEvents: 'none',
+                              zIndex: 1
+                            }
                           }
                         }}
                       >
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#FFFFFF' }}>
                           {item.title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
+                        <Typography variant="body2" sx={{ mb: 3, lineHeight: 1.7, color: 'rgba(255, 255, 255, 0.8)' }}>
                           {item.description}
                         </Typography>
                         <List dense>
                           {item.benefits.map((benefit, benefitIdx) => (
                             <ListItem key={benefitIdx} sx={{ px: 0, py: 0.5 }}>
                               <ListItemIcon sx={{ minWidth: 28 }}>
-                                <CheckIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
+                                <CheckIcon sx={{ fontSize: 16, color: '#10B981' }} />
                               </ListItemIcon>
                               <ListItemText 
                                 primary={benefit}
                                 primaryTypographyProps={{
                                   fontSize: '0.875rem',
-                                  color: 'text.secondary'
+                                  color: 'rgba(255, 255, 255, 0.8)'
                                 }}
                               />
                             </ListItem>
@@ -428,20 +482,21 @@ export default function Product() {
       </Box>
 
       {/* Integrations */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Seamless Integrations
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Connect with the tools you already use
             </Typography>
           </Box>
@@ -454,22 +509,31 @@ export default function Product() {
                     p: 3,
                     height: '100%',
                     textAlign: 'center',
-                    border: '1px solid rgba(94, 92, 230, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '2px solid #000000',
+                    borderRadius: 0,
                     '&:hover': {
-                      boxShadow: '0 8px 24px rgba(94, 92, 230, 0.1)'
+                      background: `
+                        linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                      `,
+                      backdropFilter: 'blur(10px)',
+                      opacity: 0.8
                     }
                   }}
                 >
-                  <Box sx={{ mb: 2, color: '#9CA3AF' }}>
+                  <Box sx={{ mb: 2, color: '#10B981' }}>
                     {integration.icon}
                   </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#FFFFFF' }}>
                     {integration.category}
                   </Typography>
                   <List dense>
                     {integration.items.map((item, idx) => (
                       <ListItem key={idx} sx={{ px: 0, justifyContent: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                           {item}
                         </Typography>
                       </ListItem>
@@ -481,7 +545,7 @@ export default function Product() {
           </Grid>
 
           <Box sx={{ textAlign: 'center', mt: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Don't see your tool? We offer custom integrations and API access.
             </Typography>
           </Box>
@@ -490,54 +554,76 @@ export default function Product() {
 
 
       {/* Platform Architecture */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Built for Scale
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Modern architecture designed to grow with your firm
             </Typography>
           </Box>
 
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
-              <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <CloudIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              <Card sx={{ 
+                p: 3, 
+                textAlign: 'center', 
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '2px solid #000000',
+                borderRadius: 0
+              }}>
+                <CloudIcon sx={{ fontSize: 48, color: '#10B981', mb: 2 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#FFFFFF' }}>
                   Cloud-Native
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                   Built on modern cloud infrastructure for reliability, scalability, and performance
                 </Typography>
               </Card>
             </Grid>
             <Grid item xs={12} md={4}>
-              <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <MobileIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              <Card sx={{ 
+                p: 3, 
+                textAlign: 'center', 
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '2px solid #000000',
+                borderRadius: 0
+              }}>
+                <MobileIcon sx={{ fontSize: 48, color: '#10B981', mb: 2 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#FFFFFF' }}>
                   Mobile Ready
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                   Access your deals and portfolio data from anywhere with our responsive design
                 </Typography>
               </Card>
             </Grid>
             <Grid item xs={12} md={4}>
-              <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <ApiIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              <Card sx={{ 
+                p: 3, 
+                textAlign: 'center', 
+                height: '100%',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '2px solid #000000',
+                borderRadius: 0
+              }}>
+                <ApiIcon sx={{ fontSize: 48, color: '#10B981', mb: 2 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#FFFFFF' }}>
                   API-First
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                   Comprehensive APIs enable custom integrations and workflow automation
                 </Typography>
               </Card>
@@ -547,20 +633,21 @@ export default function Product() {
       </Box>
 
       {/* FAQs */}
-      <Box sx={{ py: 12, background: 'white' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Frequently Asked Questions
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Everything you need to know about Equitle
             </Typography>
           </Box>
@@ -570,27 +657,29 @@ export default function Product() {
               key={index}
               sx={{ 
                 mb: 2, 
-                border: '1px solid rgba(94, 92, 230, 0.08)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '2px solid #000000',
+                borderRadius: 0,
                 '&:before': { display: 'none' },
                 '&.Mui-expanded': {
-                  boxShadow: '0 4px 12px rgba(94, 92, 230, 0.1)'
+                  background: 'rgba(16, 185, 129, 0.1)'
                 }
               }}
             >
               <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
+                expandIcon={<ExpandMoreIcon sx={{ color: '#10B981' }} />}
                 sx={{ 
                   '& .MuiAccordionSummary-content': {
                     my: 2
                   }
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#FFFFFF' }}>
                   {faq.question}
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                <Typography variant="body1" sx={{ lineHeight: 1.7, color: 'rgba(255, 255, 255, 0.8)' }}>
                   {faq.answer}
                 </Typography>
               </AccordionDetails>
@@ -603,7 +692,7 @@ export default function Product() {
       <Box 
         sx={{ 
           py: 12, 
-          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+          background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
           color: 'white'
         }}
       >
@@ -612,7 +701,7 @@ export default function Product() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
                 mb: 2
               }}
@@ -629,7 +718,7 @@ export default function Product() {
                 onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                 sx={{
                   background: 'white',
-                  color: '#374151',
+                  color: '#10B981',
                   py: 1.5,
                   px: 4,
                   '&:hover': {
