@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -18,14 +18,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function MarketingHeader() {
   const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const openMobile = () => setMobileOpen(true);
   const closeMobile = () => setMobileOpen(false);
@@ -33,6 +26,7 @@ export default function MarketingHeader() {
   const go = (path: string) => {
     closeMobile();
     navigate(path);
+    window.scrollTo(0, 0);
   };
 
   const bookDemo = () => {
@@ -48,31 +42,18 @@ export default function MarketingHeader() {
         left: 0,
         right: 0,
         zIndex: 1300,
-        padding: 0,
-        pointerEvents: 'none',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        background: '#000000',
+        padding: { xs: '1rem 0', md: '1.25rem 0' }
       }}
     >
       <Box
         sx={{
-          pointerEvents: 'auto',
           width: '100%',
-          padding: scrolled 
-            ? { xs: '0.75rem 1.25rem', md: '1rem 2rem' }
-            : { xs: '1rem 2rem', md: '1.5rem 3rem' },
+          paddingLeft: { xs: '1.5rem', md: '2rem' },
+          paddingRight: { xs: '1.5rem', md: '2rem' },
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          background: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'saturate(180%) blur(20px)',
-          border: scrolled ? '1px solid rgba(0, 0, 0, 0.08)' : 'none',
-          borderRadius: scrolled ? { xs: '12px', md: '14px' } : 0,
-          boxShadow: scrolled 
-            ? '0 8px 32px rgba(0, 0, 0, 0.12)' 
-            : '0 4px 24px rgba(0, 0, 0, 0.08)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          maxWidth: scrolled ? '1200px' : '100%',
-          margin: scrolled ? '0 auto' : '0'
+          alignItems: 'center'
         }}
       >
         {/* Logo */}
@@ -81,44 +62,122 @@ export default function MarketingHeader() {
           src="/assets/images/extended_logo_black_white.png"
           alt="Equitle"
           sx={{
-            height: scrolled 
-              ? { xs: '2rem', md: '2.25rem' }
-              : { xs: '2.5rem', md: '3rem' },
-            filter: 'brightness(0)',
+            height: { xs: '3rem', md: '3.5rem' },
+            filter: 'brightness(0) invert(1)',
             opacity: 0.95,
             objectFit: 'contain',
             mr: { xs: '2rem', md: '4rem' },
-            cursor: 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            cursor: 'pointer'
           }}
-          onClick={() => navigate('/')}
+          onClick={() => {
+            navigate('/');
+            window.scrollTo(0, 0);
+          }}
         />
 
         {/* Desktop nav */}
-        <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, gap: 3, ml: 4 }}>
+        <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, gap: 3, ml: 4, alignItems: 'center' }}>
           <Button 
-            onClick={() => navigate('/product')}
+            onClick={() => {
+              navigate('/product');
+              window.scrollTo(0, 0);
+            }}
             sx={{ 
-              color: 'text.primary',
+              color: '#FFFFFF',
               fontWeight: 500,
-              fontSize: '0.9rem',
+              fontSize: '1rem',
               textTransform: 'none',
-              '&:hover': { color: 'text.primary', bgcolor: 'rgba(0, 0, 0, 0.04)' }
+              py: 1.5,
+              position: 'relative',
+              alignSelf: 'center',
+              '&:hover': { 
+                color: '#FFFFFF',
+                '&::after': {
+                  width: '60%'
+                }
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: '6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '0',
+                height: '2px',
+                background: '#10B981',
+                transition: 'width 0.3s ease-in-out'
+              }
             }}
           >
             Product
           </Button>
           <Button 
-            onClick={() => navigate('/manifesto')}
+            onClick={() => {
+              navigate('/manifesto');
+              window.scrollTo(0, 0);
+            }}
             sx={{ 
-              color: 'text.primary',
+              color: '#FFFFFF',
               fontWeight: 500,
-              fontSize: '0.9rem',
+              fontSize: '1rem',
               textTransform: 'none',
-              '&:hover': { color: 'text.primary', bgcolor: 'rgba(0, 0, 0, 0.04)' }
+              py: 1.5,
+              position: 'relative',
+              alignSelf: 'center',
+              '&:hover': { 
+                color: '#FFFFFF',
+                '&::after': {
+                  width: '60%'
+                }
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: '6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '0',
+                height: '2px',
+                background: '#10B981',
+                transition: 'width 0.3s ease-in-out'
+              }
             }}
           >
             Manifesto
+          </Button>
+          <Button 
+            onClick={() => {
+              navigate('/network');
+              window.scrollTo(0, 0);
+            }}
+            sx={{ 
+              color: '#FFFFFF',
+              fontWeight: 500,
+              fontSize: '1rem',
+              textTransform: 'none',
+              py: 1.5,
+              position: 'relative',
+              alignSelf: 'center',
+              '&:hover': { 
+                color: '#FFFFFF',
+                '&::after': {
+                  width: '60%'
+                }
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: '6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '0',
+                height: '2px',
+                background: '#10B981',
+                transition: 'width 0.3s ease-in-out'
+              }
+            }}
+          >
+            Network
           </Button>
         </Box>
 
@@ -128,8 +187,10 @@ export default function MarketingHeader() {
             variant="text"
             onClick={() => navigate('/login')}
             sx={{ 
-              color: 'text.primary',
+              color: '#FFFFFF',
               fontWeight: 500,
+              fontSize: '1rem',
+              py: 1.5,
               display: { xs: 'none', md: 'inline-flex' }
             }}
           >
@@ -139,14 +200,67 @@ export default function MarketingHeader() {
             variant="contained"
             onClick={bookDemo}
             sx={{
-              background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
+              background: `
+                linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+              `,
+              backdropFilter: 'blur(10px)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
               fontWeight: 600,
-              px: scrolled ? 2.5 : 3,
-              py: scrolled ? 0.75 : 1,
-              fontSize: scrolled ? '0.875rem' : '0.9rem',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              display: { xs: 'none', md: 'inline-flex' }
+              px: 3,
+              py: 1.5,
+              fontSize: '1rem',
+              display: { xs: 'none', md: 'inline-flex' },
+              position: 'relative',
+              overflow: 'hidden',
+              '&:hover': {
+                background: `
+                  linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
+                  radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                `
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `
+                  repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255,255,255,0.03) 2px,
+                    rgba(255,255,255,0.03) 4px
+                  ),
+                  repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0,0,0,0.02) 2px,
+                    rgba(0,0,0,0.02) 4px
+                  )
+                `,
+                pointerEvents: 'none',
+                zIndex: 1
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                animation: 'slideShine 1.5s infinite',
+                zIndex: 2
+              }
             }}
           >
             Book Demo
@@ -173,7 +287,9 @@ export default function MarketingHeader() {
           sx: {
             width: '80vw',
             maxWidth: 360,
-            pt: 1.5
+            pt: 1.5,
+            background: '#000000',
+            color: '#FFFFFF'
           }
         }}
       >
@@ -194,6 +310,9 @@ export default function MarketingHeader() {
           </ListItemButton>
           <ListItemButton onClick={() => go('/manifesto')}>
             <ListItemText primary="Manifesto" />
+          </ListItemButton>
+          <ListItemButton onClick={() => go('/network')}>
+            <ListItemText primary="Network" />
           </ListItemButton>
         </List>
 

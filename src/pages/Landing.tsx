@@ -589,7 +589,7 @@ export default function Landing() {
                     color: '#000000'
                   }
                 }}
-                onClick={() => navigate('/product')}
+                onClick={() => navigate('/product#integrations')}
               >
                 Learn More About Integrations
               </Button>
@@ -672,7 +672,7 @@ export default function Landing() {
                       className="integration-icon"
                       sx={{
                         fontSize: 40,
-                        color: 'rgba(255, 255, 255, 0.8)',
+                        color: '#10B981',
                         transition: 'all 0.3s ease'
                       }}
                     >
@@ -736,6 +736,34 @@ export default function Landing() {
             zIndex: 0
           }
         }}
+        onMouseMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          
+          // Create smooth marker tracer
+          const tracer = document.createElement('div');
+          tracer.style.position = 'absolute';
+          tracer.style.left = `${x - 15}px`;
+          tracer.style.top = `${y - 15}px`;
+          tracer.style.width = '30px';
+          tracer.style.height = '30px';
+          tracer.style.background = 'radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%)';
+          tracer.style.pointerEvents = 'none';
+          tracer.style.zIndex = '10';
+          tracer.style.borderRadius = '50%';
+          tracer.style.filter = 'blur(1px)';
+          tracer.style.animation = 'smoothMarker 1.2s ease-out forwards';
+          
+          e.currentTarget.appendChild(tracer);
+          
+          // Remove tracer after animation
+          setTimeout(() => {
+            if (tracer.parentNode) {
+              tracer.parentNode.removeChild(tracer);
+            }
+          }, 1200);
+        }}
       >
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
@@ -751,7 +779,7 @@ export default function Landing() {
               Ready to Accelerate Your Sourcing?
             </Typography>
             <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4 }}>
-              Join a community of searchers and discover how Equitle can transform your deal process
+              Discover how Equitle can transform your deal process.
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
               <Button 

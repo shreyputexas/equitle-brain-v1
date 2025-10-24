@@ -57,37 +57,22 @@ export default function Manifesto() {
 
   const manifestoPoints = [
     {
-      title: 'Relationships Over Administration',
-      description: 'Build meaningful connections with business owners, not manage spreadsheets.',
-      icon: <HandshakeIcon sx={{ fontSize: 40 }} />,
-      color: '#9CA3AF',
-      details: [
-        'Focus on business owner\'s vision and goals',
-        'Build trust through genuine conversations',
-        'Develop deep industry expertise'
-      ]
+      title: 'Relationships',
+      description: 'Not Administration',
+      icon: <HandshakeIcon sx={{ fontSize: 32 }} />,
+      color: '#10B981'
     },
     {
-      title: 'Financial Analysis Over Data Entry',
-      description: 'Analyze financials and identify opportunities, not process data manually.',
-      icon: <MoneyIcon sx={{ fontSize: 40 }} />,
-      color: '#9CA3AF',
-      details: [
-        'Deep dive into financial models',
-        'Identify growth opportunities',
-        'Focus on due diligence and risk assessment'
-      ]
+      title: 'Analysis',
+      description: 'Not Data Entry',
+      icon: <MoneyIcon sx={{ fontSize: 32 }} />,
+      color: '#10B981'
     },
     {
-      title: 'Strategic Thinking Over Task Management',
-      description: 'Focus on deal sourcing and execution, not administrative tasks.',
-      icon: <LightbulbIcon sx={{ fontSize: 40 }} />,
-      color: '#9CA3AF',
-      details: [
-        'Develop investment theses',
-        'Build industry networks',
-        'Focus on fundraising and investor relations'
-      ]
+      title: 'Strategy',
+      description: 'Not Task Management',
+      icon: <LightbulbIcon sx={{ fontSize: 32 }} />,
+      color: '#10B981'
     }
   ];
 
@@ -144,10 +129,10 @@ export default function Manifesto() {
       {/* Header */}
       <Box
         sx={{
-          pt: { xs: 16, md: 20 },
-          py: 8,
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F8FF 100%)',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
+          pt: { xs: 20, md: 24 },
+          py: 12,
+          background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
+          color: '#FFFFFF'
         }}
       >
         <Container maxWidth="lg">
@@ -156,24 +141,26 @@ export default function Manifesto() {
               label="OUR MANIFESTO" 
               sx={{ 
                 mb: 3,
-                background: 'linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(55, 65, 81, 0.1) 100%)',
-                border: '1px solid rgba(156, 163, 175, 0.2)',
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                color: '#10B981',
                 fontWeight: 600
               }}
             />
             <Typography 
               variant="h1" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
                 fontSize: { xs: '2.5rem', md: '3.5rem' },
                 lineHeight: 1.2,
-                mb: 3
+                mb: 3,
+                color: '#FFFFFF'
               }}
             >
-              Search Funders Deserve Better
+              You Deserve Better
             </Typography>
-            <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
+            <Typography variant="h5" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4, lineHeight: 1.6, maxWidth: 800, mx: 'auto' }}>
               You're building the next generation of great companies. You shouldn't be spending your time managing spreadsheets and tracking emails.
             </Typography>
           </Box>
@@ -181,67 +168,95 @@ export default function Manifesto() {
       </Box>
 
       {/* Manifesto Points */}
-      <Box sx={{ py: 12, background: 'white' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Our Core Beliefs
             </Typography>
-            <Typography variant="h6" color="text.secondary">
-              What search funders should focus on vs. what they're actually doing
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+              What you should focus on vs. what you're actually doing
             </Typography>
           </Box>
 
-          <Grid container spacing={6}>
+          <Grid container spacing={8} justifyContent="center">
             {manifestoPoints.map((point, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Card
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Box
                   sx={{
+                    textAlign: 'center',
                     p: 4,
-                    height: '100%',
-                    border: '1px solid rgba(156, 163, 175, 0.08)',
                     '&:hover': {
-                      boxShadow: '0 12px 32px rgba(156, 163, 175, 0.15)',
-                      transform: 'translateY(-4px)'
+                      transform: 'translateY(-4px)',
+                      '& .circle': {
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        border: '2px solid rgba(255, 255, 255, 0.4)'
+                      },
+                      '& .icon': {
+                        color: '#FFFFFF'
+                      }
                     },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    transition: 'all 0.3s ease'
                   }}
                 >
-                  <Box sx={{ textAlign: 'center', mb: 3 }}>
-                    <Avatar sx={{ bgcolor: point.color, width: 80, height: 80, mx: 'auto', mb: 2 }}>
+                  <Box
+                    className="circle"
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: '50%',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '2px solid rgba(16, 185, 129, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 3,
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <Box 
+                      className="icon"
+                      sx={{ 
+                        color: '#10B981',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
                       {point.icon}
-                    </Avatar>
-                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-                      {point.title}
-                    </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                      {point.description}
-                    </Typography>
+                    </Box>
                   </Box>
                   
-                  <List>
-                    {point.details.map((detail, idx) => (
-                      <ListItem key={idx} sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 28 }}>
-                          <CheckIcon sx={{ fontSize: 16, color: point.color }} />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={detail}
-                          primaryTypographyProps={{
-                            fontSize: '0.875rem'
-                          }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Card>
+                  <Typography 
+                    variant="h4" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 1, 
+                      color: '#FFFFFF',
+                      fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif"
+                    }}
+                  >
+                    {point.title}
+                  </Typography>
+                  
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      fontWeight: 400,
+                      fontStyle: 'italic'
+                    }}
+                  >
+                    {point.description}
+                  </Typography>
+                </Box>
               </Grid>
             ))}
           </Grid>
@@ -249,20 +264,21 @@ export default function Manifesto() {
       </Box>
 
       {/* Problems Section */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               The Current Reality
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               How search funders are spending their time today
             </Typography>
           </Box>
@@ -274,26 +290,94 @@ export default function Manifesto() {
                   sx={{
                     p: 4,
                     height: '100%',
-                    border: '1px solid rgba(156, 163, 175, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '2px solid #000000',
+                    borderRadius: 0,
+                    position: 'relative',
+                    overflow: 'hidden',
                     '&:hover': {
-                      boxShadow: '0 8px 24px rgba(156, 163, 175, 0.1)'
+                      background: `
+                        linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                      `,
+                      backdropFilter: 'blur(10px)',
+                      opacity: 0.8,
+                      '& .MuiSvgIcon-root': {
+                        color: '#FFFFFF !important'
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: `
+                          repeating-linear-gradient(
+                            0deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(255,255,255,0.03) 2px,
+                            rgba(255,255,255,0.03) 4px
+                          ),
+                          repeating-linear-gradient(
+                            90deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(0,0,0,0.02) 2px,
+                            rgba(0,0,0,0.02) 4px
+                          )
+                        `,
+                        pointerEvents: 'none',
+                        zIndex: 1
+                      }
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: `
+                        repeating-linear-gradient(
+                          0deg,
+                          transparent,
+                          transparent 2px,
+                          rgba(255,255,255,0.03) 2px,
+                          rgba(255,255,255,0.03) 4px
+                        ),
+                        repeating-linear-gradient(
+                          90deg,
+                          transparent,
+                          transparent 2px,
+                          rgba(0,0,0,0.02) 2px,
+                          rgba(0,0,0,0.02) 4px
+                        )
+                      `,
+                      pointerEvents: 'none',
+                      zIndex: 1
                     }
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
-                    <Avatar sx={{ bgcolor: '#9CA3AF' }}>
-                      {problem.icon}
+                    <Avatar sx={{ bgcolor: '#065F46' }}>
+                      <Box sx={{ color: '#10B981' }}>
+                        {problem.icon}
+                      </Box>
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
                         {problem.problem}
                       </Typography>
-                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#9CA3AF' }}>
+                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#10B981' }}>
                         {problem.percentage}
                       </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                     {problem.description}
                   </Typography>
                 </Card>
@@ -304,63 +388,153 @@ export default function Manifesto() {
       </Box>
 
       {/* Solutions Section */}
-      <Box sx={{ py: 12, background: 'white' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               The Equitle Solution
             </Typography>
-            <Typography variant="h6" color="text.secondary">
-              How we're changing the game for search funders
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+              One Software. Manage everything.
             </Typography>
           </Box>
 
-          <Grid container spacing={6}>
-            {solutions.map((solution, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Card
-                  sx={{
-                    p: 4,
-                    height: '100%',
-                    border: '1px solid rgba(156, 163, 175, 0.08)',
-                    '&:hover': {
-                      boxShadow: '0 12px 32px rgba(156, 163, 175, 0.15)'
-                    }
-                  }}
-                >
-                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-                    {solution.title}
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                    {solution.description}
-                  </Typography>
+          <Box sx={{ position: 'relative', py: 12 }}>
+            {/* Pipeline Line */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 'calc(50% - 50px)', // Move line lower
+                left: '60px', // Start at first circle center
+                right: '60px', // End at last circle center
+                height: '8px',
+                background: `
+                  linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                  radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                `,
+                backdropFilter: 'blur(10px)',
+                opacity: 0.8,
+                transform: 'translateY(-50%)',
+                zIndex: 1,
+                borderRadius: '4px'
+              }}
+            />
+            
+            {/* Pipeline Stages */}
+            <Grid container spacing={8} sx={{ position: 'relative', zIndex: 2 }}>
+              {[
+                {
+                  title: 'Investment Thesis',
+                  description: 'Define your investment criteria and target markets',
+                  icon: <LightbulbIcon />
+                },
+                {
+                  title: 'Fundraising',
+                  description: 'Raise capital from investors and LPs',
+                  icon: <MoneyIcon />
+                },
+                {
+                  title: 'Outreach',
+                  description: 'Source and connect with potential deals',
+                  icon: <SearchIcon />
+                },
+                {
+                  title: 'Due Diligence',
+                  description: 'Evaluate and analyze investment opportunities',
+                  icon: <AssessmentIcon />
+                },
+                {
+                  title: 'Closing',
+                  description: 'Finalize deals and complete transactions',
+                  icon: <HandshakeIcon />
+                }
+              ].map((stage, index) => (
+                <Grid item xs={12} sm={6} md={2.4} key={index}>
+                  {/* Circle Container - Completely Separate */}
+                  <Box
+                    sx={{
+                      textAlign: 'center',
+                      position: 'relative',
+                      mb: 4,
+                        '&:hover': {
+                          '& .stage-circle': {
+                            background: 'rgba(255, 255, 255, 0.9)',
+                            transform: 'scale(1.1)',
+                            '& .stage-icon': {
+                              color: '#10B981',
+                              transform: 'scale(1.1)'
+                            }
+                          }
+                        }
+                    }}
+                  >
+                    <Box
+                      className="stage-circle"
+                      sx={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: '50%',
+                        background: `
+                          linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                          radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                          radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                        `,
+                        backdropFilter: 'blur(10px)',
+                        opacity: 0.8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        transition: 'all 0.3s ease',
+                        position: 'relative',
+                        zIndex: 3
+                      }}
+                    >
+                      <Box
+                        className="stage-icon"
+                        sx={{
+                          color: '#FFFFFF',
+                          transition: 'all 0.3s ease',
+                          '& .MuiSvgIcon-root': {
+                            fontSize: '2.5rem'
+                          }
+                        }}
+                      >
+                        {stage.icon}
+                      </Box>
+                    </Box>
+                  </Box>
                   
-                  <List>
-                    {solution.benefits.map((benefit, idx) => (
-                      <ListItem key={idx} sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 28 }}>
-                          <CheckIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={benefit}
-                          primaryTypographyProps={{
-                            fontSize: '0.875rem'
-                          }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                  {/* Text Container - Completely Separate */}
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography 
+                      variant="h5" 
+                      sx={{ 
+                        fontWeight: 700, 
+                        mb: 2, 
+                        color: '#FFFFFF',
+                        fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+                        fontSize: '1.25rem'
+                      }}
+                    >
+                      {stage.title}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         </Container>
       </Box>
 
@@ -368,24 +542,68 @@ export default function Manifesto() {
       {/* Call to Action */}
       <Box 
         sx={{ 
-          py: 12, 
-          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-          color: 'white'
+          py: 16, 
+          background: '#000000',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 30%, rgba(4, 120, 87, 0.1) 70%, rgba(6, 78, 59, 0.1) 100%),
+              radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(5, 150, 105, 0.03) 0%, transparent 50%),
+              radial-gradient(circle at 40% 80%, rgba(4, 120, 87, 0.02) 0%, transparent 50%)
+            `,
+            pointerEvents: 'none',
+            zIndex: 0
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(16, 185, 129, 0.02) 2px,
+                rgba(16, 185, 129, 0.02) 4px
+              ),
+              repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(5, 150, 105, 0.01) 2px,
+                rgba(5, 150, 105, 0.01) 4px
+              )
+            `,
+            pointerEvents: 'none',
+            zIndex: 0
+          }
         }}
       >
         <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center' }}>
+          <Box sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
+                color: '#FFFFFF',
                 mb: 2
               }}
             >
               Ready to Focus on What Matters?
             </Typography>
-            <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 4 }}>
               Join the search funders who've already made the switch to relationship-focused deal sourcing
             </Typography>
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -394,12 +612,39 @@ export default function Manifesto() {
                 size="large"
                 onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
                 sx={{
-                  background: 'white',
-                  color: '#374151',
-                  py: 1.5,
-                  px: 4,
+                  background: `
+                    linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                    radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                  `,
+                  backdropFilter: 'blur(10px)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  py: 2,
+                  px: 5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                    animation: 'slideShine 1.5s infinite',
+                    zIndex: 2
+                  },
                   '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.95)'
+                    background: `
+                      linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
+                      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                      radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                    `
                   }
                 }}
               >
