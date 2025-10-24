@@ -257,9 +257,19 @@ export default function DealPipeline({
       // Get deal-related emails with categorization
       const categorizedEmails = await emailCategorizationService.getDealRelatedEmails(50);
       setOutlookEmails(categorizedEmails);
-    } catch (error) {
-      console.error('Error fetching Outlook emails:', error);
-      setEmailsError('Failed to fetch emails. Please check your Microsoft integration.');
+    } catch (error: any) {
+      console.error('Error fetching emails:', error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('No email integration connected')) {
+        setEmailsError('Please connect Gmail or Microsoft Outlook in Settings to view deal emails');
+      } else if (error.response?.status === 401 || error.response?.status === 404) {
+        setEmailsError('Please connect an email account (Gmail or Outlook) in Settings to view deal emails');
+      } else if (error.message?.includes('No active Microsoft integration')) {
+        setEmailsError('No email integration found. Please connect Gmail or Outlook in Settings');
+      } else {
+        setEmailsError('Failed to fetch emails. Please connect Gmail or Outlook in Settings');
+      }
     } finally {
       setEmailsLoading(false);
     }

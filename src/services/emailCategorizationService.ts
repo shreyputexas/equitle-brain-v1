@@ -1,4 +1,5 @@
 import integrationService from './integrationService';
+import axios from 'axios';
 
 export interface EmailCategory {
   category: 'deal' | 'investor' | 'broker' | 'general';
@@ -248,20 +249,102 @@ class EmailCategorizationService {
   }
 
   /**
-   * Get categorized emails from Outlook
+   * Get AI-categorized emails from Firebase (already processed by backend)
    */
   async getCategorizedEmails(maxResults: number = 50): Promise<CategorizedEmail[]> {
     try {
-      const emails = await integrationService.getOutlookMessages({ maxResults });
+      console.log('🤖 Fetching AI-categorized emails from Firebase...');
       
-      return emails.map(email => ({
-        ...email,
-        categorization: this.categorizeEmail(email)
+      // Fetch from Firebase API (emails already processed with AI by backend)
+      const response = await axios.get(`/api/firebase-emails?limit=${maxResults}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.data.success || !response.data.data) {
+        throw new Error('Failed to fetch emails from Firebase');
+      }
+
+      const firebaseEmails = response.data.data;
+      console.log(`✅ Fetched ${firebaseEmails.length} AI-categorized emails from Firebase`);
+
+      // Convert Firebase format to CategorizedEmail format
+      const categorizedEmails: CategorizedEmail[] = firebaseEmails.map((email: any) => ({
+        id: email.message_id || email.id,
+        subject: email.email_subject || '(No Subject)',
+        from: {
+          emailAddress: {
+            address: email.prospect_email || '',
+            name: email.prospect_name || ''
+          }
+        },
+        receivedDateTime: email.received_date || email.createdAt,
+        isRead: true,
+        hasAttachments: false,
+        body: {
+          content: email.email_body || '',
+          contentType: 'text/plain'
+        },
+        importance: 'normal' as const,
+        categories: [],
+        categorization: {
+          category: email.category || 'general',
+          confidence: email.confidence || 0,
+          extractedData: {
+            sentiment: email.sentiment || 'neutral',
+            companyName: email.associatedDealCompany,
+            ...email.extractedData
+          }
+        }
       }));
-    } catch (error) {
-      console.error('Error fetching categorized emails:', error);
-      throw error;
+
+      console.log('📊 Email categorization breakdown from Firebase:', 
+        categorizedEmails.reduce((acc, email) => {
+          const cat = email.categorization.category;
+          acc[cat] = (acc[cat] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      );
+
+      return categorizedEmails;
+    } catch (error: any) {
+      console.error('Error fetching Firebase emails:', error);
+      throw new Error('Failed to fetch AI-categorized emails. Please ensure your email integration is connected and the backend is processing emails.');
     }
+  }
+  
+  /**
+   * Convert Gmail message format to common email format
+   */
+  private convertGmailToCommonFormat(gmailMsg: any): any {
+    const headers = gmailMsg.payload?.headers || [];
+    const getHeader = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+    
+    const fromHeader = getHeader('From');
+    const fromMatch = fromHeader.match(/^(.*?)\s*<(.+)>$/) || fromHeader.match(/^(.+)$/);
+    const fromName = fromMatch?.[1]?.trim() || fromMatch?.[2] || '';
+    const fromEmail = fromMatch?.[2] || fromMatch?.[1] || '';
+    
+    return {
+      id: gmailMsg.id,
+      subject: getHeader('Subject') || '(No Subject)',
+      from: {
+        emailAddress: {
+          address: fromEmail,
+          name: fromName
+        }
+      },
+      receivedDateTime: new Date(parseInt(gmailMsg.internalDate)).toISOString(),
+      isRead: !gmailMsg.labelIds?.includes('UNREAD'),
+      hasAttachments: false, // Can be enhanced later
+      body: {
+        content: gmailMsg.snippet || '',
+        contentType: 'text/plain'
+      },
+      importance: 'normal' as const,
+      categories: gmailMsg.labelIds || []
+    };
   }
 
   /**
@@ -290,9 +373,30 @@ class EmailCategorizationService {
   ): Promise<CategorizedEmail[]> {
     try {
       const categorizedEmails = await this.getCategorizedEmails(maxResults);
-      return categorizedEmails.filter(email => 
+      
+      // Log categorization breakdown for debugging
+      const breakdown = categorizedEmails.reduce((acc, email) => {
+        const cat = email.categorization.category;
+        acc[cat] = (acc[cat] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      console.log('📊 Email categorization breakdown:', breakdown);
+      console.log(`Looking for "${category}" emails:`, categorizedEmails.filter(e => e.categorization.category === category).length, 'found');
+      
+      const filtered = categorizedEmails.filter(email => 
         email.categorization.category === category
       );
+      
+      // If no emails found, log some examples to help debug
+      if (filtered.length === 0 && categorizedEmails.length > 0) {
+        console.log('⚠️ No emails matched category "' + category + '". Here are the first 3 email subjects:');
+        categorizedEmails.slice(0, 3).forEach((email, idx) => {
+          console.log(`  ${idx + 1}. "${email.subject}" - categorized as: ${email.categorization.category} (confidence: ${email.categorization.confidence.toFixed(2)})`);
+        });
+      }
+      
+      return filtered;
     } catch (error) {
       console.error('Error fetching emails by category:', error);
       throw error;
