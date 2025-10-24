@@ -8,20 +8,32 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  Divider
+  Divider,
+  Menu,
+  MenuItem
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  ArrowDropDown as ArrowDropDownIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 export default function MarketingHeader() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loginAnchorEl, setLoginAnchorEl] = useState<null | HTMLElement>(null);
 
   const openMobile = () => setMobileOpen(true);
   const closeMobile = () => setMobileOpen(false);
+  
+  const handleLoginMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setLoginAnchorEl(event.currentTarget);
+  };
+  
+  const handleLoginMenuClose = () => {
+    setLoginAnchorEl(null);
+  };
 
   const go = (path: string) => {
     closeMobile();
@@ -82,6 +94,7 @@ export default function MarketingHeader() {
               navigate('/product');
               window.scrollTo(0, 0);
             }}
+            disableRipple
             sx={{ 
               color: '#FFFFFF',
               fontWeight: 500,
@@ -116,6 +129,7 @@ export default function MarketingHeader() {
               navigate('/manifesto');
               window.scrollTo(0, 0);
             }}
+            disableRipple
             sx={{ 
               color: '#FFFFFF',
               fontWeight: 500,
@@ -150,6 +164,7 @@ export default function MarketingHeader() {
               navigate('/network');
               window.scrollTo(0, 0);
             }}
+            disableRipple
             sx={{ 
               color: '#FFFFFF',
               fontWeight: 500,
@@ -185,16 +200,38 @@ export default function MarketingHeader() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button 
             variant="text"
-            onClick={() => navigate('/login')}
+            onClick={handleLoginMenuOpen}
+            endIcon={<ArrowDropDownIcon />}
+            disableRipple
             sx={{ 
               color: '#FFFFFF',
               fontWeight: 500,
               fontSize: '1rem',
               py: 1.5,
-              display: { xs: 'none', md: 'inline-flex' }
+              display: { xs: 'none', md: 'inline-flex' },
+              position: 'relative',
+              '&:hover': {
+                backgroundColor: 'transparent',
+                transform: 'none',
+                boxShadow: 'none',
+                '&::after': {
+                  width: '100%'
+                }
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: '6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '0',
+                height: '2px',
+                background: '#10B981',
+                transition: 'width 0.3s ease-in-out'
+              }
             }}
           >
-            Sign In
+            Login
           </Button>
           <Button 
             variant="contained"
@@ -216,14 +253,6 @@ export default function MarketingHeader() {
               display: { xs: 'none', md: 'inline-flex' },
               position: 'relative',
               overflow: 'hidden',
-              '&:hover': {
-                background: `
-                  linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
-                  radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                  radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
-                `
-              },
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -265,6 +294,67 @@ export default function MarketingHeader() {
           >
             Book Demo
           </Button>
+
+          {/* Login Dropdown Menu */}
+          <Menu
+            anchorEl={loginAnchorEl}
+            open={Boolean(loginAnchorEl)}
+            onClose={handleLoginMenuClose}
+            PaperProps={{
+              sx: {
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: 0,
+                backdropFilter: 'blur(10px)',
+                mt: 1,
+                minWidth: 'fit-content',
+                width: 'auto'
+              }
+            }}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          >
+            <MenuItem 
+              onClick={() => {
+                handleLoginMenuClose();
+                navigate('/login');
+                window.scrollTo(0, 0);
+              }}
+              sx={{
+                color: '#FFFFFF',
+                fontFamily: '"Darker Grotesque", sans-serif',
+                fontWeight: 500,
+                minWidth: '120px',
+                px: 2,
+                py: 1,
+                '&:hover': {
+                  backgroundColor: 'rgba(16, 185, 129, 0.2)'
+                }
+              }}
+            >
+              Sign In
+            </MenuItem>
+            <MenuItem 
+              onClick={() => {
+                handleLoginMenuClose();
+                navigate('/signup');
+                window.scrollTo(0, 0);
+              }}
+              sx={{
+                color: '#FFFFFF',
+                fontFamily: '"Darker Grotesque", sans-serif',
+                fontWeight: 500,
+                minWidth: '120px',
+                px: 2,
+                py: 1,
+                '&:hover': {
+                  backgroundColor: 'rgba(16, 185, 129, 0.2)'
+                }
+              }}
+            >
+              Sign Up
+            </MenuItem>
+          </Menu>
 
           {/* Mobile hamburger */}
           <IconButton
@@ -322,10 +412,37 @@ export default function MarketingHeader() {
           <Button
             variant="outlined"
             fullWidth
-            onClick={() => go('/login')}
-            sx={{ textTransform: 'none' }}
+            onClick={handleLoginMenuOpen}
+            endIcon={<ArrowDropDownIcon />}
+            disableRipple
+            sx={{ 
+              textTransform: 'none',
+              color: '#FFFFFF',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              position: 'relative',
+              '&:hover': {
+                borderColor: '#10B981',
+                backgroundColor: 'transparent',
+                transform: 'none',
+                boxShadow: 'none',
+                '&::after': {
+                  width: '100%'
+                }
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: '6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '0',
+                height: '2px',
+                background: '#10B981',
+                transition: 'width 0.3s ease-in-out'
+              }
+            }}
           >
-            Sign In
+            Login
           </Button>
           <Button
             variant="contained"

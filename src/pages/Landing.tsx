@@ -159,7 +159,7 @@ export default function Landing() {
     {
       title: 'Fundraising',
       icon: <FundraisingIcon />,
-      description: 'Manage LPs, quarterly reports, and communication',
+      description: 'Manage LPs, quarterly reports, and communication to keep investors updated',
       features: ['LP management', 'Quarterly reports', 'Communication management']
     }
   ];
@@ -237,14 +237,6 @@ export default function Landing() {
                       border: '1px solid rgba(16, 185, 129, 0.4)',
                       position: 'relative',
                       overflow: 'hidden',
-                      '&:hover': {
-                        background: `
-                          linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
-                          radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
-                          radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                          radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
-                        `
-                      },
                       '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -452,7 +444,7 @@ export default function Landing() {
                         pointerEvents: 'none',
                         zIndex: 1
                       }
-                    }
+                    },
                   }}
                 >
                   <Box
@@ -736,34 +728,6 @@ export default function Landing() {
             zIndex: 0
           }
         }}
-        onMouseMove={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-          
-          // Create smooth marker tracer
-          const tracer = document.createElement('div');
-          tracer.style.position = 'absolute';
-          tracer.style.left = `${x - 15}px`;
-          tracer.style.top = `${y - 15}px`;
-          tracer.style.width = '30px';
-          tracer.style.height = '30px';
-          tracer.style.background = 'radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%)';
-          tracer.style.pointerEvents = 'none';
-          tracer.style.zIndex = '10';
-          tracer.style.borderRadius = '50%';
-          tracer.style.filter = 'blur(1px)';
-          tracer.style.animation = 'smoothMarker 1.2s ease-out forwards';
-          
-          e.currentTarget.appendChild(tracer);
-          
-          // Remove tracer after animation
-          setTimeout(() => {
-            if (tracer.parentNode) {
-              tracer.parentNode.removeChild(tracer);
-            }
-          }, 1200);
-        }}
       >
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
@@ -802,14 +766,6 @@ export default function Landing() {
                   fontWeight: 600,
                   position: 'relative',
                   overflow: 'hidden',
-                  '&:hover': {
-                    background: `
-                      linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
-                      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                      radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
-                    `
-                  },
                   '&::before': {
                     content: '""',
                     position: 'absolute',

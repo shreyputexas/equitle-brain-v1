@@ -184,14 +184,14 @@ export default function SignUp() {
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          label="First Name"
+          placeholder="First Name *"
           value={formData.firstName}
           onChange={(e) => handleInputChange('firstName', e.target.value)}
           required
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <PersonIcon sx={{ color: 'text.secondary' }} />
+                <PersonIcon sx={{ color: '#FFFFFF' }} />
               </InputAdornment>
             )
           }}
@@ -200,7 +200,7 @@ export default function SignUp() {
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          label="Last Name"
+          placeholder="Last Name *"
           value={formData.lastName}
           onChange={(e) => handleInputChange('lastName', e.target.value)}
           required
@@ -209,7 +209,7 @@ export default function SignUp() {
       <Grid item xs={12}>
         <TextField
           fullWidth
-          label="Email"
+          placeholder="Email *"
           type="email"
           value={formData.email}
           onChange={(e) => handleInputChange('email', e.target.value)}
@@ -217,7 +217,7 @@ export default function SignUp() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <EmailIcon sx={{ color: 'text.secondary' }} />
+                <EmailIcon sx={{ color: '#FFFFFF' }} />
               </InputAdornment>
             )
           }}
@@ -226,13 +226,13 @@ export default function SignUp() {
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          label="Phone Number"
+          placeholder="Phone Number"
           value={formData.phone}
           onChange={(e) => handleInputChange('phone', e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <PhoneIcon sx={{ color: 'text.secondary' }} />
+                <PhoneIcon sx={{ color: '#FFFFFF' }} />
               </InputAdornment>
             )
           }}
@@ -241,13 +241,13 @@ export default function SignUp() {
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          label="Location"
+          placeholder="Location"
           value={formData.location}
           onChange={(e) => handleInputChange('location', e.target.value)}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LocationIcon sx={{ color: 'text.secondary' }} />
+                <LocationIcon sx={{ color: '#FFFFFF' }} />
               </InputAdornment>
             )
           }}
@@ -256,7 +256,7 @@ export default function SignUp() {
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          label="Password"
+          placeholder="Password *"
           type={showPassword ? 'text' : 'password'}
           value={formData.password}
           onChange={(e) => handleInputChange('password', e.target.value)}
@@ -264,7 +264,7 @@ export default function SignUp() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LockIcon sx={{ color: 'text.secondary' }} />
+                <LockIcon sx={{ color: '#FFFFFF' }} />
               </InputAdornment>
             ),
             endAdornment: (
@@ -272,6 +272,7 @@ export default function SignUp() {
                 <IconButton
                   onClick={() => setShowPassword(!showPassword)}
                   edge="end"
+                  sx={{ color: '#FFFFFF' }}
                 >
                   {showPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>
@@ -283,7 +284,7 @@ export default function SignUp() {
       <Grid item xs={12} sm={6}>
         <TextField
           fullWidth
-          label="Confirm Password"
+          placeholder="Confirm Password *"
           type={showConfirmPassword ? 'text' : 'password'}
           value={formData.confirmPassword}
           onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
@@ -294,6 +295,7 @@ export default function SignUp() {
                 <IconButton
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   edge="end"
+                  sx={{ color: '#FFFFFF' }}
                 >
                   {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                 </IconButton>
@@ -309,11 +311,11 @@ export default function SignUp() {
     <Grid container spacing={3}>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
-          <InputLabel>Search Stage</InputLabel>
           <Select
             value={formData.searchStage}
             onChange={(e) => handleInputChange('searchStage', e.target.value)}
-            label="Search Stage"
+            displayEmpty
+            renderValue={(selected) => selected || 'Search Stage *'}
           >
             <MenuItem value="planning">Planning Phase</MenuItem>
             <MenuItem value="active">Active Search</MenuItem>
@@ -325,11 +327,11 @@ export default function SignUp() {
       </Grid>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
-          <InputLabel>How long have you been searching?</InputLabel>
         <Select
             value={formData.searchDuration}
             onChange={(e) => handleInputChange('searchDuration', e.target.value)}
-            label="How long have you been searching?"
+            displayEmpty
+            renderValue={(selected) => selected || 'How long have you been searching? *'}
           >
             <MenuItem value="0-6-months">0-6 months</MenuItem>
             <MenuItem value="6-12-months">6-12 months</MenuItem>
@@ -341,11 +343,11 @@ export default function SignUp() {
       </Grid>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
-          <InputLabel>Target Company Size</InputLabel>
           <Select
             value={formData.targetCompanySize}
             onChange={(e) => handleInputChange('targetCompanySize', e.target.value)}
-            label="Target Company Size"
+            displayEmpty
+            renderValue={(selected) => selected || 'Target Company Size *'}
           >
             <MenuItem value="<1M">Under $1M Revenue</MenuItem>
             <MenuItem value="1M-5M">$1M - $5M Revenue</MenuItem>
@@ -357,11 +359,11 @@ export default function SignUp() {
       </Grid>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
-          <InputLabel>Investment Range</InputLabel>
           <Select
             value={formData.investmentRange}
             onChange={(e) => handleInputChange('investmentRange', e.target.value)}
-            label="Investment Range"
+            displayEmpty
+            renderValue={(selected) => selected || 'Investment Range *'}
           >
             <MenuItem value="<1M">Under $1M</MenuItem>
             <MenuItem value="1M-5M">$1M - $5M</MenuItem>
@@ -372,10 +374,10 @@ export default function SignUp() {
         </FormControl>
       </Grid>
       <Grid item xs={12}>
-        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#FFFFFF' }}>
           Target Industries (Select all that apply)
           {formData.targetIndustries.length > 0 && (
-            <Typography component="span" variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
+            <Typography component="span" variant="body2" sx={{ ml: 1, color: '#CCCCCC' }}>
               ({formData.targetIndustries.length} selected)
             </Typography>
           )}
@@ -457,11 +459,11 @@ export default function SignUp() {
     <Grid container spacing={3}>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
-          <InputLabel>Team Size</InputLabel>
           <Select
             value={formData.teamSize}
             onChange={(e) => handleInputChange('teamSize', e.target.value)}
-            label="Team Size"
+            displayEmpty
+            renderValue={(selected) => selected || 'Team Size *'}
           >
             <MenuItem value="solo">Solo Searcher</MenuItem>
             <MenuItem value="2-3">2-3 People</MenuItem>
@@ -473,11 +475,11 @@ export default function SignUp() {
       </Grid>
       <Grid item xs={12} sm={6}>
         <FormControl fullWidth required>
-          <InputLabel>Current Role</InputLabel>
           <Select
             value={formData.currentRole}
             onChange={(e) => handleInputChange('currentRole', e.target.value)}
-            label="Current Role"
+            displayEmpty
+            renderValue={(selected) => selected || 'Current Role *'}
           >
             <MenuItem value="searcher">Searcher</MenuItem>
             <MenuItem value="co-searcher">Co-Searcher</MenuItem>
@@ -489,11 +491,11 @@ export default function SignUp() {
       </Grid>
       <Grid item xs={12}>
         <FormControl fullWidth required>
-          <InputLabel>Previous Experience</InputLabel>
           <Select
             value={formData.previousExperience}
             onChange={(e) => handleInputChange('previousExperience', e.target.value)}
-            label="Previous Experience"
+            displayEmpty
+            renderValue={(selected) => selected || 'Previous Experience *'}
           >
             <MenuItem value="none">No previous search experience</MenuItem>
             <MenuItem value="1-search">1 previous search</MenuItem>
@@ -509,10 +511,9 @@ export default function SignUp() {
       <Grid item xs={12}>
         <TextField
           fullWidth
-          label="Education Background"
+          placeholder="Education Background (e.g., MBA from Stanford, BS in Engineering from MIT)"
           value={formData.education}
           onChange={(e) => handleInputChange('education', e.target.value)}
-          placeholder="e.g., MBA from Stanford, BS in Engineering from MIT"
         />
       </Grid>
     </Grid>
@@ -522,14 +523,14 @@ export default function SignUp() {
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <FormControl component="fieldset">
-          <FormLabel component="legend">Communication Preference</FormLabel>
+          <FormLabel component="legend" sx={{ color: '#FFFFFF' }}>Communication Preference</FormLabel>
           <RadioGroup
             value={formData.communicationPreference}
             onChange={(e) => handleInputChange('communicationPreference', e.target.value)}
           >
-            <FormControlLabel value="email" control={<Radio />} label="Email" />
-            <FormControlLabel value="phone" control={<Radio />} label="Phone" />
-            <FormControlLabel value="both" control={<Radio />} label="Both Email and Phone" />
+            <FormControlLabel value="email" control={<Radio sx={{ color: '#10B981' }} />} label={<span style={{ color: '#FFFFFF' }}>Email</span>} />
+            <FormControlLabel value="phone" control={<Radio sx={{ color: '#10B981' }} />} label={<span style={{ color: '#FFFFFF' }}>Phone</span>} />
+            <FormControlLabel value="both" control={<Radio sx={{ color: '#10B981' }} />} label={<span style={{ color: '#FFFFFF' }}>Both Email and Phone</span>} />
           </RadioGroup>
         </FormControl>
       </Grid>
@@ -539,9 +540,10 @@ export default function SignUp() {
             <Checkbox
               checked={formData.newsletter}
               onChange={(e) => handleInputChange('newsletter', e.target.checked)}
+              sx={{ color: '#10B981' }}
             />
           }
-          label="Subscribe to our newsletter for search fund insights and updates"
+          label={<span style={{ color: '#FFFFFF' }}>Subscribe to our newsletter for search fund insights and updates</span>}
         />
       </Grid>
       <Grid item xs={12}>
@@ -619,7 +621,7 @@ export default function SignUp() {
       <Box
         sx={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F8FF 100%)',
+          background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
           py: 4,
           pt: { xs: 16, md: 20 }
         }}
@@ -630,24 +632,142 @@ export default function SignUp() {
               elevation={0}
               sx={{
                 p: 6,
-                background: 'white',
-                border: '1px solid rgba(94, 92, 230, 0.08)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)'
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: 0,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                backdropFilter: 'blur(10px)',
+                '& .MuiTextField-root': {
+                  '& .MuiInputLabel-root': {
+                    color: '#FFFFFF',
+                    '&.Mui-focused': {
+                      color: '#10B981'
+                    }
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: 0,
+                    '&:hover': {
+                      borderColor: '#10B981'
+                    },
+                    '&.Mui-focused': {
+                      borderColor: '#10B981',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#10B981'
+                      }
+                    },
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255, 255, 255, 0.2)'
+                    },
+                    '& input::placeholder': {
+                      color: '#FFFFFF',
+                      opacity: 0.8
+                    },
+                    '& input': {
+                      color: '#FFFFFF'
+                    }
+                  }
+                },
+                '& .MuiFormControl-root': {
+                  '& .MuiInputLabel-root': {
+                    color: '#FFFFFF',
+                    '&.Mui-focused': {
+                      color: '#10B981'
+                    }
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: 0,
+                    '&:hover': {
+                      borderColor: '#10B981'
+                    },
+                    '&.Mui-focused': {
+                      borderColor: '#10B981',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#10B981'
+                      }
+                    },
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255, 255, 255, 0.2)'
+                    },
+                    '& input::placeholder': {
+                      color: '#FFFFFF',
+                      opacity: 0.8
+                    },
+                    '& input': {
+                      color: '#FFFFFF'
+                    },
+                    '& .MuiSelect-select': {
+                      color: '#FFFFFF'
+                    }
+                  },
+                  '& .MuiSelect-icon': {
+                    color: '#FFFFFF'
+                  }
+                },
+                '& .MuiMenuItem-root': {
+                  color: '#FFFFFF',
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)'
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(16, 185, 129, 0.3)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(16, 185, 129, 0.4)'
+                    }
+                  }
+                },
+                '& .MuiPaper-root': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 0
+                },
+                '& .MuiButton-root': {
+                  fontFamily: '"Darker Grotesque", sans-serif',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: 0,
+                  '&.MuiButton-contained': {
+                    background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%)',
+                      transform: 'none',
+                      boxShadow: 'none'
+                    }
+                  },
+                  '&.MuiButton-outlined': {
+                    color: '#FFFFFF',
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      borderColor: '#10B981',
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      transform: 'none',
+                      boxShadow: 'none'
+                    }
+                  }
+                }
               }}
             >
               <Box sx={{ textAlign: 'center', mb: 4 }}>
                 <Typography
                   variant="h4"
                   sx={{
-                    fontFamily: '"Space Grotesk", sans-serif',
+                    fontFamily: '"Darker Grotesque", sans-serif',
                     fontWeight: 700,
+                    color: '#FFFFFF',
                     mb: 1
                   }}
                 >
-                  Join the Search Fund Community
+                  Welcome to Equitle
                 </Typography>
-                <Typography variant="body1" color="text.secondary">
+                <Typography variant="body1" sx={{ color: '#CCCCCC' }}>
                   Tell us about your search to get started
                 </Typography>
               </Box>
@@ -660,15 +780,16 @@ export default function SignUp() {
                         '& .MuiStepLabel-label': {
                           fontSize: '0.875rem',
                           fontWeight: activeStep === index ? 600 : 400,
-                          color: activeStep >= index ? '#374151' : 'rgba(0, 0, 0, 0.4)'
+                          color: activeStep >= index ? '#FFFFFF' : 'rgba(255, 255, 255, 0.4)',
+                          fontFamily: '"Darker Grotesque", sans-serif'
                         },
                         '& .MuiStepIcon-root': {
-                          color: activeStep >= index ? '#374151' : 'rgba(0, 0, 0, 0.2)',
+                          color: activeStep >= index ? '#10B981' : 'rgba(255, 255, 255, 0.2)',
                           '&.Mui-active': {
-                            color: '#374151'
+                            color: '#10B981'
                           },
                           '&.Mui-completed': {
-                            color: '#374151'
+                            color: '#10B981'
                           }
                         }
                       }}
@@ -680,7 +801,7 @@ export default function SignUp() {
               </Stepper>
 
               {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
+                <Alert severity="error" sx={{ mb: 3, backgroundColor: 'rgba(255, 0, 0, 0.1)', color: '#FFFFFF', border: '1px solid rgba(255, 0, 0, 0.3)' }}>
                   {error}
                 </Alert>
               )}
@@ -695,16 +816,22 @@ export default function SignUp() {
                   disabled={loading}
                   sx={{
                     textTransform: 'none',
-                    borderColor: 'rgba(0,0,0,0.2)',
-                    '&:hover': { borderColor: 'rgba(0,0,0,0.4)', backgroundColor: 'rgba(0,0,0,0.02)' }
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    color: '#FFFFFF',
+                    '&:hover': { 
+                      borderColor: '#10B981', 
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      transform: 'none',
+                      boxShadow: 'none'
+                    }
                   }}
                 >
                   Continue with Google
                 </Button>
               </Box>
 
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
+              <Divider sx={{ my: 3, '& .MuiDivider-root': { borderColor: 'rgba(255, 255, 255, 0.2)' } }}>
+                <Typography variant="body2" sx={{ color: '#CCCCCC' }}>
                   OR  
                 </Typography>
               </Divider>
@@ -721,11 +848,13 @@ export default function SignUp() {
                     startIcon={<ArrowBackIcon />}
                     sx={{ 
                       display: activeStep === 0 ? 'none' : 'flex',
-                      color: '#374151',
-                      borderColor: '#374151',
+                      color: '#FFFFFF',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
                       '&:hover': {
-                        borderColor: '#1F2937',
-                        backgroundColor: 'rgba(55, 65, 81, 0.04)'
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        transform: 'none',
+                        boxShadow: 'none'
                       }
                     }}
                     variant="outlined"
@@ -733,8 +862,8 @@ export default function SignUp() {
                     Back
                   </Button>
                   
-                  <Typography variant="body2" color="text.secondary" sx={{ flex: 1, textAlign: 'center' }}>
-                    Step {activeStep + 1} of {steps.length}
+                  <Typography variant="body2" sx={{ flex: 1, textAlign: 'center', color: '#CCCCCC' }}>
+                    
                   </Typography>
                   
                   {activeStep === steps.length - 1 ? (
@@ -744,13 +873,18 @@ export default function SignUp() {
                       disabled={loading || !formData.termsAccepted}
                       endIcon={<ArrowForwardIcon />}
                       sx={{
-                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                        background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%)',
+                        color: '#FFFFFF',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
                         '&:hover': {
-                          background: 'linear-gradient(135deg, #6B7280 0%, #1F2937 100%)'
+                          background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%)',
+                          transform: 'none',
+                          boxShadow: 'none'
                         },
                         '&:disabled': {
-                          background: 'rgba(156, 163, 175, 0.3)',
-                          color: 'rgba(0, 0, 0, 0.4)'
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.4)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
                         }
                       }}
                     >
@@ -762,9 +896,13 @@ export default function SignUp() {
                       onClick={handleNext}
                       endIcon={<ArrowForwardIcon />}
                       sx={{
-                        background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
+                        background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%)',
+                        color: '#FFFFFF',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
                         '&:hover': {
-                          background: 'linear-gradient(135deg, #6B7280 0%, #1F2937 100%)'
+                          background: 'linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%)',
+                          transform: 'none',
+                          boxShadow: 'none'
                         }
                       }}
                     >
@@ -775,17 +913,20 @@ export default function SignUp() {
               </form>
 
               <Box sx={{ textAlign: 'center', mt: 3 }}>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: '#CCCCCC' }}>
                   Already have an account?{' '}
                   <Link
                     component="button"
                     variant="body2"
                     onClick={() => navigate('/login')}
                     sx={{ 
-                      color: 'text.primary', 
+                      color: '#10B981', 
                       textDecoration: 'none',
                       fontWeight: 500,
-                      '&:hover': { textDecoration: 'underline' }
+                      '&:hover': { 
+                        textDecoration: 'underline',
+                        color: '#059669'
+                      }
                     }}
                   >
                     Sign in

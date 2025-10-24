@@ -105,27 +105,14 @@ const theme = createTheme({
           fontWeight: 600,
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: 'none',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)'
-          }
         },
         contained: {
           background: 'linear-gradient(135deg, #0A0A0A 0%, #2C2C2C 100%)',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          '&:hover': {
-            background: 'linear-gradient(135deg, #1A1A1A 0%, #3C3C3C 100%)',
-            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)'
-          }
         },
         outlined: {
           borderWidth: '1.5px',
           borderColor: 'rgba(10, 10, 10, 0.2)',
-          '&:hover': {
-            borderWidth: '1.5px',
-            borderColor: 'rgba(10, 10, 10, 0.4)',
-            backgroundColor: 'rgba(10, 10, 10, 0.02)'
-          }
         }
       }
     },
@@ -149,11 +136,6 @@ const theme = createTheme({
           borderRadius: 16,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.02)',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06)',
-            border: '1px solid rgba(156, 163, 175, 0.15)'
-          }
         }
       }
     },
@@ -191,10 +173,6 @@ const theme = createTheme({
           color: '#0A0A0A',
           fontWeight: 500,
           transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            backgroundColor: 'rgba(156, 163, 175, 0.15)',
-            transform: 'scale(1.05)'
-          }
         }
       }
     },

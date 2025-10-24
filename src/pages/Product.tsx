@@ -326,7 +326,7 @@ export default function Product() {
     },
     {
       question: 'Why not use existing softwares to source deals?',
-      answer: 'Equitle is built specifically for private equity firms to source deals and manage the entire deal pipeline. It is 1 platform that consolidates your entire tech stack so you can focus on closing isntead of administrativie work.'
+      answer: 'Equitle is built specifically for private equity firms to source deals and manage the entire deal pipeline. It is 1 platform that consolidates your entire tech stack so you can focus on closing isntead of tedious work.'
     },
     {
       question: 'How does investor communication work?',

@@ -128,7 +128,7 @@ export default function Network() {
                   <Grid item xs={12} sm={3}>
                     <TextField
                       fullWidth
-                      placeholder="john@firm.com"
+                      placeholder="john@domain.com"
                       name="email"
                       type="email"
                       value={formData.email}
@@ -243,11 +243,11 @@ export default function Network() {
                         }}
                       >
                         <MenuItem value="pe-firm">Private Equity Firm</MenuItem>
-                        <MenuItem value="pe-firm">Private Equity LP</MenuItem>
-                        <MenuItem value="pe-firm">Search Fund Investor</MenuItem>
+                        <MenuItem value="pe-lp">Private Equity LP</MenuItem>
+                        <MenuItem value="search-fund-investor">Search Fund Investor</MenuItem>
                         <MenuItem value="broker">Broker</MenuItem>
-                        <MenuItem value="search-fund">Active Searcher</MenuItem>
-                        <MenuItem value="lawyer">M&A Lawyer</MenuItem>
+                        <MenuItem value="active-searcher">Active Searcher</MenuItem>
+                        <MenuItem value="ma-lawyer">M&A Lawyer</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
@@ -310,14 +310,6 @@ export default function Network() {
                           animation: 'slideShine 1.5s infinite',
                           zIndex: 2
                         },
-                        '&:hover': {
-                          background: `
-                            linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
-                            radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
-                            radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                            radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
-                          `
-                        }
                       }}
                     >
                       Request Spot

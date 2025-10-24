@@ -194,16 +194,6 @@ export default function Manifesto() {
                   sx={{
                     textAlign: 'center',
                     p: 4,
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      '& .circle': {
-                        background: 'rgba(255, 255, 255, 0.15)',
-                        border: '2px solid rgba(255, 255, 255, 0.4)'
-                      },
-                      '& .icon': {
-                        color: '#FFFFFF'
-                      }
-                    },
                     transition: 'all 0.3s ease'
                   }}
                 >
@@ -466,16 +456,6 @@ export default function Manifesto() {
                       textAlign: 'center',
                       position: 'relative',
                       mb: 4,
-                        '&:hover': {
-                          '& .stage-circle': {
-                            background: 'rgba(255, 255, 255, 0.9)',
-                            transform: 'scale(1.1)',
-                            '& .stage-icon': {
-                              color: '#10B981',
-                              transform: 'scale(1.1)'
-                            }
-                          }
-                        }
                     }}
                   >
                     <Box
@@ -638,14 +618,6 @@ export default function Manifesto() {
                     animation: 'slideShine 1.5s infinite',
                     zIndex: 2
                   },
-                  '&:hover': {
-                    background: `
-                      linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%),
-                      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                      radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
-                    `
-                  }
                 }}
               >
                 Book Demo

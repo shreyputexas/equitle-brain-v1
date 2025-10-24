@@ -62,7 +62,7 @@ export default function Footer() {
             </Box>
           </Grid>
           <Grid item xs={6} md={3}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#10B981' }}>
               Account
             </Typography>
             {[
@@ -87,12 +87,13 @@ export default function Footer() {
             ))}
           </Grid>
           <Grid item xs={6} md={3}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#10B981' }}>
               Company
             </Typography>
             {[
               { name: 'Product', path: '/product' },
               { name: 'Manifesto', path: '/manifesto' },
+              { name: 'Network', path: '/network' },
               { name: 'Landing', path: '/' }
             ].map((item) => (
               <Typography
