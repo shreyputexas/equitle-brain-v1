@@ -35,23 +35,17 @@ body::before {
 }
 
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 0px;
+  height: 0px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(156, 163, 175, 0.05);
-  border-radius: 100px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #9CA3AF 0%, #374151 100%);
-  border-radius: 100px;
-  border: 3px solid #FFFFFF;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #6B7280 0%, #1F2937 100%);
+  background: transparent;
 }
 
 ::selection {

@@ -365,7 +365,7 @@ export default function Product() {
             onClick={handlePrevFeature}
             sx={{
               position: 'absolute',
-              left: { xs: '10px', md: '20px' },
+              left: { xs: 'calc(50% - 500px - 60px)', md: 'calc(50% - 500px - 80px)' },
               top: '50%',
               transform: 'translateY(-50%)',
               color: '#FFFFFF',
@@ -386,7 +386,7 @@ export default function Product() {
             onClick={handleNextFeature}
                 sx={{ 
               position: 'absolute',
-              right: { xs: '10px', md: '20px' },
+              right: { xs: 'calc(50% - 500px - 60px)', md: 'calc(50% - 500px - 80px)' },
               top: '50%',
               transform: 'translateY(-50%)',
               color: '#FFFFFF',
