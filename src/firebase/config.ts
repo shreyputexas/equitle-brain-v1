@@ -5,20 +5,22 @@ import { getFirestore } from "firebase/firestore";
 
 // Your Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyB9uCbqk4J6M9fXASsgHI2FwUDxqndbyzE",
-  authDomain: "equitle.firebaseapp.com",
-  projectId: "equitle",
-  storageBucket: "equitle.firebasestorage.app",
-  messagingSenderId: "621123805303",
-  appId: "1:621123805303:web:1681b2af10f6d7a5676672",
-  measurementId: "G-DB8G3TY5SY"
+  apiKey: "AIzaSyDuJtDrZHzQAW-M8rbkVPl8oTalxU1f6ko",
+  authDomain: "equitle-brain-dev.firebaseapp.com",
+  projectId: "equitle-brain-dev",
+  storageBucket: "equitle-brain-dev.firebasestorage.app",
+  messagingSenderId: "44990905496",
+  appId: "1:44990905496:web:f6cfc91b23549793cc64ed",
+  measurementId: "G-6GZHY4SQB9"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 
-// ✅ Add this line to export auth
+// Initialize services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Only initialize analytics in browser environment
+export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
