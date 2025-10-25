@@ -110,7 +110,10 @@ const navigationItems = [
   {
     text: 'Voice Calls',
     icon: <PhoneIcon />,
-    path: '/voice-calls'
+    subItems: [
+      { text: 'Live Calling', path: '/voice-calls' },
+      { text: 'Voicemails', path: '/mass-voicemail' }
+    ]
   },
   {
     text: 'Brain',

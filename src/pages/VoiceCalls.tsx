@@ -760,7 +760,7 @@ export default function VoiceCalls() {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CampaignIcon />
-                Mass Voicemail
+                Mass Calling
               </Box>
             }
           />
@@ -1269,11 +1269,11 @@ export default function VoiceCalls() {
                 </Avatar>
 
                 <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                  Mass Voicemail Campaign
+                  Mass Calling Campaign
                 </Typography>
 
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                  Upload a CSV file and create personalized voicemail campaigns at scale
+                  Upload a CSV file and create personalized live calling campaigns at scale
                 </Typography>
 
                 {/* Campaign Form */}
@@ -1400,7 +1400,7 @@ export default function VoiceCalls() {
                       Professional Outreach
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Professional voicemail for business development
+                      Professional call for business development
                     </Typography>
                   </Card>
                 </Grid>
@@ -1419,7 +1419,7 @@ export default function VoiceCalls() {
                       Investor Qualification
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Voicemail to qualify potential investors
+                      Call to qualify potential investors
                     </Typography>
                   </Card>
                 </Grid>
