@@ -51,6 +51,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';
+import { getUserId } from '../utils/auth';
 
 
 // BULLETPROOF Helper function to ensure headshot URL is absolute
@@ -155,10 +156,10 @@ export default function Profile() {
   useEffect(() => {
     const loadTeamConnection = async () => {
       try {
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const teamConnectionRef = doc(db, 'users', userId, 'teamConnection', 'connection');
         const docSnap = await getDoc(teamConnectionRef);
-        
+
         if (docSnap.exists()) {
           setTeamConnection(docSnap.data().connection || '');
         }
@@ -174,10 +175,10 @@ export default function Profile() {
   useEffect(() => {
     const loadSearchFundData = async () => {
       try {
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const userRef = doc(db, 'users', userId);
         const docSnap = await getDoc(userRef);
-        
+
         if (docSnap.exists()) {
           const userData = docSnap.data();
           setSearchFundLogo(userData.searchFundLogo || null);
@@ -233,7 +234,20 @@ export default function Profile() {
     if (editingSearcher && searcherForm.name && searcherForm.title && searcherForm.bio) {
       try {
         setLoading(true);
-      setError('');
+        setError('');
+
+        console.log('🔄 Updating searcher profile:', {
+          searcherId: editingSearcher.id,
+          updateData: {
+            name: searcherForm.name,
+            title: searcherForm.title,
+            bio: searcherForm.bio,
+            why: searcherForm.why || '',
+            education: searcherForm.education || [],
+            experience: searcherForm.experience || [],
+            avatar: searcherForm.avatar
+          }
+        });
 
         const updatedSearcher = await searcherProfilesApi.updateSearcherProfile(editingSearcher.id, {
           name: searcherForm.name,
@@ -245,7 +259,11 @@ export default function Profile() {
           avatar: searcherForm.avatar
         });
         
-        setSearchers(searchers.map(s => s.id === editingSearcher.id ? updatedSearcher : s));
+        console.log('✅ Updated searcher profile response:', updatedSearcher);
+        
+        // Reload profiles to ensure we have the latest data
+        console.log('🔄 Reloading profiles after update...');
+        await loadSearcherProfiles();
         setIsEditingSearcher(false);
         setEditingSearcher(null);
         resetSearcherForm();
@@ -253,9 +271,9 @@ export default function Profile() {
       } catch (error: any) {
         console.error('Error updating searcher profile:', error);
         setError(error.response?.data?.message || 'Failed to update searcher profile');
-    } finally {
-      setLoading(false);
-    }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -289,19 +307,13 @@ export default function Profile() {
           current: educationForm.current || false,
           description: educationForm.description
         };
-        
-        if (isEditingSearcher && editingSearcher) {
-          const updatedEducationList = (editingSearcher.education || []).map(edu => 
-            edu.id === editingEducation.id ? updatedEducation : edu
-          );
-          setSearcherForm({ ...searcherForm, education: updatedEducationList });
-        } else {
-          const updatedEducationList = (searcherForm.education || []).map(edu => 
-            edu.id === editingEducation.id ? updatedEducation : edu
-          );
-          setSearcherForm({ ...searcherForm, education: updatedEducationList });
-        }
-        
+
+        // Always use searcherForm.education as the source of truth
+        const updatedEducationList = (searcherForm.education || []).map(edu =>
+          edu.id === editingEducation.id ? updatedEducation : edu
+        );
+        setSearcherForm({ ...searcherForm, education: updatedEducationList });
+
         setEditingEducation(null);
       } else {
         // Add new education
@@ -315,15 +327,11 @@ export default function Profile() {
           current: educationForm.current || false,
           description: educationForm.description
         };
-        
-        if (isEditingSearcher && editingSearcher) {
-          const updatedEducation = [...(editingSearcher.education || []), newEducation];
-          setSearcherForm({ ...searcherForm, education: updatedEducation });
-        } else {
-          setSearcherForm({ ...searcherForm, education: [...(searcherForm.education || []), newEducation] });
-        }
+
+        // Always use searcherForm.education as the source of truth
+        setSearcherForm({ ...searcherForm, education: [...(searcherForm.education || []), newEducation] });
       }
-      
+
       setIsAddingEducation(false);
       resetEducationForm();
     }
@@ -343,19 +351,13 @@ export default function Profile() {
           description: experienceForm.description || '',
           achievements: experienceForm.achievements
         };
-        
-        if (isEditingSearcher && editingSearcher) {
-          const updatedExperienceList = (editingSearcher.experience || []).map(exp => 
-            exp.id === editingExperience.id ? updatedExperience : exp
-          );
-          setSearcherForm({ ...searcherForm, experience: updatedExperienceList });
-        } else {
-          const updatedExperienceList = (searcherForm.experience || []).map(exp => 
-            exp.id === editingExperience.id ? updatedExperience : exp
-          );
-          setSearcherForm({ ...searcherForm, experience: updatedExperienceList });
-        }
-        
+
+        // Always use searcherForm.experience as the source of truth
+        const updatedExperienceList = (searcherForm.experience || []).map(exp =>
+          exp.id === editingExperience.id ? updatedExperience : exp
+        );
+        setSearcherForm({ ...searcherForm, experience: updatedExperienceList });
+
         setEditingExperience(null);
       } else {
         // Add new experience
@@ -369,15 +371,11 @@ export default function Profile() {
           description: experienceForm.description || '',
           achievements: experienceForm.achievements
         };
-        
-        if (isEditingSearcher && editingSearcher) {
-          const updatedExperience = [...(editingSearcher.experience || []), newExperience];
-          setSearcherForm({ ...searcherForm, experience: updatedExperience });
-        } else {
-          setSearcherForm({ ...searcherForm, experience: [...(searcherForm.experience || []), newExperience] });
-        }
+
+        // Always use searcherForm.experience as the source of truth
+        setSearcherForm({ ...searcherForm, experience: [...(searcherForm.experience || []), newExperience] });
       }
-      
+
       setIsAddingExperience(false);
       resetExperienceForm();
     }
@@ -409,13 +407,9 @@ export default function Profile() {
   };
 
   const handleDeleteEducation = (id: string) => {
-    if (isEditingSearcher && editingSearcher) {
-      const updatedEducation = (editingSearcher.education || []).filter(edu => edu.id !== id);
-      setSearcherForm({ ...searcherForm, education: updatedEducation });
-    } else {
-      const updatedEducation = (searcherForm.education || []).filter(edu => edu.id !== id);
-      setSearcherForm({ ...searcherForm, education: updatedEducation });
-    }
+    // Always use searcherForm.education as the source of truth
+    const updatedEducation = (searcherForm.education || []).filter(edu => edu.id !== id);
+    setSearcherForm({ ...searcherForm, education: updatedEducation });
   };
 
   const handleEditExperience = (experience: Experience) => {
@@ -433,27 +427,23 @@ export default function Profile() {
   };
 
   const handleDeleteExperience = (id: string) => {
-    if (isEditingSearcher && editingSearcher) {
-      const updatedExperience = (editingSearcher.experience || []).filter(exp => exp.id !== id);
-      setSearcherForm({ ...searcherForm, experience: updatedExperience });
-    } else {
-      const updatedExperience = (searcherForm.experience || []).filter(exp => exp.id !== id);
-      setSearcherForm({ ...searcherForm, experience: updatedExperience });
-    }
+    // Always use searcherForm.experience as the source of truth
+    const updatedExperience = (searcherForm.experience || []).filter(exp => exp.id !== id);
+    setSearcherForm({ ...searcherForm, experience: updatedExperience });
   };
 
   const handleSaveTeamConnection = async () => {
     try {
       setLoading(true);
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
-      
+      const userId = getUserId();
+
       // Save team connection to Firebase
       const teamConnectionRef = doc(db, 'users', userId, 'teamConnection', 'connection');
       await setDoc(teamConnectionRef, {
         connection: teamConnection,
         updatedAt: new Date()
       });
-      
+
       setSuccess('Team connection saved successfully!');
     } catch (error: any) {
       console.error('Error saving team connection:', error);
@@ -602,13 +592,13 @@ export default function Profile() {
       setLoading(true);
       setError('');
 
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userId = getUserId();
       const userRef = doc(db, 'users', userId);
       await setDoc(userRef, {
         searchFundName: searchFundName,
         updatedAt: new Date()
       }, { merge: true });
-      
+
       setSuccess('Search fund name saved successfully!');
     } catch (error: any) {
       console.error('Error saving search fund name:', error);
@@ -623,13 +613,13 @@ export default function Profile() {
       setLoading(true);
       setError('');
 
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userId = getUserId();
       const userRef = doc(db, 'users', userId);
       await setDoc(userRef, {
         searchFundWebsite: searchFundWebsite,
         updatedAt: new Date()
       }, { merge: true });
-      
+
       setSuccess('Search fund website saved successfully!');
     } catch (error: any) {
       console.error('Error saving search fund website:', error);
@@ -644,13 +634,13 @@ export default function Profile() {
       setLoading(true);
       setError('');
 
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userId = getUserId();
       const userRef = doc(db, 'users', userId);
       await setDoc(userRef, {
         searchFundAddress: searchFundAddress,
         updatedAt: new Date()
       }, { merge: true });
-      
+
       setSuccess('Search fund address saved successfully!');
     } catch (error: any) {
       console.error('Error saving search fund address:', error);
@@ -665,13 +655,13 @@ export default function Profile() {
       setLoading(true);
       setError('');
 
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userId = getUserId();
       const userRef = doc(db, 'users', userId);
       await setDoc(userRef, {
         searchFundEmail: searchFundEmail,
         updatedAt: new Date()
       }, { merge: true });
-      
+
       setSuccess('Search fund email saved successfully!');
     } catch (error: any) {
       console.error('Error saving search fund email:', error);
@@ -714,19 +704,23 @@ export default function Profile() {
     resetSearcherForm();
   };
 
-  // Load searcher profiles on component mount
-  useEffect(() => {
-    const loadSearcherProfiles = async () => {
-      try {
-        setLoading(true);
+  // Load searcher profiles function
+  const loadSearcherProfiles = async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Loading searcher profiles...');
       const profiles = await searcherProfilesApi.getSearcherProfiles();
-      console.log('Loaded searcher profiles:', profiles);
+      console.log('📋 Loaded searcher profiles:', profiles);
       profiles.forEach(profile => {
         console.log(`🔍 Profile ${profile.name}:`, {
           id: profile.id,
+          name: profile.name,
+          title: profile.title,
+          bio: profile.bio?.substring(0, 50) + '...',
           headshotUrl: profile.headshotUrl,
           hasHeadshot: !!profile.headshotUrl,
-          fullProfile: profile
+          educationCount: profile.education?.length || 0,
+          experienceCount: profile.experience?.length || 0
         });
         
         // Test if the image URL is accessible
@@ -739,15 +733,65 @@ export default function Profile() {
         }
       });
       setSearchers(profiles);
-      } catch (error: any) {
-        console.error('Error loading searcher profiles:', error);
-        setError(error.response?.data?.message || 'Failed to load searcher profiles');
-      } finally {
-        setLoading(false);
+      console.log('✅ Searchers state updated with', profiles.length, 'profiles');
+    } catch (error: any) {
+      console.error('Error loading searcher profiles:', error);
+      setError(error.response?.data?.message || 'Failed to load searcher profiles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load search fund information on component mount
+  useEffect(() => {
+    const loadSearchFundInfo = async () => {
+      try {
+        const userId = getUserId();
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('📋 Loaded user data:', userData);
+
+          if (userData.searchFundName) {
+            setSearchFundName(userData.searchFundName);
+            console.log('✅ Loaded search fund name:', userData.searchFundName);
+          }
+          if (userData.searchFundWebsite) {
+            setSearchFundWebsite(userData.searchFundWebsite);
+            console.log('✅ Loaded search fund website:', userData.searchFundWebsite);
+          }
+          if (userData.searchFundEmail) {
+            setSearchFundEmail(userData.searchFundEmail);
+            console.log('✅ Loaded search fund email:', userData.searchFundEmail);
+          }
+          if (userData.searchFundAddress) {
+            setSearchFundAddress(userData.searchFundAddress);
+            console.log('✅ Loaded search fund address:', userData.searchFundAddress);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading search fund info:', error);
       }
     };
 
+    loadSearchFundInfo();
+  }, []);
+
+  // Load searcher profiles on component mount
+  useEffect(() => {
     loadSearcherProfiles();
+  }, []);
+
+  // Refresh searcher profiles when page regains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      loadSearcherProfiles();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   return (
