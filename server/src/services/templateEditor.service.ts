@@ -69,8 +69,8 @@ export class TemplateEditorService {
       console.error(`Template file not found: ${templatePath}`);
       try {
         console.error(`Templates directory contents:`, fs.readdirSync(this.templatesPath));
-      } catch (e) {
-        console.error(`Could not read templates directory:`, e.message);
+      } catch (e: unknown) {
+        console.error(`Could not read templates directory:`, e instanceof Error ? e.message : 'Unknown error');
       }
       throw new Error(`Template ${templateName} not found at ${templatePath}. Please ensure the template file exists.`);
     }
@@ -87,14 +87,14 @@ export class TemplateEditorService {
       console.log('Text replacement completed successfully');
 
       return modifiedBuffer;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('=== TEMPLATE EDITING ERROR ===');
       console.error('Template name:', templateName);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
       console.error('Error details:', error);
       console.error('==============================');
-      throw new Error(`Failed to edit template ${templateName}: ${error.message}`);
+      throw new Error(`Failed to edit template ${templateName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -149,7 +149,7 @@ export class TemplateEditorService {
   async editIndustryTemplate(templateName: string, data: IndustryTemplateData): Promise<Buffer> {
     // Write to debug file
     const fs = require('fs');
-    const debugFiles = require('fs').readdirSync('/tmp').filter(f => f.startsWith('navy-debug-'));
+    const debugFiles = require('fs').readdirSync('/tmp').filter((f: string) => f.startsWith('navy-debug-'));
     const debugLog = debugFiles.length > 0 ? `/tmp/${debugFiles[debugFiles.length - 1]}` : `/tmp/navy-debug-fallback.log`;
     fs.appendFileSync(debugLog, '\n\n🔵 EDIT INDUSTRY TEMPLATE CALLED\n');
 
@@ -176,8 +176,8 @@ export class TemplateEditorService {
       console.error(`❌ Template file not found: ${templatePath}`);
       try {
         console.error(`Templates directory contents:`, fs.readdirSync(this.templatesPath));
-      } catch (e) {
-        console.error(`Could not read templates directory:`, e.message);
+      } catch (e: unknown) {
+        console.error(`Could not read templates directory:`, e instanceof Error ? e.message : 'Unknown error');
       }
       throw new Error(`Template ${templateName} not found at ${templatePath}. Please ensure the template file exists.`);
     }
@@ -194,13 +194,13 @@ export class TemplateEditorService {
       console.log('Size difference:', modifiedBuffer.length - templateBuffer.length, 'bytes');
 
       return modifiedBuffer;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('=== INDUSTRY TEMPLATE EDITING ERROR ===');
       console.error('Template name:', templateName);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
       console.error('========================================');
-      throw new Error(`Failed to edit industry template ${templateName}: ${error.message}`);
+      throw new Error(`Failed to edit industry template ${templateName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -293,13 +293,13 @@ export class TemplateEditorService {
       });
 
       return modifiedBuffer;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in replaceIndustryTextInDocx:', error);
       throw error;
     }
   }
 
-  private async replaceTextInDocx(templateBuffer: Buffer, data: any): Promise<Buffer> {
+  private async replaceTextInDocx(templateBuffer: Buffer, data: TemplateData): Promise<Buffer> {
     try {
       // Load the DOCX file as a ZIP
       const zip = await JSZip.loadAsync(templateBuffer);
@@ -422,7 +422,7 @@ export class TemplateEditorService {
       });
 
       return modifiedBuffer;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error in replaceTextInDocx:', error);
       throw error;
     }
@@ -468,12 +468,12 @@ export class TemplateEditorService {
         const searcher = searcherProfiles[0];
         console.log(`Processing image1.png for first searcher: ${searcher.name}`);
         try {
-          const imageBuffer = await this.downloadImage(searcher.headshotUrl);
+          const imageBuffer = await this.downloadImage(searcher.headshotUrl!);
           if (imageBuffer) {
             zip.file('word/media/image1.png', imageBuffer);
             console.log(`Successfully replaced image1.png with headshot for ${searcher.name}`);
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`Error processing first headshot:`, error);
         }
       }
@@ -483,7 +483,7 @@ export class TemplateEditorService {
         const searcher = searcherProfiles[1];
         console.log(`Processing image3.png for second searcher: ${searcher.name}`);
         try {
-          const imageBuffer = await this.downloadImage(searcher.headshotUrl);
+          const imageBuffer = await this.downloadImage(searcher.headshotUrl!);
           if (imageBuffer) {
             // Add image3.png to media folder
             zip.file('word/media/image3.png', imageBuffer);
@@ -493,7 +493,7 @@ export class TemplateEditorService {
             // This will replace the 2nd occurrence of rId8 with rId13
             const documentXml = await zip.file('word/document.xml').async('string');
             let count = 0;
-            const updatedXml = documentXml.replace(/r:embed="rId8"/g, (match) => {
+            const updatedXml = documentXml.replace(/r:embed="rId8"/g, (match: string) => {
               count++;
               if (count === 2) {
                 return 'r:embed="rId13"'; // Replace 2nd instance with rId13 (rId9-12 already exist)
@@ -510,13 +510,13 @@ export class TemplateEditorService {
 
             console.log('Updated document.xml and relationships for second headshot');
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`Error processing second headshot:`, error);
         }
       }
 
       console.log('=== IMAGE REPLACEMENT PROCESS COMPLETED ===');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('=== ERROR IN IMAGE REPLACEMENT ===');
       console.error('Error in replaceImages:', error);
       // Don't throw error - continue with text-only replacement if images fail
@@ -582,13 +582,13 @@ export class TemplateEditorService {
         console.log(`Local image loaded successfully, size: ${buffer.length} bytes`);
         return buffer;
       }
-    } catch (error) {
-      console.error(`Error loading image: ${error.message}`);
+    } catch (error: unknown) {
+      console.error(`Error loading image: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
   }
 
-  private prepareTemplateData(data: TemplateData): any {
+  private prepareTemplateData(data: TemplateData): Record<string, any> {
     return {
       // Search Fund Information - common placeholders
       searchFundName: data.searchFundName || 'Search Fund',
@@ -646,7 +646,7 @@ export class TemplateEditorService {
     };
   }
 
-  private getImageData(imageUrl?: string): any {
+  private getImageData(imageUrl?: string): { width: number; height: number; data: Buffer; type: string } | null {
     if (!imageUrl) return null;
     
     try {
@@ -665,7 +665,7 @@ export class TemplateEditorService {
           type: 'png' // or determine from file extension
         };
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('Could not load image:', imageUrl, error);
     }
     
