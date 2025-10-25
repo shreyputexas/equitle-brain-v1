@@ -975,32 +975,32 @@ FINAL INSTRUCTIONS:
     for (const line of lines) {
       const trimmedLine = line.trim();
 
-      // Detect section headers - support both numbered (1.) and markdown (##) formats
+      // Detect section headers - support **bold**, numbered (1.), and markdown (##) formats
       if (trimmedLine.match(/^(#+\s+|1\.?\s+)?(#\s+)?Home Healthcare Services$/i)) {
         currentSection = 'industry';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|2\.?\s+)?MARKET[\s\-]+OVERVIEW/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|2\.?\s+)?MARKET[\s\-]+OVERVIEW(\*\*)?/i)) {
         currentSection = 'marketOverview';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|3\.?\s+)?(M&A|M\s*&\s*A)[\s\-]+(ACTIVITY|CONSOLIDATION)/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|3\.?\s+)?(M&A|M\s*&\s*A)[\s\-]+(ACTIVITY|CONSOLIDATION)(\s+AND\s+\w+)?(\*\*)?/i)) {
         currentSection = 'industryConsolidation';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|4\.?\s+)?BARRIERS?[\s\-]+TO[\s\-]+ENTRY/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|4\.?\s+)?BARRIERS?[\s\-]+TO[\s\-]+ENTRY(\s+AND\s+\w+)?(\*\*)?/i)) {
         currentSection = 'entryBarrier';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|5\.?\s+)?FINANCIAL[\s\-]+PROFILE/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|5\.?\s+)?FINANCIAL[\s\-]+PROFILE(\s+AND\s+\w+)?(\*\*)?/i)) {
         currentSection = 'financialProfile';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|6\.?\s+)?(TECHNOLOGY|INNOVATION|TECHNOLOGY\s+AND\s+INNOVATION)/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|6\.?\s+)?(TECHNOLOGY|INNOVATION|TECHNOLOGY\s+AND\s+INNOVATION)(\s+(TRENDS|AND\s+\w+))?(\*\*)?/i)) {
         currentSection = 'technology';
         continue;
-      } else if (trimmedLine.match(/^(\*\*)?(\d+\.?\s+)?(##\s+)?(INVESTMENT\s+OPPORTUNITY\s+AND\s+VALUE\s+CREATION|INVESTMENT\s+OPPORTUNITY|INVESTMENT|VALUE\s+CREATION|VALUE)/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(\d+\.?\s+)?(##\s+)?(INVESTMENT\s+OPPORTUNITY\s+AND\s+VALUE\s+CREATION|INVESTMENT\s+OPPORTUNITY|INVESTMENT|VALUE\s+CREATION|VALUE)(\*\*)?/i)) {
         currentSection = 'investmentInsight';
         continue;
       }
 
-      // Add content to current section
-      if (currentSection && trimmedLine) {
+      // Add content to current section (skip the header line itself)
+      if (currentSection && trimmedLine && !trimmedLine.match(/^\*\*[A-Z\s&]+\*\*$/)) {
         sections[currentSection].push(trimmedLine);
       }
     }

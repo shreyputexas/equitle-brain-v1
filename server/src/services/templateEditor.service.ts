@@ -140,23 +140,31 @@ export class TemplateEditorService {
     normalized = normalized.replace(simplePattern, '<w:t>{investmentinsight}</w:t>');
     
     // Step 4: Merge placeholders split across runs with spell-check markers
-    // Pattern in template: <w:r><w:t>{</w:t></w:r><w:proofErr.../><w:r><w:t>placeholder</w:t></w:r><w:proofErr.../><w:r><w:t>}</w:t></w:r>
+    // Pattern in template: <w:t>{</w:t></w:r><w:proofErr.../><w:r><w:t>placeholder</w:t></w:r><w:proofErr.../><w:r><w:t>}</w:t></w:r>
     // We need to merge these into a single <w:t>{placeholder}</w:t>
 
     const beforeMerge = normalized;
 
-    // First, handle the common pattern with spell-check markers
-    // This pattern matches: <w:r><w:t>{</w:t></w:r> + optional proofErr + <w:r>...<w:t>placeholder</w:t></w:r> + optional proofErr + <w:r>...<w:t>}</w:t></w:r>
-    normalized = normalized.replace(/<w:r[^>]*>\s*<w:t>\{<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>([a-zA-Z0-9]+)<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>\}<\/w:t>/g,
-      '<w:t>{$1}</w:t>');
-
-    // Also handle pattern without opening <w:r> tag (in case regex was too strict)
-    normalized = normalized.replace(/<w:t>\{<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>([a-zA-Z0-9]+)<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>\}<\/w:t>/g,
-      '<w:t>{$1}</w:t>');
-
-    // Handle simpler pattern without spell-check markers
-    normalized = normalized.replace(/<w:t>\{<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>\}<\/w:t>/g,
-      '<w:t>{$1}</w:t>');
+    // Handle multiple patterns of split placeholders:
+    let iterations = 0;
+    let prevLength = 0;
+    do {
+      prevLength = normalized.length;
+      
+      // Pattern 1: {</w:t></w:r><w:proofErr.../><w:r...><w:t>WORD</w:t></w:r><w:proofErr.../><w:r...><w:t>}
+      normalized = normalized.replace(/\{<\/w:t><\/w:r><w:proofErr[^>]*\/><w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r><w:proofErr[^>]*\/><w:r[^>]*>.*?<w:t>\}/g,
+        '<w:t>{$1}</w:t>');
+      
+      // Pattern 2: {</w:t></w:r><w:r...><w:t>WORD</w:t></w:r><w:r...><w:t>} (without proofErr)
+      normalized = normalized.replace(/\{<\/w:t><\/w:r><w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r><w:r[^>]*>.*?<w:t>\}/g,
+        '<w:t>{$1}</w:t>');
+      
+      // Pattern 3: {WORD</w:t></w:r><w:r...><w:t>} (split across runs)
+      normalized = normalized.replace(/\{([a-zA-Z0-9]+)<\/w:t><\/w:r><w:r[^>]*>.*?<w:t>\}/g,
+        '<w:t>{$1}</w:t>');
+      
+      iterations++;
+    } while (prevLength !== normalized.length && iterations < 10);
 
     if (beforeMerge.length !== normalized.length) {
       console.log(`✅ Merged ${(beforeMerge.length - normalized.length)} characters of split placeholders`);
@@ -168,6 +176,9 @@ export class TemplateEditorService {
         console.log('Sample XML around marketOverview:', sample);
       }
     }
+
+    console.log('🔧 NORMALIZATION COMPLETE - Output length:', normalized.length);
+    console.log('🔧 Found placeholders in normalized XML:', (normalized.match(/\{[^}]+\}/g) || []).length);
 
     return normalized;
   }
@@ -245,7 +256,9 @@ export class TemplateEditorService {
 
       // Normalize placeholders
       console.log('Normalizing split placeholders in XML...');
+      console.log('Before normalization - placeholders found:', (modifiedXml.match(/\{[^}]+\}/g) || []).length);
       modifiedXml = this.normalizePlaceholders(modifiedXml);
+      console.log('After normalization - placeholders found:', (modifiedXml.match(/\{[^}]+\}/g) || []).length);
 
       // Helper to escape XML special characters
       const escapeXml = (text: string): string => {
@@ -258,23 +271,19 @@ export class TemplateEditorService {
       };
 
       // Build replacement map for industry template
-      // NOTE: Placeholder names must match EXACTLY what's in the template file
+      // NOTE: Include all placeholders that should exist after normalization
       const replacements: Record<string, string> = {
         '{industry}': data.industry || '',
-        '{marketOverview}': data.marketOverview || '',
-        '{industryConsolidation}': data.industryConsolidation || '',
-        '{entryBarrier}': data.entryBarrier || '',
-        '{financialProfile}': data.financialProfile || '',
-        '{technology}': data.technology || '',
-        '{investment insight}': data.investmentInsight || '', // Template has space - this is the correct one
-        '{investmentInsight}': data.investmentInsight || '', // Keep camelCase as backup
-        '{investmentinsight}': data.investmentInsight || '', // Keep lowercase as backup
-        '{investment insight }': data.investmentInsight || '', // Template has trailing space
-        '{investment}insight}': data.investmentInsight || '', // Handle split placeholder
+        '{marketOverview}': data.marketOverview || 'Market overview content will be added here.',
+        '{industryConsolidation}': data.industryConsolidation || 'Industry consolidation content will be added here.',
+        '{entryBarrier}': data.entryBarrier || 'Entry barrier content will be added here.',
+        '{financialProfile}': data.financialProfile || 'Financial profile content will be added here.',
+        '{technology}': data.technology || 'Technology content will be added here.',
+        '{investmentinsight}': data.investmentInsight || 'Investment insight content will be added here.',
         '{searchFundWebsite}': data.searchFundWebsite || '',
         '{searchFundEmail}': data.searchFundEmail || '',
         '{searchFundAddress}': data.searchFundAddress || '',
-        '{sources}': data.sources || '',
+        '{sources}': data.sources || 'Sources will be added here.',
       };
 
       console.log('=== PERFORMING INDUSTRY TEMPLATE REPLACEMENTS ===');
@@ -307,6 +316,18 @@ export class TemplateEditorService {
           skippedCount++;
         }
       }
+      // CRITICAL: Remove any remaining unreplaced placeholders to prevent Word corruption
+      if (notFoundCount > 0) {
+        console.log('🔧 CLEANING UP UNREPLACED PLACEHOLDERS...');
+        const beforeCleanup = modifiedXml;
+        
+        // Remove any remaining {placeholder} patterns that weren't replaced
+        modifiedXml = modifiedXml.replace(/\{[^}]+\}/g, '');
+        
+        const cleanedCount = (beforeCleanup.match(/\{[^}]+\}/g) || []).length;
+        console.log(`🧹 Removed ${cleanedCount} unreplaced placeholders to prevent corruption`);
+      }
+
       console.log('=== INDUSTRY TEMPLATE REPLACEMENT SUMMARY ===');
       console.log(`  ✅ Replaced: ${replacedCount}`);
       console.log(`  ⚠️ Not found: ${notFoundCount}`);
