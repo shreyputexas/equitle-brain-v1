@@ -30,6 +30,14 @@ export default function Network() {
     }));
   };
 
+  const handleSelectChange = (e: any) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
@@ -201,7 +209,7 @@ export default function Network() {
                       <Select
                         name="type"
                         value={formData.type}
-                        onChange={handleInputChange}
+                        onChange={handleSelectChange}
                         required
                         displayEmpty
                         sx={{
