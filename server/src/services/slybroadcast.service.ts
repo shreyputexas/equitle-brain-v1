@@ -14,6 +14,15 @@ export interface VoicemailDeliveryRequest {
   title?: string;
 }
 
+export interface IndividualVoicemailRequest {
+  phoneNumber: string;
+  mp3FilePath?: string;
+  mp3Url?: string;
+  callerIdNumber?: string;
+  callerIdName?: string;
+  title?: string;
+}
+
 export interface DeliveryResult {
   success: boolean;
   broadcastId?: string;
@@ -34,6 +43,158 @@ export class SlybroadcastService {
       logger.warn('Slybroadcast credentials not configured. Set SLYBROADCAST_EMAIL and SLYBROADCAST_PASSWORD environment variables.');
     } else {
       logger.info('SlybroadcastService initialized');
+    }
+  }
+
+  /**
+   * Send individual voicemail to a single phone number
+   */
+  async sendIndividualVoicemail(request: IndividualVoicemailRequest): Promise<DeliveryResult> {
+    try {
+      if (!this.email || !this.password) {
+        return {
+          success: false,
+          error: 'Slybroadcast credentials not configured'
+        };
+      }
+
+      logger.info('🚀 Sending individual voicemail via Slybroadcast', {
+        phoneNumber: request.phoneNumber,
+        mp3File: request.mp3FilePath,
+        mp3Url: request.mp3Url,
+        title: request.title
+      });
+
+      // Validate phone number
+      const { valid: validPhones } = this.validatePhoneNumbers([request.phoneNumber]);
+      if (validPhones.length === 0) {
+        return {
+          success: false,
+          error: 'Invalid phone number format'
+        };
+      }
+
+      const validPhone = validPhones[0];
+
+      // Create delivery date (immediate delivery)
+      const now = new Date();
+      const easternTime = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).formatToParts(now);
+
+      const dateStr = `${easternTime.find(p => p.type === 'month')?.value}/${easternTime.find(p => p.type === 'day')?.value}/${easternTime.find(p => p.type === 'year')?.value} ${easternTime.find(p => p.type === 'hour')?.value}:${easternTime.find(p => p.type === 'minute')?.value}`;
+
+      // Create form data
+      const formParams = new URLSearchParams();
+      formParams.append('c_uid', this.email);
+      formParams.append('c_password', this.password);
+      formParams.append('c_phone', validPhone);
+      formParams.append('c_date', dateStr);
+
+      // Use external URL (required for Slybroadcast)
+      if (request.mp3Url) {
+        formParams.append('c_url', request.mp3Url);
+        formParams.append('c_audio', 'MP3'); // Required: specify file type
+        logger.info('📡 Using MP3 URL for delivery', { mp3Url: request.mp3Url });
+      } else {
+        return {
+          success: false,
+          error: 'MP3 URL is required for Slybroadcast delivery. File uploads not supported.'
+        };
+      }
+
+      // Caller ID is required by Slybroadcast
+      if (!request.callerIdNumber) {
+        return {
+          success: false,
+          error: 'Caller ID number is required for Slybroadcast delivery'
+        };
+      }
+      formParams.append('c_callerID', request.callerIdNumber);
+
+      logger.info('📤 Sending individual voicemail request to Slybroadcast', {
+        phoneNumber: validPhone,
+        date: dateStr,
+        callerID: request.callerIdNumber || 'none'
+      });
+
+      // Send request to Slybroadcast
+      const response = await fetch(`${this.baseUrl}/gateway/vmb.php`, {
+        method: 'POST',
+        body: formParams.toString(),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Equitle-VoicemailService/1.0'
+        }
+      });
+
+      const responseText = await response.text();
+
+      logger.info('📡 Slybroadcast individual response received', {
+        status: response.status,
+        response: responseText.substring(0, 200),
+        phoneNumber: validPhone
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `Slybroadcast API error: ${response.status} - ${responseText}`
+        };
+      }
+
+      // Parse response according to Slybroadcast format: "OK session_id=XXXXXXXXX number of phone=X"
+      if (responseText.startsWith('OK')) {
+        const sessionIdMatch = responseText.match(/session_id=(\w+)/i);
+        const sessionId = sessionIdMatch ? sessionIdMatch[1] : undefined;
+        const phoneCountMatch = responseText.match(/number of phone=(\d+)/i);
+        const phoneCount = phoneCountMatch ? phoneCountMatch[1] : '1';
+
+        logger.info('✅ Individual voicemail sent successfully', {
+          sessionId,
+          phoneNumber: validPhone,
+          phoneCount
+        });
+
+        return {
+          success: true,
+          broadcastId: sessionId,
+          message: `Voicemail sent successfully. Session ID: ${sessionId}`
+        };
+      } else {
+        // Check for specific error messages
+        let errorMessage = responseText;
+        if (responseText.includes('ERROR')) {
+          errorMessage = `Slybroadcast API error: ${responseText}`;
+        } else if (responseText.includes('Bad Audio')) {
+          errorMessage = `Audio file error: ${responseText}. Check that your MP3 file is publicly accessible and > 5 seconds long.`;
+        } else if (responseText.includes('Invalid')) {
+          errorMessage = `Invalid request: ${responseText}. Check credentials and parameters.`;
+        }
+
+        logger.error('❌ Slybroadcast delivery failed', {
+          phoneNumber: validPhone,
+          response: responseText
+        });
+
+        return {
+          success: false,
+          error: errorMessage
+        };
+      }
+
+    } catch (error) {
+      logger.error('❌ Failed to send individual voicemail', error);
+      return {
+        success: false,
+        error: `Failed to send voicemail: ${(error as Error).message}`
+      };
     }
   }
 
@@ -88,12 +249,19 @@ export class SlybroadcastService {
       formParams.append('c_phone', request.phoneNumbers.join(','));
       formParams.append('c_date', dateStr);
 
-      // Try using c_record_audio with base64 data instead of c_url
-      formParams.append('c_record_audio', audioBase64);
+      // For bulk campaigns, we'll use the first MP3 file as URL
+      // In production, you'd want to use a single representative audio file
+      formParams.append('c_url', `${process.env.BACKEND_URL || 'http://localhost:4001'}/uploads/campaigns/temp/${request.mp3FilePath}`);
+      formParams.append('c_audio', 'MP3');
 
-      if (request.callerIdNumber) {
-        formParams.append('c_callerID', request.callerIdNumber);
+      // Caller ID is required
+      if (!request.callerIdNumber) {
+        return {
+          success: false,
+          error: 'Caller ID number is required for Slybroadcast delivery'
+        };
       }
+      formParams.append('c_callerID', request.callerIdNumber);
 
       // Debug log the form data
       logger.info('📤 Sending URL-encoded form data to Slybroadcast', {
@@ -130,26 +298,34 @@ export class SlybroadcastService {
         };
       }
 
-      // Parse response (Slybroadcast returns success/error messages in text)
-      if (responseText.includes('success') || responseText.includes('Success')) {
-        // Extract broadcast ID if available
-        const broadcastIdMatch = responseText.match(/broadcast[_\s]*id[:\s]*(\d+)/i);
-        const broadcastId = broadcastIdMatch ? broadcastIdMatch[1] : undefined;
+      // Parse response according to Slybroadcast format: "OK session_id=XXXXXXXXX number of phone=X"
+      if (responseText.startsWith('OK')) {
+        const sessionIdMatch = responseText.match(/session_id=(\w+)/i);
+        const sessionId = sessionIdMatch ? sessionIdMatch[1] : undefined;
+        const phoneCountMatch = responseText.match(/number of phone=(\d+)/i);
+        const phoneCount = phoneCountMatch ? phoneCountMatch[1] : request.phoneNumbers.length.toString();
 
         logger.info('✅ Slybroadcast voicemail campaign sent successfully', {
-          broadcastId,
-          phoneCount: request.phoneNumbers.length
+          sessionId,
+          phoneCount
         });
 
         return {
           success: true,
-          broadcastId,
-          message: 'Voicemail campaign sent successfully'
+          broadcastId: sessionId,
+          message: `Voicemail campaign sent successfully. Session ID: ${sessionId}, Phones: ${phoneCount}`
         };
       } else {
+        let errorMessage = responseText;
+        if (responseText.includes('ERROR')) {
+          errorMessage = `Slybroadcast API error: ${responseText}`;
+        } else if (responseText.includes('Bad Audio')) {
+          errorMessage = `Audio file error: ${responseText}. Check that your MP3 file is publicly accessible and > 5 seconds long.`;
+        }
+
         return {
           success: false,
-          error: `Slybroadcast error: ${responseText}`
+          error: errorMessage
         };
       }
 
@@ -220,5 +396,67 @@ export class SlybroadcastService {
     });
 
     return { valid, invalid };
+  }
+
+  /**
+   * Send personalized voicemails to multiple contacts
+   */
+  async sendPersonalizedVoicemails(requests: IndividualVoicemailRequest[]): Promise<{
+    successful: Array<{ phoneNumber: string; broadcastId?: string }>;
+    failed: Array<{ phoneNumber: string; error: string }>;
+  }> {
+    const successful: Array<{ phoneNumber: string; broadcastId?: string }> = [];
+    const failed: Array<{ phoneNumber: string; error: string }> = [];
+
+    logger.info('🚀 Starting batch personalized voicemail delivery', {
+      totalRequests: requests.length
+    });
+
+    for (const request of requests) {
+      try {
+        const result = await this.sendIndividualVoicemail(request);
+
+        if (result.success) {
+          successful.push({
+            phoneNumber: request.phoneNumber,
+            broadcastId: result.broadcastId
+          });
+          logger.info('✅ Voicemail sent successfully', {
+            phoneNumber: request.phoneNumber,
+            broadcastId: result.broadcastId
+          });
+        } else {
+          failed.push({
+            phoneNumber: request.phoneNumber,
+            error: result.error || 'Unknown error'
+          });
+          logger.error('❌ Voicemail failed', {
+            phoneNumber: request.phoneNumber,
+            error: result.error
+          });
+        }
+
+        // Add delay to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+      } catch (error) {
+        failed.push({
+          phoneNumber: request.phoneNumber,
+          error: (error as Error).message
+        });
+        logger.error('❌ Voicemail request failed with exception', {
+          phoneNumber: request.phoneNumber,
+          error: (error as Error).message
+        });
+      }
+    }
+
+    logger.info('🏁 Batch voicemail delivery completed', {
+      successful: successful.length,
+      failed: failed.length,
+      total: requests.length
+    });
+
+    return { successful, failed };
   }
 }

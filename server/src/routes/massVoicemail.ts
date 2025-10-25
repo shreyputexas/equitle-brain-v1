@@ -4,8 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import * as XLSX from 'xlsx';
 import { ElevenLabsService } from '../services/elevenlabs.service';
-import { SlybroadcastService } from '../services/slybroadcast.service';
+import { SlybroadcastService, IndividualVoicemailRequest } from '../services/slybroadcast.service';
 import logger from '../utils/logger';
+import { io } from '../index';
 
 const router = Router();
 
@@ -592,6 +593,16 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
         campaign.completed_contacts = completedCount;
         campaign.progress = Math.round((completedCount / totalContacts) * 100);
 
+        // Emit real-time progress update
+        io.emit('campaign-progress', {
+          campaignId: campaignId,
+          progress: campaign.progress,
+          completed: completedCount,
+          total: totalContacts,
+          status: campaign.status,
+          currentContact: contact.name
+        });
+
         logger.info(`🎉 Generated MP3 for ${contact.name} (${completedCount}/${totalContacts})`, {
           progress: campaign.progress,
           fileName
@@ -614,6 +625,16 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
 
     const finalStatus = completedCount === totalContacts ? 'completed' : 'failed';
     campaign.status = finalStatus;
+
+    // Emit final campaign status update
+    io.emit('campaign-completed', {
+      campaignId: campaignId,
+      status: finalStatus,
+      completed: completedCount,
+      total: totalContacts,
+      progress: 100,
+      generatedFiles: campaign.generated_files.length
+    });
 
     logger.info(`🏁 Campaign ${campaignId} ${finalStatus}`, {
       campaignId,
@@ -656,7 +677,131 @@ router.get('/mp3/:campaignId/:filename', async (req: Request, res: Response) => 
   }
 });
 
-// Send voicemail campaign using Slybroadcast
+// Send personalized voicemail campaign using Slybroadcast
+router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, res: Response) => {
+  try {
+    const { id: campaignId } = req.params;
+    const { callerIdNumber, callerIdName } = req.body;
+
+    logger.info('📞 Starting personalized voicemail delivery for campaign', {
+      campaignId,
+      callerIdNumber,
+      callerIdName
+    });
+
+    // Get campaign from memory
+    const campaign = campaigns.find(c => c.id === campaignId);
+
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    if (campaign.status !== 'completed') {
+      return res.status(400).json({ error: 'Campaign must be completed before sending voicemails' });
+    }
+
+    // Initialize Slybroadcast service
+    const slybroadcastService = new SlybroadcastService();
+
+    // Test connection first
+    const connectionTest = await slybroadcastService.testConnection();
+    if (!connectionTest) {
+      return res.status(500).json({ error: 'Unable to connect to Slybroadcast. Please check credentials.' });
+    }
+
+    // Get campaign directory
+    const campaignDir = path.join('uploads/campaigns', campaignId);
+
+    if (!fs.existsSync(campaignDir)) {
+      return res.status(400).json({ error: 'Campaign files not found' });
+    }
+
+    // Create base URL for MP3 files (for URL-based delivery)
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:4001';
+
+    // Create individual voicemail requests for each contact
+    const voicemailRequests: IndividualVoicemailRequest[] = [];
+
+    for (const contact of campaign.contacts) {
+      // Find the corresponding MP3 file for this contact
+      const mp3Files = fs.readdirSync(campaignDir).filter(file =>
+        file.endsWith('.mp3') && file.includes(contact.name.replace(/[^a-zA-Z0-9]/g, '_'))
+      );
+
+      if (mp3Files.length > 0) {
+        const mp3File = mp3Files[0];
+        const mp3Url = `${baseUrl}/uploads/campaigns/${campaignId}/${mp3File}`;
+
+        voicemailRequests.push({
+          phoneNumber: contact.phone,
+          mp3Url: mp3Url,
+          callerIdNumber,
+          callerIdName,
+          title: `${campaign.name} - ${contact.name}`
+        });
+      } else {
+        logger.warn('⚠️ No MP3 file found for contact', {
+          contactName: contact.name,
+          campaignId
+        });
+      }
+    }
+
+    if (voicemailRequests.length === 0) {
+      return res.status(400).json({ error: 'No valid MP3 files found for contacts' });
+    }
+
+    logger.info('📋 Prepared personalized voicemail requests', {
+      totalRequests: voicemailRequests.length,
+      totalContacts: campaign.contacts.length
+    });
+
+    // Send personalized voicemails
+    const result = await slybroadcastService.sendPersonalizedVoicemails(voicemailRequests);
+
+    // Update campaign status
+    campaign.voicemailStatus = 'sent';
+    campaign.voicemailSentAt = new Date().toISOString();
+
+    // Emit voicemail delivery completion
+    io.emit('voicemail-delivery-completed', {
+      campaignId,
+      successful: result.successful.length,
+      failed: result.failed.length,
+      total: voicemailRequests.length,
+      results: result
+    });
+
+    logger.info('🎉 Personalized voicemail campaign completed', {
+      campaignId,
+      successful: result.successful.length,
+      failed: result.failed.length,
+      total: voicemailRequests.length
+    });
+
+    res.json({
+      success: true,
+      message: 'Personalized voicemail campaign sent',
+      results: {
+        successful: result.successful.length,
+        failed: result.failed.length,
+        total: voicemailRequests.length,
+        successfulDeliveries: result.successful,
+        failedDeliveries: result.failed
+      },
+      campaignUpdate: {
+        voicemailStatus: 'sent',
+        voicemailSentAt: campaign.voicemailSentAt
+      }
+    });
+
+  } catch (error) {
+    logger.error('❌ Error sending personalized voicemail campaign', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Send voicemail campaign using Slybroadcast (original bulk method)
 router.post('/campaigns/:id/send-voicemails', async (req: Request, res: Response) => {
   try {
     const { id: campaignId } = req.params;
@@ -783,6 +928,49 @@ router.get('/test-slybroadcast', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to test Slybroadcast connection'
+    });
+  }
+});
+
+// Test individual voicemail sending
+router.post('/test-individual-voicemail', async (req: Request, res: Response) => {
+  try {
+    const { phoneNumber, mp3Url, callerIdNumber, callerIdName } = req.body;
+
+    if (!phoneNumber || !mp3Url || !callerIdNumber) {
+      return res.status(400).json({
+        error: 'phoneNumber, mp3Url, and callerIdNumber are required'
+      });
+    }
+
+    const slybroadcastService = new SlybroadcastService();
+
+    logger.info('🧪 Testing individual voicemail delivery', {
+      phoneNumber,
+      mp3Url,
+      callerIdNumber,
+      callerIdName
+    });
+
+    const result = await slybroadcastService.sendIndividualVoicemail({
+      phoneNumber,
+      mp3Url,
+      callerIdNumber,
+      callerIdName,
+      title: 'Test Voicemail'
+    });
+
+    res.json({
+      success: result.success,
+      result,
+      message: result.success ? 'Test voicemail sent successfully!' : 'Test voicemail failed'
+    });
+
+  } catch (error) {
+    logger.error('Error testing individual voicemail', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to test individual voicemail'
     });
   }
 });
