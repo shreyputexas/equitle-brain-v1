@@ -106,9 +106,22 @@ export const searcherProfilesApi = {
   // Update a searcher profile
   async updateSearcherProfile(searcherId: string, updateData: UpdateSearcherProfileRequest): Promise<SearcherProfile> {
     try {
+      console.log('🌐 API Call - Updating searcher profile:', {
+        url: `${API_BASE_URL}/${searcherId}`,
+        searcherId,
+        updateData,
+        headers: getAuthHeaders()
+      });
+      
       const response = await axios.put(`${API_BASE_URL}/${searcherId}`, updateData, {
         headers: getAuthHeaders()
       });
+      
+      console.log('🌐 API Response - Updated searcher profile:', {
+        status: response.status,
+        data: response.data
+      });
+      
       return response.data.data.searcherProfile;
     } catch (error) {
       console.error('Error updating searcher profile:', error);

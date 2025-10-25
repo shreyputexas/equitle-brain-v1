@@ -124,13 +124,37 @@ export class TemplateEditorService {
     // This regex finds { text } pattern and removes the spaces
     normalized = normalized.replace(/\{\s+([a-zA-Z0-9]+)\s+\}/g, '{$1}');
 
-    // Step 3: Merge placeholders split across runs with spell-check markers
-    // Pattern: <w:t>{</w:t>...</w:r>...<w:r>...<w:t>placeholder</w:t>...</w:r>...<w:r>...<w:t>}</w:t>
+    // Step 3: Handle specific case of {investmentinsight} split as {investment and insight}
+    // Pattern: <w:r><w:t>{investment</w:t></w:r><w:r ...><w:t xml:space="preserve">insight} </w:t></w:r>
+    // This pattern spans across two complete runs, so we need to match both run open/close tags
+    console.log('Checking for {investment pattern before replacement...');
+    const investmentPattern = /<w:r[^>]*>\s*<w:t>\{investment<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*<w:t[^>]*xml:space="preserve"[^>]*>insight\}\s*<\/w:t>\s*<\/w:r>/g;
+    const investmentMatches = normalized.match(investmentPattern);
+    console.log('Investment pattern matches:', investmentMatches ? investmentMatches.length : 0);
+    if (investmentMatches) {
+      console.log('First match:', investmentMatches[0].substring(0, 200));
+    }
+
+    // Also check for the pattern without the first run opening tag
+    const simplePattern = /<w:t>\{investment<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*<w:t[^>]*xml:space="preserve"[^>]*>insight\}\s*<\/w:t>/g;
+    normalized = normalized.replace(simplePattern, '<w:t>{investmentinsight}</w:t>');
+    
+    // Step 4: Merge placeholders split across runs with spell-check markers
+    // Pattern in template: <w:r><w:t>{</w:t></w:r><w:proofErr.../><w:r><w:t>placeholder</w:t></w:r><w:proofErr.../><w:r><w:t>}</w:t></w:r>
     // We need to merge these into a single <w:t>{placeholder}</w:t>
 
-    // This regex looks for { text } pattern across different runs and merges them
-    // It's more flexible and handles various XML structures
     const beforeMerge = normalized;
+
+    // First, handle the common pattern with spell-check markers
+    // This pattern matches: <w:r><w:t>{</w:t></w:r> + optional proofErr + <w:r>...<w:t>placeholder</w:t></w:r> + optional proofErr + <w:r>...<w:t>}</w:t></w:r>
+    normalized = normalized.replace(/<w:r[^>]*>\s*<w:t>\{<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>([a-zA-Z0-9]+)<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>\}<\/w:t>/g,
+      '<w:t>{$1}</w:t>');
+
+    // Also handle pattern without opening <w:r> tag (in case regex was too strict)
+    normalized = normalized.replace(/<w:t>\{<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>([a-zA-Z0-9]+)<\/w:t>\s*<\/w:r>\s*(?:<w:proofErr[^>]*>\s*)?<w:r[^>]*>\s*<w:t>\}<\/w:t>/g,
+      '<w:t>{$1}</w:t>');
+
+    // Handle simpler pattern without spell-check markers
     normalized = normalized.replace(/<w:t>\{<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>\}<\/w:t>/g,
       '<w:t>{$1}</w:t>');
 
@@ -139,8 +163,10 @@ export class TemplateEditorService {
     } else {
       console.log(`⚠️ No split placeholders found to merge`);
       // Log a sample of the XML to help debug
-      const sample = normalized.substring(normalized.indexOf('searchFundName') - 200, normalized.indexOf('searchFundName') + 200);
-      console.log('Sample XML around searchFundName:', sample);
+      if (normalized.indexOf('marketOverview') > 0) {
+        const sample = normalized.substring(normalized.indexOf('marketOverview') - 200, normalized.indexOf('marketOverview') + 200);
+        console.log('Sample XML around marketOverview:', sample);
+      }
     }
 
     return normalized;
@@ -240,9 +266,11 @@ export class TemplateEditorService {
         '{entryBarrier}': data.entryBarrier || '',
         '{financialProfile}': data.financialProfile || '',
         '{technology}': data.technology || '',
-        '{investmentinsight}': data.investmentInsight || '', // Try lowercase (no space)
-        '{investmentInsight}': data.investmentInsight || '', // Try camelCase
-        '{investment insight}': data.investmentInsight || '', // Try with space
+        '{investment insight}': data.investmentInsight || '', // Template has space - this is the correct one
+        '{investmentInsight}': data.investmentInsight || '', // Keep camelCase as backup
+        '{investmentinsight}': data.investmentInsight || '', // Keep lowercase as backup
+        '{investment insight }': data.investmentInsight || '', // Template has trailing space
+        '{investment}insight}': data.investmentInsight || '', // Handle split placeholder
         '{searchFundWebsite}': data.searchFundWebsite || '',
         '{searchFundEmail}': data.searchFundEmail || '',
         '{searchFundAddress}': data.searchFundAddress || '',
@@ -360,7 +388,7 @@ export class TemplateEditorService {
         '{ourStories}': data.content?.ourStories || '',
         '{ourStory}': data.content?.ourStories || '',
 
-        // Individual searcher stories - for navy_blue template
+        // Individual searcher stories - for personal_navy_placeholders template
         '{searcherStory1}': data.content?.searcherStory1 || '',
         '{searcherStory2}': data.content?.searcherStory2 || '',
 
@@ -442,7 +470,7 @@ export class TemplateEditorService {
         return;
       }
       
-      // Image mapping logic for navy_blue template:
+      // Image mapping logic for industry_navy_placeholders template:
       // Header: image2.png (rId1) = Logo (TOP)
       // Our Story: image1.png (rId8, used 2x) = First headshot (BOTTOM)
       // Our Story: image3.png (rId13, needs to be added) = Second headshot (BOTTOM)

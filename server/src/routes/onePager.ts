@@ -14,7 +14,7 @@ router.get('/test-template', async (req, res) => {
 
     const projectRoot = process.cwd();
     const templatesPath = path.join(projectRoot, 'equitle-brain-v1/one_pager_templates');
-    const navyBluePath = path.join(templatesPath, 'navy_blue.docx');
+    const navyBluePath = path.join(templatesPath, 'industry_navy_placeholders.docx');
 
     const info = {
       projectRoot,
@@ -173,7 +173,7 @@ router.post('/test-generate', async (req, res) => {
               searcherProfiles: actualSearcherProfiles,
               thesisData,
               teamConnection,
-              template: template || 'navy_blue'
+              template: template || 'industry_navy_placeholders'
             });
 
             // Call the actual generation service with content
@@ -186,7 +186,7 @@ router.post('/test-generate', async (req, res) => {
               searchFundEmail,
               thesisData,
               teamConnection,
-              template: template || 'navy_blue'
+              template: template || 'industry_navy_placeholders'
             }, content); // Pass the generated content as second parameter
 
     console.log('Generation result size:', result.length);
@@ -444,7 +444,7 @@ router.post('/test-basic-document', async (req, res) => {
     );
 
     // Set response headers for file download
-    const templateSuffix = template === 'navy' ? '-navy' : '';
+    const templateSuffix = (template === 'navy' || template === 'industry_navy' || template === 'personal_navy') ? '-navy' : '';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="test-industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}${templateSuffix}-${Date.now()}.docx"`);
     res.setHeader('Content-Length', docxBuffer.length);
@@ -544,7 +544,7 @@ router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res)
     );
 
     // Set response headers for file download
-    const templateSuffix = template === 'navy' ? '-navy' : '';
+    const templateSuffix = (template === 'navy' || template === 'industry_navy' || template === 'personal_navy') ? '-navy' : '';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="industry-report-${selectedIndustry.replace(/[^a-zA-Z0-9]/g, '-')}${templateSuffix}-${Date.now()}.docx"`);
     res.setHeader('Content-Length', docxBuffer.length);

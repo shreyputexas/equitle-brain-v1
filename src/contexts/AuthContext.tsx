@@ -86,10 +86,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar: undefined
       };
       
-      // Set mock token for backend
+      // Set mock token and userId for backend
       localStorage.setItem('token', 'mock-token');
+      localStorage.setItem('userId', mockUser.id);
       axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
-      
+
+      console.log('✅ AuthContext: Stored userId in localStorage (dev mode):', mockUser.id);
+
       setUser(mockUser);
       setLoading(false);
       return;
@@ -100,8 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // User is signed in
         const idToken = await firebaseUser.getIdToken();
         localStorage.setItem('token', idToken);
+        localStorage.setItem('userId', firebaseUser.uid);
         axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
-        
+
+        console.log('✅ AuthContext: Stored userId in localStorage (auth state):', firebaseUser.uid);
+
         // Create user object from Firebase user
         const user: User = {
           id: firebaseUser.uid,
@@ -113,12 +119,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           location: '',
           avatar: firebaseUser.photoURL || undefined
         };
-        
+
         setUser(user);
       } else {
         // User is signed out
         setUser(null);
         localStorage.removeItem('token');
+        localStorage.removeItem('userId');
         delete axios.defaults.headers.common['Authorization'];
       }
       setLoading(false);
@@ -138,10 +145,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Get the ID token for backend authentication
       const idToken = await firebaseUser.getIdToken();
       localStorage.setItem('token', idToken);
-      
+      localStorage.setItem('userId', firebaseUser.uid);
+
+      console.log('✅ AuthContext: Stored userId in localStorage (login):', firebaseUser.uid);
+
       // Set axios default header for backend requests
       axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
-      
+
       // Create user object from Firebase user
       const user: User = {
         id: firebaseUser.uid,
@@ -153,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         location: '',
         avatar: firebaseUser.photoURL || undefined
       };
-      
+
       setUser(user);
       navigate('/outreach/deals');
     } catch (error: any) {
@@ -169,6 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signOut(auth);
       setUser(null);
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       delete axios.defaults.headers.common['Authorization'];
       navigate('/login');
     } catch (error) {
@@ -176,6 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Still clear local state even if Firebase logout fails
       setUser(null);
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       delete axios.defaults.headers.common['Authorization'];
       navigate('/login');
     }

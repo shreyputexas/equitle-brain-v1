@@ -4,6 +4,8 @@ import { db } from '../lib/firebase';
 import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, Timestamp, getDoc } from 'firebase/firestore';
 import { onePagerApi } from '../services/onePagerApi';
 import type { OnePagerRequest } from '../services/onePagerApi';
+import { searcherProfilesApi } from '../services/searcherProfilesApi';
+import { getUserId } from '../utils/auth';
 import {
   Box,
   Typography,
@@ -154,6 +156,12 @@ const MyThesis: React.FC = () => {
   const [selectedSearchers, setSelectedSearchers] = useState<string[]>([]);
   const [isGeneratingPitch, setIsGeneratingPitch] = useState(false);
   const [searcherProfiles, setSearcherProfiles] = useState<any[]>([]);
+
+  // Debug: Log searcherProfiles state changes
+  useEffect(() => {
+    console.log('🔄 SearcherProfiles state changed:', searcherProfiles);
+    console.log('📊 SearcherProfiles length:', searcherProfiles.length);
+  }, [searcherProfiles]);
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
   const [showTemplatePreview, setShowTemplatePreview] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string>('');
@@ -181,13 +189,20 @@ const MyThesis: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+        console.log('🔄 Loading investment theses...');
 
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
+        console.log('📋 Using userId:', userId);
+
         const thesesRef = collection(db, 'users', userId, 'investmentTheses');
         const q = query(thesesRef, orderBy('createdAt', 'asc'));
         const snapshot = await getDocs(q);
+        
+        console.log('📊 Found', snapshot.docs.length, 'theses in database');
+        
         const loadedTheses = snapshot.docs.map(d => {
           const data = d.data();
+          console.log('📋 Thesis data:', { id: d.id, name: data.name, criteriaCount: data.criteria?.length || 0 });
           return {
             id: d.id,
             name: data.name,
@@ -199,6 +214,7 @@ const MyThesis: React.FC = () => {
 
         // If no theses exist, create a default one
         if (loadedTheses.length === 0) {
+          console.log('📝 No theses found, creating default thesis...');
           const now = Timestamp.now();
           const docRef = await addDoc(thesesRef, {
             name: 'Tech Growth Thesis',
@@ -213,16 +229,18 @@ const MyThesis: React.FC = () => {
             createdAt: now.toDate(),
             updatedAt: now.toDate()
           };
+          console.log('✅ Created default thesis:', defaultThesis);
           setTheses([defaultThesis]);
           setCurrentThesisId(defaultThesis.id);
           setCriteria([]);
         } else {
+          console.log('✅ Loaded', loadedTheses.length, 'theses:', loadedTheses.map(t => t.name));
           setTheses(loadedTheses);
           setCurrentThesisId(loadedTheses[0].id);
           setCriteria(loadedTheses[0].criteria);
         }
       } catch (error: any) {
-        console.error('Error loading theses:', error);
+        console.error('❌ Error loading theses:', error);
         setError('Failed to load investment theses');
       } finally {
         setLoading(false);
@@ -236,16 +254,13 @@ const MyThesis: React.FC = () => {
   useEffect(() => {
     const loadSearcherProfiles = async () => {
       try {
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
-        const profilesRef = collection(db, 'users', userId, 'searcherProfiles');
-        const snapshot = await getDocs(profilesRef);
-        const profiles = snapshot.docs.map(d => ({
-          id: d.id,
-          ...d.data()
-        }));
+        console.log('🔍 Loading searcher profiles via API...');
+        const profiles = await searcherProfilesApi.getSearcherProfiles();
+        console.log('📋 Loaded searcher profiles:', profiles);
+        console.log('📊 Number of searcher profiles:', profiles.length);
         setSearcherProfiles(profiles);
       } catch (error) {
-        console.error('Error loading searcher profiles:', error);
+        console.error('❌ Error loading searcher profiles:', error);
       }
     };
 
@@ -257,16 +272,13 @@ const MyThesis: React.FC = () => {
     const handleFocus = () => {
       const loadSearcherProfiles = async () => {
         try {
-          const userId = localStorage.getItem('userId') || 'dev-user-123';
-          const profilesRef = collection(db, 'users', userId, 'searcherProfiles');
-          const snapshot = await getDocs(profilesRef);
-          const profiles = snapshot.docs.map(d => ({
-            id: d.id,
-            ...d.data()
-          }));
+          console.log('🔄 Refreshing searcher profiles on focus via API...');
+          const profiles = await searcherProfilesApi.getSearcherProfiles();
+          console.log('📋 Refreshed searcher profiles:', profiles);
+          console.log('📊 Number of refreshed searcher profiles:', profiles.length);
           setSearcherProfiles(profiles);
         } catch (error) {
-          console.error('Error loading searcher profiles:', error);
+          console.error('❌ Error refreshing searcher profiles:', error);
         }
       };
       loadSearcherProfiles();
@@ -458,7 +470,7 @@ const MyThesis: React.FC = () => {
           [...theses.find(t => t.id === templateThesisId)?.criteria || []] :
           [];
 
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const now = Timestamp.now();
         const thesesRef = collection(db, 'users', userId, 'investmentTheses');
         const docRef = await addDoc(thesesRef, {
@@ -491,7 +503,7 @@ const MyThesis: React.FC = () => {
   const handleDeleteThesis = async (thesisId: string) => {
     if (theses.length > 1) {
       try {
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
         await deleteDoc(thesisRef);
 
@@ -517,7 +529,7 @@ const MyThesis: React.FC = () => {
   const handleSaveThesisName = async (thesisId: string) => {
     if (editingThesisNameValue.trim()) {
       try {
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const now = Timestamp.now();
         const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
         await updateDoc(thesisRef, {
@@ -556,7 +568,7 @@ const MyThesis: React.FC = () => {
     try {
       console.log('Auto-saving thesis with criteria:', criteria);
       // Update the thesis in Firebase
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userId = getUserId();
       const now = Timestamp.now();
       const thesisRef = doc(db, 'users', userId, 'investmentTheses', currentThesisId);
       await updateDoc(thesisRef, {
@@ -591,7 +603,7 @@ const MyThesis: React.FC = () => {
     }
 
     try {
-      const userId = localStorage.getItem('userId') || 'dev-user-123';
+      const userId = getUserId();
       const now = Timestamp.now();
       const thesisRef = doc(db, 'users', userId, 'investmentTheses', currentThesisId);
 
@@ -691,7 +703,7 @@ const MyThesis: React.FC = () => {
       // Get team connection from Firebase
       let teamConnection = '';
       try {
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const teamConnectionRef = doc(db, 'users', userId, 'teamConnection', 'connection');
         const teamConnectionDoc = await getDoc(teamConnectionRef);
         if (teamConnectionDoc.exists()) {
@@ -1049,7 +1061,7 @@ const MyThesis: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const userId = localStorage.getItem('userId') || 'dev-user-123';
+        const userId = getUserId();
         const thesesRef = collection(db, 'users', userId, 'investmentTheses');
         const q = query(thesesRef, orderBy('createdAt', 'asc'));
         const snapshot = await getDocs(q);
@@ -1767,6 +1779,14 @@ const MyThesis: React.FC = () => {
                     <MenuItem disabled>No searcher profiles found. Create one in My Profile.</MenuItem>
                   )}
                 </Select>
+                {/* Debug info */}
+                {process.env.NODE_ENV === 'development' && (
+                  <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Debug: {searcherProfiles.length} profiles loaded
+                    </Typography>
+                  </Box>
+                )}
               </FormControl>
             </Grid>
             <Grid item xs={12} md={4}>
@@ -1778,7 +1798,8 @@ const MyThesis: React.FC = () => {
                   label="Select Template"
                 >
                   <MenuItem value="basic">Basic Template</MenuItem>
-                  <MenuItem value="navy_blue">Navy Blue</MenuItem>
+                  <MenuItem value="industry_navy">Industry Navy</MenuItem>
+                  <MenuItem value="personal_navy">Personal Navy</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -3070,7 +3091,7 @@ const MyThesis: React.FC = () => {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Template Preview - {selectedTemplate === 'basic' ? 'Basic Template' : selectedTemplate === 'navy_blue' ? 'Navy Blue' : selectedTemplate}
+            Template Preview - {selectedTemplate === 'basic' ? 'Basic Template' : selectedTemplate === 'industry_navy' ? 'Industry Navy' : selectedTemplate === 'personal_navy' ? 'Personal Navy' : selectedTemplate}
           </Typography>
           <IconButton onClick={() => setShowTemplatePreview(false)}>
             <CloseIcon />
