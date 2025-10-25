@@ -16,7 +16,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  Collapse,
   IconButton,
   Accordion,
   AccordionSummary,
@@ -33,8 +32,6 @@ import {
   LocationOn as LocationIcon,
   Schedule as ScheduleIcon,
   Business as BusinessIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   LinkedIn as LinkedInIcon,
   Group as GroupIcon,
   Send as SendIcon,
@@ -90,7 +87,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
   const [globalOutreachType, setGlobalOutreachType] = useState('');
   const [isBulkGenerating, setIsBulkGenerating] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const handleProfileInputChange = (profileId: number, field: 'rawLinkedInText' | 'websiteUrl') => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -242,17 +239,10 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             Bulk LinkedIn Outreach Generator
           </Typography>
         </Box>
-        <IconButton
-          onClick={() => setExpanded(!expanded)}
-          sx={{ color: 'white' }}
-        >
-          {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
       </Box>
 
-      {/* Collapsible Content */}
-      <Collapse in={expanded}>
-        <Box sx={{ p: 2.5, bgcolor: 'background.paper' }}>
+      {/* Content */}
+      <Box sx={{ p: 2.5, bgcolor: 'background.paper' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Generate personalized LinkedIn messages for up to 10 people at once. Paste LinkedIn profiles and optionally add company research.
           </Typography>
@@ -762,7 +752,6 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             </Button>
           </Box>
         </Box>
-      </Collapse>
     </Paper>
   );
 };

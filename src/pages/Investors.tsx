@@ -28,6 +28,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
+import LinkedInOutreach from '../components/LinkedInOutreach';
 import {
   People as PeopleIcon,
   Search as SearchIcon,
@@ -602,6 +603,9 @@ export default function Investors() {
           })}
         </Box>
       )}
+
+      {/* LinkedIn Outreach Section */}
+      <LinkedInOutreach />
     </Box>
   );
 }
