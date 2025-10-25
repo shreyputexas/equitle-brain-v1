@@ -141,6 +141,13 @@ app.use('/uploads', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Type');
+
+  // Set proper content type for MP3 files
+  if (req.path.endsWith('.mp3')) {
+    res.header('Content-Type', 'audio/mpeg');
+  }
+
   next();
 }, express.static(uploadsPath));
 

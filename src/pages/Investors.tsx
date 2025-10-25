@@ -79,11 +79,6 @@ export default function Investors() {
       setEmails(investorEmails);
     } catch (err: any) {
       console.error('Error loading investor emails:', err);
-<<<<<<< Updated upstream
-      // Silently handle errors - show empty state instead of error
-      setEmails([]);
-      setError(null);
-=======
       
       // Provide more specific error messages
       if (err.message?.includes('No email integration connected')) {
@@ -95,7 +90,6 @@ export default function Investors() {
       } else {
         setError('Failed to load investor emails. Please connect Gmail or Outlook in Settings');
       }
->>>>>>> Stashed changes
     } finally {
       setLoading(false);
     }

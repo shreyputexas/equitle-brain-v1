@@ -150,6 +150,7 @@ export default function VoiceCalls() {
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([]);
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [message, setMessage] = useState('');
@@ -259,12 +260,40 @@ export default function VoiceCalls() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+
+      if (!response.ok) {
+        console.error('Voice profiles API response not ok:', response.status);
+        setVoiceProfiles([]);
+        return;
+      }
+
       const data = await response.json();
-      if (data.voices) {
+      console.log('Voice profiles API response:', data);
+
+      // Handle direct array response (new format from mass voicemail endpoint)
+      if (Array.isArray(data)) {
+        // Convert mass voicemail format to VoiceProfile format
+        const convertedVoices = data.map(voice => ({
+          id: voice.voice_id,
+          name: voice.name,
+          description: voice.name, // Use name as description
+          elevenLabsVoiceId: voice.voice_id,
+          isDefault: false,
+          userId: 'current-user',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }));
+        setVoiceProfiles(convertedVoices);
+      } else if (data && data.voices && Array.isArray(data.voices)) {
+        // Handle old format if it still exists
         setVoiceProfiles(data.voices);
+      } else {
+        console.warn('Unexpected voice profiles response format:', data);
+        setVoiceProfiles([]);
       }
     } catch (error) {
       console.error('Failed to load voice profiles:', error);
+      setVoiceProfiles([]);
     }
   };
 
@@ -275,12 +304,23 @@ export default function VoiceCalls() {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+
+      if (!response.ok) {
+        console.error('Call history API response not ok:', response.status);
+        setCallHistory([]);
+        return;
+      }
+
       const data = await response.json();
-      if (data.calls) {
+      if (data && data.calls && Array.isArray(data.calls)) {
         setCallHistory(data.calls);
+      } else {
+        console.warn('Unexpected call history response format:', data);
+        setCallHistory([]);
       }
     } catch (error) {
       console.error('Failed to load call history:', error);
+      setCallHistory([]);
     }
   };
 
@@ -295,19 +335,42 @@ export default function VoiceCalls() {
       const response = await fetch(getApiUrl('campaigns'), {
         headers
       });
+
+      if (!response.ok) {
+        console.error('Campaigns API response not ok:', response.status);
+        setCampaigns([]);
+        return;
+      }
+
       const data = await response.json();
-      if (data.success) {
-        setCampaigns(data.campaigns || []);
+      if (data && data.success && Array.isArray(data.campaigns)) {
+        setCampaigns(data.campaigns);
+      } else {
+        console.warn('Unexpected campaigns response format:', data);
+        setCampaigns([]);
       }
     } catch (error) {
       console.error('Failed to load campaigns:', error);
+      setCampaigns([]);
     }
   };
 
   useEffect(() => {
-    loadVoiceProfiles();
-    loadCallHistory();
-    loadCampaigns();
+    const initializeData = async () => {
+      try {
+        await Promise.all([
+          loadVoiceProfiles(),
+          loadCallHistory(),
+          loadCampaigns()
+        ]);
+      } catch (error) {
+        console.error('Error initializing voice calls page:', error);
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    initializeData();
 
     // Initialize WebSocket connection
     const socketConnection = io(getSocketUrl(), {
@@ -609,6 +672,28 @@ export default function VoiceCalls() {
       console.error(`Error calling ${contact.name}:`, error);
     }
   };
+
+  // Show loading screen while initializing
+  if (initialLoading) {
+    return (
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '400px',
+        textAlign: 'center'
+      }}>
+        <CircularProgress size={60} sx={{ mb: 3 }} />
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Loading Voice Interface...
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Initializing voice profiles and call history
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box>

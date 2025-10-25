@@ -29,6 +29,29 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Voice agent route is working!', timestamp: new Date().toISOString() });
 });
 
+// ElevenLabs voices endpoint (no auth required) - matches mass voicemail implementation
+router.get('/elevenlabs-voices', async (req, res) => {
+  console.log('🎤 ELEVENLABS VOICES ROUTE HIT');
+  try {
+    const elevenLabsService = new ElevenLabsService();
+    const remoteVoices = await elevenLabsService.getVoices();
+    const clonedVoices = remoteVoices
+      .filter(voice => voice.category === 'cloned')
+      .map(voice => ({
+        voice_id: voice.voice_id,
+        name: voice.name,
+        status: 'ready' as const,
+        created_at: new Date().toISOString(),
+      }));
+
+    console.log('🎤 Found cloned voices:', clonedVoices.map(v => v.name));
+    res.json(clonedVoices);
+  } catch (error) {
+    logger.error('Failed to get ElevenLabs voices:', error);
+    res.status(500).json({ message: 'Failed to get ElevenLabs voices' });
+  }
+});
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -320,6 +343,9 @@ router.get('/calls', firebaseAuthMiddleware, async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
+    // Initialize services
+    const { voiceAgentService } = getServices();
+
     const calls = await voiceAgentService.getCallHistory(userId, limit);
     res.json({ calls });
   } catch (error) {
@@ -340,6 +366,9 @@ router.get('/calls/:callId', firebaseAuthMiddleware, async (req, res) => {
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
+
+    // Initialize services
+    const { voiceAgentService } = getServices();
 
     const call = await voiceAgentService.getCallSession(callId);
 
@@ -406,21 +435,64 @@ router.post('/voice-clone', firebaseAuthMiddleware, upload.single('audio'), asyn
 
 /**
  * GET /api/voice-agent/voices
- * Get user's voice profiles
+ * Get ElevenLabs cloned voices (simplified - matching mass voicemail implementation)
  */
-router.get('/voices', firebaseAuthMiddleware, async (req, res) => {
+router.get('/voices', async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    // Get clones from ElevenLabs API (same as mass voicemail route)
+    const elevenLabsService = new ElevenLabsService();
+    const remoteVoices = await elevenLabsService.getVoices();
+    const clonedVoices = remoteVoices
+      .filter(voice => voice.category === 'cloned')
+      .map(voice => ({
+        voice_id: voice.voice_id,
+        name: voice.name,
+        status: 'ready' as const,
+        created_at: new Date().toISOString(),
+      }));
 
-    if (!userId) {
-      return res.status(401).json({ error: 'User not authenticated' });
+    res.json(clonedVoices);
+    logger.info(`Returning ${clonedVoices.length} cloned voices from ElevenLabs`);
+  } catch (error) {
+    logger.error('Failed to get voices:', error);
+    res.status(500).json({ message: 'Failed to get voices' });
+  }
+});
+
+/**
+ * GET /api/voice-agent/test-elevenlabs
+ * Test ElevenLabs API connection
+ */
+router.get('/test-elevenlabs', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const elevenLabsService = new ElevenLabsService();
+
+    // Test the connection and get available voices
+    const isConnected = await elevenLabsService.testConnection();
+
+    if (!isConnected) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to connect to ElevenLabs API - check your API key'
+      });
     }
 
-    const voices = await voiceAgentService.getVoiceProfiles(userId);
-    res.json({ voices });
+    // Get available voices to verify the integration
+    const voices = await elevenLabsService.getVoices();
+
+    res.json({
+      success: true,
+      connected: true,
+      voicesCount: voices.length,
+      voices: voices.slice(0, 3) // Return first 3 voices as sample
+    });
   } catch (error) {
-    logger.error('Error getting voice profiles', error);
-    res.status(500).json({ error: 'Internal server error' });
+    logger.error('ElevenLabs test error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'ElevenLabs API test failed',
+      details: (error as Error).message
+    });
   }
 });
 

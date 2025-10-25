@@ -20,7 +20,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import {
   CloudUpload,
@@ -31,6 +32,7 @@ import {
   RecordVoiceOver,
   Phone
 } from '@mui/icons-material';
+import io from 'socket.io-client';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -102,9 +104,73 @@ const MassVoicemail: React.FC = () => {
   const [callerIdName, setCallerIdName] = useState('');
   const [isSendingVoicemails, setIsSendingVoicemails] = useState(false);
 
+  // Real-time notifications
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+
   useEffect(() => {
     loadVoiceClones();
     loadCampaigns();
+
+    // Initialize Socket.io connection
+    const socket = io('http://localhost:4001');
+
+    // Listen for campaign progress updates
+    socket.on('campaign-progress', (data) => {
+      console.log('Campaign progress update:', data);
+
+      // Update the campaign in the list
+      setCampaigns(prev => prev.map(campaign =>
+        campaign.id === data.campaignId
+          ? {
+              ...campaign,
+              progress: data.progress,
+              completed_contacts: data.completed,
+              status: data.status,
+              last_updated: new Date().toISOString()
+            }
+          : campaign
+      ));
+
+      // Show notification for significant progress
+      if (data.progress % 25 === 0 || data.progress === 100) {
+        setNotificationMessage(`Campaign ${data.progress}% complete - Processing ${data.currentContact}`);
+        setNotificationOpen(true);
+      }
+    });
+
+    // Listen for campaign completion
+    socket.on('campaign-completed', (data) => {
+      console.log('Campaign completed:', data);
+
+      setCampaigns(prev => prev.map(campaign =>
+        campaign.id === data.campaignId
+          ? {
+              ...campaign,
+              status: data.status,
+              progress: 100,
+              completed_contacts: data.completed,
+              last_updated: new Date().toISOString()
+            }
+          : campaign
+      ));
+
+      setNotificationMessage(`Campaign completed! Generated ${data.generatedFiles} audio files.`);
+      setNotificationOpen(true);
+    });
+
+    // Listen for voicemail delivery completion
+    socket.on('voicemail-delivery-completed', (data) => {
+      console.log('Voicemail delivery completed:', data);
+
+      setNotificationMessage(`Voicemails sent! ${data.successful} successful, ${data.failed} failed.`);
+      setNotificationOpen(true);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const loadVoiceClones = async () => {
@@ -217,13 +283,30 @@ const MassVoicemail: React.FC = () => {
     }
   };
 
-  const sendVoicemails = async () => {
+  const sendVoicemails = async (personalized = true) => {
     if (!selectedCampaign) return;
+
+    // Validate caller ID is provided
+    if (!callerIdNumber || callerIdNumber.trim().length === 0) {
+      alert('Caller ID Number is required for Slybroadcast delivery.');
+      return;
+    }
+
+    // Validate caller ID format (10 digits)
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(callerIdNumber.replace(/\D/g, ''))) {
+      alert('Please enter a valid 10-digit phone number for Caller ID (e.g., 5551234567).');
+      return;
+    }
 
     setIsSendingVoicemails(true);
 
     try {
-      const response = await fetch(`http://localhost:4001/api/mass-voicemail/campaigns/${selectedCampaign.id}/send-voicemails`, {
+      const endpoint = personalized
+        ? `http://localhost:4001/api/mass-voicemail/campaigns/${selectedCampaign.id}/send-personalized-voicemails`
+        : `http://localhost:4001/api/mass-voicemail/campaigns/${selectedCampaign.id}/send-voicemails`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,7 +320,19 @@ const MassVoicemail: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        alert(`Voicemails sent successfully! Broadcast ID: ${data.broadcastId}\nSent to ${data.sentTo} numbers.`);
+        if (personalized) {
+          const successMsg = `Personalized voicemails sent!\nSuccessful: ${data.results.successful}\nFailed: ${data.results.failed}\nTotal: ${data.results.total}`;
+
+          // Show failed deliveries if any
+          if (data.results.failed > 0 && data.results.failedDeliveries) {
+            const failedDetails = data.results.failedDeliveries.map(f => `${f.phoneNumber}: ${f.error}`).join('\n');
+            alert(`${successMsg}\n\nFailed deliveries:\n${failedDetails}`);
+          } else {
+            alert(successMsg);
+          }
+        } else {
+          alert(`Voicemails sent successfully! Broadcast ID: ${data.broadcastId}\nSent to ${data.sentTo} numbers.`);
+        }
         setVoicemailDialog(false);
         setCallerIdNumber('');
         setCallerIdName('');
@@ -576,11 +671,12 @@ const MassVoicemail: React.FC = () => {
 
           <TextField
             fullWidth
-            label="Caller ID Number (Optional)"
+            label="Caller ID Number (Required)"
             value={callerIdNumber}
             onChange={(e) => setCallerIdNumber(e.target.value)}
             placeholder="e.g. 5551234567"
-            helperText="10-digit US phone number that will appear as the caller"
+            helperText="10-digit US phone number that will appear as the caller (required by Slybroadcast)"
+            required
             sx={{ mb: 2 }}
           />
 
@@ -598,21 +694,56 @@ const MassVoicemail: React.FC = () => {
             <strong>Important:</strong> Make sure you have valid Slybroadcast credentials configured.
             This will charge your Slybroadcast account approximately $0.06-$0.12 per voicemail.
           </Alert>
+
+          <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+            Delivery Method
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Choose how to deliver your voicemails:
+          </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setVoicemailDialog(false)}>
-            Cancel
-          </Button>
+        <DialogActions sx={{ flexDirection: 'column', gap: 1, alignItems: 'stretch', p: 3 }}>
           <Button
             variant="contained"
-            onClick={sendVoicemails}
+            onClick={() => sendVoicemails(true)}
             disabled={isSendingVoicemails}
             startIcon={<Phone />}
+            color="primary"
+            fullWidth
           >
-            {isSendingVoicemails ? 'Sending...' : 'Send Voicemails'}
+            {isSendingVoicemails ? 'Sending...' : 'Send Personalized Voicemails (Recommended)'}
+          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', px: 2 }}>
+            Each contact receives their personalized message
+          </Typography>
+
+          <Button
+            variant="outlined"
+            onClick={() => sendVoicemails(false)}
+            disabled={isSendingVoicemails}
+            startIcon={<Phone />}
+            fullWidth
+          >
+            {isSendingVoicemails ? 'Sending...' : 'Send Bulk Voicemail (Single Message)'}
+          </Button>
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', px: 2 }}>
+            All contacts receive the same message
+          </Typography>
+
+          <Button onClick={() => setVoicemailDialog(false)} sx={{ mt: 2 }}>
+            Cancel
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Real-time notifications */}
+      <Snackbar
+        open={notificationOpen}
+        autoHideDuration={6000}
+        onClose={() => setNotificationOpen(false)}
+        message={notificationMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      />
     </Box>
   );
 };
