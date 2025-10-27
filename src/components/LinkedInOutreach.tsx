@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -25,7 +25,13 @@ import {
   ListItemText,
   ListItemIcon,
   Avatar,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  ListItemButton,
+  InputAdornment
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -38,8 +44,27 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
   ContentCopy as ContentCopyIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
+import axios from 'axios';
+
+interface Contact {
+  id: string;
+  name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  linkedin_url: string;
+  title: string;
+  company: string;
+  type: 'deal' | 'investor' | 'broker';
+  city?: string;
+  state?: string;
+  country?: string;
+  tags?: string[];
+}
 
 interface LinkedInData {
   interest: string;
@@ -63,6 +88,9 @@ interface BulkLinkedInProfile {
   id: number;
   rawLinkedInText: string;
   websiteUrl: string;
+  contactName: string;
+  contactEmail: string;
+  linkedinUrl: string;
   generatedMessage?: any;
   status: 'pending' | 'generating' | 'success' | 'error';
   error?: string;
@@ -73,12 +101,22 @@ interface LinkedInOutreachProps {
 }
 
 const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated }) => {
+  // Contact data state
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+  const [contactSelectionOpen, setContactSelectionOpen] = useState(false);
+  const [contactFilter, setContactFilter] = useState<'all' | 'deal' | 'investor' | 'broker'>('all');
+
   // Bulk processing state
   const [bulkProfiles, setBulkProfiles] = useState<BulkLinkedInProfile[]>(
     Array.from({ length: 10 }, (_, i) => ({
       id: i + 1,
       rawLinkedInText: '',
       websiteUrl: '',
+      contactName: '',
+      contactEmail: '',
+      linkedinUrl: '',
       status: 'pending' as const
     }))
   );
@@ -89,7 +127,87 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expanded, setExpanded] = useState(true);
 
-  const handleProfileInputChange = (profileId: number, field: 'rawLinkedInText' | 'websiteUrl') => (
+  // Fetch contacts on component mount
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  const fetchContacts = async () => {
+    setLoadingContacts(true);
+    try {
+      const response = await axios.get('/api/firebase/contacts');
+      const contactsList = response.data.data?.contacts || response.data.data || [];
+      
+      // Apply the same type determination logic as Contacts.tsx
+      const contactsWithTypes = contactsList.map((contact: any) => {
+        // Determine contact type from tags
+        let contactType: 'deal' | 'investor' | 'broker' = 'deal';
+        const tags = contact.tags || [];
+        
+        if (tags.includes('investor') || tags.includes('investors')) {
+          contactType = 'investor';
+        } else if (tags.includes('broker') || tags.includes('brokers')) {
+          contactType = 'broker';
+        } else if (tags.includes('people') || tags.includes('deal')) {
+          contactType = 'deal';
+        }
+
+        return {
+          ...contact,
+          type: contactType,
+          status: contact.status || 'active',
+          tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
+        };
+      });
+      
+      console.log('Fetched contacts with types:', contactsWithTypes);
+      setContacts(contactsWithTypes);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const handleSelectContacts = () => {
+    setContactSelectionOpen(true);
+  };
+
+  const handleContactSelection = (selectedContacts: Contact[]) => {
+    setSelectedContacts(selectedContacts);
+    
+    console.log('Selected contacts:', selectedContacts);
+    
+    // Auto-populate only the contact name and URLs for icon functionality
+    const updatedProfiles = bulkProfiles.map((profile, index) => {
+      if (index < selectedContacts.length) {
+        const contact = selectedContacts[index];
+        
+        console.log(`Contact ${index + 1}:`, {
+          name: contact.name,
+          linkedin_url: contact.linkedin_url,
+          email: contact.email
+        });
+        
+        return {
+          ...profile,
+          contactName: contact.name,
+          contactEmail: contact.email || '',
+          linkedinUrl: contact.linkedin_url || '',
+          // Leave rawLinkedInText and websiteUrl empty for user to fill
+          rawLinkedInText: '',
+          websiteUrl: ''
+        };
+      }
+      return profile;
+    });
+    
+    console.log('Updated profiles:', updatedProfiles);
+    setBulkProfiles(updatedProfiles);
+    setContactSelectionOpen(false);
+  };
+
+  const handleProfileInputChange = (profileId: number, field: 'rawLinkedInText' | 'websiteUrl' | 'contactName') => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setBulkProfiles(prev => prev.map(profile => 
@@ -242,10 +360,68 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
       </Box>
 
       {/* Content */}
-      <Box sx={{ p: 2.5, bgcolor: 'background.paper' }}>
+        <Box sx={{ p: 2.5, bgcolor: 'background.paper' }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Generate personalized LinkedIn messages for up to 10 people at once. Paste LinkedIn profiles and optionally add company research.
+            Generate personalized LinkedIn messages for up to 10 people at once. Select contacts from your database or manually paste LinkedIn profiles.
           </Typography>
+
+          {/* Contact Selection Section */}
+          <Card sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PersonIcon />
+                  Contact Selection
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<PersonIcon />}
+                  onClick={handleSelectContacts}
+                  disabled={loadingContacts}
+                  sx={{
+                    borderColor: '#000000',
+                    color: '#000000',
+                    '&:hover': {
+                      borderColor: '#333333',
+                      bgcolor: '#F9FAFB'
+                    }
+                  }}
+                >
+                  {loadingContacts ? 'Loading...' : 'Select Contacts'}
+                </Button>
+              </Box>
+              
+              {selectedContacts.length > 0 && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Selected Contacts ({selectedContacts.length}):
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {selectedContacts.map((contact) => (
+                      <Chip
+                        key={contact.id}
+                        label={`${contact.name} (${contact.company || 'No Company'})`}
+                        onDelete={() => {
+                          const updated = selectedContacts.filter(c => c.id !== contact.id);
+                          setSelectedContacts(updated);
+                        }}
+                        sx={{
+                          bgcolor: '#F0FDF4',
+                          color: '#166534',
+                          border: '1px solid #22C55E'
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+              
+              <Typography variant="caption" color="text.secondary">
+                {contacts.length} contacts available. 
+                Selected contacts will auto-populate the contact names and enable LinkedIn/Email icons.
+              </Typography>
+            </CardContent>
+          </Card>
 
           {bulkMessage && (
             <Alert severity={bulkMessage.type} sx={{ mb: 3 }}>
@@ -263,14 +439,18 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             {/* Header Row */}
             <Box sx={{ 
               display: 'grid', 
-              gridTemplateColumns: '60px 1fr 300px 200px 100px', 
-              bgcolor: '#f5f5f5',
+              gridTemplateColumns: '60px 200px 1fr 300px 200px', 
               borderBottom: '1px solid',
               borderColor: 'divider'
             }}>
               <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                   #
+                </Typography>
+              </Box>
+              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  Profile
                 </Typography>
               </Box>
               <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
@@ -283,14 +463,9 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   Website URL (Optional)
                 </Typography>
               </Box>
-              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Status
-                </Typography>
-              </Box>
               <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Message
+                  Status
                 </Typography>
               </Box>
             </Box>
@@ -299,7 +474,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             {bulkProfiles.map((profile, index) => (
               <Box key={profile.id} sx={{ 
                 display: 'grid', 
-                gridTemplateColumns: '60px 1fr 300px 200px 100px',
+                gridTemplateColumns: '60px 200px 1fr 300px 200px',
                 borderBottom: index < bulkProfiles.length - 1 ? '1px solid' : 'none',
                 borderColor: 'divider',
                 '&:hover': {
@@ -313,12 +488,82 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   borderColor: 'divider', 
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: 'center',
-                  bgcolor: '#f9f9f9'
+                  justifyContent: 'center'
                 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {profile.id}
                   </Typography>
+                </Box>
+
+                {/* Profile Column with Name and Contact Info */}
+                <Box sx={{ 
+                  p: 1, 
+                  borderRight: '1px solid', 
+                  borderColor: 'divider', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  gap: 0.5
+                }}>
+                  <TextField
+                    fullWidth
+                    placeholder="Contact Name"
+                    value={profile.contactName}
+                    onChange={handleProfileInputChange(profile.id, 'contactName')}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '0.75rem',
+                        height: '28px'
+                      },
+                      '& .MuiInputBase-input': {
+                        padding: '4px 8px'
+                      }
+                    }}
+                  />
+                  {profile.contactName && (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: 0.25,
+                      mt: 0.5
+                    }}>
+                      {(() => {
+                        const selectedContact = selectedContacts.find(c => c.name === profile.contactName);
+                        if (selectedContact) {
+                          return (
+                            <>
+                              <Typography variant="caption" sx={{ 
+                                fontSize: '0.625rem', 
+                                fontWeight: 600, 
+                                color: selectedContact.type === 'investor' ? '#1E40AF' : 
+                                       selectedContact.type === 'broker' ? '#92400E' : '#166534',
+                                textTransform: 'uppercase',
+                                bgcolor: selectedContact.type === 'investor' ? '#DBEAFE' : 
+                                         selectedContact.type === 'broker' ? '#FEF3C7' : '#DCFCE7',
+                                px: 0.5,
+                                py: 0.125,
+                                borderRadius: 0.25
+                              }}>
+                                {selectedContact.type}
+                              </Typography>
+                              {selectedContact.title && (
+                                <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 600, color: '#333333' }}>
+                                  {selectedContact.title}
+                                </Typography>
+                              )}
+                              {selectedContact.company && (
+                                <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 600, color: '#333333' }}>
+                                  {selectedContact.company}
+                                </Typography>
+                              )}
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </Box>
+                  )}
                 </Box>
 
                 {/* LinkedIn Profile Data */}
@@ -358,7 +603,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                 </Box>
 
                 {/* Status */}
-                <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {profile.status === 'generating' && (
                     <CircularProgress size={20} />
                   )}
@@ -374,31 +619,6 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   {profile.status === 'pending' && (
                     <Typography variant="caption" color="text.secondary">
                       Pending
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Message Status */}
-                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {profile.generatedMessage ? (
-                    <Chip 
-                      label="Ready" 
-                      size="small" 
-                      color="success" 
-                      variant="outlined"
-                    />
-                  ) : profile.status === 'generating' ? (
-                    <CircularProgress size={16} />
-                  ) : profile.status === 'error' ? (
-                    <Chip 
-                      label="Error" 
-                      size="small" 
-                      color="error" 
-                      variant="outlined"
-                    />
-                  ) : (
-                    <Typography variant="caption" color="text.secondary">
-                      -
                     </Typography>
                   )}
                 </Box>
@@ -752,6 +972,250 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             </Button>
           </Box>
         </Box>
+
+      {/* Contact Selection Dialog */}
+      <Dialog
+        open={contactSelectionOpen}
+        onClose={() => setContactSelectionOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '80vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+            Select Contacts for LinkedIn Outreach
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Choose up to 10 contacts to auto-populate contact names and enable LinkedIn/Email functionality
+          </Typography>
+          
+          {/* Filter Buttons */}
+          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+            <Button
+              variant={contactFilter === 'all' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setContactFilter('all')}
+              sx={{
+                minWidth: '60px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                ...(contactFilter === 'all' ? {
+                  bgcolor: '#000000',
+                  color: 'white',
+                  '&:hover': { bgcolor: '#333333' }
+                } : {
+                  borderColor: '#000000',
+                  color: '#000000',
+                  '&:hover': { borderColor: '#333333', bgcolor: '#F9FAFB' }
+                })
+              }}
+            >
+              All
+            </Button>
+            <Button
+              variant={contactFilter === 'deal' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setContactFilter('deal')}
+              sx={{
+                minWidth: '60px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                ...(contactFilter === 'deal' ? {
+                  bgcolor: '#166534',
+                  color: 'white',
+                  '&:hover': { bgcolor: '#15803D' }
+                } : {
+                  borderColor: '#166534',
+                  color: '#166534',
+                  '&:hover': { borderColor: '#15803D', bgcolor: '#F0FDF4' }
+                })
+              }}
+            >
+              Deals
+            </Button>
+            <Button
+              variant={contactFilter === 'investor' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setContactFilter('investor')}
+              sx={{
+                minWidth: '60px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                ...(contactFilter === 'investor' ? {
+                  bgcolor: '#1E40AF',
+                  color: 'white',
+                  '&:hover': { bgcolor: '#1D4ED8' }
+                } : {
+                  borderColor: '#1E40AF',
+                  color: '#1E40AF',
+                  '&:hover': { borderColor: '#1D4ED8', bgcolor: '#DBEAFE' }
+                })
+              }}
+            >
+              Investors
+            </Button>
+            <Button
+              variant={contactFilter === 'broker' ? 'contained' : 'outlined'}
+              size="small"
+              onClick={() => setContactFilter('broker')}
+              sx={{
+                minWidth: '60px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                ...(contactFilter === 'broker' ? {
+                  bgcolor: '#92400E',
+                  color: 'white',
+                  '&:hover': { bgcolor: '#B45309' }
+                } : {
+                  borderColor: '#92400E',
+                  color: '#92400E',
+                  '&:hover': { borderColor: '#B45309', bgcolor: '#FEF3C7' }
+                })
+              }}
+            >
+              Brokers
+            </Button>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ maxHeight: '50vh', overflowY: 'auto' }}>
+            {contacts.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No contacts found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  No contacts available.
+                </Typography>
+              </Box>
+            ) : (
+              <List>
+                {contacts
+                  .filter(contact => contactFilter === 'all' || contact.type === contactFilter)
+                  .map((contact) => (
+                  <ListItem key={contact.id} disablePadding>
+                    <ListItemButton
+                      onClick={() => {
+                        const isSelected = selectedContacts.some(c => c.id === contact.id);
+                        if (isSelected) {
+                          setSelectedContacts(prev => prev.filter(c => c.id !== contact.id));
+                        } else if (selectedContacts.length < 10) {
+                          setSelectedContacts(prev => [...prev, contact]);
+                        }
+                      }}
+                      disabled={!selectedContacts.some(c => c.id === contact.id) && selectedContacts.length >= 10}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: 'action.hover'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <Box sx={{ mr: 2 }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedContacts.some(c => c.id === contact.id)}
+                            onChange={() => {}}
+                            style={{ margin: 0 }}
+                          />
+                        </Box>
+                        <Avatar
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: '#000000',
+                            color: 'white',
+                            mr: 2,
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {contact.first_name?.[0]}{contact.last_name?.[0]}
+                        </Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              {contact.name}
+                            </Typography>
+                            {contact.type && (
+                              <Typography variant="caption" sx={{ 
+                                fontWeight: 600, 
+                                color: contact.type === 'investor' ? '#1E40AF' : 
+                                       contact.type === 'broker' ? '#92400E' : '#166534',
+                                textTransform: 'uppercase',
+                                fontSize: '0.6875rem',
+                                bgcolor: contact.type === 'investor' ? '#DBEAFE' : 
+                                         contact.type === 'broker' ? '#FEF3C7' : '#DCFCE7',
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: 0.5
+                              }}>
+                                {contact.type}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {contact.title && contact.company && (
+                              <Typography variant="body2" color="text.secondary">
+                                {contact.title} at {contact.company}
+                              </Typography>
+                            )}
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                              {contact.email && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <EmailIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {contact.email}
+                                  </Typography>
+                                </Box>
+                              )}
+                              {contact.phone && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    📞 {contact.phone}
+                                  </Typography>
+                                </Box>
+                              )}
+                              {contact.linkedin_url && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <LinkedInIcon sx={{ fontSize: 14, color: '#0077B5' }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    LinkedIn
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+          <Button onClick={() => setContactSelectionOpen(false)} sx={{ color: 'text.secondary' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => handleContactSelection(selectedContacts)}
+            disabled={selectedContacts.length === 0}
+            sx={{ px: 3 }}
+          >
+            Use Selected Contacts ({selectedContacts.length})
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
