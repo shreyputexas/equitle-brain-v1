@@ -72,7 +72,12 @@ import {
   Add as AddIcon,
   FilterList as FilterIcon,
   ViewList as ViewListIcon,
-  GridView as GridViewIcon
+  GridView as GridViewIcon,
+  Call as CallIcon,
+  Voicemail as VoicemailIcon,
+  Campaign as CampaignIcon,
+  VolumeUp as SpeakerIcon,
+  Handshake as HandshakeIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -109,12 +114,12 @@ const navigationItems = [
   },
   {
     text: 'Outreach',
-    icon: <DealsIcon />,
+    icon: <SpeakerIcon />,
     badge: '3',
     subItems: [
       { text: 'Deals', path: '/outreach/deals', icon: <DealsIcon /> },
       { text: 'Investors', path: '/outreach/investors', icon: <FundraisingIcon /> },
-      { text: 'Brokers', path: '/outreach/brokers', icon: <BusinessIcon /> }
+      { text: 'Brokers', path: '/outreach/brokers', icon: <HandshakeIcon /> }
     ]
   },
   {
@@ -122,8 +127,8 @@ const navigationItems = [
     icon: <PhoneIcon />,
     badge: null,
     subItems: [
-      { text: 'Live Calling', path: '/voice-calls', icon: <PhoneIcon /> },
-      { text: 'Voicemails', path: '/mass-voicemail', icon: <MicIcon /> }
+      { text: 'Live Calling', path: '/voice-calls', icon: <MicIcon /> },
+      { text: 'Voicemails', path: '/mass-voicemail', icon: <VoicemailIcon /> }
     ]
   },
   {
@@ -145,8 +150,7 @@ const navigationItems = [
 
 const recentItems = [
   { text: 'Acme Corp Deal', type: 'Deal', path: '/outreach/deals/acme-corp' },
-  { text: 'John Smith Contact', type: 'Contact', path: '/contacts/john-smith' },
-  { text: 'Q4 Fundraising Report', type: 'Report', path: '/reports/q4-fundraising' }
+  { text: 'John Smith Contact', type: 'Contact', path: '/contacts/john-smith' }
 ];
 
 const pinnedItems = [
@@ -163,6 +167,7 @@ export default function ProfessionalNavbar() {
   // State management
   const [navMenuAnchors, setNavMenuAnchors] = useState<{ [key: string]: HTMLElement | null }>({});
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
+  const [threeDotsMenuAnchor, setThreeDotsMenuAnchor] = useState<null | HTMLElement>(null);
   const [notificationsMenuAnchor, setNotificationsMenuAnchor] = useState<null | HTMLElement>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -193,6 +198,15 @@ export default function ProfessionalNavbar() {
 
   const handleProfileMenuClose = () => {
     setProfileMenuAnchor(null);
+  };
+
+  const handleThreeDotsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    console.log('Three dots clicked!', event.currentTarget);
+    setThreeDotsMenuAnchor(event.currentTarget);
+  };
+
+  const handleThreeDotsMenuClose = () => {
+    setThreeDotsMenuAnchor(null);
   };
 
   const handleNotificationsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -247,16 +261,16 @@ export default function ProfessionalNavbar() {
             pr: 2,
             py: 1,
             minHeight: 44,
-            backgroundColor: active ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-            border: active ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}` : '1px solid transparent',
+            backgroundColor: active ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
+            border: active ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
             '&:hover': {
-              backgroundColor: alpha(theme.palette.primary.main, 0.05),
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
             },
             transition: 'all 0.2s ease-in-out'
           }}
         >
-          <ListItemIcon sx={{ minWidth: 40, color: active ? theme.palette.primary.main : theme.palette.text.primary }}>
+          <ListItemIcon sx={{ minWidth: 40, color: active ? 'white' : 'rgba(255, 255, 255, 0.8)' }}>
             {item.icon}
           </ListItemIcon>
           {!sidebarCollapsed && (
@@ -266,7 +280,7 @@ export default function ProfessionalNavbar() {
                 primaryTypographyProps={{
                   fontSize: '0.875rem',
                   fontWeight: active ? 600 : 500,
-                  color: active ? theme.palette.primary.main : theme.palette.text.primary
+                  color: active ? 'white' : 'rgba(255, 255, 255, 0.9)'
                 }}
               />
               {item.badge && (
@@ -276,43 +290,79 @@ export default function ProfessionalNavbar() {
                   sx={{
                     height: 20,
                     fontSize: '0.75rem',
-                    backgroundColor: theme.palette.error.main,
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     color: 'white',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    border: '1px solid rgba(255, 255, 255, 0.3)'
                   }}
                 />
               )}
               {hasSubItems && (
-                <IconButton size="small" sx={{ ml: 1, p: 0.5 }}>
-                  {isExpanded ? <ExpandLess /> : <ArrowRightIcon />}
+                <IconButton 
+                  size="small" 
+                  sx={{ 
+                    ml: 1, 
+                    p: 0.5,
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <ArrowRightIcon />
                 </IconButton>
               )}
             </>
           )}
         </ListItemButton>
         
-        {hasSubItems && isExpanded && !sidebarCollapsed && (
-          <Box sx={{ ml: 2 }}>
-            {item.subItems.map((subItem: any) => (
-              <NavItem key={subItem.text} item={subItem} level={1} />
-            ))}
-          </Box>
+        {hasSubItems && !sidebarCollapsed && (
+          <Collapse 
+            in={isExpanded} 
+            timeout={300}
+            unmountOnExit
+            sx={{
+              '& .MuiCollapse-wrapper': {
+                overflow: 'visible'
+              },
+              '& .MuiCollapse-wrapperInner': {
+                overflow: 'visible',
+                transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+              }
+            }}
+          >
+            <Box sx={{ ml: 2, mt: 0.5 }}>
+              {item.subItems.map((subItem: any, index: number) => (
+                <Box
+                  key={subItem.text}
+                  sx={{
+                    opacity: isExpanded ? 1 : 0,
+                    transform: isExpanded ? 'translateY(0) scale(1)' : 'translateY(-12px) scale(0.95)',
+                    transition: `all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)`,
+                    transitionDelay: isExpanded ? `${0.15 + index * 0.05}s` : '0s',
+                    transformOrigin: 'top left'
+                  }}
+                >
+                  <NavItem item={subItem} level={1} />
+                </Box>
+              ))}
+            </Box>
+          </Collapse>
         )}
       </Box>
     );
   };
 
   const SidebarContent = () => (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', color: 'white' }}>
       {/* Logo Section */}
-      <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+      <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <Box
           component="img"
           src="/assets/images/extended_logo_black_white.png"
           alt="Equitle"
           sx={{
             height: sidebarCollapsed ? 32 : 40,
-            filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
+            filter: 'brightness(0) invert(1)',
             objectFit: 'contain',
             cursor: 'pointer',
             transition: 'height 0.2s ease-in-out'
@@ -321,39 +371,6 @@ export default function ProfessionalNavbar() {
         />
       </Box>
 
-      {/* Global Search */}
-      <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-        <Paper
-          component="form"
-          sx={{
-            p: '2px 4px',
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: theme.palette.background.default,
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 2,
-            '&:hover': {
-              borderColor: theme.palette.primary.main
-            },
-            '&:focus-within': {
-              borderColor: theme.palette.primary.main,
-              boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`
-            }
-          }}
-        >
-          <IconButton sx={{ p: '10px' }} aria-label="search">
-            <SearchIcon />
-          </IconButton>
-          {!sidebarCollapsed && (
-            <InputBase
-              sx={{ ml: 1, flex: 1, fontSize: '0.875rem' }}
-              placeholder="Search anything..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          )}
-        </Paper>
-      </Box>
 
       {/* Navigation Items */}
       <Box sx={{ flex: 1, overflow: 'auto', py: 1 }}>
@@ -364,65 +381,9 @@ export default function ProfessionalNavbar() {
         </List>
       </Box>
 
-      {/* Recent & Pinned Items */}
-      {!sidebarCollapsed && (
-        <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, p: 2 }}>
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600, mb: 1, display: 'block' }}>
-            RECENT
-          </Typography>
-          {recentItems.map((item, index) => (
-            <ListItemButton
-              key={index}
-              onClick={() => handleNavigation(item.path)}
-              sx={{
-                borderRadius: 1,
-                mb: 0.5,
-                py: 0.5,
-                px: 1,
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.05)
-                }
-              }}
-            >
-              <ListItemText
-                primary={item.text}
-                secondary={item.type}
-                primaryTypographyProps={{ fontSize: '0.8rem' }}
-                secondaryTypographyProps={{ fontSize: '0.7rem' }}
-              />
-            </ListItemButton>
-          ))}
-          
-          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600, mb: 1, display: 'block', mt: 2 }}>
-            PINNED
-          </Typography>
-          {pinnedItems.map((item, index) => (
-            <ListItemButton
-              key={index}
-              onClick={() => handleNavigation(item.path)}
-              sx={{
-                borderRadius: 1,
-                mb: 0.5,
-                py: 0.5,
-                px: 1,
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.05)
-                }
-              }}
-            >
-              <ListItemText
-                primary={item.text}
-                secondary={item.type}
-                primaryTypographyProps={{ fontSize: '0.8rem' }}
-                secondaryTypographyProps={{ fontSize: '0.7rem' }}
-              />
-            </ListItemButton>
-          ))}
-        </Box>
-      )}
 
       {/* User Profile Section */}
-      <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, p: 2 }}>
+      <Box sx={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Badge
             overlap="circular"
@@ -434,7 +395,7 @@ export default function ProfessionalNavbar() {
                   height: 12,
                   borderRadius: '50%',
                   backgroundColor: '#4CAF50',
-                  border: `2px solid ${theme.palette.background.paper}`
+                  border: '2px solid #1a1a1a'
                 }}
               />
             }
@@ -443,9 +404,11 @@ export default function ProfessionalNavbar() {
               sx={{
                 width: sidebarCollapsed ? 32 : 40,
                 height: sidebarCollapsed ? 32 : 40,
-                backgroundColor: '#000000',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease-in-out'
+                transition: 'all 0.2s ease-in-out',
+                border: '1px solid rgba(255, 255, 255, 0.3)'
               }}
               onClick={handleProfileMenuOpen}
             >
@@ -455,17 +418,17 @@ export default function ProfessionalNavbar() {
           
           {!sidebarCollapsed && (
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'white' }}>
                 {user?.name || 'User'}
               </Typography>
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                 Online
               </Typography>
             </Box>
           )}
           
           {!sidebarCollapsed && (
-            <IconButton size="small" onClick={handleProfileMenuOpen}>
+            <IconButton size="small" onClick={handleThreeDotsMenuOpen} sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               <MoreVertIcon fontSize="small" />
             </IconButton>
           )}
@@ -484,9 +447,10 @@ export default function ProfessionalNavbar() {
           '& .MuiDrawer-paper': {
             width: sidebarCollapsed ? 80 : 280,
             transition: 'width 0.2s ease-in-out',
-            backgroundColor: theme.palette.background.paper,
-            borderRight: `1px solid ${theme.palette.divider}`,
-            boxShadow: 'none'
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
+            color: 'white'
           }
         }}
       >
@@ -502,7 +466,9 @@ export default function ProfessionalNavbar() {
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
             width: 280,
-            backgroundColor: theme.palette.background.paper
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+            color: 'white'
           }
         }}
       >
@@ -548,7 +514,7 @@ export default function ProfessionalNavbar() {
                 <NotificationsIcon />
               </Badge>
             </IconButton>
-            <IconButton onClick={handleProfileMenuOpen}>
+            <IconButton>
               <Avatar sx={{ width: 32, height: 32, backgroundColor: '#000000' }}>
                 {user?.name?.charAt(0).toUpperCase()}
               </Avatar>
@@ -557,40 +523,47 @@ export default function ProfessionalNavbar() {
         </Toolbar>
       </AppBar>
 
-      {/* Profile Menu */}
+
+      {/* Three Dots Menu */}
       <Menu
-        anchorEl={profileMenuAnchor}
-        open={Boolean(profileMenuAnchor)}
-        onClose={handleProfileMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{
-          sx: {
-            minWidth: 200,
-            mt: 1,
-            borderRadius: 2,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
-          }
+        anchorEl={threeDotsMenuAnchor}
+        open={Boolean(threeDotsMenuAnchor)}
+        onClose={handleThreeDotsMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              minWidth: 200,
+              borderRadius: 2,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+              '& .MuiMenuItem-root': {
+                px: 2,
+                py: 1,
+              },
+            },
+          },
         }}
       >
-        <MenuItem onClick={handleProfileMenuClose}>
-          <ListItemIcon>
-            <PersonIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Profile" />
+        <MenuItem onClick={handleThreeDotsMenuClose}>
+          <PersonIcon fontSize="small" sx={{ mr: 1 }} />
+          Profile
         </MenuItem>
-        <MenuItem onClick={handleProfileMenuClose}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Settings" />
+        <MenuItem onClick={handleThreeDotsMenuClose}>
+          <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
+          Settings
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
+          <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
+          Logout
         </MenuItem>
       </Menu>
 
