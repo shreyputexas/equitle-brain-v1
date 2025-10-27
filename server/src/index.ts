@@ -403,9 +403,15 @@ server.listen(PORT, '0.0.0.0', async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
-  // Connect to Firebase
-  await connectFirebase();
-  await EmailSyncService.startEmailSync();
+  // Connect to Firebase (non-blocking to allow server to start)
+  connectFirebase().catch(error => {
+    console.error('Firebase connection failed but server will continue:', error.message);
+  });
+
+  // Start email sync (also non-blocking)
+  EmailSyncService.startEmailSync().catch(error => {
+    console.error('Email sync failed to start but server will continue:', error.message);
+  });
 });
 
 export { io };

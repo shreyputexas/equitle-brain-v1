@@ -102,7 +102,11 @@ router.post('/create-call', async (req, res) => {
       investmentRange,
       industryFocus,
       customInstructions,
-      voiceId
+      voiceId,
+      callerName,
+      callObjective,
+      referralSource,
+      callingCompany
     } = req.body;
 
     // For development: always use dev user (no auth required)
@@ -134,7 +138,7 @@ router.post('/create-call', async (req, res) => {
       return res.status(400).json({ error: 'Call type must be "live" or "voicemail"' });
     }
 
-    logger.info('Creating voice call', { userId, phoneNumber, callType });
+    logger.info('Creating voice call', { userId, phoneNumber, callType, callerName, callObjective, referralSource, callingCompany });
 
     // Create dynamic variables object for Retell
     const dynamicVariables = {
@@ -143,7 +147,11 @@ router.post('/create-call', async (req, res) => {
       deal_type: dealType || '',
       investment_range: investmentRange || '',
       industry_focus: industryFocus || '',
-      custom_instructions: customInstructions || ''
+      custom_instructions: customInstructions || '',
+      caller_name: callerName || '',
+      call_objective: callObjective || '',
+      referral_source: referralSource || '',
+      calling_company: callingCompany || ''
     };
 
     const result = await voiceAgentService.initiateCall(
@@ -611,7 +619,10 @@ router.post('/test-call', firebaseAuthMiddleware, async (req, res) => {
       deal_type: 'test-call',
       investment_range: 'N/A',
       industry_focus: 'System Testing',
-      custom_instructions: 'You are a friendly AI assistant calling to test the voice system. Keep the conversation brief and professional. Ask if the call quality is good and if they can hear you clearly. Thank them for their time and end the call politely.'
+      custom_instructions: 'You are a friendly AI assistant calling to test the voice system. Keep the conversation brief and professional. Ask if the call quality is good and if they can hear you clearly. Thank them for their time and end the call politely.',
+      caller_name: 'Test Caller',
+      call_objective: 'system testing and quality assurance',
+      referral_source: 'internal testing'
     };
 
     const result = await voiceAgentService.initiateCall(

@@ -1,4 +1,6 @@
 import { db } from '../lib/firebase';
+import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, getDoc, orderBy, query } from 'firebase/firestore';
+import { getUserId } from '../utils/auth';
 
 export interface InvestmentCriteria {
   id: string;
@@ -28,21 +30,18 @@ export interface UpdateThesisRequest {
   criteria?: InvestmentCriteria[];
 }
 
-const getUserId = () => {
-  // Get user ID from localStorage or use a default for development
-  return localStorage.getItem('userId') || 'dev-user-123';
-};
 
 const getCollection = () => {
   const userId = getUserId();
-  return db.collection('users').doc(userId).collection('investmentTheses');
+  return collection(db, 'users', userId, 'investmentTheses');
 };
 
 export const thesisApi = {
   // Get all investment theses
   async getTheses(): Promise<InvestmentThesis[]> {
     try {
-      const snapshot = await getCollection().orderBy('createdAt', 'asc').get();
+      const q = query(getCollection(), orderBy('createdAt', 'asc'));
+      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as InvestmentThesis));
     } catch (error) {
       console.error('Error fetching investment theses:', error);
@@ -54,7 +53,7 @@ export const thesisApi = {
   async createThesis(thesisData: CreateThesisRequest): Promise<InvestmentThesis> {
     try {
       const now = new Date();
-      const docRef = await getCollection().add({
+      const docRef = await addDoc(getCollection(), {
         ...thesisData,
         createdAt: now,
         updatedAt: now,
@@ -70,11 +69,12 @@ export const thesisApi = {
   async updateThesis(thesisId: string, updateData: UpdateThesisRequest): Promise<InvestmentThesis> {
     try {
       const now = new Date();
-      await getCollection().doc(thesisId).update({
+      const docRef = doc(getCollection(), thesisId);
+      await updateDoc(docRef, {
         ...updateData,
         updatedAt: now,
       });
-      const updatedDoc = await getCollection().doc(thesisId).get();
+      const updatedDoc = await getDoc(docRef);
       return { id: updatedDoc.id, ...updatedDoc.data() } as InvestmentThesis;
     } catch (error) {
       console.error('Error updating investment thesis:', error);
@@ -85,7 +85,7 @@ export const thesisApi = {
   // Delete an investment thesis
   async deleteThesis(thesisId: string): Promise<void> {
     try {
-      await getCollection().doc(thesisId).delete();
+      await deleteDoc(doc(getCollection(), thesisId));
     } catch (error) {
       console.error('Error deleting investment thesis:', error);
       throw error;
@@ -95,11 +95,11 @@ export const thesisApi = {
   // Get a specific investment thesis
   async getThesis(thesisId: string): Promise<InvestmentThesis> {
     try {
-      const doc = await getCollection().doc(thesisId).get();
-      if (!doc.exists) {
+      const docSnap = await getDoc(doc(getCollection(), thesisId));
+      if (!docSnap.exists()) {
         throw new Error('Investment thesis not found');
       }
-      return { id: doc.id, ...doc.data() } as InvestmentThesis;
+      return { id: docSnap.id, ...docSnap.data() } as InvestmentThesis;
     } catch (error) {
       console.error('Error getting investment thesis:', error);
       throw error;

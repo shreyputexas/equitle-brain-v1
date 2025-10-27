@@ -16,7 +16,18 @@ export interface CallSession {
   transcript: string[];
   retellCallId?: string;
   voiceId?: string;
-  dynamicVariables?: Record<string, string>;
+  dynamicVariables?: {
+    contact_name?: string;
+    company_name?: string;
+    deal_type?: string;
+    investment_range?: string;
+    industry_focus?: string;
+    custom_instructions?: string;
+    caller_name?: string;
+    call_objective?: string;
+    referral_source?: string;
+    calling_company?: string;
+  };
   metadata?: any;
 }
 
@@ -200,13 +211,23 @@ export class VoiceAgentService {
    */
   async getCallHistory(userId: string, limit_count: number = 50): Promise<CallSession[]> {
     try {
+      // Get all calls for the user first (without orderBy to avoid index requirement)
       const snapshot = await db.collection('voice_calls')
         .where('userId', '==', userId)
-        .orderBy('startTime', 'desc')
-        .limit(limit_count)
+        .limit(limit_count * 2) // Get more to account for sorting
         .get();
 
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CallSession));
+      // Sort and limit in memory
+      const calls = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as CallSession))
+        .sort((a, b) => {
+          const aTime = a.startTime ? new Date(a.startTime).getTime() : 0;
+          const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
+          return bTime - aTime; // desc order
+        })
+        .slice(0, limit_count);
+
+      return calls;
     } catch (error) {
       logger.error('Failed to get call history', error);
       return [];
