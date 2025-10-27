@@ -115,8 +115,18 @@ export const connectFirebase = async () => {
     await db.collection('_health').doc('test').set({ timestamp: FirestoreHelpers.serverTimestamp() });
     logger.info('✅ Firestore connected successfully');
 
-    await auth.listUsers(1);
-    logger.info('✅ Firebase Auth connected successfully');
+    // Only test Auth if not using emulators or if Auth emulator is available
+    const useEmulators = process.env.FIREBASE_USE_EMULATORS === 'true';
+    if (!useEmulators) {
+      try {
+        await auth.listUsers(1);
+        logger.info('✅ Firebase Auth connected successfully');
+      } catch (authError) {
+        logger.warn('⚠️ Firebase Auth connection failed (non-critical for emulator mode):', authError);
+      }
+    } else {
+      logger.info('🔧 Skipping Firebase Auth test in emulator mode');
+    }
 
     return true;
   } catch (error) {

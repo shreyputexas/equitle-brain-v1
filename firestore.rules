@@ -14,6 +14,12 @@ service cloud.firestore {
       }
     }
 
+    // Temporary: Allow specific access to dev-user-123 investmentTheses
+    match /users/dev-user-123/investmentTheses/{thesisId} {
+      allow read, write: if true;
+    }
+
+
     // Health check endpoint (used by backend)
     match /_health/{document} {
       allow read, write: if true;

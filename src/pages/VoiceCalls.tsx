@@ -19,10 +19,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormLabel,
   TextField,
   CircularProgress,
   Snackbar,
@@ -44,7 +40,10 @@ import {
   TableHead,
   TableRow,
   LinearProgress,
-  Stack
+  Stack,
+  Collapse,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import {
   Phone as PhoneIcon,
@@ -66,7 +65,9 @@ import {
   PlayArrow as PlayArrowIcon,
   Pause as PauseIcon,
   Stop as StopIcon,
-  Assignment as AssignmentIcon
+  Assignment as AssignmentIcon,
+  ExpandMore as ExpandMoreIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 
 interface VoiceProfile {
@@ -117,6 +118,19 @@ interface MessageTemplate {
   template: string;
 }
 
+interface CallTemplateDefaults {
+  callObjective?: string;
+  referralSource?: string;
+  customInstructions?: string;
+}
+
+interface CallTemplate {
+  name: string;
+  description: string;
+  defaults: CallTemplateDefaults;
+  showFields: string[];
+}
+
 const DEFAULT_AI_PROMPT = `You are a professional searcher working for Equitle, a deal management platform.
 
 Your role:
@@ -135,6 +149,46 @@ Conversation guidelines:
 
 Be natural, conversational, and respectful of their time.`;
 
+// Template definitions
+const CALL_TEMPLATES: Record<string, CallTemplate> = {
+  'cold-outreach': {
+    name: 'Cold Outreach',
+    description: 'Professional introduction and initial qualification',
+    defaults: {
+      callObjective: 'introduction and qualification',
+      referralSource: 'research and prospecting',
+      customInstructions: 'Make a professional introduction, explain how you found them, and assess their interest in hearing about investment opportunities.'
+    },
+    showFields: ['callerName', 'callObjective', 'referralSource', 'callingCompany']
+  },
+  'warm-followup': {
+    name: 'Warm Follow-up',
+    description: 'Follow-up on previous conversation or interaction',
+    defaults: {
+      callObjective: 'follow up on previous conversation',
+      referralSource: 'previous interaction',
+      customInstructions: 'Reference your previous conversation and continue building the relationship. Ask about their current investment focus.'
+    },
+    showFields: ['callerName', 'callObjective', 'referralSource', 'callingCompany']
+  },
+  'investor-qualification': {
+    name: 'Investor Qualification',
+    description: 'Detailed assessment of investment criteria',
+    defaults: {
+      callObjective: 'assess investment criteria and interest',
+      referralSource: 'qualified lead',
+      customInstructions: 'Focus on understanding their investment thesis, ticket sizes, industry preferences, and current portfolio gaps.'
+    },
+    showFields: ['callerName', 'callObjective', 'dealType', 'investmentRange', 'industryFocus', 'callingCompany']
+  },
+  'custom': {
+    name: 'Custom',
+    description: 'Fully customizable call configuration',
+    defaults: {},
+    showFields: ['callerName', 'callObjective', 'referralSource', 'dealType', 'investmentRange', 'industryFocus', 'callingCompany']
+  }
+};
+
 
 export default function VoiceCalls() {
   // Existing individual call state
@@ -148,6 +202,16 @@ export default function VoiceCalls() {
   const [customInstructions, setCustomInstructions] = useState('');
   const [selectedVoice, setSelectedVoice] = useState('');
   const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([]);
+
+  // New dynamic variables
+  const [callerName, setCallerName] = useState('');
+  const [callObjective, setCallObjective] = useState('');
+  const [referralSource, setReferralSource] = useState('');
+  const [callingCompany, setCallingCompany] = useState('');
+
+  // Template and UI state
+  const [selectedTemplate, setSelectedTemplate] = useState('custom');
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [callHistory, setCallHistory] = useState<CallHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -189,8 +253,23 @@ export default function VoiceCalls() {
     setSelectedVoice(event.target.value);
   };
 
-  const handleCallTypeChange = (event: any) => {
-    setCallType(event.target.value);
+
+  const handleTemplateChange = (event: any) => {
+    const templateKey = event.target.value;
+    setSelectedTemplate(templateKey);
+
+    const template = CALL_TEMPLATES[templateKey];
+    if (template && template.defaults) {
+      // Apply template defaults
+      if (template.defaults.callObjective) setCallObjective(template.defaults.callObjective);
+      if (template.defaults.referralSource) setReferralSource(template.defaults.referralSource);
+      if (template.defaults.customInstructions) setCustomInstructions(template.defaults.customInstructions);
+    }
+
+    // Show advanced options for templates that need them
+    if (templateKey !== 'custom') {
+      setShowAdvancedOptions(true);
+    }
   };
 
   const handleStartCall = async () => {
@@ -224,7 +303,11 @@ export default function VoiceCalls() {
           investmentRange,
           industryFocus: industryFocus.trim(),
           customInstructions: customInstructions.trim(),
-          voiceId: selectedVoice || undefined
+          voiceId: selectedVoice || undefined,
+          callerName: callerName.trim(),
+          callObjective: callObjective.trim(),
+          referralSource: referralSource.trim(),
+          callingCompany: callingCompany.trim()
         })
       });
 
@@ -240,6 +323,9 @@ export default function VoiceCalls() {
         setInvestmentRange('');
         setIndustryFocus('');
         setCustomInstructions('');
+        setCallerName('');
+        setCallObjective('');
+        setReferralSource('');
         loadCallHistory(); // Refresh call history
       } else {
         setMessage(data.error || 'Failed to initiate call');
@@ -660,7 +746,11 @@ export default function VoiceCalls() {
           investmentRange,
           industryFocus,
           customInstructions: personalizedMessage,
-          voiceId: selectedVoice || undefined
+          voiceId: selectedVoice || undefined,
+          callerName: callerName.trim(),
+          callObjective: callObjective.trim() || 'campaign outreach',
+          referralSource: referralSource.trim() || 'marketing campaign',
+          callingCompany: callingCompany.trim()
         })
       });
 
@@ -794,6 +884,31 @@ export default function VoiceCalls() {
                 Enter a phone number and configure your AI voice agent to make a call
               </Typography>
 
+              {/* Template Selection */}
+              <Box sx={{ maxWidth: 500, mx: 'auto', mb: 4 }}>
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel>Call Template</InputLabel>
+                  <Select
+                    value={selectedTemplate}
+                    onChange={handleTemplateChange}
+                    label="Call Template"
+                  >
+                    {Object.entries(CALL_TEMPLATES).map(([key, template]) => (
+                      <MenuItem key={key} value={key}>
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {template.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {template.description}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
               {/* Phone Number Input */}
               <Box sx={{ maxWidth: 500, mx: 'auto', mb: 4 }}>
                 <TextField
@@ -832,39 +947,77 @@ export default function VoiceCalls() {
                   </Select>
                 </FormControl>
 
-                {/* Call Type Selection */}
-                <FormControl component="fieldset">
-                  <FormLabel component="legend" sx={{ color: 'white', '&.Mui-focused': { color: 'white' }, fontWeight: 600 }}>
-                    Call Type
-                  </FormLabel>
-                  <RadioGroup
-                    row
-                    value={callType}
-                    onChange={handleCallTypeChange}
-                    sx={{ justifyContent: 'center', mt: 1 }}
+
+                {/* Advanced Options Toggle */}
+                <Box sx={{ textAlign: 'center', mt: 3, mb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                    endIcon={
+                      <ExpandMoreIcon
+                        sx={{
+                          transform: showAdvancedOptions ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.3s ease'
+                        }}
+                      />
+                    }
+                    sx={{ color: '#000000', borderColor: '#000000' }}
                   >
-                    <FormControlLabel
-                      value="live"
-                      control={<Radio sx={{ color: '#000000', '&.Mui-checked': { color: '#000000' } }} />}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#000000' }}>
-                          <CallIcon sx={{ fontSize: 18, color: '#000000' }} />
-                          <Typography variant="body2" sx={{ color: '#000000', fontWeight: 500 }}>Live Call</Typography>
-                        </Box>
-                      }
-                    />
-                    <FormControlLabel
-                      value="voicemail"
-                      control={<Radio sx={{ color: '#000000', '&.Mui-checked': { color: '#000000' } }} />}
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#000000' }}>
-                          <VoicemailIcon sx={{ fontSize: 18, color: '#000000' }} />
-                          <Typography variant="body2" sx={{ color: '#000000', fontWeight: 500 }}>Voicemail</Typography>
-                        </Box>
-                      }
-                    />
-                  </RadioGroup>
-                </FormControl>
+                    {showAdvancedOptions ? 'Hide Advanced Options' : 'Show Advanced Options'}
+                  </Button>
+                </Box>
+
+                {/* Advanced Options Section */}
+                <Collapse in={showAdvancedOptions}>
+                  <Box sx={{ mb: 3, p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: '#000000', fontWeight: 600 }}>
+                      Call Configuration
+                    </Typography>
+
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Caller Name"
+                          placeholder="Your name"
+                          value={callerName}
+                          onChange={(e) => setCallerName(e.target.value)}
+                          helperText="Your name for introductions"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Call Objective"
+                          placeholder="introduction and qualification"
+                          value={callObjective}
+                          onChange={(e) => setCallObjective(e.target.value)}
+                          helperText="Main purpose of this call"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Referral Source"
+                          placeholder="How you found this contact"
+                          value={referralSource}
+                          onChange={(e) => setReferralSource(e.target.value)}
+                          helperText="How you found or were referred to this contact"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Calling Company"
+                          placeholder="Your company name"
+                          value={callingCompany}
+                          onChange={(e) => setCallingCompany(e.target.value)}
+                          helperText="The company you are calling from"
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Collapse>
 
                 {/* Contact Information */}
                 <Typography variant="h6" sx={{ mt: 3, mb: 2, color: '#000000', fontWeight: 600 }}>
@@ -968,7 +1121,7 @@ export default function VoiceCalls() {
               <Button
                 variant="contained"
                 size="large"
-                startIcon={isLoading ? <CircularProgress size={20} /> : (callType === 'live' ? <CallIcon /> : <VoicemailIcon />)}
+                startIcon={isLoading ? <CircularProgress size={20} /> : <CallIcon />}
                 onClick={handleStartCall}
                 disabled={!phoneNumber.trim() || isLoading}
                 sx={{
@@ -989,86 +1142,13 @@ export default function VoiceCalls() {
                   }
                 }}
               >
-                {isLoading ? 'Initiating...' : `Start ${callType === 'live' ? 'Live Call' : 'Voicemail'}`}
+                {isLoading ? 'Initiating...' : 'Start Live Call'}
               </Button>
 
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                AI agent will {callType === 'live' ? 'handle live conversations with prospects' : 'leave personalized voicemails'}
+                AI agent will handle live conversations with prospects
               </Typography>
             </Box>
-          </Paper>
-
-          {/* AI Features Preview */}
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              AI Voice Features (Coming Soon)
-            </Typography>
-
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Card sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', mr: 2 }}>
-                      <MicIcon />
-                    </Avatar>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Smart Conversation
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    AI agent handles natural conversation flow and responds intelligently to prospect questions
-                  </Typography>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Card sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: 'secondary.main', mr: 2 }}>
-                      <VolumeUpIcon />
-                    </Avatar>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Real-time Transcription
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Live transcription of conversations with automatic note-taking and key point extraction
-                  </Typography>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Card sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: 'info.main', mr: 2 }}>
-                      <PersonIcon />
-                    </Avatar>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Context Awareness
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    AI has full context of deal history, previous conversations, and relevant documents
-                  </Typography>
-                </Card>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <Card sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ width: 40, height: 40, bgcolor: 'success.main', mr: 2 }}>
-                      <TimerIcon />
-                    </Avatar>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                      Automated Follow-up
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Automatic summary generation and follow-up task creation based on call outcomes
-                  </Typography>
-                </Card>
-              </Grid>
-            </Grid>
           </Paper>
 
           {/* Real-time Call Monitor */}
@@ -1122,53 +1202,6 @@ export default function VoiceCalls() {
           )}
         </Grid>
 
-        {/* Audio Player Section */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 4, mb: 3 }}>
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Avatar
-                sx={{
-                  width: 60,
-                  height: 60,
-                  bgcolor: 'primary.main',
-                  mx: 'auto',
-                  mb: 2
-                }}
-              >
-                <VolumeUpIcon sx={{ fontSize: 30 }} />
-              </Avatar>
-
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                Recording Playback
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Play back recorded conversations and audio files
-              </Typography>
-
-              {/* Audio Player */}
-              <Box sx={{ maxWidth: 500, mx: 'auto' }}>
-                <audio
-                  controls
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    borderRadius: '8px',
-                    backgroundColor: '#f5f5f5'
-                  }}
-                >
-                  <source src="/recording.wav" type="audio/wav" />
-                  <source src="/recording.mp3" type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-                
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Supported formats: WAV, MP3, FLAC
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
 
         {/* Call History Sidebar */}
         <Grid item xs={12} md={4}>
