@@ -61,6 +61,7 @@ import {
   LocationOn as LocationIcon,
   People as PeopleIcon,
   ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Info as InfoIcon,
@@ -181,6 +182,18 @@ const MyThesis: React.FC = () => {
   const categories = ['Financial', 'Market', 'Geographic', 'Team', 'Technology', 'Operational', 'Valuation', 'Subindustry', 'Growth Rate'];
   const operators = ['>=', '<=', '=', '!=', 'contains', 'not contains'];
   const valuationTypes = ['Enterprise Value', 'Equity Value'];
+
+  // Green shade mapping for bars (index-based) - single gradient reference for all elements
+  const getGreenShade = (index: number) => {
+    const greenShades = [
+      { color: '#10b981', gradient: 'linear-gradient(135deg, #10b981 0%, #10b981dd 100%)' },
+      { color: '#059669', gradient: 'linear-gradient(135deg, #059669 0%, #059669dd 100%)' },
+      { color: '#047857', gradient: 'linear-gradient(135deg, #047857 0%, #047857dd 100%)' },
+      { color: '#065f46', gradient: 'linear-gradient(135deg, #065f46 0%, #065f46dd 100%)' },
+      { color: '#064e3b', gradient: 'linear-gradient(135deg, #064e3b 0%, #064e3bdd 100%)' }
+    ];
+    return greenShades[index % greenShades.length];
+  };
 
   // Load theses on component mount
   useEffect(() => {
@@ -500,7 +513,11 @@ const MyThesis: React.FC = () => {
   };
 
   const handleDeleteThesis = async (thesisId: string) => {
-    if (theses.length > 1) {
+    const confirmMessage = theses.length === 1 
+      ? 'This is your last thesis. Are you sure you want to delete it? You can always create a new one later.'
+      : 'Are you sure you want to delete this thesis? This action cannot be undone.';
+    
+    if (window.confirm(confirmMessage)) {
       try {
         const userId = localStorage.getItem('userId') || 'dev-user-123';
         const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
@@ -508,9 +525,14 @@ const MyThesis: React.FC = () => {
 
         const updatedTheses = theses.filter(t => t.id !== thesisId);
         setTheses(updatedTheses);
-        if (currentThesisId === thesisId) {
+        
+        if (updatedTheses.length > 0) {
           setCurrentThesisId(updatedTheses[0].id);
           setCriteria([...updatedTheses[0].criteria]);
+        } else {
+          // If no theses left, reset to empty state
+          setCurrentThesisId('');
+          setCriteria([]);
         }
       } catch (error) {
         console.error('Error deleting thesis:', error);
@@ -1198,7 +1220,7 @@ const MyThesis: React.FC = () => {
                     WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  Build Your Investment Thesis
+                  Investment Thesis
                 </Typography>
                 <Typography 
                   variant="h6" 
@@ -1210,7 +1232,7 @@ const MyThesis: React.FC = () => {
                     lineHeight: 1.5
                   }}
                 >
-                  Define your investment criteria and generate comprehensive one-pagers for potential acquisitions.
+                  Define your investment criteria and generate comprehensive one-pagers for stakeholders and target companies.
                 </Typography>
                 <Typography 
                   variant="body1" 
@@ -1221,7 +1243,7 @@ const MyThesis: React.FC = () => {
                     lineHeight: 1.6
                   }}
                 >
-                  Create structured investment frameworks that align with your strategic goals and market opportunities.
+                  Creating context allows Equitle to have context on your investment thesis and target companies, so messages, calls, and other functions are more relevant and effective.
                 </Typography>
                 
                 {/* Action Buttons */}
@@ -1232,7 +1254,7 @@ const MyThesis: React.FC = () => {
                     startIcon={<AddIcon />}
                     onClick={() => setShowNewThesisDialog(true)}
                     sx={{
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      background: 'linear-gradient(135deg, #6B7280 0%, #000000 100%)',
                       color: 'white',
                       px: 4,
                       py: 1.5,
@@ -1240,10 +1262,10 @@ const MyThesis: React.FC = () => {
                       fontSize: '1rem',
                       fontWeight: 600,
                       textTransform: 'none',
-                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                      boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                        boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                        background: 'linear-gradient(135deg, #4B5563 0%, #000000 100%)',
+                        boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
                         transform: 'translateY(-2px)'
                       },
                       transition: 'all 0.3s ease'
@@ -1390,34 +1412,132 @@ const MyThesis: React.FC = () => {
           mb: 4, 
           borderRadius: 3,
           border: '1px solid #e2e8f0',
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+          overflow: 'hidden'
         }}
       >
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-          <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, color: '#1e293b' }}>
-                Current Thesis
-            </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Select and manage your investment criteria
+        {/* Gradient Header */}
+        <Box sx={{
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+          color: 'white',
+          py: 3,
+          px: 4,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ 
+              width: 24, 
+              height: 24, 
+              borderRadius: '50%', 
+              bgcolor: 'white', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Typography sx={{ color: '#2c2c2c', fontSize: '1rem', fontWeight: 600 }}>T</Typography>
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.25rem', color: 'white' }}>
+              Manage Investment Thesis
             </Typography>
           </Box>
+          <Typography variant="body2" sx={{ 
+            mt: 1, 
+            fontSize: '0.9rem', 
+            color: 'rgba(255, 255, 255, 0.8)',
+            lineHeight: 1.5
+          }}>
+            Select and manage your investment criteria
+          </Typography>
+        </Box>
+
+        {/* Content Area */}
+        <CardContent sx={{ 
+          p: 4, 
+          bgcolor: '#F8FAFC',
+          color: '#1E293B'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body1" sx={{ 
+                color: '#64748B', 
+                fontSize: '0.95rem', 
+                lineHeight: 1.6,
+                mb: 2
+              }}>
+                Choose your active investment thesis to view and manage criteria
+              </Typography>
+            </Box>
             <FormControl sx={{ minWidth: 250 }}>
-              <InputLabel>Thesis</InputLabel>
+              <InputLabel sx={{ color: '#64748B', fontWeight: 500, fontSize: '0.875rem' }}>Thesis</InputLabel>
               <Select
                 value={currentThesisId}
                 onChange={(e) => handleThesisChange(e.target.value)}
                 label="Thesis"
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      borderRadius: 2,
+                      mt: 1,
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      border: '1px solid #E2E8F0',
+                      '& .MuiMenuItem-root': {
+                        px: 2,
+                        py: 1.5,
+                        fontSize: '0.9rem',
+                        color: '#1E293B',
+                        fontWeight: 500,
+                        borderBottom: '1px solid #F1F5F9',
+                        '&:last-child': {
+                          borderBottom: 'none'
+                        },
+                        '&:hover': {
+                          bgcolor: 'transparent'
+                        },
+                        '&.Mui-selected': {
+                          bgcolor: '#10B981',
+                          color: 'white',
+                          '&:hover': {
+                            bgcolor: '#10B981'
+                          }
+                        },
+                        '&.Mui-focusVisible': {
+                          bgcolor: 'transparent'
+                        },
+                        '&:active': {
+                          bgcolor: 'transparent'
+                        }
+                      }
+                    }
+                  }
+                }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    '&:hover fieldset': {
-                      borderColor: '#94a3b8'
+                    borderRadius: 0,
+                    borderBottom: '1px solid #DADCE0',
+                    borderTop: 'none',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    minHeight: '48px',
+                    '&:hover': {
+                      borderBottom: '2px solid #10B981'
                     },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#10b981'
+                    '&.Mui-focused': {
+                      borderBottom: '2px solid #10B981',
+                      '& fieldset': {
+                        border: 'none'
+                      }
+                    },
+                    '& fieldset': {
+                      border: 'none'
                     }
+                  },
+                  '& .MuiSelect-select': {
+                    py: 1.5,
+                    fontSize: '0.9rem',
+                    color: '#1E293B',
+                    fontWeight: 500,
+                    minHeight: '48px',
+                    display: 'flex',
+                    alignItems: 'center'
                   }
                 }}
               >
@@ -1458,7 +1578,7 @@ const MyThesis: React.FC = () => {
               onClick={handleOpenAddCriteria}
               disabled={getTotalWeight() >= 100}
               sx={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: 'linear-gradient(135deg, #6B7280 0%, #000000 100%)',
                 color: 'white',
                 px: 3,
                 py: 1.5,
@@ -1466,10 +1586,10 @@ const MyThesis: React.FC = () => {
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 textTransform: 'none',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                  boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                  background: 'linear-gradient(135deg, #4B5563 0%, #000000 100%)',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
                   transform: 'translateY(-2px)'
                 },
                 '&:disabled': { 
@@ -1509,17 +1629,9 @@ const MyThesis: React.FC = () => {
                   }}
                 >
                   {criteria.map((criterion, index) => {
-                    const colors = [
-                      '#10b981', // Green
-                      '#059669', // Darker Green
-                      '#047857', // Even Darker Green
-                      '#065f46', // Very Dark Green
-                      '#064e3b', // Darkest Green
-                      '#10b981'  // Back to Green
-                    ];
-                    const color = colors[index % colors.length];
+                    const greenShade = getGreenShade(index);
                     const width = criterion.weight;
-                    
+
                     return (
                       <Box
                         key={criterion.id}
@@ -1527,7 +1639,7 @@ const MyThesis: React.FC = () => {
                         sx={{
                           width: `${width}%`,
                           height: '100%',
-                          background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+                          background: greenShade.gradient,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1722,41 +1834,35 @@ const MyThesis: React.FC = () => {
           {criteria.length > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
               <Box
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                onClick={() => {
+                  console.log('Toggle clicked, current state:', showTraditionalView);
+                  setShowTraditionalView(!showTraditionalView);
+                  console.log('New state:', !showTraditionalView);
                 }}
-                sx={{ display: 'inline-block' }}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  border: '1px solid #D1D5DB',
+                  color: '#6B7280',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: '#10b981',
+                    color: '#10b981',
+                    bgcolor: '#f0fdf4'
+                  }
+                }}
               >
-                <Button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.nativeEvent.stopImmediatePropagation();
-                    setShowTraditionalView(!showTraditionalView);
-                  }}
-                  variant="outlined"
-                  size="small"
-                  startIcon={showTraditionalView ? <ExpandLess /> : <AddIcon />}
-                  sx={{
-                    borderColor: '#D1D5DB',
-                    color: '#6B7280',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    px: 2,
-                    py: 1,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    '&:hover': {
-                      borderColor: '#10b981',
-                      color: '#10b981',
-                      bgcolor: '#f0fdf4'
-                    }
-                  }}
-                >
+                {showTraditionalView ? <ExpandLessIcon /> : <AddIcon />}
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
                   {showTraditionalView ? 'Hide Detailed View' : 'Show Detailed View'}
-                </Button>
+                </Typography>
               </Box>
             </Box>
           )}
@@ -1785,17 +1891,17 @@ const MyThesis: React.FC = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <Box sx={{ flex: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                        <Chip 
-                          label={criterion.category} 
-                          size="small" 
-                          sx={{ 
-                            bgcolor: '#E5E7EB', 
-                            color: '#000000',
+                        <Chip
+                          label={criterion.category}
+                          size="small"
+                          sx={{
+                            bgcolor: getGreenShade(index).color,
+                            color: '#FFFFFF',
                             fontWeight: 600,
                             fontSize: '0.75rem',
                             height: 28,
                             px: 1
-                          }} 
+                          }}
                         />
                         <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000' }}>
                           {criterion.field}
@@ -1883,21 +1989,11 @@ const MyThesis: React.FC = () => {
                             borderRadius: 4,
                             bgcolor: '#F3F4F6',
                             '& .MuiLinearProgress-bar': {
-                              background: 'linear-gradient(90deg, #6B7280 0%, #000000 100%)',
+                              background: getGreenShade(index).gradient,
                               borderRadius: 4
                             }
                           }}
                         />
-                      </Box>
-
-                      {/* Detailed Description */}
-                      <Box sx={{ mt: 2, p: 2, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
-                        <Typography variant="body2" sx={{ color: '#4B5563', fontWeight: 500 }}>
-                          <strong>{criterion.field}</strong> {criterion.operator} <strong>{criterion.value}</strong>
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#6B7280', mt: 1, display: 'block' }}>
-                          This criterion represents {criterion.weight}% of your total investment evaluation weight.
-                        </Typography>
                       </Box>
                     </Box>
                     
@@ -1954,76 +2050,6 @@ const MyThesis: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* One-Pager Generation Section */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#000000' }}>
-            Generate One-Pager
-          </Typography>
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Search for Company"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  )
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Select Company</InputLabel>
-                <Select
-                  value={selectedCompany}
-                  onChange={(e) => setSelectedCompany(e.target.value)}
-                  label="Select Company"
-                >
-                  <MenuItem value="TechCorp Solutions">TechCorp Solutions</MenuItem>
-                  <MenuItem value="DataFlow Inc">DataFlow Inc</MenuItem>
-                  <MenuItem value="CloudScale Systems">CloudScale Systems</MenuItem>
-                  <MenuItem value="AI Dynamics">AI Dynamics</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              startIcon={<AutoAwesomeIcon />}
-              onClick={handleGenerateOnePager}
-              disabled={isGenerating || !selectedCompany}
-              size="large"
-              sx={{
-                bgcolor: '#000000',
-                color: 'white',
-                px: 4,
-                py: 1.5,
-                '&:hover': { bgcolor: '#333333' },
-                '&:disabled': { bgcolor: '#9CA3AF' }
-              }}
-            >
-              {isGenerating ? 'Generating...' : 'Generate One-Pager'}
-            </Button>
-          </Box>
-
-          {isGenerating && (
-            <Box sx={{ mt: 3 }}>
-              <LinearProgress sx={{ mb: 1 }} />
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                Analyzing company data and generating comprehensive report...
-              </Typography>
-            </Box>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Personal Pitch One Pager Generator */}
       <Card sx={{ mt: 4 }}>
@@ -2040,6 +2066,43 @@ const MyThesis: React.FC = () => {
                   value={selectedThesisForPitch}
                   onChange={(e) => setSelectedThesisForPitch(e.target.value)}
                   label="Select Thesis"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        border: '1px solid #E2E8F0',
+                        '& .MuiMenuItem-root': {
+                          px: 2,
+                          py: 1.5,
+                          fontSize: '0.9rem',
+                          color: '#1E293B',
+                          fontWeight: 500,
+                          borderBottom: '1px solid #F1F5F9',
+                          '&:last-child': {
+                            borderBottom: 'none'
+                          },
+                          '&:hover': {
+                            bgcolor: 'transparent'
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: '#10B981',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: '#10B981'
+                            }
+                          },
+                          '&.Mui-focusVisible': {
+                            bgcolor: 'transparent'
+                          },
+                          '&:active': {
+                            bgcolor: 'transparent'
+                          }
+                        }
+                      }
+                    }
+                  }}
                 >
                   {theses.map((thesis) => (
                     <MenuItem key={thesis.id} value={thesis.id}>
@@ -2057,6 +2120,43 @@ const MyThesis: React.FC = () => {
                   value={selectedSearchers}
                   onChange={(e) => setSelectedSearchers(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
                   label="Select Searcher Profiles"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        border: '1px solid #E2E8F0',
+                        '& .MuiMenuItem-root': {
+                          px: 2,
+                          py: 1.5,
+                          fontSize: '0.9rem',
+                          color: '#1E293B',
+                          fontWeight: 500,
+                          borderBottom: '1px solid #F1F5F9',
+                          '&:last-child': {
+                            borderBottom: 'none'
+                          },
+                          '&:hover': {
+                            bgcolor: 'transparent'
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: '#10B981',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: '#10B981'
+                            }
+                          },
+                          '&.Mui-focusVisible': {
+                            bgcolor: 'transparent'
+                          },
+                          '&:active': {
+                            bgcolor: 'transparent'
+                          }
+                        }
+                      }
+                    }
+                  }}
                   renderValue={(selected) => (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {selected.map((value) => {
@@ -2093,6 +2193,43 @@ const MyThesis: React.FC = () => {
                   value={selectedTemplate}
                   onChange={(e) => setSelectedTemplate(e.target.value)}
                   label="Select Template"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        border: '1px solid #E2E8F0',
+                        '& .MuiMenuItem-root': {
+                          px: 2,
+                          py: 1.5,
+                          fontSize: '0.9rem',
+                          color: '#1E293B',
+                          fontWeight: 500,
+                          borderBottom: '1px solid #F1F5F9',
+                          '&:last-child': {
+                            borderBottom: 'none'
+                          },
+                          '&:hover': {
+                            bgcolor: 'transparent'
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: '#10B981',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: '#10B981'
+                            }
+                          },
+                          '&.Mui-focusVisible': {
+                            bgcolor: 'transparent'
+                          },
+                          '&:active': {
+                            bgcolor: 'transparent'
+                          }
+                        }
+                      }
+                    }
+                  }}
                 >
                   <MenuItem value="basic">Basic Template</MenuItem>
                   <MenuItem value="industry_navy">Industry Navy</MenuItem>
@@ -2583,211 +2720,523 @@ const MyThesis: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            borderRadius: 2,
+            boxShadow: '0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)',
+            maxHeight: '90vh',
+            overflow: 'hidden'
           }
         }}
       >
         <DialogTitle sx={{ 
-          bgcolor: '#000000', 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)', 
           color: 'white',
-          py: 3,
-          px: 4,
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12
+          py: 2,
+          px: 3,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <AddIcon />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Box sx={{ 
+              width: 24, 
+              height: 24, 
+              borderRadius: '50%', 
+              bgcolor: 'white', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <AddIcon sx={{ color: '#2c2c2c', fontSize: '1rem' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.25rem', color: 'white' }}>
               {editingCriteria ? 'Edit Investment Criteria' : 'Add Investment Criteria'}
             </Typography>
           </Box>
         </DialogTitle>
         
-        <DialogContent sx={{ p: 4 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <DialogContent sx={{ 
+          p: 4, 
+          pt: 5,
+          pb: 5,
+          bgcolor: '#F8FAFC',
+          color: '#1E293B',
+          position: 'relative'
+        }}>
+          <Typography variant="body2" sx={{ 
+            mb: 4, 
+            fontSize: '0.9rem', 
+            lineHeight: 1.5,
+            color: '#64748B',
+            textAlign: 'center'
+          }}>
             {editingCriteria 
-              ? 'Modify the selected investment criterion. Changes will be applied immediately.'
+              ? ''
               : 'Define a new investment criterion to add to your thesis. Each criterion will be weighted and used in the one-pager generation process.'
             }
           </Typography>
           
           <Grid container spacing={3}>
+            {/* Row 1: Category and Field Name */}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel sx={{ color: '#6B7280' }}>Category</InputLabel>
-                <Select
-                  value={newCriteria.category}
-                  onChange={(e) => setNewCriteria({ ...newCriteria, category: e.target.value })}
-                  label="Category"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#9CA3AF'
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#000000'
-                      }
-                    }
-                  }}
-                >
-                  {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                      {category}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', maxWidth: 280 }}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ color: '#64748B', fontWeight: 500, fontSize: '0.875rem' }}>Category</InputLabel>
+                    <Select
+                      value={newCriteria.category}
+                      onChange={(e) => setNewCriteria({ ...newCriteria, category: e.target.value })}
+                      label="Category"
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            borderRadius: 2,
+                            mt: 1,
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            border: '1px solid #E2E8F0',
+                            '& .MuiMenuItem-root': {
+                              px: 2,
+                              py: 1.5,
+                              fontSize: '0.9rem',
+                              color: '#1E293B',
+                              fontWeight: 500,
+                              borderBottom: '1px solid #F1F5F9',
+                              '&:last-child': {
+                                borderBottom: 'none'
+                              },
+                              '&:hover': {
+                                bgcolor: 'transparent'
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: '#10B981',
+                                color: 'white',
+                                '&:hover': {
+                                  bgcolor: '#10B981'
+                                }
+                              },
+                              '&.Mui-focusVisible': {
+                                bgcolor: 'transparent'
+                              },
+                              '&:active': {
+                                bgcolor: 'transparent'
+                              }
+                            }
+                          }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 0,
+                          borderBottom: '1px solid #DADCE0',
+                          borderTop: 'none',
+                          borderLeft: 'none',
+                          borderRight: 'none',
+                          minHeight: '48px',
+                          '&:hover': {
+                            borderBottom: '2px solid #10B981'
+                          },
+                          '&.Mui-focused': {
+                            borderBottom: '2px solid #10B981',
+                            '& fieldset': {
+                              border: 'none'
+                            }
+                          },
+                          '& fieldset': {
+                            border: 'none'
+                          }
+                        },
+                        '& .MuiSelect-select': {
+                          py: 1.5,
+                          fontSize: '0.9rem',
+                          color: '#1E293B',
+                          fontWeight: 500,
+                          minHeight: '48px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }
+                      }}
+                    >
+                      {categories.map((category) => (
+                        <MenuItem key={category} value={category} sx={{ fontSize: '0.875rem' }}>
+                          {category}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Field Name"
-                value={newCriteria.field}
-                onChange={(e) => setNewCriteria({ ...newCriteria, field: e.target.value })}
-                placeholder="e.g., Revenue, EBITDA, Industry"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': {
-                      borderColor: '#9CA3AF'
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#000000'
-                    }
-                  }
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} sm={4}>
-              <FormControl fullWidth>
-                <InputLabel sx={{ color: '#6B7280' }}>Operator</InputLabel>
-                <Select
-                  value={newCriteria.operator}
-                  onChange={(e) => setNewCriteria({ ...newCriteria, operator: e.target.value })}
-                  label="Operator"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      '&:hover fieldset': {
-                        borderColor: '#9CA3AF'
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', maxWidth: 280 }}>
+                  <TextField
+                    fullWidth
+                    label="Field Name"
+                    value={newCriteria.field}
+                    onChange={(e) => setNewCriteria({ ...newCriteria, field: e.target.value })}
+                    placeholder="e.g., Revenue, EBITDA, Industry"
+                    variant="standard"
+                    sx={{
+                      '& .MuiInputLabel-root': {
+                        color: '#64748B',
+                        fontWeight: 500,
+                        fontSize: '0.875rem'
                       },
-                      '&.Mui-focused fieldset': {
-                        borderColor: '#000000'
+                      '& .MuiInput-underline': {
+                        '&:before': {
+                          borderBottom: '2px solid #E2E8F0'
+                        },
+                        '&:hover:not(.Mui-disabled):before': {
+                          borderBottom: '2px solid #10B981'
+                        },
+                        '&:after': {
+                          borderBottom: '2px solid #10B981'
+                        }
+                      },
+                      '& .MuiInputBase-input': {
+                        py: 1.5,
+                        fontSize: '0.9rem',
+                        color: '#1E293B',
+                        fontWeight: 500,
+                        minHeight: '48px',
+                        display: 'flex',
+                        alignItems: 'center'
                       }
-                    }
-                  }}
-                >
-                  {operators.map((op) => (
-                    <MenuItem key={op} value={op}>
-                      {op}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    }}
+                  />
+                </Box>
+              </Box>
             </Grid>
             
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Value"
-                value={newCriteria.value}
-                onChange={(e) => setNewCriteria({ ...newCriteria, value: e.target.value })}
-                placeholder="e.g., 1000000, Technology, North America"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': {
-                      borderColor: '#9CA3AF'
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#000000'
-                    }
-                  }
-                }}
-              />
+            {/* Row 2: Operator and Value */}
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', maxWidth: 280 }}>
+                  <FormControl fullWidth>
+                    <InputLabel sx={{ color: '#64748B', fontWeight: 500, fontSize: '0.875rem' }}>Operator</InputLabel>
+                    <Select
+                      value={newCriteria.operator}
+                      onChange={(e) => setNewCriteria({ ...newCriteria, operator: e.target.value })}
+                      label="Operator"
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            borderRadius: 2,
+                            mt: 1,
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            border: '1px solid #E2E8F0',
+                            '& .MuiMenuItem-root': {
+                              px: 2,
+                              py: 1.5,
+                              fontSize: '0.9rem',
+                              color: '#1E293B',
+                              fontWeight: 500,
+                              borderBottom: '1px solid #F1F5F9',
+                              '&:last-child': {
+                                borderBottom: 'none'
+                              },
+                              '&:hover': {
+                                bgcolor: 'transparent'
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: '#10B981',
+                                color: 'white',
+                                '&:hover': {
+                                  bgcolor: '#10B981'
+                                }
+                              },
+                              '&.Mui-focusVisible': {
+                                bgcolor: 'transparent'
+                              },
+                              '&:active': {
+                                bgcolor: 'transparent'
+                              }
+                            }
+                          }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 0,
+                          borderBottom: '1px solid #DADCE0',
+                          borderTop: 'none',
+                          borderLeft: 'none',
+                          borderRight: 'none',
+                          minHeight: '48px',
+                          '&:hover': {
+                            borderBottom: '2px solid #10B981'
+                          },
+                          '&.Mui-focused': {
+                            borderBottom: '2px solid #10B981',
+                            '& fieldset': {
+                              border: 'none'
+                            }
+                          },
+                          '& fieldset': {
+                            border: 'none'
+                          }
+                        },
+                        '& .MuiSelect-select': {
+                          py: 1.5,
+                          fontSize: '0.9rem',
+                          color: '#1E293B',
+                          fontWeight: 500,
+                          minHeight: '48px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }
+                      }}
+                    >
+                      {operators.map((op) => (
+                        <MenuItem key={op} value={op} sx={{ fontSize: '0.875rem' }}>
+                          {op}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', maxWidth: 280 }}>
+                  <TextField
+                    fullWidth
+                    label="Value"
+                    value={newCriteria.value}
+                    onChange={(e) => setNewCriteria({ ...newCriteria, value: e.target.value })}
+                    placeholder="e.g., 1000000, Technology, North America"
+                    variant="standard"
+                    sx={{
+                      '& .MuiInputLabel-root': {
+                        color: '#64748B',
+                        fontWeight: 500,
+                        fontSize: '0.875rem'
+                      },
+                      '& .MuiInput-underline': {
+                        '&:before': {
+                          borderBottom: '2px solid #E2E8F0'
+                        },
+                        '&:hover:not(.Mui-disabled):before': {
+                          borderBottom: '2px solid #10B981'
+                        },
+                        '&:after': {
+                          borderBottom: '2px solid #10B981'
+                        }
+                      },
+                      '& .MuiInputBase-input': {
+                        py: 1.5,
+                        fontSize: '0.9rem',
+                        color: '#1E293B',
+                        fontWeight: 500,
+                        minHeight: '48px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Grid>
+            
+            {/* Row 3: Weight and Valuation Type (if applicable) */}
+            <Grid item xs={12} sm={6}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', maxWidth: 280 }}>
+                  <TextField
+                    fullWidth
+                    label="Weight (%)"
+                    type="text"
+                    value={newCriteria.weight}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      setNewCriteria({ ...newCriteria, weight: parseInt(value) || 0 });
+                    }}
+                    error={editingCriteria ? false : (newCriteria.weight || 0) > getRemainingWeight()}
+                    variant="standard"
+                    sx={{
+                      '& .MuiInputLabel-root': {
+                        color: '#64748B',
+                        fontWeight: 500,
+                        fontSize: '0.875rem'
+                      },
+                      '& .MuiInput-underline': {
+                        '&:before': {
+                          borderBottom: '2px solid #E2E8F0'
+                        },
+                        '&:hover:not(.Mui-disabled):before': {
+                          borderBottom: '2px solid #10B981'
+                        },
+                        '&:after': {
+                          borderBottom: '2px solid #10B981'
+                        }
+                      },
+                      '& .MuiInputBase-input': {
+                        py: 2,
+                        fontSize: '1.5rem',
+                        color: '#1E293B',
+                        fontWeight: 600,
+                        minHeight: '56px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        textAlign: 'center'
+                      },
+                      '& input[type=number]': {
+                        MozAppearance: 'textfield',
+                        WebkitAppearance: 'none',
+                        appearance: 'none'
+                      },
+                      '& input[type=number]::-webkit-outer-spin-button': {
+                        WebkitAppearance: 'none',
+                        margin: 0
+                      },
+                      '& input[type=number]::-webkit-inner-spin-button': {
+                        WebkitAppearance: 'none',
+                        margin: 0
+                      }
+                    }}
+                  />
+                  
+                  {/* Status Indicators - Integrated */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+                    {editingCriteria && (
+                      <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        px: 1
+                      }}>
+                        <Typography sx={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 500 }}>
+                          Current
+                        </Typography>
+                        <Typography sx={{ color: '#1E293B', fontSize: '0.8rem', fontWeight: 600 }}>
+                          {criteria.find(c => c.id === editingCriteria)?.weight || 0}%
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      px: 1
+                    }}>
+                      <Typography sx={{ color: '#DC2626', fontSize: '0.75rem', fontWeight: 500 }}>
+                        Remaining
+                      </Typography>
+                      <Typography sx={{ color: '#DC2626', fontSize: '0.8rem', fontWeight: 600 }}>
+                        {editingCriteria ? getRemainingWeightForEdit(editingCriteria) : getRemainingWeight()}%
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
             </Grid>
             
             {newCriteria.category === 'Valuation' && (
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel sx={{ color: '#6B7280' }}>Valuation Type</InputLabel>
-                  <Select
-                    value={newCriteria.valuationType || ''}
-                    onChange={(e) => setNewCriteria({ ...newCriteria, valuationType: e.target.value as 'enterprise' | 'equity' })}
-                    label="Valuation Type"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover fieldset': {
-                          borderColor: '#9CA3AF'
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#000000'
-                        }
-                      }
-                    }}
-                  >
-                    <MenuItem value="enterprise">Enterprise Value</MenuItem>
-                    <MenuItem value="equity">Equity Value</MenuItem>
-                  </Select>
-                </FormControl>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <Box sx={{ width: '100%', maxWidth: 280 }}>
+                    <FormControl fullWidth>
+                      <InputLabel sx={{ color: '#64748B', fontWeight: 500, fontSize: '0.875rem' }}>Valuation Type</InputLabel>
+                      <Select
+                        value={newCriteria.valuationType || ''}
+                        onChange={(e) => setNewCriteria({ ...newCriteria, valuationType: e.target.value as 'enterprise' | 'equity' })}
+                        label="Valuation Type"
+                        MenuProps={{
+                          PaperProps: {
+                            sx: {
+                              borderRadius: 2,
+                              mt: 1,
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                              border: '1px solid #E2E8F0',
+                              '& .MuiMenuItem-root': {
+                                px: 2,
+                                py: 1.5,
+                                fontSize: '0.9rem',
+                                color: '#1E293B',
+                                fontWeight: 500,
+                                borderBottom: '1px solid #F1F5F9',
+                                '&:last-child': {
+                                  borderBottom: 'none'
+                                },
+                                '&:hover': {
+                                  bgcolor: '#F8FAFC'
+                                },
+                                '&.Mui-selected': {
+                                  bgcolor: '#10B981',
+                                  color: 'white',
+                                  '&:hover': {
+                                    bgcolor: '#059669'
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 0,
+                            borderBottom: '1px solid #DADCE0',
+                            borderTop: 'none',
+                            borderLeft: 'none',
+                            borderRight: 'none',
+                            minHeight: '56px',
+                            '&:hover': {
+                              borderBottom: '2px solid #1A73E8'
+                            },
+                            '&.Mui-focused': {
+                              borderBottom: '2px solid #1A73E8',
+                              '& fieldset': {
+                                border: 'none'
+                              }
+                            },
+                            '& fieldset': {
+                              border: 'none'
+                            }
+                          },
+                          '& .MuiSelect-select': {
+                            py: 2,
+                            fontSize: '1rem',
+                            color: '#202124',
+                            minHeight: '56px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }
+                        }}
+                      >
+                        <MenuItem value="enterprise" sx={{ fontSize: '0.875rem' }}>Enterprise Value</MenuItem>
+                        <MenuItem value="equity" sx={{ fontSize: '0.875rem' }}>Equity Value</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                </Box>
               </Grid>
             )}
-            
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Weight (%)"
-                type="text"
-                value={newCriteria.weight}
-                onChange={(e) => {
-                  // Only allow numbers
-                  const value = e.target.value.replace(/[^0-9]/g, '');
-                  setNewCriteria({ ...newCriteria, weight: parseInt(value) || 0 });
-                }}
-                helperText={
-                  editingCriteria 
-                    ? `How important is this criterion (0-100%). Current: ${criteria.find(c => c.id === editingCriteria)?.weight || 0}%, Remaining: ${getRemainingWeightForEdit(editingCriteria)}%`
-                    : `Max: ${getRemainingWeight()}% (${getTotalWeight()}% already allocated)`
-                }
-                error={editingCriteria ? false : (newCriteria.weight || 0) > getRemainingWeight()}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '&:hover fieldset': {
-                      borderColor: '#9CA3AF'
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#000000'
-                    },
-                    '& input[type=number]': {
-                      MozAppearance: 'textfield',
-                      WebkitAppearance: 'none',
-                      appearance: 'none'
-                    },
-                    '& input[type=number]::-webkit-outer-spin-button': {
-                      WebkitAppearance: 'none',
-                      margin: 0
-                    },
-                    '& input[type=number]::-webkit-inner-spin-button': {
-                      WebkitAppearance: 'none',
-                      margin: 0
-                    }
-                  }
-                }}
-              />
-            </Grid>
           </Grid>
         </DialogContent>
         
-        <DialogActions sx={{ p: 4, bgcolor: '#F9FAFB', borderTop: '1px solid #E5E7EB' }}>
+        <DialogActions sx={{ 
+          p: 3, 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
+          justifyContent: 'flex-end', 
+          gap: 2 
+        }}>
           <Button 
             onClick={() => setShowAddCriteria(false)} 
-            variant="outlined"
+            variant="text"
             sx={{
-              borderColor: '#D1D5DB',
-              color: '#374151',
+              color: 'rgba(255, 255, 255, 0.8)',
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              px: 3,
+              py: 1,
               '&:hover': {
-                borderColor: '#9CA3AF',
-                bgcolor: '#F9FAFB'
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                color: 'white'
               }
             }}
           >
@@ -2798,15 +3247,22 @@ const MyThesis: React.FC = () => {
               variant="contained"
               disabled={!newCriteria.field || newCriteria.value === ''}
               sx={{
-                bgcolor: '#000000',
+                bgcolor: '#10B981',
                 color: 'white',
                 px: 3,
+                py: 1,
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                borderRadius: 1,
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
                 '&:hover': { 
-                  bgcolor: '#333333' 
+                  bgcolor: '#059669',
+                  boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)'
                 },
                 '&:disabled': {
-                  bgcolor: '#9CA3AF',
-                  color: '#FFFFFF'
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'rgba(255, 255, 255, 0.5)'
                 }
               }}
             >
@@ -2951,43 +3407,60 @@ const MyThesis: React.FC = () => {
         }}
       >
         <DialogTitle sx={{ 
-          bgcolor: '#000000', 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)', 
           color: 'white',
           py: 3,
           px: 4,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <EditIcon />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Box sx={{ 
+              width: 24, 
+              height: 24, 
+              borderRadius: '50%', 
+              bgcolor: 'white', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <EditIcon sx={{ color: '#2c2c2c', fontSize: '1rem' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.25rem', color: 'white' }}>
               Manage Theses
             </Typography>
           </Box>
-        </DialogTitle>
-        
-        <DialogContent sx={{ p: 4 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ 
+            mt: 1, 
+            fontSize: '0.9rem', 
+            color: 'rgba(255, 255, 255, 0.8)',
+            lineHeight: 1.5
+          }}>
             Manage your investment theses. You can rename, duplicate, or delete theses.
           </Typography>
-          
-          {/* Debug info */}
-          <Typography variant="caption" sx={{ color: '#6B7280', mb: 2, display: 'block' }}>
-            Debug: editingThesisName = {editingThesisName || 'null'}, editingThesisNameValue = {editingThesisNameValue || 'empty'}
-          </Typography>
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        </DialogTitle>
+        
+        <DialogContent sx={{ 
+          p: 6, 
+          bgcolor: '#F8FAFC',
+          color: '#1E293B'
+        }}>
+          <Box sx={{ height: 40 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {theses.map((thesis) => (
               <Paper 
                 key={thesis.id} 
                 sx={{ 
-                  p: 3, 
-                  bgcolor: currentThesisId === thesis.id ? '#F9FAFB' : '#FFFFFF', 
-                  border: currentThesisId === thesis.id ? '2px solid #000000' : '1px solid #E5E7EB',
+                  p: 4, 
+                  bgcolor: currentThesisId === thesis.id ? '#F1F5F9' : '#FFFFFF', 
+                  border: currentThesisId === thesis.id ? '2px solid #10B981' : '1px solid #E2E8F0',
                   borderRadius: 2,
                   transition: 'all 0.2s ease',
+                  boxShadow: currentThesisId === thesis.id ? '0 4px 12px rgba(16, 185, 129, 0.15)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
                   '&:hover': {
-                    borderColor: '#D1D5DB'
+                    borderColor: currentThesisId === thesis.id ? '#10B981' : '#CBD5E1',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)'
                   }
                 }}
               >
@@ -3059,23 +3532,35 @@ const MyThesis: React.FC = () => {
                           variant="h6" 
                           sx={{ 
                             fontWeight: 600, 
-                            color: '#000000',
-                            mb: 0
+                            color: '#1E293B',
+                            fontSize: '1.1rem',
+                            mb: 1
                           }}
                         >
                           {thesis.name}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                        <Typography variant="caption" sx={{ 
+                          color: '#64748B',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          mb: 1,
+                          display: 'block'
+                        }}>
                           Click to edit name
                         </Typography>
                       </Box>
                     )}
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ 
+                      color: '#64748B',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      mt: 2
+                    }}>
                       {thesis.criteria.length} criteria • Updated {thesis.updatedAt.toLocaleDateString()}
                     </Typography>
                   </Box>
                   
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', pt: 1 }}>
                     <Button
                       size="small"
                       variant="outlined"
@@ -3096,23 +3581,21 @@ const MyThesis: React.FC = () => {
                     >
                       Duplicate
                     </Button>
-                    {theses.length > 1 && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleDeleteThesis(thesis.id)}
-                        sx={{
-                          borderColor: '#EF4444',
-                          color: '#EF4444',
-                          '&:hover': {
-                            borderColor: '#DC2626',
-                            bgcolor: '#FEF2F2'
-                          }
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleDeleteThesis(thesis.id)}
+                      sx={{
+                        borderColor: '#EF4444',
+                        color: '#EF4444',
+                        '&:hover': {
+                          borderColor: '#DC2626',
+                          bgcolor: '#FEF2F2'
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </Box>
                 </Box>
               </Paper>
@@ -3120,16 +3603,29 @@ const MyThesis: React.FC = () => {
           </Box>
         </DialogContent>
         
-        <DialogActions sx={{ p: 4, bgcolor: '#F9FAFB', borderTop: '1px solid #E5E7EB' }}>
+        <DialogActions sx={{ 
+          p: 1, 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
+          justifyContent: 'flex-end', 
+          gap: 1,
+          borderRadius: '0 0 12px 12px',
+          minHeight: 'auto'
+        }}>
           <Button 
             onClick={() => setShowThesisManager(false)} 
-            variant="outlined"
+            variant="text"
             sx={{
-              borderColor: '#D1D5DB',
-              color: '#374151',
+              color: 'rgba(255, 255, 255, 0.8)',
+              textTransform: 'none',
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              px: 2,
+              py: 0.5,
+              minHeight: 'auto',
               '&:hover': {
-                borderColor: '#9CA3AF',
-                bgcolor: '#F9FAFB'
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                color: 'white'
               }
             }}
           >

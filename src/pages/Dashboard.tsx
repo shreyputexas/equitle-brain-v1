@@ -32,21 +32,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const data = await DashboardApiService.getDashboardData();
-        setDashboardData(data);
-        setError(null);
-      } catch (err: any) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err.message || 'Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await DashboardApiService.getDashboardData();
+      setDashboardData(data);
+      setError(null);
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchDashboardData();
   }, []);
 
@@ -64,7 +64,7 @@ export default function Dashboard() {
         <Typography variant="h6" color="error" gutterBottom>
           {error || 'Failed to load dashboard data'}
         </Typography>
-        <Button onClick={() => window.location.reload()} variant="contained">
+        <Button onClick={fetchDashboardData} variant="contained">
           Retry
         </Button>
       </Box>
