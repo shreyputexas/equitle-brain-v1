@@ -42,6 +42,7 @@ interface Message {
 export default function Layout() {
   const theme = useTheme();
   const [brainChatOpen, setBrainChatOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [quickLookupOpen, setQuickLookupOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -232,7 +233,7 @@ export default function Layout() {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       {/* Professional Navigation Bar */}
-      <ProfessionalNavbar />
+      <ProfessionalNavbar onSidebarCollapsedChange={setSidebarCollapsed} />
       
       {/* Main Content Area */}
       <Box
@@ -241,10 +242,10 @@ export default function Layout() {
           flexGrow: 1,
           p: 3,
           mt: { xs: 8, md: 0 }, // Account for mobile app bar
-          ml: { xs: 0, md: '280px' }, // Account for sidebar width
+          ml: { xs: 0, md: sidebarCollapsed ? '80px' : '280px' }, // Dynamic sidebar width
           bgcolor: 'background.default',
           minHeight: '100vh',
-          width: { xs: '100%', md: 'calc(100% - 280px)' }, // Ensure proper width calculation
+          width: { xs: '100%', md: sidebarCollapsed ? 'calc(100% - 80px)' : 'calc(100% - 280px)' }, // Dynamic width calculation
           transition: 'all 0.2s ease-in-out' // Smooth transition when sidebar collapses
         }}
       >
