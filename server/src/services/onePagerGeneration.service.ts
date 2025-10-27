@@ -230,7 +230,7 @@ ${teamConnectionText}
    Example 2 - If thesis industries are: Healthcare Services, Medical Practices
    "We are targeting healthcare services and medical practices. Our skills in scaling operations, optimizing unit economics, and building high-performing teams translate directly to growing healthcare businesses. We understand the unique regulatory environment, reimbursement models, and operational challenges in healthcare services. We're passionate about improving patient outcomes while building sustainable, profitable businesses in this essential and growing sector."
 
-   Example 3 - If thesis industries are: Business Services, Professional Services
+   Example 3 - If thesis industres are: Business Services, Professional Services
    "We are seeking opportunities in business services and professional services. Our expertise in evaluating recurring revenue models, assessing competitive positioning, and identifying operational leverage opportunities makes us well-suited for this sector. We understand what drives value in service businesses—customer retention, employee productivity, and scalable delivery models. We're excited to partner with businesses in professional services and help them scale systematically while maintaining quality and margins."
 
    ⚠️ REMINDER: Only mention thesis industries. Never mention background industries. ⚠️
@@ -1004,7 +1004,6 @@ FINAL INSTRUCTIONS:
         sections[currentSection].push(trimmedLine);
       }
     }
-
     // Build the structured data
     const parsedData: IndustryTemplateData = {
       industry: selectedIndustry,

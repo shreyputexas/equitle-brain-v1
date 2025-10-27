@@ -5,7 +5,6 @@ import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy,
 import { onePagerApi } from '../services/onePagerApi';
 import type { OnePagerRequest } from '../services/onePagerApi';
 import { searcherProfilesApi } from '../services/searcherProfilesApi';
-import { getUserId } from '../utils/auth';
 import {
   Box,
   Typography,
@@ -191,9 +190,9 @@ const MyThesis: React.FC = () => {
         setError(null);
         console.log('🔄 Loading investment theses...');
 
-        const userId = getUserId();
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
         console.log('📋 Using userId:', userId);
-
+        
         const thesesRef = collection(db, 'users', userId, 'investmentTheses');
         const q = query(thesesRef, orderBy('createdAt', 'asc'));
         const snapshot = await getDocs(q);
@@ -470,7 +469,7 @@ const MyThesis: React.FC = () => {
           [...theses.find(t => t.id === templateThesisId)?.criteria || []] :
           [];
 
-        const userId = getUserId();
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
         const now = Timestamp.now();
         const thesesRef = collection(db, 'users', userId, 'investmentTheses');
         const docRef = await addDoc(thesesRef, {
@@ -503,7 +502,7 @@ const MyThesis: React.FC = () => {
   const handleDeleteThesis = async (thesisId: string) => {
     if (theses.length > 1) {
       try {
-        const userId = getUserId();
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
         const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
         await deleteDoc(thesisRef);
 
@@ -529,7 +528,7 @@ const MyThesis: React.FC = () => {
   const handleSaveThesisName = async (thesisId: string) => {
     if (editingThesisNameValue.trim()) {
       try {
-        const userId = getUserId();
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
         const now = Timestamp.now();
         const thesisRef = doc(db, 'users', userId, 'investmentTheses', thesisId);
         await updateDoc(thesisRef, {
@@ -568,7 +567,7 @@ const MyThesis: React.FC = () => {
     try {
       console.log('Auto-saving thesis with criteria:', criteria);
       // Update the thesis in Firebase
-      const userId = getUserId();
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
       const now = Timestamp.now();
       const thesisRef = doc(db, 'users', userId, 'investmentTheses', currentThesisId);
       await updateDoc(thesisRef, {
@@ -603,7 +602,7 @@ const MyThesis: React.FC = () => {
     }
 
     try {
-      const userId = getUserId();
+      const userId = localStorage.getItem('userId') || 'dev-user-123';
       const now = Timestamp.now();
       const thesisRef = doc(db, 'users', userId, 'investmentTheses', currentThesisId);
 
@@ -703,7 +702,7 @@ const MyThesis: React.FC = () => {
       // Get team connection from Firebase
       let teamConnection = '';
       try {
-        const userId = getUserId();
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
         const teamConnectionRef = doc(db, 'users', userId, 'teamConnection', 'connection');
         const teamConnectionDoc = await getDoc(teamConnectionRef);
         if (teamConnectionDoc.exists()) {
@@ -1061,7 +1060,7 @@ const MyThesis: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const userId = getUserId();
+        const userId = localStorage.getItem('userId') || 'dev-user-123';
         const thesesRef = collection(db, 'users', userId, 'investmentTheses');
         const q = query(thesesRef, orderBy('createdAt', 'asc'));
         const snapshot = await getDocs(q);
