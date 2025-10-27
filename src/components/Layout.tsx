@@ -1,66 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import {
   Box,
-  AppBar,
-  Toolbar,
   Typography,
   IconButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Badge,
   Tooltip,
-  Divider,
   InputBase,
   Paper,
-  Button,
-  ListItemIcon,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Collapse,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  useTheme
+  useTheme,
+  Button
 } from '@mui/material';
 import {
-  AttachMoney as DealsIcon,
-  TrendingUp as FundraisingIcon,
-  Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   Search as SearchIcon,
-  Logout as LogoutIcon,
-  People as RelationshipsIcon,
-  Person as PersonIcon,
-  AccountBalance as LimitedPartnersIcon,
-  BusinessCenter as FundsIcon,
-  KeyboardArrowDown as ArrowDownIcon,
-  Menu as MenuIcon,
-  ExpandLess,
-  ExpandMore,
   Mic as MicIcon,
   Close as CloseIcon,
   Stop as StopIcon,
   Send as SendIcon,
-  VolumeUp as VolumeUpIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon,
-  Psychology as BrainIcon,
-  QuestionAnswer as AskIcon,
-  FollowTheSigns as FollowUpIcon,
-  Analytics as AnalyticsIcon,
-  Assessment as ReportIcon,
-  Phone as PhoneIcon,
-  DataUsage as DataEnrichmentIcon,
-  Contacts as ContactsIcon,
-  Assignment as ThesisIcon
+  VolumeUp as VolumeUpIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrain } from '../contexts/BrainContext';
+import ProfessionalNavbar from './ProfessionalNavbar';
 
 interface Message {
   id: string;
@@ -74,61 +38,9 @@ interface Message {
   }>;
 }
 
-const navigationItems = [
-  {
-    text: 'Scraping',
-    icon: <AnalyticsIcon />,
-    path: '/data-enrichment'
-  },
-  {
-    text: 'Contacts',
-    icon: <ContactsIcon />,
-    path: '/contacts'
-  },
-  {
-    text: 'My Thesis',
-    icon: <ThesisIcon />,
-    path: '/my-thesis'
-  },
-  {
-    text: 'Outreach',
-    icon: <DealsIcon />,
-    subItems: [
-      { text: 'Deals', path: '/outreach/deals' },
-      { text: 'Investors', path: '/outreach/investors' },
-      { text: 'Brokers', path: '/outreach/brokers' }
-    ]
-  },
-  {
-    text: 'Investors',
-    icon: <FundraisingIcon />,
-    subItems: [
-      { text: 'Limited Partners', path: '/fundraising/limited-partners' },
-      { text: 'Funds', path: '/fundraising/funds' }
-    ]
-  },
-  {
-    text: 'Voice Calls',
-    icon: <PhoneIcon />,
-    subItems: [
-      { text: 'Live Calling', path: '/voice-calls' },
-      { text: 'Voicemails', path: '/mass-voicemail' }
-    ]
-  },
-  {
-    text: 'Brain',
-    icon: <BrainIcon />,
-    path: '/brain'
-  }
-];
 
 export default function Layout() {
   const theme = useTheme();
-  const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
-  const [navMenuAnchors, setNavMenuAnchors] = useState<{ [key: string]: HTMLElement | null }>({});
-  const [searchQuery, setSearchQuery] = useState('');
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [mobileExpandedMenus, setMobileExpandedMenus] = useState<{ [key: string]: boolean }>({});
   const [brainChatOpen, setBrainChatOpen] = useState(false);
   const [quickLookupOpen, setQuickLookupOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -138,43 +50,15 @@ export default function Layout() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [navPosition, setNavPosition] = useState<'top' | 'left'>('top');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { askBrain } = useBrain();
-
-  const handleNavMenuOpen = (event: React.MouseEvent<HTMLElement>, menuKey: string) => {
-    setNavMenuAnchors(prev => ({
-      ...prev,
-      [menuKey]: event.currentTarget
-    }));
-  };
-
-  const handleNavMenuClose = (menuKey: string) => {
-    setNavMenuAnchors(prev => ({
-      ...prev,
-      [menuKey]: null
-    }));
-  };
-
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setProfileAnchorEl(event.currentTarget);
-  };
-
-  const handleProfileMenuClose = () => {
-    setProfileAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    handleProfileMenuClose();
-    logout();
-  };
 
   const handleSearch = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -183,32 +67,6 @@ export default function Layout() {
       // TODO: Implement quick lookup search functionality
       setSearchQuery('');
     }
-  };
-
-  const handleNavigation = (path: string, menuKey?: string, action?: string) => {
-    navigate(path);
-    if (menuKey) {
-      handleNavMenuClose(menuKey);
-    }
-    setMobileDrawerOpen(false);
-    
-    // Handle Brain quick actions
-    if (action) {
-      // You can add specific logic here for different actions
-      // For now, we'll just navigate to the brain page
-      console.log(`Brain action: ${action}`);
-    }
-  };
-
-  const handleMobileDrawerToggle = () => {
-    setMobileDrawerOpen(!mobileDrawerOpen);
-  };
-
-  const handleMobileMenuToggle = (menuKey: string) => {
-    setMobileExpandedMenus(prev => ({
-      ...prev,
-      [menuKey]: !prev[menuKey]
-    }));
   };
 
   const handleBrainChatToggle = () => {
@@ -372,581 +230,22 @@ export default function Layout() {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: navPosition === 'left' ? 'row' : 'column', minHeight: '100vh' }}>
-      {/* Navigation Bar - Top or Left */}
-      <Box sx={{
-        bgcolor: 'background.paper',
-        ...(navPosition === 'left' ? {
-          width: 80,
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          borderRight: '1px solid',
-          borderColor: 'divider',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          zIndex: 1200,
-          p: 1
-        } : {
-          width: '100%',
-          position: 'fixed',
-          top: 0,
-          zIndex: 1200,
-          boxShadow: 'none',
-          borderBottom: '1px solid',
-          borderColor: 'divider'
-        })
-      }}>
-        {navPosition === 'left' ? (
-          /* Left Mode - Compact Icons */
-          <>
-            {/* Equitle Logo Icon */}
-            <Tooltip title="Equitle" placement="right">
-              <IconButton
-                onClick={() => navigate('/')}
-                sx={{
-                  width: 56,
-                  height: 56,
-                  bgcolor: '#FFFFFF',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 2,
-                  mb: 3,
-                  p: 1,
-                  '&:hover': {
-                    bgcolor: '#F9FAFB',
-                    borderColor: '#D1D5DB'
-                  }
-                }}
-              >
-                <Box
-                  component="img"
-                  src="/assets/images/extended_logo_black_white.png"
-                  alt="Equitle"
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    filter: 'brightness(0)'
-                  }}
-                />
-              </IconButton>
-            </Tooltip>
-
-            {/* Navigation Icons */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', flex: 1 }}>
-              {navigationItems.map((item) => (
-                <Box key={item.text} sx={{ position: 'relative' }}>
-                  <Tooltip title={item.text} placement="right">
-                    <IconButton
-                      onClick={() => {
-                        if (item.subItems) {
-                          // For items with submenus, open the dropdown menu
-                          handleNavMenuOpen({ currentTarget: document.querySelector(`[data-menu-trigger="${item.text}"]`) } as any, item.text);
-                        } else {
-                          handleNavigation(item.path || '#');
-                        }
-                      }}
-                      data-menu-trigger={item.text}
-                      sx={{
-                        bgcolor: 'transparent',
-                        color: location.pathname === item.path || 
-                               (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
-                               (item.text === 'Investors' && location.pathname.startsWith('/fundraising')) ||
-                               (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'text.primary',
-                        width: 48,
-                        height: 48,
-                        border: '1px solid',
-                        borderColor: location.pathname === item.path || 
-                                     (item.text === 'Outreach' && location.pathname.startsWith('/outreach')) ||
-                                     (item.text === 'Investors' && location.pathname.startsWith('/fundraising')) ||
-                                     (item.text === 'Brain' && location.pathname.startsWith('/brain')) ? 'primary.main' : 'transparent',
-                        '&:hover': {
-                          bgcolor: 'action.hover'
-                        }
-                      }}
-                    >
-                      {item.icon}
-                    </IconButton>
-                  </Tooltip>
-                  
-                  {/* Submenu for left navigation */}
-                  {item.subItems && (
-                    <Menu
-                      anchorEl={navMenuAnchors[item.text]}
-                      open={Boolean(navMenuAnchors[item.text])}
-                      onClose={() => handleNavMenuClose(item.text)}
-                      transformOrigin={{ horizontal: 'left', vertical: 'top' }}
-                      anchorOrigin={{ horizontal: 'right', vertical: 'top' }}
-                      PaperProps={{
-                        sx: {
-                          ml: 1,
-                          minWidth: 200,
-                          bgcolor: 'background.paper',
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
-                        }
-                      }}
-                    >
-                      {item.subItems.map((subItem) => (
-                        <MenuItem
-                          key={subItem.text}
-                          onClick={() => handleNavigation(subItem.path, item.text, (subItem as any).action)}
-                          selected={false}
-                          sx={{
-                            py: 1.5,
-                            px: 2,
-                            '&:hover': {
-                              bgcolor: 'action.hover'
-                            }
-                          }}
-                        >
-                          <ListItemText 
-                            primary={subItem.text}
-                            primaryTypographyProps={{
-                              variant: 'body2',
-                              fontWeight: 500
-                            }}
-                          />
-                        </MenuItem>
-                      ))}
-                    </Menu>
-                  )}
-                </Box>
-              ))}
-            </Box>
-
-            {/* Search Bar */}
-            <Box sx={{ mb: 2, width: '100%', px: 1 }}>
-              <Tooltip title="Quick Search" placement="right">
-                <IconButton
-                  onClick={() => setQuickLookupOpen(true)}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: 'background.default',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  <SearchIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            {/* Profile Section */}
-            <Box sx={{ mb: 2 }}>
-              <Tooltip title="Profile" placement="right">
-                <IconButton 
-                  onClick={handleProfileMenuOpen}
-                  sx={{ 
-                    p: 0, 
-                    position: 'relative',
-                    width: 48,
-                    height: 48
-                  }}
-                >
-                  <Badge 
-                    badgeContent={4} 
-                    sx={{ 
-                      '& .MuiBadge-badge': { 
-                        bgcolor: '#ff0000',
-                        color: 'white',
-                        right: 2,
-                        top: 2,
-                        minWidth: '18px',
-                        height: '18px',
-                        fontSize: '12px'
-                      } 
-                    }}
-                  >
-                    <Avatar sx={{ bgcolor: '#000000', width: 48, height: 48 }}>
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-            </Box>
-
-            {/* Layout Toggle */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
-              <Tooltip title="Top Layout" placement="right">
-                <IconButton
-                  onClick={() => setNavPosition('top')}
-                  sx={{
-                    bgcolor: 'transparent',
-                    color: (navPosition as string) === 'top' ? 'primary.main' : 'text.primary',
-                    width: 32,
-                    height: 32,
-                    fontSize: '0.7rem',
-                    border: '1px solid',
-                    borderColor: (navPosition as string) === 'top' ? 'primary.main' : 'divider',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  T
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Left Layout" placement="right">
-                <IconButton
-                  onClick={() => setNavPosition('left')}
-                  sx={{
-                    bgcolor: 'transparent',
-                    color: (navPosition as string) === 'left' ? 'primary.main' : 'text.primary',
-                    width: 32,
-                    height: 32,
-                    fontSize: '0.7rem',
-                    border: '1px solid',
-                    borderColor: (navPosition as string) === 'left' ? 'primary.main' : 'divider',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
-                  L
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </>
-        ) : (
-          /* Top Mode - Traditional */
-          <Toolbar sx={{ px: { xs: 2, md: 3 }, minHeight: '64px !important' }}>
-            {/* Mobile Menu Button */}
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleMobileDrawerToggle}
-              sx={{ mr: 2, display: { md: 'none' } }}
-            >
-              <MenuIcon />
-            </IconButton>
-
-            {/* Logo/Brand */}
-            <Box
-              component="img"
-              src="/assets/images/extended_logo_black_white.png"
-              alt="Equitle"
-              sx={{
-                height: { xs: '2rem', md: '2.5rem' },
-                filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
-                opacity: 0.95,
-                objectFit: 'contain',
-                mr: 4,
-                cursor: 'pointer'
-              }}
-              onClick={() => navigate('/')}
-            />
-
-            {/* Desktop Navigation Menu */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', flexGrow: 1, gap: 1 }}>
-              {navigationItems.map((item) => (
-                <Box key={item.text}>
-                  {item.subItems ? (
-                    <>
-                      <Button
-                        startIcon={item.icon}
-                        endIcon={<ArrowDownIcon />}
-                        onClick={(e) => handleNavMenuOpen(e, item.text)}
-                        sx={{
-                          color: 'text.primary',
-                          textTransform: 'none',
-                          fontWeight: 500,
-                          px: 2,
-                          py: 1,
-                          '&:hover': {
-                            bgcolor: 'action.hover'
-                          }
-                        }}
-                      >
-                        {item.text}
-                      </Button>
-                      <Menu
-                        anchorEl={navMenuAnchors[item.text]}
-                        open={Boolean(navMenuAnchors[item.text])}
-                        onClose={() => handleNavMenuClose(item.text)}
-                        transformOrigin={{ horizontal: 'left', vertical: 'top' }}
-                        anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
-                      >
-                        {item.subItems.map((subItem) => (
-                          <MenuItem
-                            key={subItem.text}
-                            onClick={() => handleNavigation(subItem.path, item.text, (subItem as any).action)}
-                            selected={false}
-                          >
-                            {subItem.text}
-                          </MenuItem>
-                        ))}
-                      </Menu>
-                    </>
-                  ) : (
-                    <Button
-                      startIcon={item.icon}
-                      onClick={() => handleNavigation(item.path!)}
-                      sx={{
-                        color: location.pathname === item.path ? 'primary.main' : 'text.primary',
-                        textTransform: 'none',
-                        fontWeight: location.pathname === item.path ? 600 : 500,
-                        px: 2,
-                        py: 1,
-                        '&:hover': {
-                          bgcolor: 'action.hover'
-                        }
-                      }}
-                    >
-                      {item.text}
-                    </Button>
-                  )}
-                </Box>
-              ))}
-            </Box>
-
-            {/* Mobile spacer */}
-            <Box sx={{ flexGrow: 1, display: { xs: 'block', md: 'none' } }} />
-
-            {/* Layout Toggle */}
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 3 }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 1 }}>
-                Layout:
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => setNavPosition('top')}
-                sx={{
-                  bgcolor: 'transparent',
-                  color: navPosition === 'top' ? 'primary.main' : 'text.primary',
-                  fontSize: '0.75rem',
-                  minWidth: 'auto',
-                  px: 1.5,
-                  border: '1px solid',
-                  borderColor: navPosition === 'top' ? 'primary.main' : 'divider',
-                  '&:hover': {
-                    bgcolor: 'action.hover'
-                  }
-                }}
-              >
-                Top
-              </Button>
-              <Button
-                size="small"
-                onClick={() => setNavPosition('left')}
-                sx={{
-                  bgcolor: 'transparent',
-                  color: (navPosition as string) === 'left' ? 'primary.main' : 'text.primary',
-                  fontSize: '0.75rem',
-                  minWidth: 'auto',
-                  px: 1.5,
-                  border: '1px solid',
-                  borderColor: (navPosition as string) === 'left' ? 'primary.main' : 'divider',
-                  '&:hover': {
-                    bgcolor: 'action.hover'
-                  }
-                }}
-              >
-                Left
-              </Button>
-            </Box>
-
-            {/* Quick Lookup Icon */}
-            <Tooltip title="Quick Lookup">
-              <IconButton
-                onClick={() => setQuickLookupOpen(true)}
-                sx={{
-                  display: { xs: 'none', md: 'flex' },
-                  mr: 3,
-                  bgcolor: 'background.default',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    bgcolor: 'action.hover'
-                  }
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-            </Tooltip>
-
-            {/* Right side - Profile with Notifications */}
-            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 'fit-content' }}>
-              <Tooltip title="Profile">
-                <IconButton onClick={handleProfileMenuOpen} sx={{ p: 0, position: 'relative' }}>
-                  <Badge 
-                    badgeContent={4} 
-                    sx={{ 
-                      '& .MuiBadge-badge': { 
-                        bgcolor: '#ff0000',
-                        color: 'white',
-                        right: 2,
-                        top: 2,
-                        minWidth: '18px',
-                        height: '18px',
-                        fontSize: '12px'
-                      } 
-                    }}
-                  >
-                    <Avatar sx={{ bgcolor: '#000000' }}>
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </Avatar>
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Toolbar>
-        )}
-      </Box>
-
-      {/* Profile Menu */}
-      <Menu
-        anchorEl={profileAnchorEl}
-        open={Boolean(profileAnchorEl)}
-        onClose={handleProfileMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/profile'); }}>
-          <ListItemIcon>
-            <PersonIcon fontSize="small" />
-          </ListItemIcon>
-          My Profile
-        </MenuItem>
-        <MenuItem onClick={() => { handleProfileMenuClose(); navigate('/settings'); }}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          Settings
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          Logout
-        </MenuItem>
-      </Menu>
-
-      {/* Mobile Navigation Drawer */}
-        <Drawer
-          variant="temporary"
-        anchor="left"
-        open={mobileDrawerOpen}
-        onClose={handleMobileDrawerToggle}
-          ModalProps={{
-          keepMounted: true, // Better open performance on mobile
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-            width: 280,
-              bgcolor: 'background.paper',
-              borderRight: '1px solid',
-              borderColor: 'divider'
-            }
-          }}
-        >
-        <Box sx={{ overflow: 'auto' }}>
-          <Toolbar>
-            <Box
-              component="img"
-              src="/assets/images/extended_logo_black_white.png"
-              alt="Equitle"
-              sx={{
-                height: '2rem',
-                filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
-                opacity: 0.95,
-                objectFit: 'contain',
-                cursor: 'pointer'
-              }}
-              onClick={() => navigate('/')}
-            />
-          </Toolbar>
-          <Divider />
-          <List>
-            {navigationItems.map((item) => (
-              <Box key={item.text}>
-                {item.subItems ? (
-                  <>
-                    <ListItem disablePadding>
-                      <ListItemButton onClick={() => handleMobileMenuToggle(item.text)}>
-                        <ListItemIcon>
-                          {item.icon}
-                        </ListItemIcon>
-                        <ListItemText primary={item.text} />
-                        {mobileExpandedMenus[item.text] ? <ExpandLess /> : <ExpandMore />}
-                      </ListItemButton>
-                    </ListItem>
-                    <Collapse in={mobileExpandedMenus[item.text]} timeout="auto" unmountOnExit>
-                      <List component="div" disablePadding>
-                        {item.subItems.map((subItem) => (
-                          <ListItemButton
-                            key={subItem.text}
-                            sx={{ pl: 4 }}
-                            onClick={() => handleNavigation(subItem.path, undefined, (subItem as any).action)}
-                            selected={false}
-                          >
-                            <ListItemText primary={subItem.text} />
-                          </ListItemButton>
-                        ))}
-                      </List>
-                    </Collapse>
-                  </>
-                ) : (
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={() => handleNavigation(item.path!)}
-                      selected={location.pathname === item.path}
-                    >
-                      <ListItemIcon>
-                        {item.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={item.text} />
-                    </ListItemButton>
-                  </ListItem>
-                )}
-              </Box>
-            ))}
-            
-            {/* Mobile Profile Section */}
-            <Divider sx={{ my: 2 }} />
-            <List>
-              <ListItem disablePadding>
-                <ListItemButton onClick={() => { setMobileDrawerOpen(false); navigate('/settings'); }}>
-                  <ListItemIcon>
-                    <SettingsIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Settings" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton onClick={handleLogout}>
-                  <ListItemIcon>
-                    <LogoutIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Logout" />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </List>
-        </Box>
-        </Drawer>
-
-      {/* Main Content */}
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Professional Navigation Bar */}
+      <ProfessionalNavbar />
+      
+      {/* Main Content Area */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
-          mt: navPosition === 'top' ? 8 : 0, // Account for AppBar height only in top mode
-          ml: navPosition === 'left' ? 10 : 0, // Account for left nav width (80px + padding)
-          bgcolor: 'background.default'
+          mt: { xs: 8, md: 0 }, // Account for mobile app bar
+          ml: { xs: 0, md: '280px' }, // Account for sidebar width
+          bgcolor: 'background.default',
+          minHeight: '100vh',
+          width: { xs: '100%', md: 'calc(100% - 280px)' }, // Ensure proper width calculation
+          transition: 'all 0.2s ease-in-out' // Smooth transition when sidebar collapses
         }}
       >
         <Outlet />
