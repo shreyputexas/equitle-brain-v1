@@ -18,7 +18,7 @@ import {
   Lock as LockIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -30,6 +30,7 @@ export default function Login() {
 
   const { login } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check for success message from signup
@@ -229,7 +230,7 @@ export default function Login() {
             <Link
               component="button"
               variant="body2"
-              onClick={() => window.location.href = '/signup'}
+              onClick={() => navigate('/signup')}
               sx={{ color: 'primary.main', textDecoration: 'none' }}
             >
               Sign up here

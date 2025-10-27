@@ -36,8 +36,7 @@ import {
   AttachMoney as MoneyIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 
 interface EmailCategory {
@@ -356,7 +355,7 @@ export default function OutlookEmailCard({
           
           <Button
             size="small"
-            endIcon={<ExpandMoreIcon />}
+            endIcon={<MoreVertIcon />}
             onClick={handleMenuOpen}
             variant="outlined"
             sx={{ flex: 1, minWidth: 'fit-content' }}
