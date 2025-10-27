@@ -11,7 +11,6 @@ import {
   MenuItem,
   Badge,
   Tooltip,
-  Divider,
   InputBase,
   Paper,
   Button,
@@ -37,7 +36,6 @@ import {
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
   Search as SearchIcon,
-  Logout as LogoutIcon,
   People as RelationshipsIcon,
   Person as PersonIcon,
   AccountBalance as LimitedPartnersIcon,
@@ -68,7 +66,6 @@ import {
   KeyboardArrowRight as ArrowRightIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
-  MoreVert as MoreVertIcon,
   Add as AddIcon,
   FilterList as FilterIcon,
   ViewList as ViewListIcon,
@@ -110,12 +107,12 @@ const navigationItems = [
     text: 'Contacts',
     icon: <ContactsIcon />,
     path: '/contacts',
-    badge: '12'
+    badge: null
   },
   {
     text: 'Outreach',
     icon: <SpeakerIcon />,
-    badge: '3',
+    badge: null,
     subItems: [
       { text: 'Deals', path: '/outreach/deals', icon: <DealsIcon /> },
       { text: 'Investors', path: '/outreach/investors', icon: <FundraisingIcon /> },
@@ -158,7 +155,11 @@ const pinnedItems = [
   { text: 'Hot Leads', type: 'View', path: '/contacts/hot-leads' }
 ];
 
-export default function ProfessionalNavbar() {
+interface ProfessionalNavbarProps {
+  onSidebarCollapsedChange?: (collapsed: boolean) => void;
+}
+
+export default function ProfessionalNavbar({ onSidebarCollapsedChange }: ProfessionalNavbarProps = {}) {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -167,7 +168,6 @@ export default function ProfessionalNavbar() {
   // State management
   const [navMenuAnchors, setNavMenuAnchors] = useState<{ [key: string]: HTMLElement | null }>({});
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
-  const [threeDotsMenuAnchor, setThreeDotsMenuAnchor] = useState<null | HTMLElement>(null);
   const [notificationsMenuAnchor, setNotificationsMenuAnchor] = useState<null | HTMLElement>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -200,14 +200,6 @@ export default function ProfessionalNavbar() {
     setProfileMenuAnchor(null);
   };
 
-  const handleThreeDotsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    console.log('Three dots clicked!', event.currentTarget);
-    setThreeDotsMenuAnchor(event.currentTarget);
-  };
-
-  const handleThreeDotsMenuClose = () => {
-    setThreeDotsMenuAnchor(null);
-  };
 
   const handleNotificationsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationsMenuAnchor(event.currentTarget);
@@ -256,21 +248,27 @@ export default function ProfessionalNavbar() {
           sx={{
             borderRadius: 1,
             mb: 0.5,
-            mx: 1,
-            pl: level === 0 ? 2 : 4,
-            pr: 2,
-            py: 1,
-            minHeight: 44,
+            mx: sidebarCollapsed ? 0.5 : 1,
+            pl: sidebarCollapsed ? 1 : (level === 0 ? 2 : 4),
+            pr: sidebarCollapsed ? 1 : 2,
+            py: sidebarCollapsed ? 1.5 : 1,
+            minHeight: sidebarCollapsed ? 48 : 44,
+            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
             backgroundColor: active ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
             border: active ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid transparent',
             '&:hover': {
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               border: '1px solid rgba(255, 255, 255, 0.2)'
             },
-            transition: 'all 0.2s ease-in-out'
+            transition: 'all 0.2s ease-in-out',
+            position: 'relative'
           }}
         >
-          <ListItemIcon sx={{ minWidth: 40, color: active ? 'white' : 'rgba(255, 255, 255, 0.8)' }}>
+          <ListItemIcon sx={{ 
+            minWidth: sidebarCollapsed ? 24 : 40, 
+            color: active ? 'white' : 'rgba(255, 255, 255, 0.8)',
+            justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
+          }}>
             {item.icon}
           </ListItemIcon>
           {!sidebarCollapsed && (
@@ -312,6 +310,20 @@ export default function ProfessionalNavbar() {
                 </IconButton>
               )}
             </>
+          )}
+          {sidebarCollapsed && item.badge && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: '#ef4444',
+                border: '2px solid #1a1a1a'
+              }}
+            />
           )}
         </ListItemButton>
         
@@ -356,19 +368,42 @@ export default function ProfessionalNavbar() {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', color: 'white' }}>
       {/* Logo Section */}
       <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-        <Box
-          component="img"
-          src="/assets/images/extended_logo_black_white.png"
-          alt="Equitle"
-          sx={{
-            height: sidebarCollapsed ? 32 : 40,
-            filter: 'brightness(0) invert(1)',
-            objectFit: 'contain',
-            cursor: 'pointer',
-            transition: 'height 0.2s ease-in-out'
-          }}
-          onClick={() => navigate('/')}
-        />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box
+            component="img"
+            src="/assets/images/extended_logo_black_white.png"
+            alt="Equitle"
+            sx={{
+              height: sidebarCollapsed ? 32 : 40,
+              filter: 'brightness(0) invert(1)',
+              objectFit: 'contain',
+              cursor: 'pointer',
+              transition: 'height 0.2s ease-in-out',
+              opacity: sidebarCollapsed ? 0 : 1,
+              width: sidebarCollapsed ? 0 : 'auto',
+              overflow: 'hidden'
+            }}
+            onClick={() => navigate('/')}
+          />
+          <IconButton
+            onClick={() => {
+              const newCollapsed = !sidebarCollapsed;
+              setSidebarCollapsed(newCollapsed);
+              onSidebarCollapsedChange?.(newCollapsed);
+            }}
+            sx={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              p: 1,
+              '&:hover': {
+                color: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              },
+              transition: 'all 0.2s ease-in-out'
+            }}
+          >
+            {sidebarCollapsed ? <ExpandMore sx={{ transform: 'rotate(-90deg)' }} /> : <ExpandMore sx={{ transform: 'rotate(90deg)' }} />}
+          </IconButton>
+        </Box>
       </Box>
 
 
@@ -383,8 +418,13 @@ export default function ProfessionalNavbar() {
 
 
       {/* User Profile Section */}
-      <Box sx={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', p: sidebarCollapsed ? 1 : 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: sidebarCollapsed ? 0 : 2,
+          justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
+        }}>
           <Badge
             overlap="circular"
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -410,7 +450,7 @@ export default function ProfessionalNavbar() {
                 transition: 'all 0.2s ease-in-out',
                 border: '1px solid rgba(255, 255, 255, 0.3)'
               }}
-              onClick={handleProfileMenuOpen}
+              onClick={handleProfileMenuOpen}th
             >
               {user?.name?.charAt(0).toUpperCase()}
             </Avatar>
@@ -427,11 +467,6 @@ export default function ProfessionalNavbar() {
             </Box>
           )}
           
-          {!sidebarCollapsed && (
-            <IconButton size="small" onClick={handleThreeDotsMenuOpen} sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-              <MoreVertIcon fontSize="small" />
-            </IconButton>
-          )}
         </Box>
       </Box>
     </Box>
@@ -523,49 +558,6 @@ export default function ProfessionalNavbar() {
         </Toolbar>
       </AppBar>
 
-
-      {/* Three Dots Menu */}
-      <Menu
-        anchorEl={threeDotsMenuAnchor}
-        open={Boolean(threeDotsMenuAnchor)}
-        onClose={handleThreeDotsMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        slotProps={{
-          paper: {
-            sx: {
-              mt: 1,
-              minWidth: 200,
-              borderRadius: 2,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-              '& .MuiMenuItem-root': {
-                px: 2,
-                py: 1,
-              },
-            },
-          },
-        }}
-      >
-        <MenuItem onClick={handleThreeDotsMenuClose}>
-          <PersonIcon fontSize="small" sx={{ mr: 1 }} />
-          Profile
-        </MenuItem>
-        <MenuItem onClick={handleThreeDotsMenuClose}>
-          <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-          Settings
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-          Logout
-        </MenuItem>
-      </Menu>
 
       {/* Notifications Menu */}
       <Menu

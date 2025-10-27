@@ -1123,20 +1123,287 @@ const MyThesis: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+    <Box sx={{ p: 3, minHeight: '100vh', bgcolor: '#FAFAFA' }}>
+      {/* Modern Hero Section */}
+      <Box sx={{ mb: 6 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 4,
+            p: 6,
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            border: '1px solid #e2e8f0',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Isometric Background Elements */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: -20,
+              right: -20,
+              width: 200,
+              height: 200,
+              background: 'linear-gradient(45deg, #e0f2fe 0%, #b3e5fc 100%)',
+              borderRadius: '50%',
+              opacity: 0.1,
+              transform: 'rotate(45deg)'
+            }}
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 40,
+              right: 40,
+              width: 80,
+              height: 80,
+              background: 'linear-gradient(45deg, #f0f9ff 0%, #e0f2fe 100%)',
+              borderRadius: 2,
+              transform: 'rotate(15deg)',
+              opacity: 0.3
+            }}
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 120,
+              height: 120,
+              background: 'linear-gradient(45deg, #f0fdf4 0%, #dcfce7 100%)',
+              borderRadius: '50%',
+              opacity: 0.1,
+              transform: 'rotate(-30deg)'
+            }}
+          />
+
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Box sx={{ position: 'relative', zIndex: 2 }}>
+                <Typography 
+                  variant="h3" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    mb: 2, 
+                    color: '#1e293b',
+                    fontSize: { xs: '2.2rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    textTransform: 'uppercase',
+                    background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  Build Your Investment Thesis
+                </Typography>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 500, 
+                    mb: 3, 
+                    color: '#475569',
+                    fontSize: '1.1rem',
+                    lineHeight: 1.5
+                  }}
+                >
+                  Define your investment criteria and generate comprehensive one-pagers for potential acquisitions.
+                </Typography>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: '#64748b',
+                    mb: 4,
+                    maxWidth: '600px',
+                    lineHeight: 1.6
+                  }}
+                >
+                  Create structured investment frameworks that align with your strategic goals and market opportunities.
+                </Typography>
+                
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<AddIcon />}
+                    onClick={() => setShowNewThesisDialog(true)}
+                    sx={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                        boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                        transform: 'translateY(-2px)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Create New Thesis
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<EditIcon />}
+                    onClick={() => setShowThesisManager(true)}
+                    sx={{
+                      borderColor: '#cbd5e1',
+                      color: '#475569',
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: '#94a3b8',
+                        bgcolor: '#f8fafc',
+                        transform: 'translateY(-1px)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Manage Theses
+                  </Button>
+                </Box>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={4}>
+              <Box sx={{ position: 'relative', zIndex: 2 }}>
+                {/* Isometric Device Illustration */}
+                <Box
+                  sx={{
+                    width: '100%',
+                    maxWidth: 300,
+                    height: 200,
+                    position: 'relative',
+                    mx: 'auto'
+                  }}
+                >
+                  {/* Device Base */}
+                  <Box
+                    sx={{
+                      width: '80%',
+                      height: '60%',
+                      background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                      borderRadius: 3,
+                      position: 'absolute',
+                      bottom: 0,
+                      left: '10%',
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                      transform: 'perspective(1000px) rotateX(15deg) rotateY(-5deg)',
+                      border: '1px solid #cbd5e1'
+                    }}
+                  >
+                    {/* Screen Content */}
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        right: 8,
+                        bottom: 8,
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                        borderRadius: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 1
+                      }}
+                    >
+                      {/* Chart Elements */}
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'end' }}>
+                        <Box sx={{ width: 8, height: 12, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: 0.5 }} />
+                        <Box sx={{ width: 8, height: 16, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', borderRadius: 0.5 }} />
+                        <Box sx={{ width: 8, height: 8, background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)', borderRadius: 0.5 }} />
+                        <Box sx={{ width: 8, height: 20, background: 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)', borderRadius: 0.5 }} />
+                      </Box>
+                      <Box sx={{ width: 20, height: 20, borderRadius: '50%', bgcolor: '#e2e8f0', position: 'relative' }}>
+                        <Box sx={{ position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} />
+                      </Box>
+                    </Box>
+                  </Box>
+                  
+                  {/* Floating Elements */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 20,
+                      right: 20,
+                      width: 24,
+                      height: 24,
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      borderRadius: 2,
+                      transform: 'rotate(15deg)',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 40,
+                      left: 10,
+                      width: 16,
+                      height: 16,
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                      borderRadius: '50%',
+                      transform: 'rotate(-15deg)',
+                      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 60,
+                      right: 10,
+                      width: 20,
+                      height: 20,
+                      background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
+                      borderRadius: 1,
+                      transform: 'rotate(30deg)',
+                      boxShadow: '0 4px 12px rgba(4, 120, 87, 0.3)'
+                    }}
+                  />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Box>
+
+      {/* Thesis Selection Card */}
+      <Card 
+        elevation={0}
+        sx={{ 
+          mb: 4, 
+          borderRadius: 3,
+          border: '1px solid #e2e8f0',
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: '#000000' }}>
-              My Investment Thesis
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, color: '#1e293b' }}>
+                Current Thesis
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Define your investment criteria and generate comprehensive one-pagers for potential acquisitions
+              <Typography variant="body2" color="text.secondary">
+                Select and manage your investment criteria
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl sx={{ minWidth: 200 }}>
+            <FormControl sx={{ minWidth: 250 }}>
               <InputLabel>Thesis</InputLabel>
               <Select
                 value={currentThesisId}
@@ -1144,11 +1411,12 @@ const MyThesis: React.FC = () => {
                 label="Thesis"
                 sx={{
                   '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
                     '&:hover fieldset': {
-                      borderColor: '#9CA3AF'
+                      borderColor: '#94a3b8'
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#000000'
+                      borderColor: '#10b981'
                     }
                   }
                 }}
@@ -1160,46 +1428,24 @@ const MyThesis: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => setShowNewThesisDialog(true)}
-              sx={{
-                borderColor: '#D1D5DB',
-                color: '#374151',
-                '&:hover': {
-                  borderColor: '#9CA3AF',
-                  bgcolor: '#F9FAFB'
-                }
-              }}
-            >
-              New Thesis
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={() => setShowThesisManager(true)}
-              sx={{
-                borderColor: '#D1D5DB',
-                color: '#374151',
-                '&:hover': {
-                  borderColor: '#9CA3AF',
-                  bgcolor: '#F9FAFB'
-                }
-              }}
-            >
-              Manage
-            </Button>
           </Box>
-        </Box>
-      </Box>
+        </CardContent>
+      </Card>
 
       {/* Investment Criteria Section - Full Width */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
+      <Card 
+        elevation={0}
+        sx={{ 
+          mb: 4, 
+          borderRadius: 3,
+          border: '1px solid #e2e8f0',
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000' }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, color: '#1e293b' }}>
                 Investment Criteria
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -1212,10 +1458,26 @@ const MyThesis: React.FC = () => {
               onClick={handleOpenAddCriteria}
               disabled={getTotalWeight() >= 100}
               sx={{
-                bgcolor: '#000000',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: 'white',
-                '&:hover': { bgcolor: '#333333' },
-                '&:disabled': { bgcolor: '#9CA3AF' }
+                px: 3,
+                py: 1.5,
+                borderRadius: 2,
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                  boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                '&:disabled': { 
+                  background: '#9CA3AF',
+                  boxShadow: 'none',
+                  transform: 'none'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               Add Criteria
@@ -1225,12 +1487,13 @@ const MyThesis: React.FC = () => {
           {/* Investment Criteria Visualization */}
           {criteria.length > 0 && (
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#000000' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1e293b' }}>
                 Investment Criteria Breakdown
               </Typography>
               
+              
               {/* Weighted Bar Visualization */}
-              <Paper sx={{ p: 3, bgcolor: '#F9FAFB', border: '1px solid #E5E7EB' }}>
+              <Paper sx={{ p: 3, bgcolor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 3 }}>
                 <Box 
                   sx={{ 
                     display: 'flex', 
@@ -1247,12 +1510,12 @@ const MyThesis: React.FC = () => {
                 >
                   {criteria.map((criterion, index) => {
                     const colors = [
-                      '#000000', // Black
-                      '#6B7280', // Gray
-                      '#374151', // Dark Gray
-                      '#4B5563', // Medium Gray
-                      '#1F2937', // Very Dark Gray
-                      '#111827'  // Almost Black
+                      '#10b981', // Green
+                      '#059669', // Darker Green
+                      '#047857', // Even Darker Green
+                      '#065f46', // Very Dark Green
+                      '#064e3b', // Darkest Green
+                      '#10b981'  // Back to Green
                     ];
                     const color = colors[index % colors.length];
                     const width = criterion.weight;
@@ -1264,7 +1527,7 @@ const MyThesis: React.FC = () => {
                         sx={{
                           width: `${width}%`,
                           height: '100%',
-                          bgcolor: color,
+                          background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -1281,9 +1544,10 @@ const MyThesis: React.FC = () => {
                           sx={{ 
                             color: 'white', 
                             fontWeight: 600,
+                            fontSize: '0.8rem',
                             textAlign: 'center',
-                            px: 1,
-                            textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                            lineHeight: 1.2
                           }}
                         >
                           {criterion.field}
@@ -1315,11 +1579,18 @@ const MyThesis: React.FC = () => {
                   })}
                 </Box>
                 
-                {/* Legend */}
-                <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {/* Legend - Only show in detailed view - REMOVED */}
+                {/* {showDetailedView && (
+                  <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {console.log('Rendering detailed view, showDetailedView:', showDetailedView)}
                   {criteria.map((criterion, index) => {
                     const colors = [
-                      '#000000', '#6B7280', '#374151', '#4B5563', '#1F2937', '#111827'
+                      '#10b981', // Green
+                      '#059669', // Darker Green
+                      '#047857', // Even Darker Green
+                      '#065f46', // Very Dark Green
+                      '#064e3b', // Darkest Green
+                      '#10b981'  // Back to Green
                     ];
                     const color = colors[index % colors.length];
                     
@@ -1329,30 +1600,42 @@ const MyThesis: React.FC = () => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1,
-                          p: 1,
+                          gap: 2,
+                          p: 2.5,
                           bgcolor: '#FFFFFF',
-                          borderRadius: 1,
+                          borderRadius: 3,
                           border: '1px solid #E5E7EB',
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
+                          width: '100%',
                           '&:hover': {
                             bgcolor: '#F9FAFB',
-                            borderColor: '#D1D5DB'
+                            borderColor: '#D1D5DB',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            transform: 'translateY(-1px)'
                           }
                         }}
                         onClick={() => handleEditCriteria(criterion)}
                       >
                         <Box
                           sx={{
-                            width: 12,
-                            height: 12,
+                            width: 16,
+                            height: 16,
                             bgcolor: color,
-                            borderRadius: 0.5
+                            borderRadius: 1,
+                            flexShrink: 0
                           }}
                         />
-                        <Typography variant="caption" sx={{ fontWeight: 500, color: '#000000' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, flex: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600, color: '#000000', fontSize: '0.9rem', mb: 0.5 }}>
                           {criterion.field} 
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 500, color: '#6B7280', fontSize: '0.8rem' }}>
+                            {criterion.operator} {criterion.value}
+                          </Typography>
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#10b981', fontSize: '1rem', ml: 2 }}>
+                          {criterion.weight}%
                         </Typography>
                         {editingWeight === criterion.id ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1410,23 +1693,7 @@ const MyThesis: React.FC = () => {
                             </Typography>
                           </Box>
                         ) : (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              fontWeight: 500, 
-                              color: '#000000',
-                              cursor: 'pointer',
-                              px: 1,
-                              py: 0.5,
-                              borderRadius: 1,
-                              '&:hover': {
-                                bgcolor: '#F3F4F6'
-                              }
-                            }}
-                            onClick={() => handleWeightEdit(criterion.id, criterion.weight)}
-                          >
-                            ({criterion.weight}%)
-                          </Typography>
+                          <Box />
                         )}
                         <IconButton
                           size="small"
@@ -1446,49 +1713,78 @@ const MyThesis: React.FC = () => {
                     );
                   })}
                 </Box>
+                )} */}
               </Paper>
             </Box>
           )}
 
-          {/* Traditional List View (Collapsible) */}
-          <Box sx={{ mb: 2 }}>
-            <Button
-              onClick={() => setShowTraditionalView(!showTraditionalView)}
-              variant="outlined"
-              size="small"
-              sx={{
-                borderColor: '#D1D5DB',
-                color: '#6B7280',
-                '&:hover': {
-                  borderColor: '#9CA3AF',
-                  bgcolor: '#F9FAFB'
-                }
-              }}
-            >
-              {showTraditionalView ? 'Hide' : 'Show'} Traditional View
-            </Button>
-          </Box>
+          {/* Traditional View Toggle Button */}
+          {criteria.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Box
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                sx={{ display: 'inline-block' }}
+              >
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.nativeEvent.stopImmediatePropagation();
+                    setShowTraditionalView(!showTraditionalView);
+                  }}
+                  variant="outlined"
+                  size="small"
+                  startIcon={showTraditionalView ? <ExpandLess /> : <AddIcon />}
+                  sx={{
+                    borderColor: '#D1D5DB',
+                    color: '#6B7280',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#10b981',
+                      color: '#10b981',
+                      bgcolor: '#f0fdf4'
+                    }
+                  }}
+                >
+                  {showTraditionalView ? 'Hide Detailed View' : 'Show Detailed View'}
+                </Button>
+              </Box>
+            </Box>
+          )}
 
-          {showTraditionalView && (
+          {/* Traditional Detailed View */}
+          {showTraditionalView && criteria.length > 0 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1e293b' }}>
+                Detailed Investment Criteria
+              </Typography>
               {criteria.map((criterion, index) => (
                 <Paper 
                   key={criterion.id} 
                   sx={{ 
-                    p: 2, 
+                    p: 3, 
                     bgcolor: '#FFFFFF', 
                     border: '1px solid #E5E7EB',
-                    borderRadius: 2,
+                    borderRadius: 3,
                     transition: 'all 0.2s ease',
                     '&:hover': {
                       borderColor: '#D1D5DB',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                     }
                   }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                         <Chip 
                           label={criterion.category} 
                           size="small" 
@@ -1497,22 +1793,23 @@ const MyThesis: React.FC = () => {
                             color: '#000000',
                             fontWeight: 600,
                             fontSize: '0.75rem',
-                            height: 24
+                            height: 28,
+                            px: 1
                           }} 
                         />
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#000000' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000' }}>
                           {criterion.field}
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#6B7280' }}>
+                        <Typography variant="body1" sx={{ color: '#6B7280', fontWeight: 500 }}>
                           {criterion.operator}
                         </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#000000' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#000000' }}>
                           {criterion.value}
                         </Typography>
                       </Box>
                       
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 'fit-content' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 'fit-content', fontWeight: 500 }}>
                           Weight: 
                         </Typography>
                         {editingWeight === criterion.id ? (
@@ -1529,15 +1826,14 @@ const MyThesis: React.FC = () => {
                                 }
                               }}
                               onChange={(e) => {
-                                // Only allow numbers
                                 const value = e.target.value.replace(/[^0-9]/g, '');
                                 e.target.value = value;
                               }}
                               inputProps={{
                                 style: { 
-                                  fontSize: '0.75rem',
-                                  padding: '4px 8px',
-                                  width: '50px',
+                                  fontSize: '0.875rem',
+                                  padding: '6px 12px',
+                                  width: '60px',
                                   textAlign: 'center',
                                   MozAppearance: 'textfield',
                                   WebkitAppearance: 'none',
@@ -1546,43 +1842,31 @@ const MyThesis: React.FC = () => {
                               }}
                               sx={{
                                 '& .MuiOutlinedInput-root': {
-                                  height: '24px',
+                                  height: '32px',
                                   '& fieldset': {
                                     borderColor: '#000000'
-                                  },
-                                  '& input[type=number]': {
-                                    MozAppearance: 'textfield',
-                                    WebkitAppearance: 'none',
-                                    appearance: 'none'
-                                  },
-                                  '& input[type=number]::-webkit-outer-spin-button': {
-                                    WebkitAppearance: 'none',
-                                    margin: 0
-                                  },
-                                  '& input[type=number]::-webkit-inner-spin-button': {
-                                    WebkitAppearance: 'none',
-                                    margin: 0
                                   }
                                 }
                               }}
                             />
-                            <Typography variant="caption" sx={{ color: '#6B7280', fontSize: '0.7rem' }}>
+                            <Typography variant="body2" sx={{ color: '#6B7280' }}>
                               /{getRemainingWeightForEdit(criterion.id)}%
                             </Typography>
                           </Box>
                         ) : (
                           <Typography 
-                            variant="caption" 
+                            variant="body1" 
                             sx={{ 
-                              fontWeight: 500, 
+                              fontWeight: 600, 
                               color: '#000000',
                               cursor: 'pointer',
-                              px: 1,
-                              py: 0.5,
-                              borderRadius: 1,
+                              px: 2,
+                              py: 1,
+                              borderRadius: 2,
                               minWidth: 'fit-content',
+                              bgcolor: '#F3F4F6',
                               '&:hover': {
-                                bgcolor: '#F3F4F6'
+                                bgcolor: '#E5E7EB'
                               }
                             }}
                             onClick={() => handleWeightEdit(criterion.id, criterion.weight)}
@@ -1595,28 +1879,40 @@ const MyThesis: React.FC = () => {
                           value={criterion.weight}
                           sx={{
                             flex: 1,
-                            height: 4,
-                            borderRadius: 2,
+                            height: 8,
+                            borderRadius: 4,
                             bgcolor: '#F3F4F6',
                             '& .MuiLinearProgress-bar': {
                               background: 'linear-gradient(90deg, #6B7280 0%, #000000 100%)',
-                              borderRadius: 2
+                              borderRadius: 4
                             }
                           }}
                         />
                       </Box>
+
+                      {/* Detailed Description */}
+                      <Box sx={{ mt: 2, p: 2, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
+                        <Typography variant="body2" sx={{ color: '#4B5563', fontWeight: 500 }}>
+                          <strong>{criterion.field}</strong> {criterion.operator} <strong>{criterion.value}</strong>
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#6B7280', mt: 1, display: 'block' }}>
+                          This criterion represents {criterion.weight}% of your total investment evaluation weight.
+                        </Typography>
+                      </Box>
                     </Box>
                     
-                    <Box sx={{ display: 'flex', gap: 0.5, ml: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, ml: 2 }}>
                       <IconButton
                         onClick={() => handleEditCriteria(criterion)}
                         size="small"
                         sx={{ 
                           color: '#6B7280',
                           bgcolor: '#F9FAFB',
+                          border: '1px solid #E5E7EB',
                           '&:hover': {
                             bgcolor: '#F3F4F6',
-                            color: '#000000'
+                            color: '#000000',
+                            borderColor: '#D1D5DB'
                           }
                         }}
                       >
@@ -1628,8 +1924,10 @@ const MyThesis: React.FC = () => {
                         sx={{ 
                           color: '#EF4444',
                           bgcolor: '#FEF2F2',
+                          border: '1px solid #FECACA',
                           '&:hover': {
-                            bgcolor: '#FEE2E2'
+                            bgcolor: '#FEE2E2',
+                            borderColor: '#FCA5A5'
                           }
                         }}
                       >
