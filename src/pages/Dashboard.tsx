@@ -109,7 +109,7 @@ export default function Dashboard() {
   return (
     <Box className="fade-in">
       <Box sx={{ mb: 3, p: 3, bgcolor: 'background.paper', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary' }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, mb: 0.5, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'text.primary' }}>
           Welcome back, {dashboardData.userName}
         </Typography>
         <Typography variant="body1" color="text.secondary">
@@ -137,7 +137,7 @@ export default function Dashboard() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.8125rem' }}>
                       {metric.title}
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.75rem' }}>
+                    <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', fontSize: '1.75rem' }}>
                       {metric.value}
                     </Typography>
                   </Box>
@@ -169,7 +169,7 @@ export default function Dashboard() {
         <Grid item xs={12} md={8}>
           <Paper className="scale-in" sx={{ p: 2.5, height: 400 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
                 Deal Flow Performance
               </Typography>
               <Button variant="text" size="small" endIcon={<ArrowForwardIcon />}>
@@ -221,7 +221,7 @@ export default function Dashboard() {
 
         <Grid item xs={12} md={4}>
           <Paper className="scale-in" sx={{ p: 2.5, height: 400 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
               Portfolio Distribution
             </Typography>
             <ResponsiveContainer width="100%" height={320}>
@@ -275,7 +275,7 @@ export default function Dashboard() {
         <Grid item xs={12}>
           <Paper className="slide-up" sx={{ p: 2.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'text.primary', fontSize: '1.125rem' }}>
                 Recent Deals
               </Typography>
               <Button variant="contained" size="small" startIcon={<BusinessIcon />}>
@@ -311,7 +311,7 @@ export default function Dashboard() {
                       {deal.stage}
                     </Typography>
                   </Box>
-                  <Typography variant="h6" sx={{ mx: 3, fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.125rem' }}>
+                  <Typography variant="h6" sx={{ mx: 3, fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', fontSize: '1.125rem' }}>
                     {deal.value}
                   </Typography>
                   <Box sx={{ width: 180, mr: 3 }}>

@@ -1731,7 +1731,7 @@ Regards`,
         }}
       >
         <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
             Schedule Email{schedulingMultiple ? 's' : ''}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -1904,7 +1904,7 @@ Regards`,
               <EmailIcon sx={{ color: 'white', fontSize: 24 }} />
             </Box>
           </Box>
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, fontFamily: '"Space Grotesk", sans-serif' }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, mb: 1, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
             Email{scheduledCount > 1 ? 's' : ''} Scheduled!
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -1923,7 +1923,7 @@ Regards`,
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
               Send Time
             </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif' }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
               {scheduleDate && scheduleTime ? (
                 `${new Date(`${scheduleDate}T${scheduleTime}`).toLocaleDateString('en-US', { 
                   weekday: 'long',

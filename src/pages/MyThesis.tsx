@@ -17,6 +17,7 @@ import {
   Chip,
   Divider,
   LinearProgress,
+  CircularProgress,
   Alert,
   IconButton,
   Tooltip,
@@ -123,6 +124,25 @@ interface OnePagerData {
 }
 
 const MyThesis: React.FC = () => {
+  // Force white text for Active Thesis dropdown
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .active-thesis-select .MuiSelect-select,
+      .active-thesis-select .MuiInputBase-input,
+      .active-thesis-select input,
+      .active-thesis-select .MuiSelect-root {
+        color: white !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
+
   const [theses, setTheses] = useState<InvestmentThesis[]>([]);
   const [currentThesisId, setCurrentThesisId] = useState<string>('');
   const [criteria, setCriteria] = useState<InvestmentCriteria[]>([]);
@@ -1066,7 +1086,7 @@ const MyThesis: React.FC = () => {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <Box sx={{ textAlign: 'center' }}>
-          <LinearProgress sx={{ mb: 2, width: 300 }} />
+          <CircularProgress sx={{ mb: 2, color: '#10B981' }} />
           <Typography variant="body1" color="text.secondary">
             Loading investment theses...
           </Typography>
@@ -1147,58 +1167,48 @@ const MyThesis: React.FC = () => {
   return (
     <Box sx={{ p: 3, minHeight: '100vh', bgcolor: '#FAFAFA' }}>
       {/* Modern Hero Section */}
-      <Box sx={{ mb: 6 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: 4,
-            p: 6,
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-            border: '1px solid #e2e8f0',
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Isometric Background Elements */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: -20,
-              right: -20,
-              width: 200,
-              height: 200,
-              background: 'linear-gradient(45deg, #e0f2fe 0%, #b3e5fc 100%)',
-              borderRadius: '50%',
-              opacity: 0.1,
-              transform: 'rotate(45deg)'
-            }}
-          />
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 40,
-              right: 40,
-              width: 80,
-              height: 80,
-              background: 'linear-gradient(45deg, #f0f9ff 0%, #e0f2fe 100%)',
-              borderRadius: 2,
-              transform: 'rotate(15deg)',
-              opacity: 0.3
-            }}
-          />
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: -30,
-              left: -30,
-              width: 120,
-              height: 120,
-              background: 'linear-gradient(45deg, #f0fdf4 0%, #dcfce7 100%)',
-              borderRadius: '50%',
-              opacity: 0.1,
-              transform: 'rotate(-30deg)'
-            }}
-          />
+      <Box sx={{
+        position: 'relative',
+        bgcolor: 'white',
+        borderRadius: '0 0 32px 32px',
+        overflow: 'hidden',
+        mb: 6,
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
+      }}>
+        {/* Background Pattern */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(5, 150, 105, 0.05) 100%)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 100,
+            height: 100,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '50%',
+            opacity: 0.1
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -30,
+            left: -30,
+            width: 60,
+            height: 60,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: 2,
+            opacity: 0.1,
+            transform: 'rotate(15deg)'
+          }
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
 
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={8}>
@@ -1243,30 +1253,29 @@ const MyThesis: React.FC = () => {
                     lineHeight: 1.6
                   }}
                 >
-                  Creating thesis  allows Equitle to have context on your investment thesis and target companies, so messages, calls, and other functions are more relevant and effective. 
+                  Allows Equitle to have context on your investment thesis and target companies, so messages, calls, and other functions are more relevant and effective. 
                 </Typography>
                 
                 {/* Action Buttons */}
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     size="large"
                     startIcon={<AddIcon />}
                     onClick={() => setShowNewThesisDialog(true)}
                     sx={{
-                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                      color: 'white',
+                      borderColor: '#cbd5e1',
+                      color: '#475569',
                       px: 4,
                       py: 1.5,
                       borderRadius: 2,
                       fontSize: '1rem',
                       fontWeight: 600,
                       textTransform: 'none',
-                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                        boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
-                        transform: 'translateY(-2px)'
+                        borderColor: '#94a3b8',
+                        bgcolor: '#f8fafc',
+                        transform: 'translateY(-1px)'
                       },
                       transition: 'all 0.3s ease'
                     }}
@@ -1402,7 +1411,7 @@ const MyThesis: React.FC = () => {
               </Box>
             </Grid>
           </Grid>
-        </Paper>
+        </Box>
       </Box>
 
 
@@ -1426,16 +1435,32 @@ const MyThesis: React.FC = () => {
         }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.25rem', color: 'white' }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 400, 
+                fontSize: '1.25rem', 
+                color: 'white',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                letterSpacing: '-0.01em'
+              }}>
                 Investment Criteria
-              </Typography>
-            </Box>
+            </Typography>
+          </Box>
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500, fontSize: '0.875rem' }}>Active Thesis:</InputLabel>
+              <InputLabel sx={{ 
+                color: '#10B981', 
+                fontWeight: 700, 
+                fontSize: '0.9rem',
+                '&.Mui-focused': {
+                  color: 'white'
+                }
+              }}>Active Thesis:</InputLabel>
               <Select
                 value={currentThesisId}
                 onChange={(e) => handleThesisChange(e.target.value)}
                 label="Active Thesis:"
+                style={{ color: 'white !important' }}
+                inputProps={{ style: { color: 'white !important' } }}
+                className="active-thesis-select"
                 MenuProps={{
                   PaperProps: {
                     sx: {
@@ -1443,18 +1468,21 @@ const MyThesis: React.FC = () => {
                       mt: 1,
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                       border: '1px solid #E2E8F0',
+                      backgroundColor: 'white',
+                      zIndex: 9999,
                       '& .MuiMenuItem-root': {
                         px: 2,
                         py: 1.5,
                         fontSize: '0.9rem',
                         color: '#1E293B',
                         fontWeight: 500,
+                        backgroundColor: 'white',
                         borderBottom: '1px solid #F1F5F9',
                         '&:last-child': {
                           borderBottom: 'none'
                         },
                         '&:hover': {
-                          bgcolor: 'transparent'
+                          bgcolor: '#F8FAFC'
                         },
                         '&.Mui-selected': {
                           bgcolor: '#10B981',
@@ -1464,10 +1492,10 @@ const MyThesis: React.FC = () => {
                           }
                         },
                         '&.Mui-focusVisible': {
-                          bgcolor: 'transparent'
+                          bgcolor: '#F8FAFC'
                         },
                         '&:active': {
-                          bgcolor: 'transparent'
+                          bgcolor: '#F1F5F9'
                         }
                       }
                     }
@@ -1476,32 +1504,59 @@ const MyThesis: React.FC = () => {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
+                    border: '2px solid #10B981',
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(5, 150, 105, 0.4) 100%)',
                     minHeight: '48px',
+                    boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.3)',
                     '&:hover': {
-                      borderColor: 'rgba(16, 185, 129, 0.6)',
-                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%)'
+                      borderColor: '#059669',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.5) 0%, rgba(5, 150, 105, 0.5) 100%)',
+                      boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.3), 0 6px 16px rgba(16, 185, 129, 0.4)'
                     },
                     '&.Mui-focused': {
-                      borderColor: '#10B981',
-                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(5, 150, 105, 0.3) 100%)',
+                      borderColor: 'white',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.5) 0%, rgba(5, 150, 105, 0.5) 100%)',
+                      boxShadow: '0 0 0 3px rgba(255, 255, 255, 0.4), 0 8px 20px rgba(16, 185, 129, 0.5)',
                       '& fieldset': {
-                        borderColor: '#10B981'
+                        borderColor: 'white'
                       }
                     }
                   },
                   '& .MuiSelect-select': {
                     py: 1.5,
                     fontSize: '0.9rem',
-                    color: 'white',
-                    fontWeight: 500,
+                    color: 'white !important',
+                    fontWeight: 600,
                     minHeight: '48px',
                     display: 'flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    '&:focus': {
+                      color: 'white !important'
+                    },
+                    '&[aria-expanded="true"]': {
+                      color: 'white !important'
+                    }
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'white !important',
+                    '&:focus': {
+                      color: 'white !important'
+                    },
+                    '&[aria-expanded="true"]': {
+                      color: 'white !important'
+                    }
+                  },
+                  '& input': {
+                    color: 'white !important'
+                  },
+                  '& .MuiSelect-root': {
+                    color: 'white !important'
+                  },
+                  '& .MuiSelect-select.MuiSelect-select': {
+                    color: 'white !important'
                   },
                   '& .MuiSvgIcon-root': {
-                    color: 'rgba(255, 255, 255, 0.8)'
+                    color: 'white'
                   }
                 }}
               >
@@ -1516,7 +1571,9 @@ const MyThesis: React.FC = () => {
           <Typography variant="body2" sx={{ 
             fontSize: '0.9rem', 
             color: 'rgba(255, 255, 255, 0.8)',
-            lineHeight: 1.5
+            lineHeight: 1.5,
+            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            letterSpacing: '-0.01em'
           }}>
                 Total Weight: {getTotalWeight()}% {getTotalWeight() < 100 && `(${getRemainingWeight()}% remaining)`}
               </Typography>
@@ -1564,7 +1621,14 @@ const MyThesis: React.FC = () => {
           {/* Investment Criteria Visualization */}
           {criteria.length > 0 && (
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.1rem', color: '#1e293b', mb: 2 }}>
+              <Typography variant="h6" sx={{ 
+                fontWeight: 400, 
+                fontSize: '1.1rem', 
+                color: '#1e293b', 
+                mb: 2,
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                letterSpacing: '-0.01em'
+              }}>
                 Investment Criteria Breakdown
               </Typography>
               
@@ -1612,11 +1676,13 @@ const MyThesis: React.FC = () => {
                           variant="body2" 
                           sx={{ 
                             color: 'white', 
-                            fontWeight: 600,
+                            fontWeight: 500,
                             fontSize: '0.8rem',
                             textAlign: 'center',
                             textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                            lineHeight: 1.2
+                            lineHeight: 1.2,
+                            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            letterSpacing: '-0.01em'
                           }}
                         >
                           {criterion.field}
@@ -1639,7 +1705,13 @@ const MyThesis: React.FC = () => {
                           }}
                           onClick={() => handleWeightEdit(criterion.id, criterion.weight)}
                         >
-                          <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>
+                          <Typography variant="caption" sx={{ 
+                            color: 'white', 
+                            fontWeight: 500, 
+                            fontSize: '0.7rem',
+                            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            letterSpacing: '-0.01em'
+                          }}>
                             {criterion.weight}%
                           </Typography>
                         </Box>
@@ -2035,8 +2107,8 @@ const MyThesis: React.FC = () => {
             lineHeight: 1.5
           }}>
             Generate personalized pitch one-pagers for your investment thesis
-          </Typography>
-        </Box>
+              </Typography>
+            </Box>
 
         {/* Content Area */}
         <CardContent sx={{ 
@@ -2263,11 +2335,11 @@ const MyThesis: React.FC = () => {
               }
               size="large"
               sx={{
-                bgcolor: '#000000',
+                bgcolor: '#10B981',
                 color: 'white',
                 px: 4,
                 py: 1.5,
-                '&:hover': { bgcolor: '#333333' },
+                '&:hover': { bgcolor: '#059669' },
                 '&:disabled': { bgcolor: '#9CA3AF' }
               }}
             >
@@ -2303,8 +2375,8 @@ const MyThesis: React.FC = () => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.25rem', color: 'white' }}>
-              Industry Overview One-Pager Generator
-            </Typography>
+            Industry Overview One-Pager Generator
+          </Typography>
           </Box>
           <Typography variant="body2" sx={{ 
             mt: 1, 
@@ -2446,11 +2518,11 @@ const MyThesis: React.FC = () => {
                     disabled={isGeneratingIndustry || !selectedThesisForIndustry || (availableIndustries.length > 1 && !selectedIndustry)}
                     size="large"
                     sx={{
-                      bgcolor: '#000000',
+                      bgcolor: '#10B981',
                       color: 'white',
                       px: 4,
                       py: 1.5,
-                      '&:hover': { bgcolor: '#333333' },
+                      '&:hover': { bgcolor: '#059669' },
                       '&:disabled': { bgcolor: '#9CA3AF' }
                     }}
                   >
@@ -3302,25 +3374,46 @@ const MyThesis: React.FC = () => {
         }}
       >
         <DialogTitle sx={{ 
-          bgcolor: '#000000', 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)', 
           color: 'white',
           py: 3,
           px: 4,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <AddIcon />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Box sx={{ 
+              width: 24, 
+              height: 24, 
+              borderRadius: '50%', 
+              bgcolor: 'white', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <AddIcon sx={{ color: '#2c2c2c', fontSize: '1rem' }} />
+            </Box>
+            <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '1.25rem', color: 'white' }}>
               Create New Thesis
             </Typography>
           </Box>
-        </DialogTitle>
-        
-        <DialogContent sx={{ p: 4 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ 
+            mt: 1, 
+            fontSize: '0.9rem', 
+            color: 'rgba(255, 255, 255, 0.8)',
+            lineHeight: 1.5
+          }}>
             Create a new investment thesis. You can start from scratch or duplicate an existing thesis as a template.
           </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ 
+          p: 6, 
+          bgcolor: '#F8FAFC',
+          color: '#1E293B'
+        }}>
+          <Box sx={{ height: 40 }} />
           
           <Grid container spacing={3}>
             <Grid item xs={12}>
@@ -3373,16 +3466,26 @@ const MyThesis: React.FC = () => {
           </Grid>
         </DialogContent>
         
-        <DialogActions sx={{ p: 4, bgcolor: '#F9FAFB', borderTop: '1px solid #E5E7EB' }}>
+        <DialogActions sx={{ 
+          p: 1, 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
+          justifyContent: 'flex-end', 
+          gap: 1,
+          borderRadius: '0 0 12px 12px',
+          minHeight: 'auto'
+        }}>
           <Button 
             onClick={() => setShowNewThesisDialog(false)} 
-            variant="outlined"
+            variant="text"
             sx={{
-              borderColor: '#D1D5DB',
-              color: '#374151',
+              color: 'white',
+              px: 3,
+              py: 1,
+              fontSize: '0.9rem',
+              fontWeight: 500,
               '&:hover': {
-                borderColor: '#9CA3AF',
-                bgcolor: '#F9FAFB'
+                bgcolor: 'rgba(255, 255, 255, 0.1)'
               }
             }}
           >
@@ -3390,18 +3493,25 @@ const MyThesis: React.FC = () => {
           </Button>
           <Button
             onClick={handleCreateNewThesis}
-            variant="contained"
             disabled={!newThesisName.trim()}
+            variant="contained"
             sx={{
-              bgcolor: '#000000',
-              color: 'white',
+              bgcolor: '#10B981 !important',
+              color: 'white !important',
               px: 3,
-              '&:hover': { 
-                bgcolor: '#333333' 
+              py: 1,
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              borderRadius: 2,
+              '&:hover': {
+                bgcolor: '#059669 !important'
               },
               '&:disabled': {
-                bgcolor: '#9CA3AF',
-                color: '#FFFFFF'
+                bgcolor: '#9CA3AF !important',
+                color: '#FFFFFF !important'
+              },
+              '&.MuiButton-contained': {
+                bgcolor: '#10B981 !important'
               }
             }}
           >
@@ -3887,9 +3997,9 @@ const MyThesis: React.FC = () => {
             variant="contained"
             disabled={!selectedGoogleDriveFolder && uploadedFiles.length === 0}
             sx={{
-              bgcolor: '#000000',
+              bgcolor: '#10B981',
               color: 'white',
-              '&:hover': { bgcolor: '#333333' },
+              '&:hover': { bgcolor: '#059669' },
               '&:disabled': { bgcolor: '#9CA3AF' }
             }}
           >

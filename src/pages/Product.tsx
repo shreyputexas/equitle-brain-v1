@@ -254,7 +254,7 @@ export default function Product() {
               <Typography 
                 variant="h1" 
                 sx={{ 
-                  fontFamily: '"Space Grotesk", sans-serif',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   fontWeight: 700,
                   fontSize: { xs: '2.5rem', md: '3.5rem' },
                   lineHeight: 1.2,
@@ -360,7 +360,7 @@ export default function Product() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 fontWeight: 700,
                 mb: 2
               }}
@@ -455,7 +455,7 @@ export default function Product() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 fontWeight: 700,
                 mb: 2
               }}
@@ -517,7 +517,7 @@ export default function Product() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 fontWeight: 700,
                 mb: 2
               }}
@@ -574,7 +574,7 @@ export default function Product() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 fontWeight: 700,
                 mb: 2
               }}
@@ -633,7 +633,7 @@ export default function Product() {
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Space Grotesk", sans-serif',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 fontWeight: 700,
                 mb: 2
               }}

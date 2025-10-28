@@ -47,64 +47,68 @@ const theme = createTheme({
     divider: 'rgba(0, 0, 0, 0.08)'
   },
   typography: {
-    fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     h1: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '2.5rem',
       fontWeight: 700,
       lineHeight: 1.2,
       letterSpacing: '-0.02em'
     },
     h2: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '2rem',
       fontWeight: 600,
       lineHeight: 1.3,
       letterSpacing: '-0.015em'
     },
     h3: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '1.5rem',
       fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: '-0.01em'
     },
     h4: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '1.25rem',
       fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: '0em'
     },
     h5: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '1.125rem',
       fontWeight: 600,
       lineHeight: 1.5
     },
     h6: {
-      fontFamily: '"Space Grotesk", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '1rem',
       fontWeight: 600,
       lineHeight: 1.5
     },
     body1: {
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '0.875rem',
       lineHeight: 1.6,
       letterSpacing: '0em'
     },
     body2: {
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '0.8125rem',
       lineHeight: 1.5,
       letterSpacing: '0em'
     },
     button: {
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontWeight: 500,
       textTransform: 'none',
       letterSpacing: '0em',
       fontSize: '0.875rem'
     },
     caption: {
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '0.75rem',
       lineHeight: 1.4,
       letterSpacing: '0em'
@@ -380,6 +384,14 @@ const theme = createTheme({
             '&.Mui-focused': {
               color: '#000000'
             }
+          }
+        }
+      },
+      MuiDataGrid: {
+        styleOverrides: {
+          root: {
+            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            border: 'none'
           }
         }
       }
