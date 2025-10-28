@@ -31,6 +31,65 @@ export interface CallSession {
   metadata?: any;
 }
 
+export interface EnhancedCallSession extends CallSession {
+  recordingUrl?: string;
+  callQuality?: number;
+  sentiment?: 'positive' | 'neutral' | 'negative';
+  sentimentScore?: number;
+  outcome?: 'interested' | 'not_interested' | 'callback_requested' | 'more_info_needed' | 'completed' | 'no_answer';
+  keyPoints?: string[];
+  actionItems?: string[];
+  summary?: string;
+  retellMetadata?: {
+    call_cost?: number;
+    latency?: any;
+    recording_url?: string;
+    transcript_object?: Array<{
+      role: 'agent' | 'user';
+      content: string;
+      timestamp: number;
+    }>;
+  };
+  analytics?: {
+    talkRatio?: number; // Percentage of time user vs agent spoke
+    interruptions?: number;
+    avgResponseTime?: number;
+    wordCount?: number;
+    keywordMatches?: string[];
+  };
+}
+
+export interface CallAnalytics {
+  totalCalls: number;
+  successfulCalls: number;
+  successRate: number;
+  averageDuration: number;
+  totalDuration: number;
+  callsByStatus: Record<string, number>;
+  callsByOutcome: Record<string, number>;
+  sentimentDistribution: Record<string, number>;
+  voiceProfilePerformance: Array<{
+    voiceId: string;
+    voiceName: string;
+    totalCalls: number;
+    successRate: number;
+    avgDuration: number;
+    avgSentiment: number;
+  }>;
+  trendsData: Array<{
+    date: string;
+    totalCalls: number;
+    successfulCalls: number;
+    avgDuration: number;
+  }>;
+  keyMetrics: {
+    bestPerformingVoice?: string;
+    avgCallsPerDay: number;
+    peakCallingHour?: number;
+    mostCommonOutcome: string;
+  };
+}
+
 export interface VoiceProfile {
   id: string;
   name: string;
@@ -482,6 +541,224 @@ export class VoiceAgentService {
     } catch (error) {
       logger.error('Failed to get voice profiles', error);
       return [];
+    }
+  }
+
+  /**
+   * Get enhanced call session with analytics data
+   */
+  async getEnhancedCallSession(callId: string): Promise<EnhancedCallSession | null> {
+    try {
+      const callSession = await this.getCallSession(callId);
+      if (!callSession) {
+        return null;
+      }
+
+      const enhanced: EnhancedCallSession = { ...callSession };
+
+      // Fetch additional data from Retell if retellCallId exists
+      if (callSession.retellCallId) {
+        try {
+          const retellCall = await this.retellService.getCall(callSession.retellCallId);
+          if (retellCall) {
+            enhanced.retellMetadata = {
+              recording_url: retellCall.metadata?.recording_url,
+              call_cost: retellCall.metadata?.call_cost,
+              latency: retellCall.metadata?.latency
+            };
+            enhanced.recordingUrl = retellCall.metadata?.recording_url;
+          }
+        } catch (error) {
+          logger.warn('Failed to fetch Retell data for call', { callId, error });
+        }
+      }
+
+      // Generate sentiment analysis if transcript exists
+      if (callSession.transcript && callSession.transcript.length > 0) {
+        try {
+          const sentimentResult = await this.openaiService.analyzeSentiment(callSession.transcript);
+          enhanced.sentiment = sentimentResult.sentiment;
+          enhanced.sentimentScore = sentimentResult.score;
+        } catch (error) {
+          logger.warn('Failed to analyze sentiment for call', { callId, error });
+        }
+      }
+
+      // Generate call summary if not already exists
+      if (!enhanced.summary && callSession.transcript && callSession.transcript.length > 0) {
+        try {
+          const summaryResult = await this.openaiService.generateCallSummary(
+            callSession.transcript,
+            { callId, duration: callSession.duration }
+          );
+          enhanced.summary = summaryResult.summary;
+          enhanced.keyPoints = summaryResult.keyPoints;
+          enhanced.actionItems = summaryResult.actionItems;
+          enhanced.outcome = summaryResult.outcome as any;
+        } catch (error) {
+          logger.warn('Failed to generate call summary', { callId, error });
+        }
+      }
+
+      return enhanced;
+    } catch (error) {
+      logger.error('Failed to get enhanced call session', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get call analytics for a user
+   */
+  async getCallAnalytics(userId: string, dateRange?: { start: Date; end: Date }): Promise<CallAnalytics> {
+    try {
+      let query = db.collection('voice_calls').where('userId', '==', userId);
+
+      if (dateRange) {
+        query = query.where('startTime', '>=', dateRange.start)
+                     .where('startTime', '<=', dateRange.end);
+      }
+
+      console.log('🔍 Querying voice_calls collection for userId:', userId);
+      const snapshot = await query.get();
+      console.log('🔍 Found', snapshot.docs.length, 'voice calls in database');
+
+      const calls = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        startTime: doc.data().startTime?.toDate ? doc.data().startTime.toDate() : doc.data().startTime,
+        endTime: doc.data().endTime?.toDate ? doc.data().endTime.toDate() : doc.data().endTime,
+      })) as CallSession[];
+
+      console.log('🔍 Mapped calls:', calls.length > 0 ? calls[0] : 'No calls found');
+
+      const analytics = this.calculateAnalytics(calls);
+      console.log('🔍 Calculated analytics:', analytics);
+
+      return analytics;
+    } catch (error) {
+      logger.error('Failed to get call analytics', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate analytics from call data
+   */
+  private calculateAnalytics(calls: CallSession[]): CallAnalytics {
+    const totalCalls = calls.length;
+    const successfulCalls = calls.filter(call =>
+      call.status === 'completed' && call.duration && call.duration > 30000 // 30 seconds minimum
+    ).length;
+
+    const callsByStatus = calls.reduce((acc, call) => {
+      acc[call.status] = (acc[call.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const completedCalls = calls.filter(call => call.status === 'completed');
+    const totalDuration = completedCalls.reduce((sum, call) => sum + (call.duration || 0), 0);
+    const averageDuration = completedCalls.length > 0 ? totalDuration / completedCalls.length : 0;
+
+    // Group calls by date for trends
+    const callsByDate = calls.reduce((acc, call) => {
+      if (!call.startTime) return acc;
+      const date = new Date(call.startTime).toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = { total: 0, successful: 0, totalDuration: 0 };
+      }
+      acc[date].total++;
+      if (call.status === 'completed' && call.duration && call.duration > 30000) {
+        acc[date].successful++;
+      }
+      acc[date].totalDuration += call.duration || 0;
+      return acc;
+    }, {} as Record<string, { total: number; successful: number; totalDuration: number }>);
+
+    const trendsData = Object.entries(callsByDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        totalCalls: data.total,
+        successfulCalls: data.successful,
+        avgDuration: data.total > 0 ? data.totalDuration / data.total : 0
+      }));
+
+    return {
+      totalCalls,
+      successfulCalls,
+      successRate: totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0,
+      averageDuration,
+      totalDuration,
+      callsByStatus,
+      callsByOutcome: {}, // Will be populated when outcome data is available
+      sentimentDistribution: {}, // Will be populated when sentiment data is available
+      voiceProfilePerformance: [], // Will be populated when voice profile data is available
+      trendsData,
+      keyMetrics: {
+        avgCallsPerDay: trendsData.length > 0 ? totalCalls / trendsData.length : 0,
+        mostCommonOutcome: Object.entries(callsByStatus).reduce((a, b) =>
+          callsByStatus[a[0]] > callsByStatus[b[0]] ? a : b, ['', 0]
+        )[0]
+      }
+    };
+  }
+
+  /**
+   * Batch analyze calls for sentiment and outcomes
+   */
+  async batchAnalyzeCalls(userId: string, limit: number = 50): Promise<void> {
+    try {
+      // Get calls that need analysis
+      const snapshot = await db.collection('voice_calls')
+        .where('userId', '==', userId)
+        .where('status', '==', 'completed')
+        .limit(limit)
+        .get();
+
+      const callsToAnalyze = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as CallSession))
+        .filter(call => call.transcript && call.transcript.length > 0);
+
+      logger.info(`Batch analyzing ${callsToAnalyze.length} calls for user ${userId}`);
+
+      // Analyze each call
+      for (const call of callsToAnalyze) {
+        try {
+          const updates: Partial<EnhancedCallSession> = {};
+
+          // Sentiment analysis
+          const sentimentResult = await this.openaiService.analyzeSentiment(call.transcript);
+          updates.sentiment = sentimentResult.sentiment;
+          updates.sentimentScore = sentimentResult.score;
+
+          // Call summary
+          const summaryResult = await this.openaiService.generateCallSummary(
+            call.transcript,
+            { callId: call.id, duration: call.duration }
+          );
+          updates.summary = summaryResult.summary;
+          updates.keyPoints = summaryResult.keyPoints;
+          updates.actionItems = summaryResult.actionItems;
+          updates.outcome = summaryResult.outcome as any;
+
+          // Update the call in database
+          await db.collection('voice_calls').doc(call.id).update(updates);
+
+          logger.info(`Analyzed call ${call.id}`, {
+            sentiment: updates.sentiment,
+            outcome: updates.outcome
+          });
+
+          // Add small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          logger.error(`Failed to analyze call ${call.id}`, error);
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to batch analyze calls', error);
+      throw error;
     }
   }
 }

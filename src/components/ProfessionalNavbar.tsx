@@ -536,7 +536,8 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
             background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
             borderRight: '1px solid rgba(255, 255, 255, 0.1)',
             boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
-            color: 'white'
+            color: 'white',
+            borderRadius: 0
           }
         }}
       >
@@ -554,7 +555,8 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
             width: 280,
             background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
             borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-            color: 'white'
+            color: 'white',
+            borderRadius: 0
           }
         }}
       >

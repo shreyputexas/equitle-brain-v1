@@ -266,7 +266,9 @@ Respond in JSON format only.`
         temperature: 0.3
       });
 
-      const analysis = JSON.parse(response.choices[0]?.message?.content || '{}');
+      const content = response.choices[0]?.message?.content || '{}';
+      const cleanedContent = this.cleanJsonResponse(content);
+      const analysis = JSON.parse(cleanedContent);
 
       return {
         sentiment: analysis.sentiment || 'neutral',
@@ -323,7 +325,9 @@ Format your response as JSON with fields: summary, key_points, action_items, out
         temperature: 0.3
       });
 
-      const analysis = JSON.parse(response.choices[0]?.message?.content || '{}');
+      const content = response.choices[0]?.message?.content || '{}';
+      const cleanedContent = this.cleanJsonResponse(content);
+      const analysis = JSON.parse(cleanedContent);
 
       return {
         summary: analysis.summary || 'Call completed',
@@ -389,6 +393,155 @@ Format your response as JSON with fields: summary, key_points, action_items, out
   }
 
   /**
+   * Analyze sentiment of conversation transcript
+   */
+  async analyzeSentiment(transcript: string[]): Promise<{
+    sentiment: 'positive' | 'neutral' | 'negative';
+    score: number;
+    confidence: number;
+    reasoning: string;
+  }> {
+    try {
+      const conversation = transcript.join('\n');
+
+      const response = await this.client.chat.completions.create({
+        model: this.defaultModel,
+        messages: [
+          {
+            role: 'system',
+            content: `Analyze the sentiment of this sales call conversation. Focus on the prospect's (user's) sentiment and engagement level, not the agent's.
+
+Consider:
+- Tone and language used by the prospect
+- Level of interest and engagement
+- Objections or concerns raised
+- Overall receptiveness to the conversation
+
+Return your analysis as JSON with:
+- sentiment: "positive", "neutral", or "negative"
+- score: -1 to 1 (negative to positive)
+- confidence: 0 to 1 (how confident you are)
+- reasoning: brief explanation of your assessment`
+          },
+          {
+            role: 'user',
+            content: `Conversation transcript:\n${conversation}`
+          }
+        ],
+        max_tokens: 400,
+        temperature: 0.3
+      });
+
+      const content = response.choices[0]?.message?.content || '{}';
+      const cleanedContent = this.cleanJsonResponse(content);
+      const analysis = JSON.parse(cleanedContent);
+
+      return {
+        sentiment: analysis.sentiment || 'neutral',
+        score: analysis.score || 0,
+        confidence: analysis.confidence || 0.5,
+        reasoning: analysis.reasoning || 'Analysis unavailable'
+      };
+    } catch (error) {
+      logger.error('Failed to analyze sentiment', error);
+      return {
+        sentiment: 'neutral',
+        score: 0,
+        confidence: 0,
+        reasoning: 'Sentiment analysis failed'
+      };
+    }
+  }
+
+  /**
+   * Enhanced call summary with outcome prediction
+   */
+  async generateEnhancedCallSummary(
+    conversationHistory: string[],
+    callMetadata?: Record<string, any>
+  ): Promise<{
+    summary: string;
+    keyPoints: string[];
+    actionItems: string[];
+    outcome: string;
+    nextSteps: string[];
+    leadQuality: 'hot' | 'warm' | 'cold' | 'unqualified';
+    followUpRecommendation: string;
+    duration?: number;
+  }> {
+    try {
+      const conversation = conversationHistory.join('\n');
+
+      const response = await this.client.chat.completions.create({
+        model: this.defaultModel,
+        messages: [
+          {
+            role: 'system',
+            content: `Analyze this sales call conversation and provide a comprehensive analysis including:
+
+1. Brief summary of the conversation
+2. Key discussion points and topics covered
+3. Specific action items or commitments made
+4. Call outcome classification
+5. Recommended next steps for follow-up
+6. Lead quality assessment
+7. Follow-up strategy recommendation
+
+Outcome categories:
+- interested: Prospect showed genuine interest, wants to move forward
+- callback_requested: Prospect wants to schedule another call
+- more_info_needed: Prospect needs additional information before deciding
+- not_interested: Prospect clearly not interested
+- no_answer: Call not answered or very brief interaction
+- completed: Call completed but unclear outcome
+
+Lead quality:
+- hot: Ready to move forward, high probability of conversion
+- warm: Interested but needs nurturing, medium probability
+- cold: Low interest or engagement, low probability
+- unqualified: Not a good fit for the service/product
+
+Format response as JSON with all fields.`
+          },
+          {
+            role: 'user',
+            content: `Call conversation:\n${conversation}\n\nCall metadata: ${JSON.stringify(callMetadata || {})}`
+          }
+        ],
+        max_tokens: 800,
+        temperature: 0.3
+      });
+
+      const content = response.choices[0]?.message?.content || '{}';
+      const cleanedContent = this.cleanJsonResponse(content);
+      const analysis = JSON.parse(cleanedContent);
+
+      return {
+        summary: analysis.summary || 'Call completed',
+        keyPoints: analysis.key_points || analysis.keyPoints || [],
+        actionItems: analysis.action_items || analysis.actionItems || [],
+        outcome: analysis.outcome || 'completed',
+        nextSteps: analysis.next_steps || analysis.nextSteps || [],
+        leadQuality: analysis.lead_quality || analysis.leadQuality || 'cold',
+        followUpRecommendation: analysis.follow_up_recommendation || analysis.followUpRecommendation || 'Standard follow-up',
+        duration: callMetadata?.duration
+      };
+    } catch (error) {
+      logger.error('Failed to generate enhanced call summary', error);
+      return {
+        summary: 'Call completed - analysis failed',
+        keyPoints: [],
+        actionItems: [],
+        outcome: 'completed',
+        nextSteps: [],
+        leadQuality: 'cold',
+        followUpRecommendation: 'Standard follow-up'
+      };
+    }
+  }
+
+
+  /**
    * Test OpenAI connection
    */
   async testConnection(): Promise<boolean> {
@@ -425,5 +578,19 @@ Format your response as JSON with fields: summary, key_points, action_items, out
       logger.error('Failed to get OpenAI models', error);
       return [this.defaultModel];
     }
+  }
+
+  /**
+   * Clean JSON response from markdown code blocks
+   */
+  private cleanJsonResponse(content: string): string {
+    // Remove markdown code blocks
+    const cleanedContent = content
+      .replace(/```json\n/g, '')
+      .replace(/```\n/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    return cleanedContent;
   }
 }
