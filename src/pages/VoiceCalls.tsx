@@ -717,6 +717,13 @@ export default function VoiceCalls() {
     }
   };
 
+  const scrollToContent = () => {
+    const element = document.getElementById('voice-calls-content');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const handleIndividualCall = async (contact: CampaignContact) => {
     try {
       const token = localStorage.getItem('token');
@@ -786,31 +793,257 @@ export default function VoiceCalls() {
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            AI Voice Calls
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Make intelligent voice calls with AI-powered conversation assistance
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Tooltip title="Manage Voices">
-            <IconButton
-              sx={{ border: '1px solid', borderColor: 'divider' }}
-              onClick={() => setShowVoiceDialog(true)}
-            >
-              <RecordVoiceOverIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Call Settings">
-            <IconButton sx={{ border: '1px solid', borderColor: 'divider' }}>
-              <SettingsIcon />
-            </IconButton>
-          </Tooltip>
+    <Box sx={{
+      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+      minHeight: '100vh',
+      pb: 6
+    }}>
+      {/* Modern Hero Section */}
+      <Box sx={{
+        position: 'relative',
+        bgcolor: 'white',
+        borderRadius: '0 0 32px 32px',
+        overflow: 'hidden',
+        mb: 6,
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
+      }}>
+        {/* Background Pattern */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(5, 150, 105, 0.05) 100%)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 100,
+            height: 100,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: '50%',
+            opacity: 0.1
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -30,
+            left: -30,
+            width: 60,
+            height: 60,
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: 2,
+            opacity: 0.1,
+            transform: 'rotate(15deg)'
+          }
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+          <Grid container spacing={6} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 700,
+                  mb: 2,
+                  color: '#1e293b',
+                  fontSize: { xs: '2.2rem', md: '3rem' },
+                  lineHeight: 1.1,
+                  letterSpacing: '-0.02em',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  textTransform: 'uppercase',
+                  background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                AI Voice Assistant
+              </Typography>
+
+              <Typography
+                variant="h6"
+                sx={{
+                  color: '#64748b',
+                  mb: 4,
+                  fontWeight: 400,
+                  lineHeight: 1.6,
+                  fontSize: { xs: '1.1rem', md: '1.25rem' }
+                }}
+              >
+                Deploy intelligent voice agents to make professional calls and connect with prospects automatically.
+              </Typography>
+
+              <Typography
+                variant="body1"
+                sx={{
+                  color: '#475569',
+                  mb: 6,
+                  fontSize: '1rem',
+                  lineHeight: 1.7,
+                  maxWidth: '600px'
+                }}
+              >
+                Create structured voice campaigns that align with your outreach goals and market opportunities.
+              </Typography>
+
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<AddIcCallIcon />}
+                  sx={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    px: 4,
+                    py: 1.5,
+                    borderRadius: 3,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                      boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                  onClick={() => {
+                    setCurrentTab(0);
+                    setTimeout(scrollToContent, 100);
+                  }}
+                >
+                  Start New Call
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  size="large"
+                  startIcon={<CampaignIcon />}
+                  onClick={() => {
+                    setCurrentTab(1);
+                    setTimeout(scrollToContent, 100);
+                  }}
+                  sx={{
+                    borderColor: '#cbd5e1',
+                    color: '#475569',
+                    px: 4,
+                    py: 1.5,
+                    borderRadius: 3,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#10b981',
+                      color: '#10b981',
+                      bgcolor: '#f0fdf4'
+                    }
+                  }}
+                >
+                  Mass Campaigns
+                </Button>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Box sx={{
+                position: 'relative',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: 300
+              }}>
+                {/* Decorative Chart Elements */}
+                <Box sx={{
+                  position: 'relative',
+                  width: 200,
+                  height: 200,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1
+                }}>
+                  {/* Chart Elements */}
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'end' }}>
+                    <Box sx={{ width: 12, height: 20, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: 0.5 }} />
+                    <Box sx={{ width: 12, height: 32, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', borderRadius: 0.5 }} />
+                    <Box sx={{ width: 12, height: 16, background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)', borderRadius: 0.5 }} />
+                    <Box sx={{ width: 12, height: 40, background: 'linear-gradient(135deg, #065f46 0%, #064e3b 100%)', borderRadius: 0.5 }} />
+                  </Box>
+                  <Box sx={{ width: 40, height: 40, borderRadius: '50%', bgcolor: '#e2e8f0', position: 'relative' }}>
+                    <Box sx={{ position: 'absolute', top: 4, left: 4, right: 4, bottom: 4, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }} />
+                  </Box>
+                </Box>
+
+                {/* Floating Elements */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 40,
+                    right: 40,
+                    width: 32,
+                    height: 32,
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    borderRadius: 2,
+                    transform: 'rotate(15deg)',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 60,
+                    left: 20,
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                  }}
+                />
+              </Box>
+            </Grid>
+          </Grid>
+
+          {/* Action Icons */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
+            <Tooltip title="Manage Voice Profiles">
+              <IconButton
+                sx={{
+                  bgcolor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+                  '&:hover': {
+                    bgcolor: '#f8fafc',
+                    borderColor: '#10b981'
+                  }
+                }}
+                onClick={() => setShowVoiceDialog(true)}
+              >
+                <RecordVoiceOverIcon sx={{ color: '#475569' }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Call Settings">
+              <IconButton
+                sx={{
+                  bgcolor: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 2,
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+                  '&:hover': {
+                    bgcolor: '#f8fafc',
+                    borderColor: '#10b981'
+                  }
+                }}
+              >
+                <SettingsIcon sx={{ color: '#475569' }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
 
@@ -835,54 +1068,118 @@ export default function VoiceCalls() {
         </Alert>
       </Snackbar>
 
-      {/* Tab Navigation */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CallIcon />
-                Individual Calls
-              </Box>
-            }
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CampaignIcon />
-                Mass Calling
-              </Box>
-            }
-          />
-        </Tabs>
+      {/* Modern Tab Navigation */}
+      <Box id="voice-calls-content" sx={{ px: 4, mb: 4 }}>
+        <Box sx={{
+          bgcolor: 'white',
+          borderRadius: 3,
+          p: 1,
+          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+          display: 'inline-flex',
+          border: '1px solid #e2e8f0'
+        }}>
+          <Button
+            onClick={() => setCurrentTab(0)}
+            sx={{
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              color: currentTab === 0 ? 'white' : '#64748b',
+              bgcolor: currentTab === 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+              background: currentTab === 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+              fontWeight: 600,
+              textTransform: 'none',
+              minWidth: 'auto',
+              boxShadow: currentTab === 0 ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
+              '&:hover': {
+                bgcolor: currentTab === 0 ? undefined : '#f8fafc',
+                color: currentTab === 0 ? 'white' : '#10b981'
+              },
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <CallIcon sx={{ mr: 1, fontSize: 20 }} />
+            Individual Calls
+          </Button>
+          <Button
+            onClick={() => setCurrentTab(1)}
+            sx={{
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              color: currentTab === 1 ? 'white' : '#64748b',
+              bgcolor: currentTab === 1 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+              background: currentTab === 1 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+              fontWeight: 600,
+              textTransform: 'none',
+              minWidth: 'auto',
+              boxShadow: currentTab === 1 ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
+              '&:hover': {
+                bgcolor: currentTab === 1 ? undefined : '#f8fafc',
+                color: currentTab === 1 ? 'white' : '#10b981'
+              },
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <CampaignIcon sx={{ mr: 1, fontSize: 20 }} />
+            Mass Campaigns
+          </Button>
+        </Box>
       </Box>
 
       {/* Tab Content */}
       {currentTab === 0 && (
-        <Grid container spacing={3}>
-          {/* Call Interface */}
-          <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 4, mb: 3 }}>
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Avatar
-                sx={{
-                  width: 80,
-                  height: 80,
-                  bgcolor: '#000000',
-                  mx: 'auto',
-                  mb: 3
-                }}
-              >
-                <AddIcCallIcon sx={{ fontSize: 40 }} />
-              </Avatar>
+        <Box sx={{ px: 4 }}>
+          <Grid container spacing={4}>
+            {/* Call Interface */}
+            <Grid item xs={12} md={8}>
+              <Paper sx={{
+                p: 6,
+                mb: 4,
+                borderRadius: 4,
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.08)',
+                border: '1px solid #f1f5f9'
+              }}>
+                <Box sx={{ textAlign: 'center', mb: 6 }}>
+                  <Box sx={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mx: 'auto',
+                    mb: 4,
+                    boxShadow: '0 8px 32px rgba(16, 185, 129, 0.3)'
+                  }}>
+                    <AddIcCallIcon sx={{ fontSize: 48, color: 'white' }} />
+                  </Box>
 
-              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                Start AI Voice Call
-              </Typography>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 2,
+                      color: '#1e293b',
+                      fontSize: { xs: '1.8rem', md: '2.2rem' }
+                    }}
+                  >
+                    Start AI Voice Call
+                  </Typography>
 
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                Enter a phone number and configure your AI voice agent to make a call
-              </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: '#64748b',
+                      mb: 6,
+                      fontWeight: 400,
+                      maxWidth: '500px',
+                      mx: 'auto'
+                    }}
+                  >
+                    Configure your AI agent and initiate intelligent voice conversations with prospects
+                  </Typography>
 
               {/* Template Selection */}
               <Box sx={{ maxWidth: 500, mx: 'auto', mb: 4 }}>
@@ -1121,32 +1418,43 @@ export default function VoiceCalls() {
               <Button
                 variant="contained"
                 size="large"
-                startIcon={isLoading ? <CircularProgress size={20} /> : <CallIcon />}
+                startIcon={isLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <CallIcon />}
                 onClick={handleStartCall}
                 disabled={!phoneNumber.trim() || isLoading}
                 sx={{
-                  bgcolor: 'white',
-                  color: '#000000',
-                  border: '2px solid #000000',
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  px: 6,
+                  py: 2,
+                  borderRadius: 3,
                   fontSize: '1.1rem',
                   fontWeight: 600,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
                   '&:hover': {
-                    bgcolor: '#f5f5f5'
+                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                    transform: 'translateY(-2px)'
                   },
                   '&:disabled': {
-                    bgcolor: '#cccccc',
-                    color: '#666666'
-                  }
+                    background: '#cbd5e1',
+                    color: '#64748b',
+                    boxShadow: 'none',
+                    transform: 'none'
+                  },
+                  transition: 'all 0.3s ease'
                 }}
               >
-                {isLoading ? 'Initiating...' : 'Start Live Call'}
+                {isLoading ? 'Initiating Call...' : 'Start Live Call'}
               </Button>
 
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                AI agent will handle live conversations with prospects
+              <Typography variant="body2" sx={{
+                display: 'block',
+                mt: 3,
+                color: '#64748b',
+                fontWeight: 500
+              }}>
+                🤖 AI agent will handle live conversations with prospects automatically
               </Typography>
             </Box>
           </Paper>
@@ -1203,31 +1511,55 @@ export default function VoiceCalls() {
         </Grid>
 
 
-        {/* Call History Sidebar */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <HistoryIcon sx={{ mr: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Recent Calls
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {callHistory.map((call) => (
-                <Box
-                  key={call.id}
-                  sx={{
-                    p: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
+            {/* Call History Sidebar */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{
+                p: 4,
+                borderRadius: 4,
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.08)',
+                border: '1px solid #f1f5f9',
+                height: 'fit-content'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                  <Box sx={{
+                    width: 40,
+                    height: 40,
                     borderRadius: 2,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      bgcolor: 'action.hover'
-                    }
-                  }}
-                >
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mr: 2
+                  }}>
+                    <HistoryIcon sx={{ color: '#10b981', fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="h6" sx={{
+                    fontWeight: 700,
+                    color: '#1e293b'
+                  }}>
+                    Recent Calls
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  {callHistory.map((call) => (
+                    <Box
+                      key={call.id}
+                      sx={{
+                        p: 3,
+                        border: '1px solid #f1f5f9',
+                        borderRadius: 3,
+                        cursor: 'pointer',
+                        bgcolor: 'white',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: '#10b981',
+                          bgcolor: '#f0fdf4',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)'
+                        }
+                      }}
+                    >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
@@ -1259,7 +1591,14 @@ export default function VoiceCalls() {
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="caption" color="text.secondary">
-                      {new Date(call.startTime).toLocaleDateString()} {new Date(call.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {call.startTime ? (() => {
+                        try {
+                          const date = new Date(call.startTime);
+                          return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                        } catch (error) {
+                          return 'Invalid Date';
+                        }
+                      })() : '--'}
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 500 }}>
                       {formatDuration(call.duration)}
@@ -1268,46 +1607,89 @@ export default function VoiceCalls() {
                 </Box>
               ))}
 
-              {callHistory.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <PhoneIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    No call history yet
-                  </Typography>
+                  {callHistory.length === 0 && (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <Box sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: '50%',
+                        bgcolor: '#f8fafc',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 3
+                      }}>
+                        <PhoneIcon sx={{ fontSize: 32, color: '#94a3b8' }} />
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: '#475569', mb: 1 }}>
+                        No calls yet
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#64748b' }}>
+                        Your recent call history will appear here
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-        </Grid>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
       )}
 
-      {/* Mass Voicemail Tab */}
+      {/* Mass Campaign Tab */}
       {currentTab === 1 && (
-        <Grid container spacing={3}>
-          {/* Campaign Creation */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 4, mb: 3 }}>
-              <Box sx={{ textAlign: 'center', mb: 4 }}>
-                <Avatar
-                  sx={{
-                    width: 80,
-                    height: 80,
-                    bgcolor: 'primary.main',
+        <Box sx={{ px: 4 }}>
+          <Grid container spacing={4}>
+            {/* Campaign Creation */}
+            <Grid item xs={12} md={8}>
+              <Paper sx={{
+                p: 6,
+                mb: 4,
+                borderRadius: 4,
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.08)',
+                border: '1px solid #f1f5f9'
+              }}>
+                <Box sx={{ textAlign: 'center', mb: 6 }}>
+                  <Box sx={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     mx: 'auto',
-                    mb: 3
-                  }}
-                >
-                  <CampaignIcon sx={{ fontSize: 40 }} />
-                </Avatar>
+                    mb: 4,
+                    boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)'
+                  }}>
+                    <CampaignIcon sx={{ fontSize: 48, color: 'white' }} />
+                  </Box>
 
-                <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                  Mass Calling Campaign
-                </Typography>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 2,
+                      color: '#1e293b',
+                      fontSize: { xs: '1.8rem', md: '2.2rem' }
+                    }}
+                  >
+                    Mass Calling Campaign
+                  </Typography>
 
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                  Upload a CSV file and create personalized live calling campaigns at scale
-                </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: '#64748b',
+                      mb: 6,
+                      fontWeight: 400,
+                      maxWidth: '500px',
+                      mx: 'auto'
+                    }}
+                  >
+                    Upload CSV contacts and launch personalized voice campaigns at scale
+                  </Typography>
 
                 {/* Campaign Form */}
                 <Grid container spacing={3} sx={{ textAlign: 'left' }}>
@@ -1552,6 +1934,7 @@ export default function VoiceCalls() {
             </Paper>
           </Grid>
         </Grid>
+        </Box>
       )}
 
       {/* Voice Management Dialog */}

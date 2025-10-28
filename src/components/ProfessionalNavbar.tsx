@@ -392,16 +392,67 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
               onSidebarCollapsedChange?.(newCollapsed);
             }}
             sx={{
-              color: 'rgba(255, 255, 255, 0.8)',
               p: 1,
+              borderRadius: 2,
               '&:hover': {
-                color: 'white',
                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
               },
               transition: 'all 0.2s ease-in-out'
             }}
           >
-            {sidebarCollapsed ? <ExpandMore sx={{ transform: 'rotate(-90deg)' }} /> : <ExpandMore sx={{ transform: 'rotate(90deg)' }} />}
+            <Box
+              sx={{
+                width: 16,
+                height: 16,
+                position: 'relative',
+                color: 'rgba(255, 255, 255, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: 'rotate(90deg)',
+                '&:hover': {
+                  color: 'white'
+                }
+              }}
+            >
+              {/* Three squares in L-shape - rotated 90 degrees CCW */}
+              {/* Top-left square (was top-right) */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: 6,
+                  height: 6,
+                  bgcolor: 'currentColor',
+                  borderRadius: '1px'
+                }}
+              />
+              {/* Top-right square (was bottom-left) */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: 6,
+                  height: 6,
+                  bgcolor: 'currentColor',
+                  borderRadius: '1px'
+                }}
+              />
+              {/* Bottom-right square (was bottom-right) */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 6,
+                  height: 6,
+                  bgcolor: 'currentColor',
+                  borderRadius: '1px'
+                }}
+              />
+            </Box>
           </IconButton>
         </Box>
       </Box>

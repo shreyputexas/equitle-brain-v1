@@ -173,7 +173,11 @@ export class VoiceAgentService {
           updates.status = 'completed';
           updates.endTime = new Date();
           if (callSession.startTime) {
-            updates.duration = new Date().getTime() - callSession.startTime.getTime();
+            // Handle both JavaScript Date and Firestore Timestamp objects
+            const startTimeMs = callSession.startTime.getTime ?
+              callSession.startTime.getTime() :
+              callSession.startTime.toDate().getTime();
+            updates.duration = new Date().getTime() - startTimeMs;
           }
           break;
         case 'failed':
@@ -219,7 +223,16 @@ export class VoiceAgentService {
 
       // Sort and limit in memory
       const calls = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as CallSession))
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamps to JavaScript Dates
+            startTime: data.startTime?.toDate ? data.startTime.toDate() : data.startTime,
+            endTime: data.endTime?.toDate ? data.endTime.toDate() : data.endTime,
+          } as CallSession;
+        })
         .sort((a, b) => {
           const aTime = a.startTime ? new Date(a.startTime).getTime() : 0;
           const bTime = b.startTime ? new Date(b.startTime).getTime() : 0;
@@ -247,7 +260,14 @@ export class VoiceAgentService {
       // Query database
       const docSnapshot = await db.collection('voice_calls').doc(callId).get();
       if (docSnapshot.exists) {
-        return { id: docSnapshot.id, ...docSnapshot.data() } as CallSession;
+        const data = docSnapshot.data();
+        return {
+          id: docSnapshot.id,
+          ...data,
+          // Convert Firestore Timestamps to JavaScript Dates
+          startTime: data?.startTime?.toDate ? data.startTime.toDate() : data?.startTime,
+          endTime: data?.endTime?.toDate ? data.endTime.toDate() : data?.endTime,
+        } as CallSession;
       }
 
       return null;

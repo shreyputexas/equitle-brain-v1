@@ -338,14 +338,16 @@ export class RetellService {
    * Parse webhook event
    */
   parseWebhookEvent(body: any): RetellWebhookEvent {
+    // According to Retell docs, the payload has an 'event' field and a 'call' object
+    const call = body.call || {};
     return {
       event: body.event || 'unknown',
-      call_id: body.call_id || '',
-      agent_id: body.agent_id || '',
-      call_status: body.call_status,
-      transcript: body.transcript,
-      recording_url: body.recording_url,
-      metadata: body.metadata
+      call_id: call.call_id || body.call_id || '',
+      agent_id: call.agent_id || body.agent_id || '',
+      call_status: call.call_status || body.call_status,
+      transcript: call.transcript || body.transcript,
+      recording_url: call.recording_url || body.recording_url,
+      metadata: call.metadata || body.metadata
     };
   }
 
