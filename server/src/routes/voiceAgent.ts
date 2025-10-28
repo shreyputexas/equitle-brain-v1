@@ -29,6 +29,12 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Voice agent route is working!', timestamp: new Date().toISOString() });
 });
 
+// TEST: Analytics endpoint right after test route
+router.get('/analytics-test', (req, res) => {
+  console.log('🧪 ANALYTICS TEST ROUTE HIT');
+  res.json({ message: 'Analytics test route is working!', timestamp: new Date().toISOString() });
+});
+
 // ElevenLabs voices endpoint (no auth required) - matches mass voicemail implementation
 router.get('/elevenlabs-voices', async (req, res) => {
   console.log('🎤 ELEVENLABS VOICES ROUTE HIT');
@@ -418,6 +424,185 @@ router.get('/calls/:callId', firebaseAuthMiddleware, async (req, res) => {
     res.json({ call });
   } catch (error) {
     logger.error('Error getting call details', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/voice-agent/calls/:callId/enhanced
+ * Get enhanced call details with analytics
+ */
+router.get('/calls/:callId/enhanced', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const { callId } = req.params;
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Initialize services
+    const { voiceAgentService } = getServices();
+
+    const enhancedCall = await voiceAgentService.getEnhancedCallSession(callId);
+
+    if (!enhancedCall) {
+      return res.status(404).json({ error: 'Call not found' });
+    }
+
+    // Verify user owns this call
+    if (enhancedCall.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({ call: enhancedCall });
+  } catch (error) {
+    logger.error('Error getting enhanced call details', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+/**
+ * GET /api/voice-agent/analytics/dashboard
+ * Get dashboard analytics data
+ */
+router.get('/analytics/dashboard', async (req, res) => {
+  try {
+    // For testing without auth - use mock user
+    const userId = (req as FirebaseAuthRequest).user?.uid || 'dev-user-123';
+    const { startDate, endDate } = req.query;
+
+    console.log('🎯 ANALYTICS DASHBOARD ROUTE HIT');
+    logger.info('Analytics dashboard route accessed', { userId });
+
+    const { voiceAgentService } = getServices();
+
+    let dateRange;
+    if (startDate && endDate) {
+      dateRange = {
+        start: new Date(startDate as string),
+        end: new Date(endDate as string)
+      };
+    }
+
+    // Get real analytics data from Firebase
+    const analytics = await voiceAgentService.getCallAnalytics(userId, dateRange);
+
+    console.log('🔍 Real analytics data:', JSON.stringify(analytics, null, 2));
+    logger.info('Analytics data retrieved', { analytics });
+
+    res.json({
+      success: true,
+      analytics,
+      message: 'Analytics dashboard data loaded successfully',
+      userId,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error getting call analytics', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/voice-agent/analytics/trends
+ * Get trend analytics data
+ */
+router.get('/analytics/trends', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const { days = '30' } = req.query;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { voiceAgentService } = getServices();
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days as string));
+
+    const analytics = await voiceAgentService.getCallAnalytics(userId, {
+      start: startDate,
+      end: endDate
+    });
+
+    res.json({
+      trends: analytics.trendsData,
+      summary: {
+        totalCalls: analytics.totalCalls,
+        successRate: analytics.successRate,
+        averageDuration: analytics.averageDuration
+      }
+    });
+  } catch (error) {
+    logger.error('Error getting trend analytics', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/voice-agent/analytics/batch-analyze
+ * Trigger batch analysis of calls
+ */
+router.post('/analytics/batch-analyze', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const { limit = 50 } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { voiceAgentService } = getServices();
+
+    // Start batch analysis (fire and forget)
+    voiceAgentService.batchAnalyzeCalls(userId, limit).catch(error => {
+      logger.error('Batch analysis failed', error);
+    });
+
+    res.json({
+      success: true,
+      message: 'Batch analysis started',
+      estimatedTime: `${Math.ceil(limit / 10)} minutes`
+    });
+  } catch (error) {
+    logger.error('Error starting batch analysis', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * GET /api/voice-agent/calls/:callId/recording
+ * Get call recording (proxy to Retell)
+ */
+router.get('/calls/:callId/recording', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const { callId } = req.params;
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { voiceAgentService } = getServices();
+
+    const call = await voiceAgentService.getCallSession(callId);
+    if (!call || call.userId !== userId) {
+      return res.status(404).json({ error: 'Call not found' });
+    }
+
+    const enhancedCall = await voiceAgentService.getEnhancedCallSession(callId);
+    if (!enhancedCall?.recordingUrl) {
+      return res.status(404).json({ error: 'Recording not available' });
+    }
+
+    // Redirect to the recording URL or proxy the content
+    res.redirect(enhancedCall.recordingUrl);
+  } catch (error) {
+    logger.error('Error getting call recording', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

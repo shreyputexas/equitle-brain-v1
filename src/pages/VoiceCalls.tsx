@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getApiUrl, getSocketUrl } from '../config/api';
+import VoiceCallAnalytics from '../components/VoiceCallAnalytics';
+import CallInspectionModal from '../components/CallInspectionModal';
 import {
   Box,
   Paper,
@@ -67,7 +69,8 @@ import {
   Stop as StopIcon,
   Assignment as AssignmentIcon,
   ExpandMore as ExpandMoreIcon,
-  Business as BusinessIcon
+  Business as BusinessIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 
 interface VoiceProfile {
@@ -245,6 +248,15 @@ export default function VoiceCalls() {
   const [showCampaignDialog, setShowCampaignDialog] = useState(false);
   const [messageTemplates, setMessageTemplates] = useState<MessageTemplate[]>([]);
 
+  // Call history management state
+  const [callHistoryLimit, setCallHistoryLimit] = useState(10);
+  const [showingAllCalls, setShowingAllCalls] = useState(false);
+  const [loadingCallHistory, setLoadingCallHistory] = useState(false);
+
+  // Call inspection modal state
+  const [showCallInspection, setShowCallInspection] = useState(false);
+  const [selectedCallId, setSelectedCallId] = useState<string | null>(null);
+
   const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPhoneNumber(event.target.value);
   };
@@ -383,9 +395,11 @@ export default function VoiceCalls() {
     }
   };
 
-  const loadCallHistory = async () => {
+  const loadCallHistory = async (limit?: number) => {
+    const requestLimit = limit || callHistoryLimit;
+    setLoadingCallHistory(true);
     try {
-      const response = await fetch(getApiUrl('voice-agent/calls?limit=10'), {
+      const response = await fetch(getApiUrl(`voice-agent/calls?limit=${requestLimit}`), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -407,6 +421,8 @@ export default function VoiceCalls() {
     } catch (error) {
       console.error('Failed to load call history:', error);
       setCallHistory([]);
+    } finally {
+      setLoadingCallHistory(false);
     }
   };
 
@@ -722,6 +738,25 @@ export default function VoiceCalls() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const handleToggleCallHistory = async () => {
+    const newShowingAll = !showingAllCalls;
+    const newLimit = newShowingAll ? 50 : 10;
+
+    setShowingAllCalls(newShowingAll);
+    setCallHistoryLimit(newLimit);
+    await loadCallHistory(newLimit);
+  };
+
+  const handleOpenCallInspection = (callId: string) => {
+    setSelectedCallId(callId);
+    setShowCallInspection(true);
+  };
+
+  const handleCloseCallInspection = () => {
+    setShowCallInspection(false);
+    setSelectedCallId(null);
   };
 
   const handleIndividualCall = async (contact: CampaignContact) => {
@@ -1123,6 +1158,29 @@ export default function VoiceCalls() {
           >
             <CampaignIcon sx={{ mr: 1, fontSize: 20 }} />
             Mass Campaigns
+          </Button>
+          <Button
+            onClick={() => setCurrentTab(2)}
+            sx={{
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              color: currentTab === 2 ? 'white' : '#64748b',
+              bgcolor: currentTab === 2 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+              background: currentTab === 2 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'transparent',
+              fontWeight: 600,
+              textTransform: 'none',
+              minWidth: 'auto',
+              boxShadow: currentTab === 2 ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
+              '&:hover': {
+                bgcolor: currentTab === 2 ? undefined : '#f8fafc',
+                color: currentTab === 2 ? 'white' : '#10b981'
+              },
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <AnalyticsIcon sx={{ mr: 1, fontSize: 20 }} />
+            Analytics
           </Button>
         </Box>
       </Box>
@@ -1533,18 +1591,32 @@ export default function VoiceCalls() {
                   }}>
                     <HistoryIcon sx={{ color: '#10b981', fontSize: 20 }} />
                   </Box>
-                  <Typography variant="h6" sx={{
-                    fontWeight: 700,
-                    color: '#1e293b'
-                  }}>
-                    Recent Calls
-                  </Typography>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" sx={{
+                      fontWeight: 700,
+                      color: '#1e293b'
+                    }}>
+                      {showingAllCalls ? 'All Calls' : 'Recent Calls'}
+                    </Typography>
+                    {callHistory.length > 0 && (
+                      <Typography variant="caption" sx={{ color: '#64748b' }}>
+                        Showing {callHistory.length} call{callHistory.length !== 1 ? 's' : ''}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
+
+                {loadingCallHistory && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                )}
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                   {callHistory.map((call) => (
                     <Box
                       key={call.id}
+                      onClick={() => handleOpenCallInspection(call.id)}
                       sx={{
                         p: 3,
                         border: '1px solid #f1f5f9',
@@ -1628,6 +1700,34 @@ export default function VoiceCalls() {
                       <Typography variant="body2" sx={{ color: '#64748b' }}>
                         Your recent call history will appear here
                       </Typography>
+                    </Box>
+                  )}
+
+                  {/* Toggle button for showing all calls */}
+                  {callHistory.length > 0 && !loadingCallHistory && (
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        onClick={handleToggleCallHistory}
+                        disabled={loadingCallHistory}
+                        sx={{
+                          borderColor: '#cbd5e1',
+                          color: '#475569',
+                          px: 3,
+                          py: 1,
+                          borderRadius: 2,
+                          fontSize: '0.875rem',
+                          fontWeight: 500,
+                          textTransform: 'none',
+                          '&:hover': {
+                            borderColor: '#10b981',
+                            color: '#10b981',
+                            bgcolor: '#f0fdf4'
+                          }
+                        }}
+                      >
+                        {showingAllCalls ? 'Show Recent Only' : 'Show All Calls'}
+                      </Button>
                     </Box>
                   )}
                 </Box>
@@ -1934,6 +2034,13 @@ export default function VoiceCalls() {
             </Paper>
           </Grid>
         </Grid>
+        </Box>
+      )}
+
+      {/* Analytics Tab */}
+      {currentTab === 2 && (
+        <Box sx={{ px: 4 }}>
+          <VoiceCallAnalytics />
         </Box>
       )}
 
@@ -2258,6 +2365,13 @@ export default function VoiceCalls() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Call Inspection Modal */}
+      <CallInspectionModal
+        open={showCallInspection}
+        onClose={handleCloseCallInspection}
+        callId={selectedCallId}
+      />
     </Box>
   );
 }
