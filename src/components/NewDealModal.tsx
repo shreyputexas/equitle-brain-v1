@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -22,32 +22,20 @@ import {
   Divider,
   Card,
   CardContent,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
-  IconButton as ListIconButton,
   Tooltip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
+  Checkbox,
+  Autocomplete
 } from '@mui/material';
 import dealsApi from '../services/dealsApi';
+import contactsApi from '../services/contactsApi';
 import {
   Close as CloseIcon,
-  AttachMoney as MoneyIcon,
   Business as BusinessIcon,
   Person as PersonIcon,
-  Email as EmailIcon,
   Phone as PhoneIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  ExpandMore as ExpandMoreIcon,
-  Note as NoteIcon,
-  Message as MessageIcon,
-  ContactPhone as ContactPhoneIcon
 } from '@mui/icons-material';
 
 interface NewDealModalProps {
@@ -59,30 +47,23 @@ interface NewDealModalProps {
 interface Contact {
   id: string;
   name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string;
-  role: string;
+  title: string;
+  company: string;
+  type: 'deal' | 'investor' | 'broker';
   isPrimary: boolean;
 }
 
-interface EmailTemplate {
-  subject: string;
-  body: string;
-}
 
-interface DealNote {
-  id: string;
-  content: string;
-  createdAt: Date;
-  type: 'general' | 'meeting' | 'call' | 'email';
-}
 
 const stages = [
-  { value: 'prospect', label: 'Initial Review' },
-  { value: 'due-diligence', label: 'Due Diligence' },
-  { value: 'term-sheet', label: 'Term Sheet' },
-  { value: 'closing', label: 'Closing' },
-  { value: 'closed', label: 'Closed' }
+  { value: 'all', label: 'All' },
+  { value: 'response-received', label: 'Response Received' },
+  { value: 'initial-diligence', label: 'Initial Diligence' },
+  { value: 'ioi-loi', label: 'IOI/LOI' }
 ];
 
 const sectors = [
@@ -109,37 +90,100 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
   const [formData, setFormData] = useState({
     company: '',
     sector: '',
-    stage: 'prospect',
-    value: '',
-    probability: '',
-    leadPartner: '',
+    stage: 'all',
     status: 'active',
-    nextStep: '',
-    description: ''
+    notes: ''
   });
 
   // New state for enhanced functionality
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [emailTemplate, setEmailTemplate] = useState<EmailTemplate>({
-    subject: '',
-    body: ''
-  });
-  const [notes, setNotes] = useState<DealNote[]>([]);
-  const [newContact, setNewContact] = useState<Partial<Contact>>({
-    name: '',
-    email: '',
-    phone: '',
-    role: '',
-    isPrimary: false
-  });
-  const [newNote, setNewNote] = useState('');
-  const [showContactForm, setShowContactForm] = useState(false);
-  const [editingContact, setEditingContact] = useState<string | null>(null);
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+  const [availableContacts, setAvailableContacts] = useState<Contact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Fetch available contacts when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchAvailableContacts();
+    }
+  }, [open]);
+
+  // Debug form data changes
+  useEffect(() => {
+    console.log('Form data changed:', formData);
+  }, [formData]);
+
+  // Debug available contacts changes
+  useEffect(() => {
+    console.log('Available contacts changed:', availableContacts);
+  }, [availableContacts]);
+
+  const fetchAvailableContacts = async () => {
+    try {
+      setContactsLoading(true);
+      console.log('Fetching contacts...');
+      const response = await contactsApi.getContacts();
+      console.log('Contacts response:', response);
+      // Transform contacts to include name field and isPrimary
+      const transformedContacts = response.contacts.map((contact: any) => ({
+        ...contact,
+        name: `${contact.first_name} ${contact.last_name}`.trim(),
+        isPrimary: false
+      }));
+      console.log('Transformed contacts:', transformedContacts);
+      setAvailableContacts(transformedContacts);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      // Fallback to mock data if API fails
+      const mockContacts = [
+        {
+          id: '1',
+          first_name: 'John',
+          last_name: 'Doe',
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          phone: '+1-555-0123',
+          title: 'CEO',
+          company: 'Tech Corp',
+          type: 'deal' as const,
+          isPrimary: false
+        },
+        {
+          id: '2',
+          first_name: 'Jane',
+          last_name: 'Smith',
+          name: 'Jane Smith',
+          email: 'jane.smith@example.com',
+          phone: '+1-555-0124',
+          title: 'CTO',
+          company: 'Innovation Inc',
+          type: 'investor' as const,
+          isPrimary: false
+        },
+        {
+          id: '3',
+          first_name: 'Mike',
+          last_name: 'Johnson',
+          name: 'Mike Johnson',
+          email: 'mike.johnson@example.com',
+          phone: '+1-555-0125',
+          title: 'VP Sales',
+          company: 'Growth Co',
+          type: 'broker' as const,
+          isPrimary: false
+        }
+      ];
+      console.log('Using mock contacts:', mockContacts);
+      setAvailableContacts(mockContacts);
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
   const handleChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
+    console.log(`Field ${field} changed to:`, event.target.value);
     setFormData(prev => ({
       ...prev,
       [field]: event.target.value
@@ -147,86 +191,23 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
   };
 
   // Contact management functions
-  const handleAddContact = () => {
-    if (newContact.name && newContact.email) {
-      const contact: Contact = {
-        id: Date.now().toString(),
-        name: newContact.name,
-        email: newContact.email,
-        phone: newContact.phone || '',
-        role: newContact.role || 'Contact',
-        isPrimary: contacts.length === 0 || newContact.isPrimary || false
-      };
-      
-      // If this is set as primary, unset others
-      if (contact.isPrimary) {
-        setContacts(prev => prev.map(c => ({ ...c, isPrimary: false })));
-      }
-      
-      setContacts(prev => [...prev, contact]);
-      setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
-      setShowContactForm(false);
-    }
+  const handleContactSelection = (event: any, newValue: Contact[]) => {
+    console.log('Contact selection changed:', newValue);
+    setSelectedContacts(newValue);
   };
 
-  const handleEditContact = (contactId: string) => {
-    const contact = contacts.find(c => c.id === contactId);
-    if (contact) {
-      setNewContact(contact);
-      setEditingContact(contactId);
-      setShowContactForm(true);
-    }
-  };
-
-  const handleUpdateContact = () => {
-    if (editingContact && newContact.name && newContact.email) {
-      setContacts(prev => prev.map(c => 
-        c.id === editingContact 
-          ? { ...c, ...newContact }
-          : c
-      ));
-      setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
-      setEditingContact(null);
-      setShowContactForm(false);
-    }
-  };
-
-  const handleDeleteContact = (contactId: string) => {
-    setContacts(prev => prev.filter(c => c.id !== contactId));
+  const handleRemoveContact = (contactId: string) => {
+    setSelectedContacts(prev => prev.filter(c => c.id !== contactId));
   };
 
   const handleSetPrimaryContact = (contactId: string) => {
-    setContacts(prev => prev.map(c => ({
+    setSelectedContacts(prev => prev.map(c => ({
       ...c,
       isPrimary: c.id === contactId
     })));
   };
 
-  // Notes management functions
-  const handleAddNote = () => {
-    if (newNote.trim()) {
-      const note: DealNote = {
-        id: Date.now().toString(),
-        content: newNote.trim(),
-        createdAt: new Date(),
-        type: 'general'
-      };
-      setNotes(prev => [...prev, note]);
-      setNewNote('');
-    }
-  };
 
-  const handleDeleteNote = (noteId: string) => {
-    setNotes(prev => prev.filter(n => n.id !== noteId));
-  };
-
-  // Email template functions
-  const handleEmailTemplateChange = (field: keyof EmailTemplate) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setEmailTemplate(prev => ({
-      ...prev,
-      [field]: event.target.value
-    }));
-  };
 
   const handleSubmit = async () => {
     try {
@@ -242,12 +223,8 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         setError('Sector is required');
         return;
       }
-      if (!formData.value || isNaN(Number(formData.value))) {
-        setError('Valid deal value is required');
-        return;
-      }
-      if (!formData.probability || isNaN(Number(formData.probability)) || Number(formData.probability) < 0 || Number(formData.probability) > 100) {
-        setError('Probability must be between 0 and 100');
+      if (!formData.stage) {
+        setError('Stage is required');
         return;
       }
 
@@ -255,16 +232,10 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         company: formData.company.trim(),
         sector: formData.sector,
         stage: formData.stage,
-        value: Number(formData.value),
-        probability: Number(formData.probability),
-        leadPartner: formData.leadPartner.trim() || 'Unassigned',
         status: formData.status,
-        nextStep: formData.nextStep.trim() || 'To be determined',
-        ...(formData.description.trim() && { description: formData.description.trim() }),
+        ...(formData.notes.trim() && { notes: formData.notes.trim() }),
         // Include new enhanced data
-        contacts: contacts,
-        emailTemplate: emailTemplate,
-        notes: notes
+        contacts: selectedContacts
       };
 
       // Use the dealsApi service
@@ -280,21 +251,11 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       setFormData({
         company: '',
         sector: '',
-        stage: 'prospect',
-        value: '',
-        probability: '',
-        leadPartner: '',
+        stage: 'all',
         status: 'active',
-        nextStep: '',
-        description: ''
+        notes: ''
       });
-      setContacts([]);
-      setEmailTemplate({ subject: '', body: '' });
-      setNotes([]);
-      setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
-      setNewNote('');
-      setShowContactForm(false);
-      setEditingContact(null);
+      setSelectedContacts([]);
 
       onSuccess();
       onClose();
@@ -324,40 +285,59 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         sx: {
           borderRadius: 3,
           minHeight: '50vh',
-          zIndex: 9999
+          border: '1px solid #e2e8f0',
+          overflow: 'hidden'
         }
       }}
-      sx={{
-        zIndex: 9999
-      }}
     >
-      <DialogTitle sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        bgcolor: '#000000',
+      {/* Gradient Header */}
+      <Box sx={{
+        background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
         color: 'white',
-        py: 2
+        py: 3,
+        px: 4,
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <BusinessIcon />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 400, 
+              fontSize: '1.25rem', 
+              color: 'white',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.01em'
+            }}>
             Create New Deal
           </Typography>
         </Box>
         <IconButton onClick={handleClose} sx={{ color: 'white' }} disabled={loading}>
           <CloseIcon />
         </IconButton>
-      </DialogTitle>
+        </Box>
+        <Typography variant="body2" sx={{ 
+          fontSize: '0.9rem', 
+          color: 'rgba(255, 255, 255, 0.8)',
+          lineHeight: 1.5,
+          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          letterSpacing: '-0.01em'
+        }}>
+          Fill in the deal details below to create a new investment opportunity
+        </Typography>
+      </Box>
 
-      <DialogContent sx={{ pt: 0, px: 3 }}>
+      {/* Content Area */}
+      <Box sx={{ 
+        p: 4, 
+        bgcolor: '#F8FAFC',
+        color: '#1E293B'
+      }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3, mt: 4 }} onClose={() => setError('')}>
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
             {error}
           </Alert>
         )}
 
-        <Grid container spacing={3} sx={{ mt: 4 }}>
+        <Grid container spacing={3}>
           {/* Company Name */}
           <Grid item xs={12} sm={6}>
             <TextField
@@ -368,7 +348,11 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
               required
               disabled={loading}
               InputLabelProps={{
-                sx: { color: '#333333', fontWeight: 500 }
+                sx: { 
+                  color: '#1E293B', 
+                  fontWeight: 600,
+                  fontSize: '0.9rem'
+                }
               }}
               InputProps={{
                 startAdornment: (
@@ -377,17 +361,74 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
                   </InputAdornment>
                 )
               }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  '& fieldset': {
+                    borderColor: '#E2E8F0',
+                    borderWidth: '1px',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#9CA3AF',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#000000',
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  py: 1.5,
+                  fontSize: '0.95rem',
+                  color: '#1E293B',
+                  fontWeight: 500,
+                },
+              }}
             />
           </Grid>
 
           {/* Sector */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth required disabled={loading}>
-              <InputLabel sx={{ color: '#333333', fontWeight: 500 }}>Sector</InputLabel>
+              <InputLabel sx={{ 
+                color: '#1E293B', 
+                fontWeight: 600,
+                fontSize: '0.9rem'
+              }}>Sector</InputLabel>
               <Select
                 value={formData.sector}
                 label="Sector"
                 onChange={handleChange('sector')}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                    },
+                  },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: 'white',
+                    '& fieldset': {
+                      borderColor: '#E2E8F0',
+                      borderWidth: '1px',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#CBD5E1',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#000000',
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiSelect-select': {
+                    py: 1.5,
+                    fontSize: '0.95rem',
+                    color: '#1E293B',
+                    fontWeight: 500,
+                  },
+                }}
               >
                 {sectors.map((sector) => (
                   <MenuItem key={sector} value={sector}>
@@ -400,12 +441,46 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
 
           {/* Stage */}
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth disabled={loading}>
-              <InputLabel sx={{ color: '#333333', fontWeight: 500 }}>Stage</InputLabel>
+            <FormControl fullWidth required disabled={loading}>
+              <InputLabel sx={{ 
+                color: '#1E293B', 
+                fontWeight: 600,
+                fontSize: '0.9rem'
+              }}>Stage</InputLabel>
               <Select
                 value={formData.stage}
                 label="Stage"
                 onChange={handleChange('stage')}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                    },
+                  },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: 'white',
+                    '& fieldset': {
+                      borderColor: '#E2E8F0',
+                      borderWidth: '1px',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#CBD5E1',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#000000',
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiSelect-select': {
+                    py: 1.5,
+                    fontSize: '0.95rem',
+                    color: '#1E293B',
+                    fontWeight: 500,
+                  },
+                }}
               >
                 {stages.map((stage) => (
                   <MenuItem key={stage.value} value={stage.value}>
@@ -419,11 +494,45 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
           {/* Status */}
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth disabled={loading}>
-              <InputLabel sx={{ color: '#333333', fontWeight: 500 }}>Status</InputLabel>
+              <InputLabel sx={{ 
+                color: '#1E293B', 
+                fontWeight: 600,
+                fontSize: '0.9rem'
+              }}>Status</InputLabel>
               <Select
                 value={formData.status}
                 label="Status"
                 onChange={handleChange('status')}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                    },
+                  },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: 'white',
+                    '& fieldset': {
+                      borderColor: '#E2E8F0',
+                      borderWidth: '1px',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#CBD5E1',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#000000',
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiSelect-select': {
+                    py: 1.5,
+                    fontSize: '0.95rem',
+                    color: '#1E293B',
+                    fontWeight: 500,
+                  },
+                }}
               >
                 {statuses.map((status) => (
                   <MenuItem key={status.value} value={status.value}>
@@ -434,388 +543,184 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
             </FormControl>
           </Grid>
 
-          {/* Deal Value */}
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Deal Value ($)"
-              value={formData.value}
-              onChange={handleChange('value')}
-              required
-              type="number"
-              disabled={loading}
-              InputLabelProps={{
-                sx: { color: '#333333', fontWeight: 500 }
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <MoneyIcon color="action" />
-                  </InputAdornment>
-                )
-              }}
-              helperText="Enter amount in USD"
-            />
-          </Grid>
 
-          {/* Probability */}
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Probability (%)"
-              value={formData.probability}
-              onChange={handleChange('probability')}
-              required
-              type="number"
-              disabled={loading}
-              InputLabelProps={{
-                sx: { color: '#333333', fontWeight: 500 }
-              }}
-              inputProps={{ min: 0, max: 100 }}
-              helperText="0-100%"
-            />
-          </Grid>
-
-          {/* Lead Partner */}
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Lead Partner"
-              value={formData.leadPartner}
-              onChange={handleChange('leadPartner')}
-              disabled={loading}
-              InputLabelProps={{
-                sx: { color: '#333333', fontWeight: 500 }
-              }}
-              helperText="Optional"
-            />
-          </Grid>
-
-          {/* Next Step */}
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Next Step"
-              value={formData.nextStep}
-              onChange={handleChange('nextStep')}
-              disabled={loading}
-              InputLabelProps={{
-                sx: { color: '#333333', fontWeight: 500 }
-              }}
-              helperText="Optional"
-            />
-          </Grid>
-
-          {/* Description */}
+          {/* Notes */}
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="Description"
-              value={formData.description}
-              onChange={handleChange('description')}
+              label="Notes"
+              value={formData.notes}
+              onChange={handleChange('notes')}
               multiline
               rows={3}
               disabled={loading}
               InputLabelProps={{
-                sx: { color: '#333333', fontWeight: 500 }
+                sx: { 
+                  color: '#1E293B', 
+                  fontWeight: 600,
+                  fontSize: '0.9rem'
+                }
               }}
-              helperText="Optional deal description or notes"
+              helperText="Optional deal notes or description"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: 'white',
+                  '& fieldset': {
+                    borderColor: '#E2E8F0',
+                    borderWidth: '1px',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#9CA3AF',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#000000',
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  py: 1.5,
+                  fontSize: '0.95rem',
+                  color: '#1E293B',
+                  fontWeight: 500,
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#64748B',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                },
+              }}
+            />
+          </Grid>
+
+          {/* Deal Contacts */}
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Autocomplete
+              multiple
+              options={availableContacts}
+              value={selectedContacts}
+              onChange={handleContactSelection}
+              loading={contactsLoading}
+              getOptionLabel={(option) => option.name}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Deal Contacts"
+                  placeholder="Search and select contacts for this deal..."
+                  InputLabelProps={{
+                    sx: { 
+                      color: '#1E293B', 
+                      fontWeight: 600,
+                      fontSize: '0.9rem'
+                    }
+                  }}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <PersonIcon sx={{ color: 'action.active', mr: 1 }} />
+                        {params.InputProps.startAdornment}
+                      </>
+                    )
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: 'white',
+                      '& fieldset': {
+                        borderColor: '#E2E8F0',
+                        borderWidth: '1px',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#9CA3AF',
+                      },
+                      '&.Mui-focused fieldset': {
+                    borderColor: '#000000',
+                        borderWidth: '2px',
+                      },
+                    },
+                    '& .MuiInputBase-input': {
+                      py: 1.5,
+                      fontSize: '0.95rem',
+                      color: '#1E293B',
+                      fontWeight: 500,
+                    },
+                  }}
+                />
+              )}
+              renderOption={(props, option, { selected }) => (
+                <li {...props}>
+                  <Checkbox
+                    checked={selected}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                    <Avatar sx={{ width: 24, height: 24, bgcolor: 'grey.300' }}>
+                      {option.name.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {option.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email} • {option.company}
+              </Typography>
+            </Box>
+            </Box>
+                </li>
+              )}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={option.id}
+                    label={option.name}
+                    avatar={<Avatar sx={{ width: 20, height: 20 }}>{option.name.charAt(0)}</Avatar>}
+                    onDelete={() => handleRemoveContact(option.id)}
+                    sx={{
+                      backgroundColor: '#F1F5F9',
+                      color: '#1E293B',
+                      '& .MuiChip-deleteIcon': {
+                        color: '#64748B',
+                        '&:hover': {
+                          color: '#EF4444'
+                        }
+                      }
+                    }}
+                  />
+                ))
+              }
+              disabled={loading}
             />
           </Grid>
         </Grid>
+      </Box>
 
-        {/* Enhanced Sections */}
-        <Divider sx={{ my: 3 }} />
-
-        {/* Contacts Section */}
-        <Accordion defaultExpanded>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PersonIcon sx={{ color: '#000000' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Key Contacts ({contacts.length})
-              </Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Contact List */}
-              {contacts.length > 0 && (
-                <List>
-                  {contacts.map((contact) => (
-                    <ListItem key={contact.id} sx={{ px: 0 }}>
-                      <ListItemIcon>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: contact.isPrimary ? '#000000' : 'grey.300' }}>
-                          {contact.name.charAt(0)}
-                        </Avatar>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                              {contact.name}
-                            </Typography>
-                            {contact.isPrimary && (
-                              <Chip label="Primary" size="small" sx={{ bgcolor: '#000000', color: 'white', fontSize: '0.7rem' }} />
-                            )}
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            <Typography variant="caption" display="block">{contact.email}</Typography>
-                            {contact.phone && <Typography variant="caption" display="block">{contact.phone}</Typography>}
-                            <Typography variant="caption" color="text.secondary">{contact.role}</Typography>
-                          </Box>
-                        }
-                      />
-                      <ListItemSecondaryAction>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <Tooltip title="Set as Primary">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleSetPrimaryContact(contact.id)}
-                              sx={{ 
-                                color: contact.isPrimary ? '#000000' : 'text.secondary',
-                                '&:hover': { bgcolor: 'action.hover' }
-                              }}
-                            >
-                              <PersonIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit Contact">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleEditContact(contact.id)}
-                              sx={{ '&:hover': { bgcolor: 'action.hover' } }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete Contact">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleDeleteContact(contact.id)}
-                              sx={{ color: 'error.main', '&:hover': { bgcolor: 'error.light' } }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-
-              {/* Add Contact Form */}
-              {showContactForm && (
-                <Card sx={{ p: 2, bgcolor: 'background.default' }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
-                    {editingContact ? 'Edit Contact' : 'Add New Contact'}
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Name"
-                        value={newContact.name}
-                        onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
-                        disabled={loading}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Email"
-                        type="email"
-                        value={newContact.email}
-                        onChange={(e) => setNewContact(prev => ({ ...prev, email: e.target.value }))}
-                        disabled={loading}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Phone"
-                        value={newContact.phone}
-                        onChange={(e) => setNewContact(prev => ({ ...prev, phone: e.target.value }))}
-                        disabled={loading}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        label="Role"
-                        value={newContact.role}
-                        onChange={(e) => setNewContact(prev => ({ ...prev, role: e.target.value }))}
-                        disabled={loading}
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          onClick={editingContact ? handleUpdateContact : handleAddContact}
-                          disabled={loading || !newContact.name || !newContact.email}
-                          sx={{ bgcolor: '#000000', '&:hover': { bgcolor: '#333333' } }}
-                        >
-                          {editingContact ? 'Update' : 'Add'} Contact
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {
-                            setShowContactForm(false);
-                            setEditingContact(null);
-                            setNewContact({ name: '', email: '', phone: '', role: '', isPrimary: false });
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Card>
-              )}
-
-              {/* Add Contact Button */}
-              {!showContactForm && (
-                <Button
-                  startIcon={<AddIcon />}
-                  onClick={() => setShowContactForm(true)}
-                  variant="outlined"
-                  sx={{
-                    borderColor: '#000000',
-                    color: '#000000',
-                    '&:hover': {
-                      borderColor: '#333333',
-                      bgcolor: 'rgba(0,0,0,0.04)'
-                    }
-                  }}
-                >
-                  Add Contact
-                </Button>
-              )}
-            </Box>
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Email Template Section */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <EmailIcon sx={{ color: '#000000' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Email Template
-              </Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="Email Subject"
-                value={emailTemplate.subject}
-                onChange={handleEmailTemplateChange('subject')}
-                disabled={loading}
-                placeholder="e.g., Follow-up on Investment Opportunity"
-                InputLabelProps={{
-                  sx: { color: '#333333', fontWeight: 500 }
-                }}
-              />
-              <TextField
-                fullWidth
-                label="Email Body"
-                value={emailTemplate.body}
-                onChange={handleEmailTemplateChange('body')}
-                multiline
-                rows={6}
-                disabled={loading}
-                placeholder="Enter your email template here..."
-                InputLabelProps={{
-                  sx: { color: '#333333', fontWeight: 500 }
-                }}
-                helperText="This template will be used for initial outreach emails"
-              />
-            </Box>
-          </AccordionDetails>
-        </Accordion>
-
-        {/* Notes Section */}
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <NoteIcon sx={{ color: '#000000' }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Deal Notes ({notes.length})
-              </Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {/* Notes List */}
-              {notes.length > 0 && (
-                <List>
-                  {notes.map((note) => (
-                    <ListItem key={note.id} sx={{ px: 0 }}>
-                      <ListItemIcon>
-                        <NoteIcon color="action" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={note.content}
-                        secondary={note.createdAt.toLocaleString()}
-                      />
-                      <ListItemSecondaryAction>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteNote(note.id)}
-                          sx={{ color: 'error.main' }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-
-              {/* Add Note Form */}
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  fullWidth
-                  label="Add Note"
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  disabled={loading}
-                  placeholder="Enter a note about this deal..."
-                  InputLabelProps={{
-                    sx: { color: '#333333', fontWeight: 500 }
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleAddNote}
-                  disabled={loading || !newNote.trim()}
-                  sx={{ bgcolor: '#000000', '&:hover': { bgcolor: '#333333' } }}
-                >
-                  Add
-                </Button>
-              </Box>
-            </Box>
-          </AccordionDetails>
-        </Accordion>
-      </DialogContent>
-
-      <DialogActions sx={{ p: 3, bgcolor: 'background.default' }}>
+      <DialogActions sx={{ 
+        p: 4, 
+        bgcolor: '#F8FAFC',
+        borderTop: '1px solid #E2E8F0',
+        justifyContent: 'flex-end',
+        gap: 2
+      }}>
         <Button
           onClick={handleClose}
           variant="outlined"
           disabled={loading}
+          sx={{
+            borderColor: '#E2E8F0',
+            color: '#64748B',
+            fontWeight: 600,
+            px: 3,
+            py: 1.5,
+            borderRadius: 2,
+            textTransform: 'none',
+            '&:hover': {
+              borderColor: '#9CA3AF',
+              backgroundColor: '#F1F5F9',
+            }
+          }}
         >
           Cancel
         </Button>
@@ -824,11 +729,26 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
           variant="contained"
           disabled={loading}
           sx={{
-            bgcolor: '#000000',
+            background: 'linear-gradient(135deg, #6B7280 0%, #000000 100%)',
             color: 'white',
+            px: 3,
+            py: 1.5,
+            borderRadius: 2,
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            textTransform: 'none',
+            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
             '&:hover': {
-              bgcolor: '#333333'
-            }
+              background: 'linear-gradient(135deg, #4B5563 0%, #000000 100%)',
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
+              transform: 'translateY(-2px)'
+            },
+            '&:disabled': { 
+              background: '#9CA3AF',
+              boxShadow: 'none',
+              transform: 'none'
+            },
+            transition: 'all 0.3s ease'
           }}
           startIcon={loading ? <CircularProgress size={20} /> : <BusinessIcon />}
         >

@@ -111,7 +111,7 @@ const navigationItems = [
   },
   {
     text: 'Outreach',
-    icon: <SpeakerIcon />,
+    icon: <CampaignIcon />,
     badge: null,
     subItems: [
       { text: 'Deals', path: '/outreach/deals', icon: <DealsIcon /> },

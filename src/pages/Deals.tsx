@@ -78,7 +78,6 @@ import dealsApi from '../services/dealsApi';
 import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 import DealPipeline from '../components/DealPipeline';
-import EmailAlerts from '../components/EmailAlerts';
 import { emailProcessingApi } from '../services/emailProcessingApi';
 
 type ViewMode = 'grid' | 'list' | 'pipeline';
@@ -167,8 +166,6 @@ export default function Deals() {
   const [newDealModalOpen, setNewDealModalOpen] = useState(false);
   const [editDealModalOpen, setEditDealModalOpen] = useState(false);
   const [dealToEdit, setDealToEdit] = useState<ApiDeal | null>(null);
-  const [emailAlertsOpen, setEmailAlertsOpen] = useState(false);
-  const [processingEmails, setProcessingEmails] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [scheduledCount, setScheduledCount] = useState(0);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -290,18 +287,6 @@ Regards`,
     setSelectedDealId(dealId);
   };
 
-  const handleProcessEmails = async () => {
-    try {
-      setProcessingEmails(true);
-      await emailProcessingApi.processEmailsNow();
-      alert('Email processing completed!');
-    } catch (error) {
-      console.error('Error processing emails:', error);
-      alert('Failed to process emails. Please try again.');
-    } finally {
-      setProcessingEmails(false);
-    }
-  };
 
   const handleOpenSchedulePicker = (itemId: string | null, isMultiple: boolean = false) => {
     setSchedulingItemId(itemId);
@@ -1123,43 +1108,158 @@ Regards`,
   return (
     <Box>
       {(viewMode as string) !== 'pipeline' && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, p: 3, bgcolor: 'background.paper' }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
-              Deal Pipeline
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
-              Manage your investment opportunities from initial outreach to closing
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ 
-              fontStyle: 'italic',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              Prospective: All companies you've reached out to. Active: Deals you're actively pursuing. Use the arrow button to move deals from prospective to active.
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              startIcon={<EmailIcon />}
-              onClick={handleProcessEmails}
-              disabled={processingEmails}
-              sx={{ borderRadius: 1 }}
-            >
-              {processingEmails ? 'Processing...' : 'Process Emails'}
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                setNewDealModalOpen(true);
-              }}
-              sx={{ borderRadius: 1 }}
-            >
-              New Deal
-            </Button>
+        <Box sx={{
+          position: 'relative',
+          bgcolor: 'white',
+          borderRadius: '0 0 32px 32px',
+          overflow: 'hidden',
+          mb: 6,
+          boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
+        }}>
+          {/* Background Pattern */}
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.02) 0%, rgba(234, 88, 12, 0.05) 100%)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: -50,
+              right: -50,
+              width: 100,
+              height: 100,
+              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              borderRadius: '50%',
+              opacity: 0.1
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: -30,
+              left: -30,
+              width: 60,
+              height: 60,
+              background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+              borderRadius: 2,
+              opacity: 0.1,
+              transform: 'rotate(15deg)'
+            }
+          }} />
+
+          <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+            <Grid container spacing={4} alignItems="center">
+              <Grid item xs={12} md={8}>
+                <Box sx={{ position: 'relative', zIndex: 2 }}>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 2,
+                      color: '#1e293b',
+                      fontSize: { xs: '2.2rem', md: '3rem' },
+                      lineHeight: 1.1,
+                      letterSpacing: '-0.02em',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      textTransform: 'uppercase',
+                      background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}
+                  >
+                    Deals
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 500,
+                      mb: 3,
+                      color: '#475569',
+                      fontSize: '1.1rem',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    Manage your investment opportunities from initial outreach to closing
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: '#64748b',
+                      mb: 4,
+                      maxWidth: '600px',
+                      lineHeight: 1.6
+                    }}
+                  >
+                    Track and organize your network of deal contacts, investors, and brokers all in one place.
+                  </Typography>
+
+                  {/* Action Buttons */}
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="text"
+                      size="large"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setNewDealModalOpen(true);
+                      }}
+                      sx={{
+                        background: 'transparent',
+                        color: '#6b7280',
+                        border: 'none',
+                        boxShadow: 'none',
+                        px: 3,
+                        py: 1.5,
+                        borderRadius: 2,
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        textTransform: 'none',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        '&:hover': {
+                          background: '#f9fafb',
+                          color: '#374151',
+                          transform: 'translateY(-1px)'
+                        },
+                        '& .MuiButton-startIcon': {
+                          color: '#6b7280'
+                        },
+                        '&:hover .MuiButton-startIcon': {
+                          color: '#374151'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      New Deal
+                    </Button>
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  position: 'relative',
+                  zIndex: 2
+                }}>
+                  <Box sx={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 8px 32px rgba(249, 115, 22, 0.3)'
+                  }}>
+                    <BusinessCenterIcon sx={{ fontSize: 64, color: 'white' }} />
+                  </Box>
+                </Box>
+              </Grid>
+            </Grid>
           </Box>
         </Box>
       )}
@@ -1239,26 +1339,163 @@ Regards`,
 
       {viewMode === 'pipeline' ? (
         <>
-          <Box sx={{ position: 'relative' }}>
-            <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 10 }}>
-              <Tooltip title="Email Alerts">
-                <IconButton
-                  onClick={() => setEmailAlertsOpen(true)}
-                  size="small"
-                  sx={{
-                    bgcolor: '#000000',
-                    color: 'white',
-                    width: 20,
-                    height: 20,
-                    '&:hover': {
-                      bgcolor: '#333333'
-                    }
-                  }}
-                >
-                  <EmailIcon sx={{ fontSize: 12 }} />
-                </IconButton>
-              </Tooltip>
+          {/* Pipeline Banner */}
+          <Box sx={{
+            position: 'relative',
+            bgcolor: 'white',
+            borderRadius: '0 0 32px 32px',
+            overflow: 'hidden',
+            mb: 6,
+            boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
+          }}>
+            {/* Background Pattern */}
+            <Box sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.02) 0%, rgba(234, 88, 12, 0.05) 100%)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 100,
+                height: 100,
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                borderRadius: '50%',
+                opacity: 0.1
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                bottom: -30,
+                left: -30,
+                width: 60,
+                height: 60,
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                borderRadius: 2,
+                opacity: 0.1,
+                transform: 'rotate(15deg)'
+              }
+            }} />
+
+            <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+              <Grid container spacing={4} alignItems="center">
+                <Grid item xs={12} md={8}>
+                  <Box sx={{ position: 'relative', zIndex: 2 }}>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 2,
+                        color: '#1e293b',
+                        fontSize: { xs: '2.2rem', md: '3rem' },
+                        lineHeight: 1.1,
+                        letterSpacing: '-0.02em',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        textTransform: 'uppercase',
+                        background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                      }}
+                    >
+                      DEAL OUTREACH
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 500,
+                        mb: 3,
+                        color: '#475569',
+                        fontSize: '1.1rem',
+                        lineHeight: 1.5
+                      }}
+                    >
+                      Track and manage your deal flow from initial outreach to closing
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: '#64748b',
+                        mb: 4,
+                        maxWidth: '600px',
+                        lineHeight: 1.6
+                      }}
+                    >
+                      Track your deals, send tailored emails, and get notified when new responses come in.
+                    </Typography>
+
+                    {/* Action Buttons */}
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <Button
+                        variant="text"
+                        size="large"
+                        startIcon={<AddIcon />}
+                        onClick={() => {
+                          setNewDealModalOpen(true);
+                        }}
+                        sx={{
+                          background: 'transparent',
+                          color: '#6b7280',
+                          border: 'none',
+                          boxShadow: 'none',
+                          px: 3,
+                          py: 1.5,
+                          borderRadius: 2,
+                          fontSize: '1rem',
+                          fontWeight: 500,
+                          textTransform: 'none',
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          '&:hover': {
+                            background: '#f9fafb',
+                            color: '#374151',
+                            transform: 'translateY(-1px)'
+                          },
+                          '& .MuiButton-startIcon': {
+                            color: '#6b7280'
+                          },
+                          '&:hover .MuiButton-startIcon': {
+                            color: '#374151'
+                          },
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        New Deal
+                      </Button>
+                    </Box>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12} md={4}>
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    position: 'relative',
+                    zIndex: 2
+                  }}>
+                    <Box sx={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 8px 32px rgba(249, 115, 22, 0.3)'
+                    }}>
+                      <TrendingUpIcon sx={{ fontSize: 64, color: 'white' }} />
+                    </Box>
+                  </Box>
+                </Grid>
+              </Grid>
             </Box>
+          </Box>
+
+          <Box sx={{ position: 'relative' }}>
             <DealPipeline
               deals={filteredDeals}
               loading={loading}
@@ -1950,41 +2187,6 @@ Regards`,
         </DialogContent>
       </Dialog>
 
-      {/* Email Alerts Modal */}
-      <Dialog
-        open={emailAlertsOpen}
-        onClose={() => setEmailAlertsOpen(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            minHeight: '60vh'
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          bgcolor: '#000000',
-          color: 'white',
-          py: 2
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <EmailIcon />
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Email Alerts
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setEmailAlertsOpen(false)} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <EmailAlerts limit={10} />
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 }

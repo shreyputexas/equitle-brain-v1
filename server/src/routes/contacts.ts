@@ -195,7 +195,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     });
 
     if (!contact) {
-      return res.status(404).json({ message: 'Contact not found' });
+      return res.status(404).json({message: 'Contact not found'})
     }
 
     res.json({ contact });

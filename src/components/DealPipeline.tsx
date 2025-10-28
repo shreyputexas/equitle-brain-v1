@@ -836,31 +836,21 @@ export default function DealPipeline({
     <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh' }}>
       {/* Pipeline Header with Black/Grey Gradient */}
       <Box sx={{ 
-        background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
-        borderRadius: '0 0 24px 24px',
+        background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+        borderRadius: '12px 12px 0 0',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
         mb: 4,
         p: 4,
         position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
-          pointerEvents: 'none'
-        }
+        overflow: 'hidden'
       }}>
         <Box sx={{ position: 'relative', zIndex: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ mb: 2 }}>
             <Box>
               <Typography 
                 variant="h4" 
                 sx={{ 
-                  fontWeight: 700, 
+                  fontWeight: 400, 
                   color: 'white', 
                   fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   letterSpacing: '-0.02em',
@@ -881,41 +871,6 @@ export default function DealPipeline({
                 Track and manage your deal flow
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() => {/* Handle new deal */}}
-                sx={{
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                  color: 'white',
-                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 500,
-                  '&:hover': {
-                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                    bgcolor: 'rgba(255, 255, 255, 0.1)'
-                  }
-                }}
-              >
-                New Deal
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<SearchIcon />}
-                onClick={() => {/* Handle search */}}
-                sx={{
-                  bgcolor: '#10B981',
-                  color: 'white',
-                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 500,
-                  '&:hover': {
-                    bgcolor: '#059669'
-                  }
-                }}
-              >
-                Search
-              </Button>
-            </Box>
           </Box>
         </Box>
       </Box>
@@ -934,11 +889,11 @@ export default function DealPipeline({
               borderRadius: 3,
               fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               '&:hover': {
-                borderColor: '#10b981'
+                borderColor: '#9CA3AF'
               },
               '&.Mui-focused': {
-                borderColor: '#10b981',
-                boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.1)'
+                borderColor: '#000000',
+                boxShadow: '0 0 0 3px rgba(0, 0, 0, 0.1)'
               }
             },
             '& .MuiInputBase-input': {
@@ -985,25 +940,35 @@ export default function DealPipeline({
                   flex: 1,
                   minWidth: 0,
                   maxWidth: '25%',
-                  p: 1.5,
-                  borderRadius: 3,
+                  p: 0,
+                  borderRadius: '12px',
                   border: '1px solid #e5e7eb',
                   bgcolor: dragOverStage === stage.value ? '#f0fdf4' : '#ffffff',
                   boxShadow: dragOverStage === stage.value 
                     ? '0 4px 12px rgba(16, 185, 129, 0.2)' 
                     : '0 2px 8px rgba(0,0,0,0.05)',
                   transition: 'all 0.2s ease',
-                  cursor: dragOverStage === stage.value ? 'pointer' : 'default'
+                  cursor: dragOverStage === stage.value ? 'pointer' : 'default',
+                  overflow: 'hidden'
                 }}
               >
                 {/* Stage Header */}
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{
+                  background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+                  color: 'white',
+                  py: 2,
+                  px: 2,
+                  borderRadius: '12px 12px 0 0',
+                  mb: 2,
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                     <Typography 
                       variant="h6" 
                       sx={{ 
-                        fontWeight: 600, 
-                        color: '#1f2937',
+                        fontWeight: 400, 
+                        fontSize: '1.25rem',
+                        color: 'white',
                         fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                         letterSpacing: '-0.01em'
                       }}
@@ -1014,7 +979,7 @@ export default function DealPipeline({
                       label={`${stageDeals.length} deal${stageDeals.length !== 1 ? 's' : ''}`}
                       size="small"
                       sx={{
-                        bgcolor: '#10b981',
+                        bgcolor: '#f97316',
                         color: 'white',
                         fontSize: '0.75rem',
                         fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -1025,9 +990,11 @@ export default function DealPipeline({
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: '#6b7280',
+                      fontSize: '0.9rem', 
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      lineHeight: 1.5,
                       fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                      fontWeight: 500
+                      letterSpacing: '-0.01em'
                     }}
                   >
                     ${(totalValue / 1000000).toFixed(1)}M total value
@@ -1035,7 +1002,7 @@ export default function DealPipeline({
                 </Box>
 
                 {/* Stage Deals */}
-                <Box sx={{ minHeight: 400 }}>
+                <Box sx={{ minHeight: 400, p: 1.5 }}>
                   {stageDeals.length === 0 ? (
                     stage.value === 'all' && outlookEmails.length > 0 ? (
                       <Box>
