@@ -485,11 +485,13 @@ export default function DealPipeline({
           transition: 'all 0.3s ease',
           cursor: 'grab',
           bgcolor: 'white',
-          border: '1px solid #d0d0d0',
+          border: '1px solid #e5e7eb',
+          borderRadius: 3,
           opacity: draggedDeal?.id === deal.id ? 0.5 : 1,
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+            borderColor: '#10b981'
           },
           '&:active': {
             cursor: 'grabbing'
@@ -527,37 +529,97 @@ export default function DealPipeline({
             </Box>
           </Box>
           
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#000000' }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600, 
+              mb: 1, 
+              color: '#1f2937',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.01em'
+            }}
+          >
             {deal.company}
           </Typography>
           
-          <Typography variant="body2" sx={{ mb: 2, color: '#000000' }}>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              mb: 2, 
+              color: '#6b7280',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500
+            }}
+          >
             {deal.sector}
           </Typography>
           
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#000000' }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 700, 
+                color: '#10b981',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                letterSpacing: '-0.01em'
+              }}
+            >
               ${((deal.value || 0) / 1000000).toFixed(1)}M
             </Typography>
-            <Typography variant="caption" sx={{ color: '#000000' }}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#6b7280',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }}
+            >
               Deal Value
             </Typography>
           </Box>
           
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ color: '#000000' }}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#6b7280',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }}
+            >
               Lead Partner
             </Typography>
-            <Typography variant="body2" sx={{ color: '#000000' }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#1f2937',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }}
+            >
               {deal.leadPartner}
             </Typography>
           </Box>
           
           <Box>
-            <Typography variant="caption" sx={{ color: '#000000' }}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#6b7280',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }}
+            >
               Next Step
             </Typography>
-            <Typography variant="body2" sx={{ color: '#000000' }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#1f2937',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }}
+            >
               {deal.nextStep}
             </Typography>
           </Box>
@@ -565,8 +627,15 @@ export default function DealPipeline({
           {/* Contact Count Indicator */}
           {!isExpanded && deal.people.length > 0 && (
             <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PersonIcon fontSize="small" sx={{ color: '#000000' }} />
-              <Typography variant="caption" sx={{ color: '#000000' }}>
+              <PersonIcon fontSize="small" sx={{ color: '#6b7280' }} />
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#6b7280',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500
+                }}
+              >
                 {deal.people.length} contact{deal.people.length !== 1 ? 's' : ''} - Click expand to view details
               </Typography>
             </Box>
@@ -765,37 +834,89 @@ export default function DealPipeline({
 
   return (
     <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh' }}>
-      {/* Pipeline Header */}
+      {/* Pipeline Header with Black/Grey Gradient */}
       <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 2,
-        bgcolor: 'black',
-        color: 'white',
-        p: 1.5,
-        borderRadius: 0
+        background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+        borderRadius: '0 0 24px 24px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+        mb: 4,
+        p: 4,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+          pointerEvents: 'none'
+        }
       }}>
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: 'white', fontFamily: '"Space Grotesk", sans-serif' }}>
-            Deal Pipeline
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {/* Handle new deal */}}
-            sx={{
-              bgcolor: 'white',
-              color: 'black',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)'
-              }
-            }}
-          >
-            New Deal
-          </Button>
+        <Box sx={{ position: 'relative', zIndex: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: 'white', 
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.02em',
+                  mb: 1
+                }}
+              >
+                Deal Pipeline
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.8)', 
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 400,
+                  letterSpacing: '-0.01em'
+                }}
+              >
+                Track and manage your deal flow
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Button
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => {/* Handle new deal */}}
+                sx={{
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  color: 'white',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500,
+                  '&:hover': {
+                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                    bgcolor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
+                New Deal
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<SearchIcon />}
+                onClick={() => {/* Handle search */}}
+                sx={{
+                  bgcolor: '#10B981',
+                  color: 'white',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500,
+                  '&:hover': {
+                    bgcolor: '#059669'
+                  }
+                }}
+              >
+                Search
+              </Button>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
@@ -809,22 +930,20 @@ export default function DealPipeline({
           sx={{
             '& .MuiOutlinedInput-root': {
               bgcolor: '#ffffff',
-              border: '2px solid #d0d0d0',
-              borderRadius: 2,
+              border: '2px solid #e5e7eb',
+              borderRadius: 3,
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               '&:hover': {
-                borderColor: '#000000',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: '#ffffff'
+                borderColor: '#10b981'
               },
               '&.Mui-focused': {
-                borderColor: '#000000',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                bgcolor: '#ffffff'
+                borderColor: '#10b981',
+                boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.1)'
               }
             },
             '& .MuiInputBase-input': {
-              color: '#000000',
-              fontWeight: 500
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 400
             }
           }}
           InputProps={{
@@ -867,12 +986,12 @@ export default function DealPipeline({
                   minWidth: 0,
                   maxWidth: '25%',
                   p: 1.5,
-                  borderRadius: 2,
-                  border: '1px solid #d0d0d0',
-                  bgcolor: dragOverStage === stage.value ? '#e3f2fd' : '#f5f5f5',
+                  borderRadius: 3,
+                  border: '1px solid #e5e7eb',
+                  bgcolor: dragOverStage === stage.value ? '#f0fdf4' : '#ffffff',
                   boxShadow: dragOverStage === stage.value 
-                    ? '0 4px 12px rgba(0,0,0,0.2)' 
-                    : '0 2px 8px rgba(0,0,0,0.1)',
+                    ? '0 4px 12px rgba(16, 185, 129, 0.2)' 
+                    : '0 2px 8px rgba(0,0,0,0.05)',
                   transition: 'all 0.2s ease',
                   cursor: dragOverStage === stage.value ? 'pointer' : 'default'
                 }}
@@ -880,20 +999,37 @@ export default function DealPipeline({
                 {/* Stage Header */}
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#333333' }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 600, 
+                        color: '#1f2937',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        letterSpacing: '-0.01em'
+                      }}
+                    >
                       {stage.label}
                     </Typography>
                     <Chip
                       label={`${stageDeals.length} deal${stageDeals.length !== 1 ? 's' : ''}`}
                       size="small"
                       sx={{
-                        bgcolor: '#333333',
+                        bgcolor: '#10b981',
                         color: 'white',
-                        fontSize: '0.75rem'
+                        fontSize: '0.75rem',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontWeight: 500
                       }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#666666' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500
+                    }}
+                  >
                     ${(totalValue / 1000000).toFixed(1)}M total value
                   </Typography>
                 </Box>
@@ -938,7 +1074,14 @@ export default function DealPipeline({
                         bgcolor: 'background.default'
                       }}>
                         <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#6b7280',
+                            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            fontWeight: 500
+                          }}
+                        >
                           No deals in this stage
                         </Typography>
                       </Box>

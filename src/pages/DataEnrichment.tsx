@@ -944,107 +944,524 @@ export default function DataEnrichment() {
 
   return (
     <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4 }}>
-        <Box>
-        <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-            Data Management
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-            Enrich and discover contact data using {selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API
-        </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Tooltip title={`Configure ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API`}>
-            <Button
-              variant="outlined"
-              startIcon={<DataUsageIcon />}
-              onClick={() => setShowApiKeyDialog(true)}
-              sx={{ borderColor: 'divider' }}
-            >
-              {isKeyValid ? 'API Configured' : 'Configure API'}
-            </Button>
-          </Tooltip>
+      {/* Hero Section */}
+      <Box sx={{
+        position: 'relative',
+        bgcolor: 'white',
+        borderRadius: '0 0 32px 32px',
+        overflow: 'hidden',
+        mb: 6,
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
+      }}>
+        {/* Background Pattern */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.02) 0%, rgba(220, 38, 38, 0.05) 100%)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 100,
+            height: 100,
+            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            borderRadius: '50%',
+            opacity: 0.1
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -30,
+            left: -30,
+            width: 60,
+            height: 60,
+            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            borderRadius: 2,
+            opacity: 0.1,
+            transform: 'rotate(15deg)'
+          }
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+
+        <Grid container spacing={4} alignItems="center">
+          <Grid item xs={12} md={8}>
+            <Box sx={{ position: 'relative', zIndex: 2 }}>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: 700, 
+                  mb: 2, 
+                  color: '#1e293b',
+                  fontSize: { xs: '2.2rem', md: '3rem' },
+                  lineHeight: 1.1,
+                  letterSpacing: '-0.02em',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  textTransform: 'uppercase',
+                  background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                Data Management
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 500, 
+                  mb: 3, 
+                  color: '#475569',
+                  fontSize: '1.1rem',
+                  lineHeight: 1.5,
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}
+              >
+                Enrich and discover contact data using advanced APIs to build comprehensive prospect databases.
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: '#64748b',
+                  mb: 4,
+                  maxWidth: '600px',
+                  lineHeight: 1.6,
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                }}
+              >
+                Upload Excel files to enrich contact data, discover new prospects, and build comprehensive databases for your investment thesis and outreach campaigns.
+              </Typography>
+              
+              {/* Action Buttons */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<DataUsageIcon />}
+                  onClick={() => setShowApiKeyDialog(true)}
+                  sx={{
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: 'white',
+                    px: 4,
+                    py: 1.5,
+                    borderRadius: 2,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      boxShadow: '0 6px 20px rgba(239, 68, 68, 0.4)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {isKeyValid ? 'API Configured' : 'Configure API'}
+                </Button>
+              </Box>
+            </Box>
+          </Grid>
+          
+          {/* Right Side - Visual Elements */}
+          <Grid item xs={12} md={4}>
+            <Box sx={{ 
+              position: 'relative', 
+              height: 300, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              zIndex: 2
+            }}>
+              {/* Data Visualization Mockup */}
+              <Box sx={{
+                width: 200,
+                height: 200,
+                background: 'white',
+                borderRadius: 3,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                p: 3,
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                {/* Chart Bars */}
+                <Box sx={{ display: 'flex', alignItems: 'end', gap: 1, height: 120, mb: 2 }}>
+                  <Box sx={{ width: 20, height: 60, background: '#ef4444', borderRadius: 1 }} />
+                  <Box sx={{ width: 20, height: 80, background: '#dc2626', borderRadius: 1 }} />
+                  <Box sx={{ width: 20, height: 40, background: '#ef4444', borderRadius: 1 }} />
+                  <Box sx={{ width: 20, height: 100, background: '#dc2626', borderRadius: 1 }} />
+                  <Box sx={{ width: 20, height: 70, background: '#ef4444', borderRadius: 1 }} />
+                </Box>
+                
+                {/* Data Points */}
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                  <Box sx={{ width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
+                  <Box sx={{ width: 8, height: 8, background: '#dc2626', borderRadius: '50%' }} />
+                  <Box sx={{ width: 8, height: 8, background: '#ef4444', borderRadius: '50%' }} />
+                </Box>
+                
+                {/* Floating Elements */}
+                <Box sx={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  width: 12,
+                  height: 12,
+                  background: '#ef4444',
+                  borderRadius: '50%',
+                  opacity: 0.7
+                }} />
+                <Box sx={{
+                  position: 'absolute',
+                  bottom: 20,
+                  left: 20,
+                  width: 8,
+                  height: 8,
+                  background: '#dc2626',
+                  borderRadius: 1,
+                  opacity: 0.6
+                }} />
+              </Box>
+              
+              {/* Floating Data Icons */}
+              <Box sx={{
+                position: 'absolute',
+                top: 20,
+                left: 20,
+                width: 40,
+                height: 40,
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: 'rotate(-15deg)'
+              }}>
+                <DataUsageIcon sx={{ color: '#ef4444', fontSize: 20 }} />
+              </Box>
+              
+              <Box sx={{
+                position: 'absolute',
+                bottom: 40,
+                right: 30,
+                width: 35,
+                height: 35,
+                background: 'rgba(220, 38, 38, 0.1)',
+                borderRadius: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: 'rotate(20deg)'
+              }}>
+                <CloudUploadIcon sx={{ color: '#dc2626', fontSize: 18 }} />
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
         </Box>
       </Box>
 
-          {/* Simplified Navigation */}
-          <Box sx={{ mb: 4 }}>
-            <Grid container spacing={3} justifyContent="center">
-              <Grid item xs={12} sm={6} md={4}>
-                <Card 
+          {/* Modern Integrated Switch with Sub-options */}
+          <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
+            <Paper 
+              sx={{ 
+                display: 'flex', 
+                borderRadius: 3, 
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e5e7eb',
+                position: 'relative',
+                background: '#ffffff'
+              }}
+            >
+              {/* Sliding Background Indicator */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  height: '100%',
+                  width: '33.333%',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  borderRadius: 3,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: activeMainTab === 0 && activeSubTab === 0 
+                    ? 'translateX(0%)' 
+                    : activeMainTab === 0 && activeSubTab === 1 
+                    ? 'translateX(100%)' 
+                    : 'translateX(200%)',
+                  zIndex: 0,
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
+                }}
+              />
+
+              {/* Enrich Contacts */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  px: 3,
+                  py: 2,
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  color: activeMainTab === 0 && activeSubTab === 0 ? 'white' : '#6b7280',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  zIndex: 1,
+                  flex: 1,
+                  '&:hover': {
+                    color: activeMainTab === 0 && activeSubTab === 0 ? 'white' : '#374151',
+                    transform: 'translateY(-1px)'
+                  }
+                }}
+                onClick={() => { setActiveMainTab(0); setActiveSubTab(0); }}
+              >
+                <PersonIcon sx={{ fontSize: 20 }} />
+                <Typography 
+                  variant="body2" 
                   sx={{ 
-                    cursor: 'pointer', 
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: activeMainTab === 0 && activeSubTab === 0 ? '2px solid #000000' : '1px solid #e0e0e0',
-                    '&:hover': { borderColor: '#000000' }
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center'
                   }}
-                  onClick={() => { setActiveMainTab(0); setActiveSubTab(0); }}
                 >
-                  <CardContent sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <PersonIcon sx={{ fontSize: 48, mb: 2, color: activeMainTab === 0 && activeSubTab === 0 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      Enrich Contacts
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-                      Upload Excel files to enrich contact data
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={12} sm={6} md={4}>
-                <Card 
+                  Enrich Contacts
+                </Typography>
+              </Box>
+
+              {/* Enrich Organizations */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  px: 3,
+                  py: 2,
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  color: activeMainTab === 0 && activeSubTab === 1 ? 'white' : '#6b7280',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  zIndex: 1,
+                  flex: 1,
+                  '&:hover': {
+                    color: activeMainTab === 0 && activeSubTab === 1 ? 'white' : '#374151',
+                    transform: 'translateY(-1px)'
+                  }
+                }}
+                onClick={() => { setActiveMainTab(0); setActiveSubTab(1); }}
+              >
+                <BusinessIcon sx={{ fontSize: 20 }} />
+                <Typography 
+                  variant="body2" 
                   sx={{ 
-                    cursor: 'pointer', 
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: activeMainTab === 0 && activeSubTab === 1 ? '2px solid #000000' : '1px solid #e0e0e0',
-                    '&:hover': { borderColor: '#000000' }
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center'
                   }}
-                  onClick={() => { setActiveMainTab(0); setActiveSubTab(1); }}
                 >
-                  <CardContent sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <BusinessIcon sx={{ fontSize: 48, mb: 2, color: activeMainTab === 0 && activeSubTab === 1 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      Enrich Organizations
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-                      Upload Excel files to enrich organization data
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-              <Grid item xs={12} sm={6} md={4}>
-                <Card 
+                  Enrich Organizations
+                </Typography>
+              </Box>
+
+              {/* Find Contacts - Main Option */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  px: 3,
+                  py: 2,
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  color: activeMainTab === 1 && activeSubTab === 0 ? 'white' : '#6b7280',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  zIndex: 1,
+                  flex: 1,
+                  '&:hover': {
+                    color: activeMainTab === 1 && activeSubTab === 0 ? 'white' : '#374151',
+                    transform: 'translateY(-1px)'
+                  }
+                }}
+                onClick={() => { setActiveMainTab(1); setActiveSubTab(0); }}
+              >
+                <SearchIcon sx={{ fontSize: 20 }} />
+                <Typography 
+                  variant="body2" 
                   sx={{ 
-                    cursor: 'pointer', 
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    border: activeMainTab === 1 && activeSubTab === 0 ? '2px solid #000000' : '1px solid #e0e0e0',
-                    '&:hover': { borderColor: '#000000' }
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center'
                   }}
-                  onClick={() => { setActiveMainTab(1); setActiveSubTab(0); }}
                 >
-                  <CardContent sx={{ textAlign: 'center', py: 4, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <SearchIcon sx={{ fontSize: 48, mb: 2, color: activeMainTab === 1 && activeSubTab === 0 ? '#000000' : '#666666' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      Find Contacts
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-                      Search for people, brokers, and investors
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              
-            </Grid>
+                  Find Contacts
+                </Typography>
+              </Box>
+            </Paper>
           </Box>
+
+          {/* Contact Type Filter - Only show when Find Contacts is active */}
+          {activeMainTab === 1 && activeSubTab === 0 && (
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
+              <Paper 
+                sx={{ 
+                  display: 'flex', 
+                  borderRadius: 2, 
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                  border: '1px solid #e5e7eb',
+                  bgcolor: '#f8fafc',
+                  position: 'relative'
+                }}
+              >
+                {/* Sub-filter Sliding Indicator */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    height: '100%',
+                    width: '33.333%',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    borderRadius: 2,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: contactSearchType === 'people' 
+                      ? 'translateX(0%)' 
+                      : contactSearchType === 'brokers' 
+                      ? 'translateX(100%)' 
+                      : 'translateX(200%)',
+                    zIndex: 0,
+                    boxShadow: '0 1px 4px rgba(239, 68, 68, 0.3)'
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    px: 2,
+                    py: 1.5,
+                    cursor: 'pointer',
+                    background: 'transparent',
+                    color: contactSearchType === 'people' ? 'white' : '#6b7280',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    zIndex: 1,
+                    flex: 1,
+                    '&:hover': {
+                      color: contactSearchType === 'people' ? 'white' : '#374151',
+                      transform: 'translateY(-1px)'
+                    }
+                  }}
+                  onClick={() => setContactSearchType('people')}
+                >
+                  <PersonIcon sx={{ fontSize: 16 }} />
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}
+                  >
+                    People
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    px: 2,
+                    py: 1.5,
+                    cursor: 'pointer',
+                    background: 'transparent',
+                    color: contactSearchType === 'brokers' ? 'white' : '#6b7280',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    zIndex: 1,
+                    flex: 1,
+                    '&:hover': {
+                      color: contactSearchType === 'brokers' ? 'white' : '#374151',
+                      transform: 'translateY(-1px)'
+                    }
+                  }}
+                  onClick={() => setContactSearchType('brokers')}
+                >
+                  <BusinessIcon sx={{ fontSize: 16 }} />
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}
+                  >
+                    Brokers
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 1,
+                    px: 2,
+                    py: 1.5,
+                    cursor: 'pointer',
+                    background: 'transparent',
+                    color: contactSearchType === 'investors' ? 'white' : '#6b7280',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    zIndex: 1,
+                    flex: 1,
+                    '&:hover': {
+                      color: contactSearchType === 'investors' ? 'white' : '#374151',
+                      transform: 'translateY(-1px)'
+                    }
+                  }}
+                  onClick={() => setContactSearchType('investors')}
+                >
+                  <AccountBalanceIcon sx={{ fontSize: 16 }} />
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: '0.8rem',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}
+                  >
+                    Investors
+                  </Typography>
+                </Box>
+              </Paper>
+            </Box>
+          )}
 
       {/* Success/Error Alerts */}
       <Snackbar
@@ -1074,11 +1491,8 @@ export default function DataEnrichment() {
           {/* Upload Section */}
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                 Organization Enrichment
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Upload an Excel file with organization data to enrich with LinkedIn links, phone numbers, emails, and other company information using Apollo's Organization Enrichment API.
               </Typography>
 
               {/* File Upload Area */}
@@ -1103,10 +1517,10 @@ export default function DataEnrichment() {
                 onClick={() => orgFileInputRef.current?.click()}
               >
                 <CloudUploadIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h6" sx={{ mb: 1 }}>
+                <Typography variant="h6" sx={{ mb: 1, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                   {orgSelectedFile ? orgSelectedFile.name : 'Drop your Excel file here or click to browse'}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                   Supports .xlsx, .xls, and .csv files
                 </Typography>
                 <input
@@ -1122,12 +1536,19 @@ export default function DataEnrichment() {
               {orgSelectedFile && (
                 <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircleIcon sx={{ color: 'success.main' }} />
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <CheckCircleIcon sx={{ color: '#ef4444' }} />
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 500,
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}>
                       File selected: {orgSelectedFile.name}
                     </Typography>
                   </Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em'
+                  }}>
                     Size: {(orgSelectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </Typography>
                 </Box>
@@ -1148,7 +1569,12 @@ export default function DataEnrichment() {
               {isOrgProcessing && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress />
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ 
+                    mt: 1, 
+                    display: 'block',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em'
+                  }}>
                     Enriching organization data... This may take a few minutes.
                   </Typography>
                 </Box>
@@ -1160,7 +1586,7 @@ export default function DataEnrichment() {
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                   Enrichment Results
                 </Typography>
                 {orgResults && (
@@ -1182,10 +1608,10 @@ export default function DataEnrichment() {
                     <Grid item xs={6}>
                       <Card sx={{ textAlign: 'center', bgcolor: 'primary.light' }}>
                         <CardContent sx={{ py: 2 }}>
-                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main', fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                             {orgResults.summary.total}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                             Total Organizations
                           </Typography>
                         </CardContent>
@@ -1194,10 +1620,10 @@ export default function DataEnrichment() {
                     <Grid item xs={6}>
                       <Card sx={{ textAlign: 'center', bgcolor: 'success.light' }}>
                         <CardContent sx={{ py: 2 }}>
-                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main' }}>
+                          <Typography variant="h4" sx={{ fontWeight: 600, color: 'success.main', fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                             {orgResults.summary.successRate}%
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                             Success Rate
                           </Typography>
                         </CardContent>
@@ -1222,10 +1648,17 @@ export default function DataEnrichment() {
                           <TableRow key={index}>
                             <TableCell>
                               <Box>
-                                <Typography variant="body2" fontWeight={500}>
+                                <Typography variant="body2" sx={{
+                                  fontWeight: 500,
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   {org.enriched?.name || org.original.company}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" sx={{
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   {org.original.company}
                                 </Typography>
                               </Box>
@@ -1234,12 +1667,21 @@ export default function DataEnrichment() {
                               {org.enriched?.website ? (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                   <BusinessIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                                  <Typography variant="body2" sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  <Typography variant="body2" sx={{ 
+                                    maxWidth: 150, 
+                                    overflow: 'hidden', 
+                                    textOverflow: 'ellipsis',
+                                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                    letterSpacing: '-0.01em'
+                                  }}>
                                     {org.enriched.website}
                                   </Typography>
                                 </Box>
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   No website
                                 </Typography>
                               )}
@@ -1248,10 +1690,16 @@ export default function DataEnrichment() {
                               {org.enriched?.linkedin ? (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                   <LinkedInIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                                  <Typography variant="body2">LinkedIn</Typography>
+                                  <Typography variant="body2" sx={{
+                                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                    letterSpacing: '-0.01em'
+                                  }}>LinkedIn</Typography>
                                 </Box>
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   No LinkedIn
                                 </Typography>
                               )}
@@ -1260,10 +1708,16 @@ export default function DataEnrichment() {
                               {org.enriched?.phone ? (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                   <PhoneIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                                  <Typography variant="body2">{org.enriched.phone}</Typography>
+                                  <Typography variant="body2" sx={{
+                                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                    letterSpacing: '-0.01em'
+                                  }}>{org.enriched.phone}</Typography>
                                 </Box>
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   No phone
                                 </Typography>
                               )}
@@ -1282,7 +1736,12 @@ export default function DataEnrichment() {
                   </TableContainer>
 
                   {orgResults.results.length > 10 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ 
+                      mt: 2, 
+                      display: 'block',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}>
                       Showing first 10 results. Download CSV for complete data.
                     </Typography>
                   )}
@@ -1290,7 +1749,10 @@ export default function DataEnrichment() {
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <BusinessIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography variant="body1" color="text.secondary" sx={{
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em'
+                  }}>
                     Upload an Excel file to start enriching organization data
                   </Typography>
                 </Box>
@@ -1306,11 +1768,8 @@ export default function DataEnrichment() {
           {/* Upload Section */}
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                 Contact Enrichment
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Upload an Excel file with contact data to enrich with emails, phone numbers, LinkedIn profiles, and other contact information using Apollo's People Enrichment API.
               </Typography>
 
               {/* File Upload Area */}
@@ -1354,7 +1813,7 @@ export default function DataEnrichment() {
               {contactSelectedFile && (
                 <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircleIcon sx={{ color: 'success.main' }} />
+                    <CheckCircleIcon sx={{ color: '#ef4444' }} />
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       File selected: {contactSelectedFile.name}
                     </Typography>
@@ -1392,7 +1851,7 @@ export default function DataEnrichment() {
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                   Enrichment Results
                 </Typography>
                 {contactResults && (
@@ -1481,7 +1940,10 @@ export default function DataEnrichment() {
                                   <Typography variant="body2">{contact.enriched.phone}</Typography>
                                 </Box>
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   No phone
                                 </Typography>
                               )}
@@ -1490,10 +1952,16 @@ export default function DataEnrichment() {
                               {contact.enriched?.linkedin ? (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                   <LinkedInIcon sx={{ fontSize: 16, color: 'primary.main' }} />
-                                  <Typography variant="body2">LinkedIn</Typography>
+                                  <Typography variant="body2" sx={{
+                                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                    letterSpacing: '-0.01em'
+                                  }}>LinkedIn</Typography>
                                 </Box>
                               ) : (
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" color="text.secondary" sx={{
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  letterSpacing: '-0.01em'
+                                }}>
                                   No LinkedIn
                                 </Typography>
                               )}
@@ -1512,7 +1980,12 @@ export default function DataEnrichment() {
                   </TableContainer>
 
                   {contactResults.results.length > 10 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ 
+                      mt: 2, 
+                      display: 'block',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}>
                       Showing first 10 results. Download CSV for complete data.
                     </Typography>
                   )}
@@ -1534,43 +2007,11 @@ export default function DataEnrichment() {
           {/* Contact Search Tab */}
           {activeMainTab === 1 && activeSubTab === 0 && (
         <Grid container spacing={3}>
-          {/* Contact Type Selection */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Contact Search Type
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Button
-                  variant={contactSearchType === 'people' ? 'contained' : 'outlined'}
-                  onClick={() => setContactSearchType('people')}
-                  startIcon={<PersonIcon />}
-                >
-                  People at Companies
-                </Button>
-                <Button
-                  variant={contactSearchType === 'brokers' ? 'contained' : 'outlined'}
-                  onClick={() => setContactSearchType('brokers')}
-                  startIcon={<BusinessIcon />}
-                >
-                  Brokers
-                </Button>
-                <Button
-                  variant={contactSearchType === 'investors' ? 'contained' : 'outlined'}
-                  onClick={() => setContactSearchType('investors')}
-                  startIcon={<AccountBalanceIcon />}
-                >
-                  Investors
-                </Button>
-              </Box>
-            </Paper>
-          </Grid>
-
           {/* Search Criteria Form */}
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                   Contact Search Criteria
                 </Typography>
                 <Chip 
@@ -1583,21 +2024,13 @@ export default function DataEnrichment() {
               {/* People at Companies Form */}
               {contactSearchType === 'people' && (
                 <>
-                  <Alert severity="info" sx={{ mb: 3 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                      Apollo-Powered Search Parameters
-                    </Typography>
-                    <Typography variant="body2">
-                      These filters use Apollo's database to find the most accurate results. Hover over the <InfoIcon sx={{ fontSize: 16, verticalAlign: 'middle' }} /> icons to learn what each parameter indicates about a company's scale, growth, and investment potential.
-                    </Typography>
-                  </Alert>
                 </>
               )}
 
               {/* Brokers Form */}
               {contactSearchType === 'brokers' && (
                 <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     Find brokers who have connections and experience in your target industries.
                   </Typography>
                 </>
@@ -1606,7 +2039,7 @@ export default function DataEnrichment() {
               {/* Investors Form */}
               {contactSearchType === 'investors' && (
                 <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     Find investors who invest in your target industries and match your investment criteria.
                   </Typography>
                 </>
@@ -2073,7 +2506,18 @@ export default function DataEnrichment() {
                     onClick={handleContactSearch}
                     disabled={isDiscovering || !isKeyValid}
                     startIcon={isDiscovering ? <CircularProgress size={20} /> : <SearchIcon />}
-                    sx={{ mt: 1 }}
+                    sx={{ 
+                      mt: 1,
+                      background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%) !important',
+                      color: 'white !important',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%) !important'
+                      },
+                      '&:disabled': {
+                        bgcolor: '#9CA3AF !important',
+                        color: '#FFFFFF !important'
+                      }
+                    }}
                   >
                     {isDiscovering ? `Searching for ${contactsToFind} Contacts...` : `Search for ${contactsToFind} Contacts`}
                   </Button>
@@ -2084,7 +2528,7 @@ export default function DataEnrichment() {
           {/* Search Results */}
           <Grid item xs={12} md={6}>
             <Paper sx={{ p: 4 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                 Search Results
               </Typography>
 

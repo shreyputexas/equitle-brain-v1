@@ -35,10 +35,9 @@ import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import BusinessIcon from '@mui/icons-material/Business';
+import BessIcon from '@mui/icons-material/Business';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
@@ -85,9 +84,7 @@ const Contacts: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [addMenuAnchorEl, setAddMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{contactId: string, field: string} | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -230,26 +227,6 @@ const Contacts: React.FC = () => {
     }
   };
 
-  const handleDeleteContact = async () => {
-    if (!selectedContactId) return;
-    
-    try {
-      setError(null);
-      await axios.delete(`/api/firebase/contacts/${selectedContactId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
-        }
-      });
-      
-      // Remove the contact from the local state
-      setContacts(contacts.filter(contact => contact.id !== selectedContactId));
-      setAnchorEl(null);
-      setSelectedContactId(null);
-    } catch (err: any) {
-      console.error('Error deleting contact:', err);
-      setError(err.response?.data?.message || 'Failed to delete contact');
-    }
-  };
 
   const handleStartEdit = (contactId: string, field: string, currentValue: string) => {
     setEditingField({ contactId, field });
@@ -754,7 +731,7 @@ const Contacts: React.FC = () => {
         if (params.row.company) {
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <BusinessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+              <BessIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
               <EditableCell
                 contactId={params.row.id}
                 field="company"
@@ -854,46 +831,104 @@ const Contacts: React.FC = () => {
         );
       },
     },
-    {
-      field: 'actions',
-      headerName: 'History',
-      width: 100,
-      minWidth: 90,
-      renderCell: (params) => (
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            setSelectedContactId(params.row.id);
-            setAnchorEl(e.currentTarget);
-          }}
-        >
-          <MoreVertIcon fontSize="small" />
-        </IconButton>
-      ),
-    },
   ];
 
   const filteredContacts = getFilteredContacts();
   const stats = getStats();
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
-          Contacts
-        </Typography>
+    <Box sx={{
+      p: 0,
+      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      {/* Header with Black/Grey Gradient */}
+      <Box sx={{ 
+        background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+        borderRadius: '0 0 24px 24px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+        mb: 4,
+        p: 4,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+          pointerEvents: 'none'
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 20,
+          right: 40,
+          width: 32,
+          height: 32,
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          borderRadius: 2,
+          transform: 'rotate(15deg)',
+          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+          pointerEvents: 'none'
+        }
+      }}>
+        <Box sx={{ 
+          position: 'relative', 
+          zIndex: 2,
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+            }}>
+              <GroupIcon sx={{ fontSize: 24, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography variant="h4" sx={{ 
+                fontWeight: 700, 
+                color: 'white',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                letterSpacing: '-0.02em',
+                mb: 1
+              }}>
+                Contacts
+              </Typography>
+              <Typography variant="body1" sx={{ 
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 400,
+                letterSpacing: '-0.01em'
+              }}>
+                Manage your contact database and relationships
+              </Typography>
+            </Box>
+          </Box>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Tooltip title="Refresh contacts">
             <IconButton
               onClick={fetchContacts}
               disabled={loading}
               sx={{
-                border: '1px solid',
-                borderColor: 'divider',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'white',
                 '&:hover': {
-                  borderColor: '#D1D5DB',
-                  bgcolor: '#F9FAFB'
+                  borderColor: 'rgba(255, 255, 255, 0.4)',
+                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 255, 255, 0.3)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)'
                 }
               }}
             >
@@ -906,12 +941,19 @@ const Contacts: React.FC = () => {
             onClick={handleExportCSV}
             disabled={filteredContacts.length === 0}
             sx={{
-              borderColor: 'divider',
-              color: 'text.primary',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500,
+              letterSpacing: '-0.01em',
               '&:hover': {
-                borderColor: '#D1D5DB',
-                bgcolor: '#F9FAFB'
+                borderColor: 'rgba(255, 255, 255, 0.4)',
+                bgcolor: 'rgba(255, 255, 255, 0.1)'
               },
+              '&:disabled': {
+                color: 'rgba(255, 255, 255, 0.3)',
+                borderColor: 'rgba(255, 255, 255, 0.1)'
+              }
             }}
           >
             Export CSV
@@ -923,14 +965,17 @@ const Contacts: React.FC = () => {
               onClick={(e) => setAddMenuAnchorEl(e.currentTarget)}
               endIcon={<ArrowDropDownIcon />}
               sx={{
-                bgcolor: '#000000',
+                bgcolor: '#10B981',
                 color: '#ffffff',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
                 '&:hover': {
-                  bgcolor: '#333333',
+                  bgcolor: '#059669',
                 },
               }}
             >
-              
+              Add Contact
             </Button>
             <Menu
               anchorEl={addMenuAnchorEl}
@@ -944,6 +989,11 @@ const Contacts: React.FC = () => {
                   setAddMenuAnchorEl(null); 
                   setAddDialogOpen(true); 
                 }}
+                sx={{
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500,
+                  letterSpacing: '-0.01em'
+                }}
               >
                 <ListItemIcon>
                   <PersonAddIcon fontSize="small" />
@@ -955,6 +1005,11 @@ const Contacts: React.FC = () => {
                   setAddMenuAnchorEl(null); 
                   setCsvDialogOpen(true); 
                 }}
+                sx={{
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500,
+                  letterSpacing: '-0.01em'
+                }}
               >
                 <ListItemIcon>
                   <UploadFileIcon fontSize="small" />
@@ -964,25 +1019,39 @@ const Contacts: React.FC = () => {
             </Menu>
           </Box>
         </Box>
+        </Box>
+
+        {/* Decorative Elements */}
+        <Box sx={{ position: 'absolute', bottom: 60, left: 20, width: 24, height: 24, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '50%', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)', pointerEvents: 'none', zIndex: 1 }} />
+        <Box sx={{ position: 'absolute', top: 60, right: 80, width: 20, height: 20, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: 1, transform: 'rotate(45deg)', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)', pointerEvents: 'none', zIndex: 1 }} />
+        <Box sx={{ position: 'absolute', bottom: 40, right: 120, width: 16, height: 16, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '50%', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)', pointerEvents: 'none', zIndex: 1 }} />
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      {/* Main Content */}
+      <Box sx={{ p: 3 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-      {/* Stats Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {/* Stats Cards */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ 
+                    display: 'block', 
+                    mb: 0.5,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em'
+                  }}>
                     Total Contacts
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     {stats.total}
                   </Typography>
                 </Box>
@@ -999,10 +1068,16 @@ const Contacts: React.FC = () => {
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ 
+                    display: 'block', 
+                    mb: 0.5,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em'
+                  }}>
                     Deal Contacts
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     {stats.deals}
                   </Typography>
                 </Box>
@@ -1019,10 +1094,16 @@ const Contacts: React.FC = () => {
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ 
+                    display: 'block', 
+                    mb: 0.5,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em'
+                  }}>
                     Investors
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     {stats.investors}
                   </Typography>
                 </Box>
@@ -1039,10 +1120,16 @@ const Contacts: React.FC = () => {
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ 
+                    display: 'block', 
+                    mb: 0.5,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em'
+                  }}>
                     Brokers
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Space Grotesk", sans-serif' }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     {stats.brokers}
                   </Typography>
                 </Box>
@@ -1054,13 +1141,14 @@ const Contacts: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+      </Box>
 
       {/* Main Content */}
       <Paper sx={{ overflow: 'hidden' }}>
         {/* Filters Bar */}
         <Box sx={{ p: 2.5, bgcolor: '#000000', color: 'white' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'white' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'white' }}>
               All Contacts
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -1163,12 +1251,14 @@ const Contacts: React.FC = () => {
             }}
             sx={{
               border: 'none',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               '& .MuiDataGrid-cell': {
                 borderColor: 'divider',
                 fontSize: '0.8125rem',
                 padding: '12px 16px',
                 display: 'flex',
-                alignItems: 'center'
+                alignItems: 'center',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
               },
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: '#F9FAFB',
@@ -1176,7 +1266,8 @@ const Contacts: React.FC = () => {
                 fontSize: '0.8125rem',
                 fontWeight: 600,
                 height: '72px !important',
-                minHeight: '72px !important'
+                minHeight: '72px !important',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
               },
               '& .MuiDataGrid-columnHeader': {
                 padding: '12px 16px'
@@ -1242,15 +1333,6 @@ const Contacts: React.FC = () => {
                     fontSize: '18px'
                   }
                 }
-              },
-              '& .MuiDataGrid-cellCheckbox': {
-                '& .MuiCheckbox-root': {
-                  width: '18px !important',
-                  height: '18px !important',
-                  '& .MuiSvgIcon-root': {
-                    fontSize: '18px'
-                  }
-                }
               }
             }}
           />
@@ -1268,7 +1350,7 @@ const Contacts: React.FC = () => {
         }}
       >
         <DialogTitle>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
             Add New Contact
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -1386,27 +1468,6 @@ const Contacts: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Actions Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <EditIcon fontSize="small" sx={{ mr: 1 }} />
-          Edit
-        </MenuItem>
-        <MenuItem onClick={() => setAnchorEl(null)}>
-          <LocalOfferIcon fontSize="small" sx={{ mr: 1 }} />
-          Add Tag
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleDeleteContact} sx={{ color: 'error.main' }}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
-          Delete
-        </MenuItem>
-      </Menu>
-
       {/* CSV Import Dialog */}
       <Dialog 
         open={csvDialogOpen} 
@@ -1419,7 +1480,7 @@ const Contacts: React.FC = () => {
         fullWidth
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
             Import Contacts from CSV
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>

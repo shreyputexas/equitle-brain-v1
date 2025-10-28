@@ -348,29 +348,104 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
   ];
 
   return (
-    <Paper sx={{ mt: 2, overflow: 'hidden' }}>
-      {/* Header Section */}
-      <Box sx={{ p: 2.5, bgcolor: '#000000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <GroupIcon sx={{ fontSize: 24 }} />
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'white', fontSize: '1.125rem' }}>
-            Bulk LinkedIn Outreach Generator
-          </Typography>
+    <Box sx={{ mt: 2 }}>
+      {/* Banner Header with Black/Grey Gradient */}
+      <Box sx={{ 
+        background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+        borderRadius: '0 0 24px 24px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+        mb: 4,
+        p: 4,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
+          pointerEvents: 'none'
+        }
+      }}>
+        <Box sx={{ position: 'relative', zIndex: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Box sx={{
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+            }}>
+              <GroupIcon sx={{ fontSize: 24, color: 'white' }} />
+            </Box>
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: 'white', 
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.02em',
+                  mb: 1
+                }}
+              >
+                Bulk LinkedIn Outreach Generator
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.8)', 
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 400,
+                  letterSpacing: '-0.01em'
+                }}
+              >
+                Generate personalized LinkedIn messages for multiple contacts at once
+              </Typography>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
+      <Paper sx={{ overflow: 'hidden' }}>
+
       {/* Content */}
-        <Box sx={{ p: 2.5, bgcolor: 'background.paper' }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Box sx={{ p: 3, bgcolor: 'background.paper' }}>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              mb: 3, 
+              color: '#6b7280',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 400,
+              lineHeight: 1.6
+            }}
+          >
             Generate personalized LinkedIn messages for up to 10 people at once. Select contacts from your database or manually paste LinkedIn profiles.
           </Typography>
 
           {/* Contact Selection Section */}
-          <Card sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
-            <CardContent>
+          <Card sx={{ mb: 3, border: '1px solid', borderColor: '#e5e7eb', borderRadius: 3, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
+            <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PersonIcon />
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 600,
+                    color: '#1f2937',
+                    letterSpacing: '-0.01em'
+                  }}
+                >
+                  <PersonIcon sx={{ color: '#10b981' }} />
                   Contact Selection
                 </Typography>
                 <Button
@@ -379,11 +454,13 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   onClick={handleSelectContacts}
                   disabled={loadingContacts}
                   sx={{
-                    borderColor: '#000000',
-                    color: '#000000',
+                    borderColor: '#10b981',
+                    color: '#10b981',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500,
                     '&:hover': {
-                      borderColor: '#333333',
-                      bgcolor: '#F9FAFB'
+                      borderColor: '#059669',
+                      bgcolor: '#f0fdf4'
                     }
                   }}
                 >
@@ -393,7 +470,15 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
               
               {selectedContacts.length > 0 && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ 
+                      mb: 1,
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 600,
+                      color: '#1f2937'
+                    }}
+                  >
                     Selected Contacts ({selectedContacts.length}):
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -406,9 +491,11 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                           setSelectedContacts(updated);
                         }}
                         sx={{
-                          bgcolor: '#F0FDF4',
+                          bgcolor: '#f0fdf4',
                           color: '#166534',
-                          border: '1px solid #22C55E'
+                          border: '1px solid #22C55E',
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          fontWeight: 500
                         }}
                       />
                     ))}
@@ -416,7 +503,14 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                 </Box>
               )}
               
-              <Typography variant="caption" color="text.secondary">
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#6b7280',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 400
+                }}
+              >
                 {contacts.length} contacts available. 
                 Selected contacts will auto-populate the contact names and enable LinkedIn/Email icons.
               </Typography>
@@ -430,41 +524,90 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
           )}
 
           {/* Spreadsheet-style Profile Input */}
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <PersonIcon />
+          <Typography 
+            variant="h6" 
+            gutterBottom 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1, 
+              mb: 2,
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 600,
+              color: '#1f2937',
+              letterSpacing: '-0.01em'
+            }}
+          >
+            <PersonIcon sx={{ color: '#10b981' }} />
             LinkedIn Profiles (1-10)
           </Typography>
 
-          <Paper sx={{ overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+          <Paper sx={{ overflow: 'hidden', border: '1px solid', borderColor: '#e5e7eb', borderRadius: 3, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)' }}>
             {/* Header Row */}
             <Box sx={{ 
               display: 'grid', 
               gridTemplateColumns: '60px 200px 1fr 300px 200px', 
               borderBottom: '1px solid',
-              borderColor: 'divider'
+              borderColor: '#e5e7eb',
+              bgcolor: '#f9fafb'
             }}>
-              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#1f2937'
+                  }}
+                >
                   #
                 </Typography>
               </Box>
-              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#1f2937'
+                  }}
+                >
                   Profile
                 </Typography>
               </Box>
-              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: '#e5e7eb', display: 'flex', alignItems: 'center' }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#1f2937'
+                  }}
+                >
                   LinkedIn Profile Data
                 </Typography>
               </Box>
-              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              <Box sx={{ p: 2, borderRight: '1px solid', borderColor: '#e5e7eb', display: 'flex', alignItems: 'center' }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#1f2937'
+                  }}
+                >
                   Website URL (Optional)
                 </Typography>
               </Box>
               <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#1f2937'
+                  }}
+                >
                   Status
                 </Typography>
               </Box>
@@ -530,23 +673,69 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                     }}>
                       {(() => {
                         const selectedContact = selectedContacts.find(c => c.name === profile.contactName);
+                        console.log('Profile contact name:', profile.contactName);
+                        console.log('Selected contacts:', selectedContacts);
+                        console.log('Found contact:', selectedContact);
                         if (selectedContact) {
                           return (
                             <>
-                              <Typography variant="caption" sx={{ 
-                                fontSize: '0.625rem', 
-                                fontWeight: 600, 
-                                color: selectedContact.type === 'investor' ? '#1E40AF' : 
-                                       selectedContact.type === 'broker' ? '#92400E' : '#166534',
-                                textTransform: 'uppercase',
-                                bgcolor: selectedContact.type === 'investor' ? '#DBEAFE' : 
-                                         selectedContact.type === 'broker' ? '#FEF3C7' : '#DCFCE7',
-                                px: 0.5,
-                                py: 0.125,
-                                borderRadius: 0.25
-                              }}>
-                                {selectedContact.type}
-                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="caption" sx={{ 
+                                  fontSize: '0.625rem', 
+                                  fontWeight: 600, 
+                                  color: selectedContact.type === 'investor' ? '#1E40AF' : 
+                                         selectedContact.type === 'broker' ? '#92400E' : '#166534',
+                                  textTransform: 'uppercase',
+                                  bgcolor: selectedContact.type === 'investor' ? '#DBEAFE' : 
+                                           selectedContact.type === 'broker' ? '#FEF3C7' : '#DCFCE7',
+                                  px: 0.5,
+                                  py: 0.125,
+                                  borderRadius: 0.25
+                                }}>
+                                  {selectedContact.type}
+                                </Typography>
+                                {/* Always show LinkedIn button - enabled if has URL, disabled if not */}
+                                <Tooltip title={selectedContact.linkedin_url ? `Open ${selectedContact.name}'s LinkedIn profile` : `${selectedContact.name} doesn't have a LinkedIn profile`}>
+                                  <IconButton
+                                    size="small"
+                                    disabled={!selectedContact.linkedin_url}
+                                    onClick={() => {
+                                      if (selectedContact.linkedin_url) {
+                                        console.log('Opening LinkedIn:', selectedContact.linkedin_url);
+                                        // Open LinkedIn profile in new tab
+                                        window.open(selectedContact.linkedin_url, '_blank');
+                                        
+                                        // Auto-fill website URL if LinkedIn URL exists
+                                        if (selectedContact.linkedin_url && !profile.websiteUrl) {
+                                          handleProfileInputChange(profile.id, 'websiteUrl')({
+                                            target: { value: selectedContact.linkedin_url }
+                                          });
+                                        }
+                                      }
+                                    }}
+                                    sx={{
+                                      width: 18,
+                                      height: 18,
+                                      p: 0.25,
+                                      border: selectedContact.linkedin_url ? '1px solid #0077B5' : '1px solid #D1D5DB',
+                                      borderRadius: 1,
+                                      '&:hover': selectedContact.linkedin_url ? {
+                                        bgcolor: 'rgba(0, 119, 181, 0.1)',
+                                        borderColor: '#005885'
+                                      } : {},
+                                      '&:disabled': {
+                                        borderColor: '#D1D5DB',
+                                        bgcolor: '#F9FAFB'
+                                      }
+                                    }}
+                                  >
+                                    <LinkedInIcon sx={{ 
+                                      fontSize: 14, 
+                                      color: selectedContact.linkedin_url ? '#0077B5' : '#9CA3AF'
+                                    }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
                               {selectedContact.title && (
                                 <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 600, color: '#333333' }}>
                                   {selectedContact.title}
@@ -678,7 +867,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
               {/* Black Header Section */}
               <Box sx={{ p: 2.5, bgcolor: '#000000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif', color: 'white', fontSize: '1.125rem' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'white', fontSize: '1.125rem' }}>
                     Generated Outreach Messages
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -948,14 +1137,23 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
               sx={{
                 px: 4,
                 py: 1.5,
-                backgroundColor: '#000',
+                backgroundColor: '#10b981',
                 color: '#fff',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 600,
+                borderRadius: 3,
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
                 '&:hover': {
-                  backgroundColor: '#333',
+                  backgroundColor: '#059669',
+                  boxShadow: '0 6px 16px rgba(16, 185, 129, 0.4)',
+                  transform: 'translateY(-1px)'
                 },
                 '&:disabled': {
-                  backgroundColor: '#ccc',
-                }
+                  backgroundColor: '#9ca3af',
+                  boxShadow: 'none',
+                  transform: 'none'
+                },
+                transition: 'all 0.2s ease'
               }}
             >
               {isBulkGenerating ? (
@@ -972,6 +1170,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             </Button>
           </Box>
         </Box>
+      </Paper>
 
       {/* Contact Selection Dialog */}
       <Dialog
@@ -987,7 +1186,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
         }}
       >
         <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Space Grotesk", sans-serif' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
             Select Contacts for LinkedIn Outreach
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -1216,7 +1415,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
           </Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+    </Box>
   );
 };
 
