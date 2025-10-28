@@ -216,6 +216,12 @@ router.post('/webhook', async (req, res) => {
     const signature = req.headers['x-retell-signature'] as string;
     const body = JSON.stringify(req.body);
 
+    // Log the raw webhook payload to understand structure
+    logger.info('Raw Retell webhook payload', {
+      headers: req.headers,
+      body: req.body
+    });
+
     // Temporarily disable webhook signature verification for development
     // if (!retellService.verifyWebhook(body, signature)) {
     //   return res.status(401).json({ error: 'Invalid webhook signature' });
@@ -223,9 +229,11 @@ router.post('/webhook', async (req, res) => {
 
     const event = retellService.parseWebhookEvent(req.body);
 
-    logger.info('Received Retell webhook', {
+    logger.info('Parsed Retell webhook', {
       event: event.event,
-      callId: event.call_id
+      callId: event.call_id,
+      agentId: event.agent_id,
+      callStatus: event.call_status
     });
 
     // Handle different webhook events
@@ -247,9 +255,27 @@ router.post('/webhook', async (req, res) => {
 
         // Generate call summary if transcript is available
         if (event.transcript && event.transcript.length > 0) {
-          const transcript = event.transcript.map(t =>
-            `${t.role === 'agent' ? 'AI' : 'User'}: ${t.content}`
-          );
+          // Handle both transcript (string) and transcript_object (array) from Retell
+          let transcript;
+          if (typeof event.transcript === 'string') {
+            // If transcript is a string, use it directly
+            transcript = [event.transcript];
+          } else if (Array.isArray(event.transcript)) {
+            // If transcript is an array, format it
+            transcript = event.transcript.map(t =>
+              `${t.role === 'agent' ? 'AI' : 'User'}: ${t.content}`
+            );
+          } else {
+            // Fallback - use transcript_object if available
+            const transcriptObj = req.body.call?.transcript_object;
+            if (Array.isArray(transcriptObj)) {
+              transcript = transcriptObj.map(t =>
+                `${t.role === 'agent' ? 'AI' : 'User'}: ${t.content}`
+              );
+            } else {
+              transcript = ['No transcript available'];
+            }
+          }
 
           const summary = await openaiService.generateCallSummary(transcript, {
             callId: event.metadata?.callId,
