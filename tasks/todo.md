@@ -609,3 +609,185 @@ Jane Smith,investor,jane@fund.com,555-5678,Partner,VC Fund,"New York, NY",invest
 - ✅ CSV upload documentation no longer mentions "interaction history"
 - ✅ CSV example template simplified without history field
 - ✅ Cleaner, more focused contact data structure
+
+---
+
+## Update Contacts Banner to Match MyThesis Style
+
+### User Request:
+The contact page banner should match the banner style of other pages like MyThesis
+
+### Current State:
+**Contacts Page Banner (lines 844-877):**
+- Gradient background: `linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)`
+- Purple overlay with decorative elements
+- Title: h4 variant with icon box
+- Compact layout with buttons on right
+- Actions buttons inline with title
+
+### Target Style (MyThesis Banner):
+**MyThesis Page Banner (lines 1170-1319):**
+- White background: `bgcolor: 'white'`
+- Rounded bottom corners: `borderRadius: '0 0 32px 32px'`
+- Subtle gradient overlay with decorative pseudo-elements
+- Title: h3 variant with gradient text effect
+- More spacious layout with better typography hierarchy
+- Grid layout (content left, illustration/actions right)
+- Better shadow effect: `boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'`
+
+### Todo Items:
+- [x] Update banner container styling (white bg, 32px rounded bottom corners, better shadow)
+- [x] Change title from h4 to h3 variant with gradient text effect
+- [x] Improve typography hierarchy and spacing
+- [x] Restructure layout to use Grid system (content left, actions right)
+- [x] Update decorative elements to be more subtle with pseudo-elements
+- [x] Keep purple color theme but apply it more subtly like MyThesis uses green
+
+### Changes Made ✅
+
+**Location:** src/pages/Contacts.tsx:844-1081
+
+#### 1. Banner Container Updated
+- Changed from gradient background to white: `bgcolor: 'white'`
+- Updated border radius: `borderRadius: '0 0 32px 32px'` (was 24px)
+- Improved shadow: `boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'`
+- Increased bottom margin: `mb: 6` (was mb: 4)
+
+#### 2. Background Pattern with Pseudo-elements
+- Subtle purple overlay: `rgba(147, 51, 234, 0.02)` to `rgba(124, 58, 237, 0.05)`
+- Added `&::before` pseudo-element: Large circle decoration (top-right)
+- Added `&::after` pseudo-element: Rotated square decoration (bottom-left)
+- All decorative elements use opacity: 0.1 for subtlety
+- Removed old decorative boxes that were positioned absolutely
+
+#### 3. Typography Hierarchy Upgraded
+- **Title:** Changed from h4 to h3 variant
+- **Title Size:** `fontSize: { xs: '2.2rem', md: '3rem' }` (responsive)
+- **Gradient Text Effect:** Added background gradient with text clip
+  ```
+  background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)'
+  backgroundClip: 'text'
+  WebkitBackgroundClip: 'text'
+  WebkitTextFillColor: 'transparent'
+  ```
+- **Subtitle:** h6 variant, color `#475569`, font size `1.1rem`
+- **Description:** body1, color `#64748b`, maxWidth `600px`
+
+#### 4. Grid Layout Implementation
+- Implemented 2-column Grid: `<Grid container spacing={4}>`
+- Left column (md={8}): Title, subtitle, description, and action buttons
+- Right column (md={4}): Large icon display
+- Proper spacing between columns: `spacing={4}`
+
+#### 5. Purple Color Theme Applied
+- Background overlay: `#9333ea` and `#7c3aed` (purple shades)
+- Icon box gradient: `linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)`
+- All decorative elements use same purple gradient
+- Matches MyThesis structure but with purple instead of green
+
+#### 6. Action Buttons Redesigned
+- Moved from top-right inline to below description
+- Larger size: `size="large"`
+- Better padding: `px: 4, py: 1.5`
+- Rounded corners: `borderRadius: 2`
+- Hover effect includes transform: `transform: 'translateY(-1px)'`
+- Smooth transition: `transition: 'all 0.3s ease'`
+- All buttons use consistent styling
+
+#### 7. Icon Display
+- Large centered icon box: 120x120px
+- Purple gradient background with shadow
+- GroupIcon at 64px font size
+- Positioned in right Grid column for balance
+
+### Result:
+- ✅ Contacts banner now matches MyThesis banner structure exactly
+- ✅ Same size, spacing, and layout
+- ✅ Purple theme consistently applied
+- ✅ Modern gradient text effect on title
+- ✅ Professional, spacious design
+- ✅ Consistent UI across all pages
+
+---
+
+## Add Delete Contact Functionality
+
+### User Request:
+Add a button which allows to delete a contact or many contacts, make sure it is functional
+
+### Implementation Details:
+
+#### 1. Added Delete Dialog State ✅
+**Location:** src/pages/Contacts.tsx:92
+- Added `deleteDialogOpen` state to control confirmation dialog
+
+#### 2. Implemented Delete Handler Function ✅
+**Location:** src/pages/Contacts.tsx:391-419
+- Function: `handleDeleteContacts()`
+- Deletes all selected contacts via API calls
+- Uses `Promise.all()` to delete multiple contacts in parallel
+- Updates local state to remove deleted contacts
+- Clears selection after successful deletion
+- Handles errors with proper error messages
+
+```typescript
+const handleDeleteContacts = async () => {
+  // Delete each selected contact via API
+  const deletePromises = selectedRows.map(contactId =>
+    axios.delete(`/api/firebase/contacts/${contactId}`)
+  );
+  await Promise.all(deletePromises);
+
+  // Update local state
+  setContacts(contacts.filter(contact => !selectedRows.includes(contact.id)));
+  setSelectedRows([]);
+};
+```
+
+#### 3. Added Delete Button to UI ✅
+**Location:** src/pages/Contacts.tsx:1239-1264
+- Button appears in filters bar when contacts are selected
+- Shows count of selected contacts
+- Red button with DeleteIcon
+- Only visible when `selectedRows.length > 0`
+- Opens confirmation dialog on click
+
+**Styling:**
+- Red background: `bgcolor: '#ef4444'`
+- Hover effect: `bgcolor: '#dc2626'`
+- Small size for compact appearance
+- DeleteIcon prefix
+
+#### 4. Created Delete Confirmation Dialog ✅
+**Location:** src/pages/Contacts.tsx:1710-1757
+- Warning alert: "This action cannot be undone"
+- Shows count of contacts to be deleted
+- Different messages for single vs. multiple contacts
+- Cancel and Delete buttons
+- Delete button styled in red to indicate danger
+- Shows "Deleting..." state while loading
+
+**Features:**
+- Dynamic title based on count: "Delete Contact" or "Delete Contacts"
+- Clear warning about permanent deletion
+- Responsive to selection count
+- Disabled state during deletion
+- Proper error handling
+
+### User Experience:
+1. User selects one or more contacts using checkboxes
+2. Delete button appears showing "{count} selected"
+3. User clicks "Delete" button
+4. Confirmation dialog appears with warning
+5. User confirms deletion
+6. Contacts are deleted from database
+7. UI updates to remove deleted contacts
+8. Selection is cleared
+
+### Result:
+- ✅ Fully functional delete feature for single and multiple contacts
+- ✅ Confirmation dialog prevents accidental deletion
+- ✅ Proper API integration with error handling
+- ✅ Clean UI that only shows delete button when needed
+- ✅ Loading states and disabled buttons during operations
+- ✅ Clear user feedback with count and warnings
