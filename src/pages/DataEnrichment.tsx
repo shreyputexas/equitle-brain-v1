@@ -209,10 +209,10 @@ interface ContactResults {
 }
 
 export default function DataEnrichment() {
-  const [selectedProvider, setSelectedProvider] = useState<'apollo' | 'zoominfo' | 'gratta'>('apollo');
+  const [selectedProvider, setSelectedProvider] = useState<'apollo' | 'zoominfo' | 'grata'>('apollo');
   const [apolloApiKey, setApolloApiKey] = useState('');
   const [zoominfoApiKey, setZoominfoApiKey] = useState('');
-  const [grattaApiKey, setGrattaApiKey] = useState('');
+  const [grataApiKey, setGrataApiKey] = useState('');
   const [isValidatingKey, setIsValidatingKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -231,19 +231,19 @@ export default function DataEnrichment() {
   useEffect(() => {
     const savedApolloKey = localStorage.getItem('apolloApiKey');
     const savedZoominfoKey = localStorage.getItem('zoominfoApiKey');
-    const savedGrattaKey = localStorage.getItem('grattaApiKey');
+    const savedGrataKey = localStorage.getItem('grataApiKey');
     const savedIsKeyValid = localStorage.getItem('isKeyValid');
     const savedSelectedProvider = localStorage.getItem('selectedProvider');
 
     if (savedApolloKey) setApolloApiKey(savedApolloKey);
     if (savedZoominfoKey) setZoominfoApiKey(savedZoominfoKey);
-    if (savedGrattaKey) setGrattaApiKey(savedGrattaKey);
+    if (savedGrataKey) setGrataApiKey(savedGrataKey);
     if (savedIsKeyValid) {
       const isValid = savedIsKeyValid === 'true';
       setIsKeyValid(isValid);
     }
-    if (savedSelectedProvider && ['apollo', 'zoominfo', 'gratta'].includes(savedSelectedProvider)) {
-      setSelectedProvider(savedSelectedProvider as 'apollo' | 'zoominfo' | 'gratta');
+    if (savedSelectedProvider && ['apollo', 'zoominfo', 'grata'].includes(savedSelectedProvider)) {
+      setSelectedProvider(savedSelectedProvider as 'apollo' | 'zoominfo' | 'grata');
     }
   }, []);
 
@@ -298,8 +298,8 @@ export default function DataEnrichment() {
         return apolloApiKey;
       case 'zoominfo':
         return zoominfoApiKey;
-      case 'gratta':
-        return grattaApiKey;
+      case 'grata':
+        return grataApiKey;
       default:
         return apolloApiKey;
     }
@@ -316,9 +316,9 @@ export default function DataEnrichment() {
         setZoominfoApiKey(key);
         localStorage.setItem('zoominfoApiKey', key);
         break;
-      case 'gratta':
-        setGrattaApiKey(key);
-        localStorage.setItem('grattaApiKey', key);
+      case 'grata':
+        setGrataApiKey(key);
+        localStorage.setItem('grataApiKey', key);
         break;
     }
   };
@@ -806,6 +806,29 @@ export default function DataEnrichment() {
     }
   };
 
+  const handleRemoveConfiguration = () => {
+    // Clear all API keys from localStorage
+    localStorage.removeItem('apolloApiKey');
+    localStorage.removeItem('zoominfoApiKey');
+    localStorage.removeItem('grataApiKey');
+    localStorage.removeItem('selectedProvider');
+    localStorage.removeItem('isKeyValid');
+    
+    // Reset state
+    setApolloApiKey('');
+    setZoominfoApiKey('');
+    setGrataApiKey('');
+    setSelectedProvider('apollo');
+    setIsKeyValid(false);
+    
+    // Close dialog
+    setShowApiKeyDialog(false);
+    
+    // Show success message
+    setMessage('API configuration removed successfully');
+    setShowSuccess(true);
+  };
+
   const handleFileSelect = (file: File) => {
     if (file) {
       setSelectedFile(file);
@@ -1039,29 +1062,56 @@ export default function DataEnrichment() {
               {/* Action Buttons */}
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
-                  variant="contained"
+                  variant={isKeyValid ? "contained" : "text"}
                   size="large"
                   startIcon={<DataUsageIcon />}
                   onClick={() => setShowApiKeyDialog(true)}
                   sx={{
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: 'white',
-                    px: 4,
+                    ...(isKeyValid ? {
+                      // Configured state - red background with white text
+                      background: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                      '&:hover': {
+                        background: '#b91c1c',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
+                        transform: 'translateY(-1px)'
+                      },
+                      '& .MuiButton-startIcon': {
+                        color: 'white'
+                      },
+                      '&:hover .MuiButton-startIcon': {
+                        color: 'white'
+                      }
+                    } : {
+                      // Unconfigured state - transparent background
+                      background: 'transparent',
+                      color: '#6b7280',
+                      border: 'none',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        background: '#f9fafb',
+                        color: '#374151',
+                        transform: 'translateY(-1px)'
+                      },
+                      '& .MuiButton-startIcon': {
+                        color: '#6b7280'
+                      },
+                      '&:hover .MuiButton-startIcon': {
+                        color: '#374151'
+                      }
+                    }),
+                    px: 3,
                     py: 1.5,
                     borderRadius: 2,
                     fontSize: '1rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     textTransform: 'none',
-                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.3)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                      boxShadow: '0 6px 20px rgba(239, 68, 68, 0.4)',
-                      transform: 'translateY(-2px)'
-                    },
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  {isKeyValid ? 'API Configured' : 'Configure API'}
+                  {isKeyValid ? 'Data Provider Configured' : 'Configure Data Provider'}
                 </Button>
               </Box>
             </Box>
@@ -2674,20 +2724,41 @@ export default function DataEnrichment() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Configure API Key
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            color: 'white',
+            py: 3,
+            px: 4,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 400, 
+              fontSize: '1.25rem', 
+              color: 'white',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.01em',
+              mb: 1
+            }}>
+              Configure API Key
+            </Typography>
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '0.875rem'
+            }}>
+              Select your data provider and enter the corresponding API key to enable contact enrichment.
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Select your data provider and enter the corresponding API key to enable contact enrichment.
-          </Typography>
+        <DialogContent sx={{ p: 4, pt: 12 }}>
           
-          <FormControl fullWidth sx={{ mb: 3 }}>
+          <FormControl fullWidth sx={{ mb: 3, mt: 4 }}>
             <InputLabel>Data Provider</InputLabel>
             <Select
               value={selectedProvider}
               onChange={(e) => {
-                const newProvider = e.target.value as 'apollo' | 'zoominfo' | 'gratta';
+                const newProvider = e.target.value as 'apollo' | 'zoominfo' | 'grata';
                 setSelectedProvider(newProvider);
                 localStorage.setItem('selectedProvider', newProvider);
               }}
@@ -2695,7 +2766,7 @@ export default function DataEnrichment() {
             >
               <MenuItem value="apollo">Apollo</MenuItem>
               <MenuItem value="zoominfo">ZoomInfo</MenuItem>
-              <MenuItem value="gratta">Gratta</MenuItem>
+              <MenuItem value="grata">Grata</MenuItem>
             </Select>
           </FormControl>
           
@@ -2748,10 +2819,10 @@ export default function DataEnrichment() {
                 </Typography>
               </>
             )}
-            {selectedProvider === 'gratta' && (
+            {selectedProvider === 'grata' && (
               <>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  1. Go to Gratta → Dashboard → API Settings
+                  1. Go to Grata → Dashboard → API Settings
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   2. Create or copy your API key
@@ -2763,18 +2834,48 @@ export default function DataEnrichment() {
             )}
           </Alert>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowApiKeyDialog(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleApiKeySubmit}
-            disabled={!getCurrentApiKey().trim() || isValidatingKey}
-            startIcon={isValidatingKey ? <CircularProgress size={16} /> : <CheckCircleIcon />}
+        <DialogActions sx={{ p: 4, pt: 2, gap: 2, justifyContent: 'space-between' }}>
+          <Button 
+            onClick={handleRemoveConfiguration}
+            sx={{ 
+              color: '#dc2626',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: '#fef2f2',
+                color: '#b91c1c'
+              }
+            }}
           >
-            {isValidatingKey ? 'Validating...' : 'Validate & Save'}
+            Remove Configuration
           </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              onClick={() => setShowApiKeyDialog(false)} 
+              sx={{ 
+                color: 'text.secondary',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleApiKeySubmit}
+              disabled={!getCurrentApiKey().trim() || isValidatingKey}
+              startIcon={isValidatingKey ? <CircularProgress size={16} /> : <CheckCircleIcon />}
+              sx={{
+                bgcolor: '#000000',
+                '&:hover': { bgcolor: '#333333' },
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500,
+                px: 3
+              }}
+            >
+              {isValidatingKey ? 'Validating...' : 'Validate & Save'}
+            </Button>
+          </Box>
         </DialogActions>
       </Dialog>
     </Box>

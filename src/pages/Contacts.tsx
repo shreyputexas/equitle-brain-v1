@@ -968,16 +968,22 @@ const Contacts: React.FC = () => {
                       onClick={fetchContacts}
                       disabled={loading}
                       sx={{
-                        border: '1px solid #cbd5e1',
-                        color: '#475569',
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        border: '1px solid #8b5cf6',
+                        color: 'white',
+                        bgcolor: '#8b5cf6',
                         '&:hover': {
-                          borderColor: '#94a3b8',
-                          bgcolor: '#f8fafc',
+                          borderColor: '#7c3aed',
+                          bgcolor: '#7c3aed',
+                          color: 'white',
                           transform: 'translateY(-1px)'
                         },
                         '&:disabled': {
-                          color: '#94a3b8',
-                          borderColor: '#e2e8f0'
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          borderColor: '#c4b5fd',
+                          bgcolor: '#c4b5fd'
                         },
                         transition: 'all 0.3s ease'
                       }}
@@ -1412,6 +1418,7 @@ const Contacts: React.FC = () => {
               fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
               '& .MuiDataGrid-cell': {
                 borderColor: 'divider',
+                borderRight: '1px solid #E5E7EB',
                 fontSize: '0.8125rem',
                 padding: '12px 16px',
                 display: 'flex',
@@ -1421,6 +1428,7 @@ const Contacts: React.FC = () => {
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: '#F9FAFB',
                 borderColor: 'divider',
+                borderRight: '1px solid #E5E7EB',
                 fontSize: '0.8125rem',
                 fontWeight: 600,
                 height: '72px !important',
@@ -1428,7 +1436,8 @@ const Contacts: React.FC = () => {
                 fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
               },
               '& .MuiDataGrid-columnHeader': {
-                padding: '12px 16px'
+                padding: '12px 16px',
+                borderRight: '1px solid #E5E7EB'
               },
               '& .MuiDataGrid-columnHeader--checkboxSelection': {
                 padding: '16px 20px',
@@ -1513,15 +1522,34 @@ const Contacts: React.FC = () => {
           sx: { borderRadius: 2 }
         }}
       >
-        <DialogTitle>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-            Add New Contact
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Fill in the contact details below
-          </Typography>
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            color: 'white',
+            py: 3,
+            px: 4,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 400, 
+              fontSize: '1.25rem', 
+              color: 'white',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.01em',
+              mb: 1
+            }}>
+              Add New Contact
+            </Typography>
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '0.875rem'
+            }}>
+              Fill in the contact details below
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: 4 }}>
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -1529,6 +1557,14 @@ const Contacts: React.FC = () => {
                 label="First Name *"
                 value={newContact.first_name}
                 onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  },
+                  '& .MuiInputBase-input': {
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -1614,8 +1650,15 @@ const Contacts: React.FC = () => {
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
-          <Button onClick={() => setAddDialogOpen(false)} sx={{ color: 'text.secondary' }}>
+        <DialogActions sx={{ p: 4, pt: 2, gap: 2 }}>
+          <Button 
+            onClick={() => setAddDialogOpen(false)} 
+            sx={{ 
+              color: 'text.secondary',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500
+            }}
+          >
             Cancel
           </Button>
           <Button 
@@ -1624,7 +1667,10 @@ const Contacts: React.FC = () => {
             disabled={!newContact.first_name || !newContact.last_name || !newContact.email}
             sx={{
               bgcolor: '#000000',
-              '&:hover': { bgcolor: '#333333' }
+              '&:hover': { bgcolor: '#333333' },
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500,
+              px: 3
             }}
           >
             Add Contact
@@ -1643,18 +1689,42 @@ const Contacts: React.FC = () => {
         maxWidth="md" 
         fullWidth
       >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-            Import Contacts from CSV
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            Required columns: <strong>name, email</strong>
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontSize: '0.75rem' }}>
-            Optional: type (deal/broker/investor), phone, title, company, location, tags (semicolon-separated), linkedin, interaction history
-          </Typography>
+        <DialogTitle sx={{ p: 0 }}>
+          <Box sx={{
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            color: 'white',
+            py: 3,
+            px: 4,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 400, 
+              fontSize: '1.25rem', 
+              color: 'white',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.01em',
+              mb: 1
+            }}>
+              Import Contacts from CSV
+            </Typography>
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '0.875rem',
+              mb: 0.5
+            }}>
+              Required columns: <strong>name, email</strong>
+            </Typography>
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontSize: '0.75rem'
+            }}>
+              Optional: type (deal/broker/investor), phone, title, company, location, tags (semicolon-separated), linkedin, interaction history
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent dividers sx={{ pt: 2 }}>
+        <DialogContent dividers sx={{ p: 4 }}>
           {/* CSV Format Example */}
           <Box sx={{ mb: 2, p: 2, bgcolor: '#F9FAFB', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
             <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mb: 1 }}>
@@ -1744,14 +1814,18 @@ Jane Smith,investor,jane@fund.com,555-5678,Partner,VC Fund,"New York, NY",invest
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+        <DialogActions sx={{ p: 4, pt: 2, gap: 2 }}>
           <Button 
             onClick={() => {
               setCsvDialogOpen(false);
               setCsvFile(null);
               setCsvPreview([]);
             }} 
-            sx={{ color: 'text.secondary' }}
+            sx={{ 
+              color: 'text.secondary',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500
+            }}
           >
             Cancel
           </Button>
@@ -1759,7 +1833,13 @@ Jane Smith,investor,jane@fund.com,555-5678,Partner,VC Fund,"New York, NY",invest
             variant="contained"
             onClick={handleImportCsv}
             disabled={!csvFile || loading}
-            sx={{ px: 3 }}
+            sx={{ 
+              px: 3,
+              bgcolor: '#000000',
+              '&:hover': { bgcolor: '#333333' },
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500
+            }}
           >
             {loading ? 'Importing...' : 'Import Contacts'}
           </Button>
