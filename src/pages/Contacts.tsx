@@ -89,7 +89,8 @@ const Contacts: React.FC = () => {
   const [editingValue, setEditingValue] = useState<string>('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
-  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   // New contact form state
   const [newContact, setNewContact] = useState({
     first_name: '',
@@ -387,6 +388,36 @@ const Contacts: React.FC = () => {
     }
   };
 
+  const handleDeleteContacts = async () => {
+    if (selectedRows.length === 0) return;
+
+    setLoading(true);
+    setDeleteDialogOpen(false);
+
+    try {
+      // Delete each selected contact
+      const deletePromises = selectedRows.map(contactId =>
+        axios.delete(`/api/firebase/contacts/${contactId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
+          }
+        })
+      );
+
+      await Promise.all(deletePromises);
+
+      // Update local state to remove deleted contacts
+      setContacts(contacts.filter(contact => !selectedRows.includes(contact.id)));
+      setSelectedRows([]);
+      setError(null);
+    } catch (err: any) {
+      console.error('Error deleting contacts:', err);
+      setError(err.response?.data?.message || 'Failed to delete contacts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportCSV = () => {
     const filteredContacts = getFilteredContacts();
 
@@ -443,7 +474,7 @@ const Contacts: React.FC = () => {
 
   const getTypeColor = (type: ContactType) => {
     switch (type) {
-      case 'deal': return '#4CAF50';
+      case 'deal': return '#9333ea';
       case 'investor': return '#2196F3';
       case 'broker': return '#FF9800';
       default: return '#9E9E9E';
@@ -452,7 +483,7 @@ const Contacts: React.FC = () => {
 
   const getTypeLabel = (type: ContactType) => {
     switch (type) {
-      case 'deal': return 'Deal Contact';
+      case 'deal': return 'Deal';
       case 'investor': return 'Investor';
       case 'broker': return 'Broker';
       default: return 'Unknown';
@@ -611,8 +642,8 @@ const Contacts: React.FC = () => {
                   height: 16,
                   fontSize: '0.65rem',
                   mt: 0.25,
-                  bgcolor: params.row.status === 'active' ? '#DCFCE7' : '#F3F4F6',
-                  color: params.row.status === 'active' ? '#166534' : '#6B7280',
+                  bgcolor: params.row.status === 'active' ? '#f3e8ff' : '#F3F4F6',
+                  color: params.row.status === 'active' ? '#581c87' : '#6B7280',
                   alignSelf: 'flex-start'
                 }}
               />
@@ -841,190 +872,243 @@ const Contacts: React.FC = () => {
       p: 0,
       fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* Header with Black/Grey Gradient */}
-      <Box sx={{ 
-        background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
-        borderRadius: '0 0 24px 24px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-        mb: 4,
-        p: 4,
+      {/* Header Banner */}
+      <Box sx={{
         position: 'relative',
+        bgcolor: 'white',
+        borderRadius: '0 0 32px 32px',
         overflow: 'hidden',
-        '&::before': {
-          content: '""',
+        mb: 6,
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
+      }}>
+        {/* Background Pattern */}
+        <Box sx={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)',
-          pointerEvents: 'none'
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: 20,
-          right: 40,
-          width: 32,
-          height: 32,
-          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-          borderRadius: 2,
-          transform: 'rotate(15deg)',
-          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-          pointerEvents: 'none'
-        }
-      }}>
-        <Box sx={{ 
-          position: 'relative', 
-          zIndex: 2,
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center' 
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-            }}>
-              <GroupIcon sx={{ fontSize: 24, color: 'white' }} />
-            </Box>
-            <Box>
-              <Typography variant="h4" sx={{ 
-                fontWeight: 700, 
-                color: 'white',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                letterSpacing: '-0.02em',
-                mb: 1
-              }}>
-                Contacts
-              </Typography>
-              <Typography variant="body1" sx={{ 
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 400,
-                letterSpacing: '-0.01em'
-              }}>
-                Manage your contact database and relationships
-              </Typography>
-            </Box>
-          </Box>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Tooltip title="Refresh contacts">
-            <IconButton
-              onClick={fetchContacts}
-              disabled={loading}
-              sx={{
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                '&:hover': {
-                  borderColor: 'rgba(255, 255, 255, 0.4)',
-                  bgcolor: 'rgba(255, 255, 255, 0.1)'
-                },
-                '&:disabled': {
-                  color: 'rgba(255, 255, 255, 0.3)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-            >
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="outlined"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExportCSV}
-            disabled={filteredContacts.length === 0}
-            sx={{
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              fontWeight: 500,
-              letterSpacing: '-0.01em',
-              '&:hover': {
-                borderColor: 'rgba(255, 255, 255, 0.4)',
-                bgcolor: 'rgba(255, 255, 255, 0.1)'
-              },
-              '&:disabled': {
-                color: 'rgba(255, 255, 255, 0.3)',
-                borderColor: 'rgba(255, 255, 255, 0.1)'
-              }
-            }}
-          >
-            Export CSV
-          </Button>
-          <Box sx={{ display: 'flex' }}>
-            <Button
-              variant="contained"
-              startIcon={<PersonAddIcon />}
-              onClick={(e) => setAddMenuAnchorEl(e.currentTarget)}
-              endIcon={<ArrowDropDownIcon />}
-              sx={{
-                bgcolor: '#10B981',
-                color: '#ffffff',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-                '&:hover': {
-                  bgcolor: '#059669',
-                },
-              }}
-            >
-              Add Contact
-            </Button>
-            <Menu
-              anchorEl={addMenuAnchorEl}
-              open={Boolean(addMenuAnchorEl)}
-              onClose={() => setAddMenuAnchorEl(null)}
-              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-            >
-              <MenuItem 
-                onClick={() => { 
-                  setAddMenuAnchorEl(null); 
-                  setAddDialogOpen(true); 
-                }}
-                sx={{
-                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 500,
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                <ListItemIcon>
-                  <PersonAddIcon fontSize="small" />
-                </ListItemIcon>
-                Add Single Contact
-              </MenuItem>
-              <MenuItem 
-                onClick={() => { 
-                  setAddMenuAnchorEl(null); 
-                  setCsvDialogOpen(true); 
-                }}
-                sx={{
-                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 500,
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                <ListItemIcon>
-                  <UploadFileIcon fontSize="small" />
-                </ListItemIcon>
-                Import from CSV
-              </MenuItem>
-            </Menu>
-          </Box>
-        </Box>
-        </Box>
+          background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.02) 0%, rgba(124, 58, 237, 0.05) 100%)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 100,
+            height: 100,
+            background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
+            borderRadius: '50%',
+            opacity: 0.1
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -30,
+            left: -30,
+            width: 60,
+            height: 60,
+            background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
+            borderRadius: 2,
+            opacity: 0.1,
+            transform: 'rotate(15deg)'
+          }
+        }} />
 
-        {/* Decorative Elements */}
-        <Box sx={{ position: 'absolute', bottom: 60, left: 20, width: 24, height: 24, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '50%', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)', pointerEvents: 'none', zIndex: 1 }} />
-        <Box sx={{ position: 'absolute', top: 60, right: 80, width: 20, height: 20, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: 1, transform: 'rotate(45deg)', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)', pointerEvents: 'none', zIndex: 1 }} />
-        <Box sx={{ position: 'absolute', bottom: 40, right: 120, width: 16, height: 16, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '50%', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)', pointerEvents: 'none', zIndex: 1 }} />
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Box sx={{ position: 'relative', zIndex: 2 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    color: '#1e293b',
+                    fontSize: { xs: '2.2rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    textTransform: 'uppercase',
+                    background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  Contacts
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 500,
+                    mb: 3,
+                    color: '#475569',
+                    fontSize: '1.1rem',
+                    lineHeight: 1.5
+                  }}
+                >
+                  Manage your contact database and build meaningful relationships
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: '#64748b',
+                    mb: 4,
+                    maxWidth: '600px',
+                    lineHeight: 1.6
+                  }}
+                >
+                  Track and organize your network of deal contacts, investors, and brokers all in one place.
+                </Typography>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Tooltip title="Refresh contacts">
+                    <IconButton
+                      onClick={fetchContacts}
+                      disabled={loading}
+                      sx={{
+                        border: '1px solid #cbd5e1',
+                        color: '#475569',
+                        '&:hover': {
+                          borderColor: '#94a3b8',
+                          bgcolor: '#f8fafc',
+                          transform: 'translateY(-1px)'
+                        },
+                        '&:disabled': {
+                          color: '#94a3b8',
+                          borderColor: '#e2e8f0'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <RefreshIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={handleExportCSV}
+                    disabled={filteredContacts.length === 0}
+                    sx={{
+                      borderColor: '#cbd5e1',
+                      color: '#475569',
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      '&:hover': {
+                        borderColor: '#94a3b8',
+                        bgcolor: '#f8fafc',
+                        transform: 'translateY(-1px)'
+                      },
+                      '&:disabled': {
+                        color: '#94a3b8',
+                        borderColor: '#e2e8f0'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<PersonAddIcon />}
+                    onClick={(e) => setAddMenuAnchorEl(e.currentTarget)}
+                    endIcon={<ArrowDropDownIcon />}
+                    sx={{
+                      borderColor: '#cbd5e1',
+                      color: '#475569',
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      '&:hover': {
+                        borderColor: '#94a3b8',
+                        bgcolor: '#f8fafc',
+                        transform: 'translateY(-1px)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Add Contact
+                  </Button>
+                  <Menu
+                    anchorEl={addMenuAnchorEl}
+                    open={Boolean(addMenuAnchorEl)}
+                    onClose={() => setAddMenuAnchorEl(null)}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  >
+                    <MenuItem
+                      onClick={() => {
+                        setAddMenuAnchorEl(null);
+                        setAddDialogOpen(true);
+                      }}
+                      sx={{
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontWeight: 500,
+                        letterSpacing: '-0.01em'
+                      }}
+                    >
+                      <ListItemIcon>
+                        <PersonAddIcon fontSize="small" />
+                      </ListItemIcon>
+                      Add Single Contact
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => {
+                        setAddMenuAnchorEl(null);
+                        setCsvDialogOpen(true);
+                      }}
+                      sx={{
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontWeight: 500,
+                        letterSpacing: '-0.01em'
+                      }}
+                    >
+                      <ListItemIcon>
+                        <UploadFileIcon fontSize="small" />
+                      </ListItemIcon>
+                      Import from CSV
+                    </MenuItem>
+                  </Menu>
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <Box sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, #9333ea 0%, #7c3aed 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 8px 32px rgba(147, 51, 234, 0.3)'
+                }}>
+                  <GroupIcon sx={{ fontSize: 64, color: 'white' }} />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
       </Box>
 
       {/* Main Content */}
@@ -1038,24 +1122,33 @@ const Contacts: React.FC = () => {
         {/* Stats Cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+          <Card sx={{ 
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 2
+          }}>
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ 
+                  <Typography variant="caption" sx={{ 
                     display: 'block', 
                     mb: 0.5,
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontWeight: 500,
-                    letterSpacing: '-0.01em'
+                    letterSpacing: '-0.01em',
+                    color: '#ffffff'
                   }}>
                     Total Contacts
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                  <Typography variant="h5" sx={{ 
+                    fontWeight: 700, 
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#ffffff'
+                  }}>
                     {stats.total}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: '#F3F4F6', color: '#000000', width: 40, height: 40 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
                   <GroupIcon />
                 </Avatar>
               </Box>
@@ -1064,24 +1157,38 @@ const Contacts: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+          <Card sx={{ 
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 2
+          }}>
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ 
-                    display: 'block', 
-                    mb: 0.5,
+                  <Chip
+                    label="Type: Deal"
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: '0.65rem',
+                      mb: 1,
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      letterSpacing: '-0.01em'
+                    }}
+                  />
+                  <Typography variant="h5" sx={{ 
+                    fontWeight: 700, 
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    fontWeight: 500,
-                    letterSpacing: '-0.01em'
+                    color: '#ffffff'
                   }}>
-                    Deal Contacts
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                     {stats.deals}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: '#DCFCE7', color: '#166534', width: 40, height: 40 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
                   <BusinessCenterIcon />
                 </Avatar>
               </Box>
@@ -1090,24 +1197,33 @@ const Contacts: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+          <Card sx={{ 
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 2
+          }}>
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ 
+                  <Typography variant="caption" sx={{ 
                     display: 'block', 
                     mb: 0.5,
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontWeight: 500,
-                    letterSpacing: '-0.01em'
+                    letterSpacing: '-0.01em',
+                    color: '#ffffff'
                   }}>
                     Investors
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                  <Typography variant="h5" sx={{ 
+                    fontWeight: 700, 
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#ffffff'
+                  }}>
                     {stats.investors}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: '#DBEAFE', color: '#1E40AF', width: 40, height: 40 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
                   <AccountBalanceIcon />
                 </Avatar>
               </Box>
@@ -1116,24 +1232,33 @@ const Contacts: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ border: '1px solid', borderColor: 'divider' }}>
+          <Card sx={{ 
+            background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 2
+          }}>
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ 
+                  <Typography variant="caption" sx={{ 
                     display: 'block', 
                     mb: 0.5,
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontWeight: 500,
-                    letterSpacing: '-0.01em'
+                    letterSpacing: '-0.01em',
+                    color: '#ffffff'
                   }}>
                     Brokers
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 700, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                  <Typography variant="h5" sx={{ 
+                    fontWeight: 700, 
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    color: '#ffffff'
+                  }}>
                     {stats.brokers}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: '#FEF3C7', color: '#92400E', width: 40, height: 40 }}>
+                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
                   <TrendingUpIcon />
                 </Avatar>
               </Box>
@@ -1146,16 +1271,49 @@ const Contacts: React.FC = () => {
       {/* Main Content */}
       <Paper sx={{ overflow: 'hidden' }}>
         {/* Filters Bar */}
-        <Box sx={{ p: 2.5, bgcolor: '#000000', color: 'white' }}>
+        <Box sx={{ 
+          background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+          color: 'white',
+          py: 3,
+          px: 4,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'white' }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 400, 
+              fontSize: '1.25rem', 
+              color: 'white',
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              letterSpacing: '-0.01em'
+            }}>
               All Contacts
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <FilterListIcon sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 20 }} />
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                {selectedRows.length > 0 ? `${selectedRows.length} selected` : ''}
-              </Typography>
+              {selectedRows.length > 0 ? (
+                <>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>
+                    {selectedRows.length} selected
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => setDeleteDialogOpen(true)}
+                    sx={{
+                      bgcolor: '#ef4444',
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: '#dc2626'
+                      },
+                      ml: 1
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </>
+              ) : (
+                <FilterListIcon sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 20 }} />
+              )}
             </Box>
           </Box>
 
@@ -1259,7 +1417,7 @@ const Contacts: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-              },
+              }, 
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: '#F9FAFB',
                 borderColor: 'divider',
@@ -1305,8 +1463,14 @@ const Contacts: React.FC = () => {
                 }
               },
               '& .MuiDataGrid-row': {
-                '&:hover': {
+                '&:nth-of-type(even)': {
                   bgcolor: '#F9FAFB'
+                },
+                '&:nth-of-type(odd)': {
+                  bgcolor: '#FFFFFF'
+                },
+                '&:hover': {
+                  bgcolor: '#F3F4F6 !important'
                 },
                 '&.Mui-selected': {
                   bgcolor: '#EBF8FF',
@@ -1426,7 +1590,7 @@ const Contacts: React.FC = () => {
                   label="Contact Type *"
                   onChange={(e) => setNewContact({ ...newContact, type: e.target.value as ContactType })}
                 >
-                  <MenuItem value="deal">Deal Contact</MenuItem>
+                  <MenuItem value="deal">Deal</MenuItem>
                   <MenuItem value="investor">Investor</MenuItem>
                   <MenuItem value="broker">Broker</MenuItem>
                 </Select>
@@ -1598,6 +1762,55 @@ Jane Smith,investor,jane@fund.com,555-5678,Partner,VC Fund,"New York, NY",invest
             sx={{ px: 3 }}
           >
             {loading ? 'Importing...' : 'Import Contacts'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DeleteIcon sx={{ color: '#ef4444' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+              Delete Contact{selectedRows.length > 1 ? 's' : ''}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This action cannot be undone.
+          </Alert>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete <strong>{selectedRows.length}</strong> contact{selectedRows.length > 1 ? 's' : ''}?
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {selectedRows.length === 1
+              ? 'This contact will be permanently removed from your database.'
+              : 'These contacts will be permanently removed from your database.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleDeleteContacts}
+            disabled={loading}
+            sx={{
+              bgcolor: '#ef4444',
+              '&:hover': { bgcolor: '#dc2626' }
+            }}
+          >
+            {loading ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>
