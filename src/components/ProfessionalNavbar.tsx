@@ -234,17 +234,77 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
     const hasSubItems = item.subItems && item.subItems.length > 0;
     const isExpanded = expandedItems.includes(item.text);
     const active = isActive(item.path, item.text);
+    const [dropdownAnchor, setDropdownAnchor] = useState<null | HTMLElement>(null);
+    const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+
+    const handleDropdownOpen = (event: React.MouseEvent<HTMLElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+        setHoverTimeout(null);
+      }
+      setDropdownAnchor(event.currentTarget);
+    };
+
+    const handleDropdownClose = () => {
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+        setHoverTimeout(null);
+      }
+      setDropdownAnchor(null);
+    };
+
+    const handleMouseEnter = (event: React.MouseEvent<HTMLElement>) => {
+      if (hasSubItems && sidebarCollapsed) {
+        if (hoverTimeout) {
+          clearTimeout(hoverTimeout);
+        }
+        setHoverTimeout(setTimeout(() => {
+          handleDropdownOpen(event);
+        }, 200)); // 200ms delay
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (hasSubItems && sidebarCollapsed) {
+        if (hoverTimeout) {
+          clearTimeout(hoverTimeout);
+          setHoverTimeout(null);
+        }
+        setHoverTimeout(setTimeout(() => {
+          handleDropdownClose();
+        }, 300)); // 300ms delay before closing
+      }
+    };
+
+    // Cleanup timeout on unmount
+    React.useEffect(() => {
+      return () => {
+        if (hoverTimeout) {
+          clearTimeout(hoverTimeout);
+        }
+      };
+    }, [hoverTimeout]);
 
     return (
       <Box>
         <ListItemButton
-          onClick={() => {
+          onClick={(event) => {
             if (hasSubItems) {
-              toggleExpanded(item.text);
+              if (sidebarCollapsed) {
+                // In collapsed mode, show dropdown menu
+                handleDropdownOpen(event);
+              } else {
+                // In expanded mode, toggle the sub-items
+                toggleExpanded(item.text);
+              }
             } else {
               handleNavigation(item.path);
             }
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           sx={{
             borderRadius: 1,
             mb: 0.5,
@@ -309,6 +369,22 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
                   <ArrowRightIcon />
                 </IconButton>
               )}
+              {sidebarCollapsed && hasSubItems && (
+                <Box
+                  component="img"
+                  src="/assets/images/transparent_shortened.png"
+                  alt="Sub-items"
+                  sx={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    width: 16,
+                    height: 16,
+                    filter: 'brightness(0) invert(1)',
+                    objectFit: 'contain'
+                  }}
+                />
+              )}
             </>
           )}
           {sidebarCollapsed && item.badge && (
@@ -326,6 +402,60 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
             />
           )}
         </ListItemButton>
+        
+        {/* Dropdown menu for collapsed mode */}
+        {hasSubItems && sidebarCollapsed && (
+          <Box
+            onMouseEnter={() => {
+              if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+                setHoverTimeout(null);
+              }
+            }}
+            onMouseLeave={handleMouseLeave}
+            sx={{
+              position: 'fixed',
+              top: dropdownAnchor ? dropdownAnchor.getBoundingClientRect().bottom - 48 : 0,
+              left: dropdownAnchor ? dropdownAnchor.getBoundingClientRect().right + 8 : 0,
+              bgcolor: '#1a1a1a',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: 2,
+              minWidth: 200,
+              p: 1,
+              zIndex: 9999,
+              display: Boolean(dropdownAnchor) ? 'block' : 'none',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              maxHeight: '300px',
+              overflowY: 'auto'
+            }}
+          >
+            {item.subItems.map((subItem: any) => (
+              <Box
+                key={subItem.text}
+                onClick={() => {
+                  handleNavigation(subItem.path);
+                  handleDropdownClose();
+                }}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  p: 1.5,
+                  cursor: 'pointer',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  borderRadius: 1,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  }
+                }}
+              >
+                <Box sx={{ mr: 1.5, color: 'rgba(255, 255, 255, 0.8)', display: 'flex', alignItems: 'center' }}>
+                  {subItem.icon}
+                </Box>
+                <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>{subItem.text}</Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
         
         {hasSubItems && !sidebarCollapsed && (
           <Collapse 
@@ -374,7 +504,7 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
             src="/assets/images/extended_logo_black_white.png"
             alt="Equitle"
             sx={{
-              height: sidebarCollapsed ? 32 : 40,
+              height: 40,
               filter: 'brightness(0) invert(1)',
               objectFit: 'contain',
               cursor: 'pointer',
@@ -400,59 +530,38 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
               transition: 'all 0.2s ease-in-out'
             }}
           >
-            <Box
-              sx={{
-                width: 16,
-                height: 16,
-                position: 'relative',
-                color: 'rgba(255, 255, 255, 0.8)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transform: 'rotate(90deg)',
-                '&:hover': {
-                  color: 'white'
-                }
-              }}
-            >
-              {/* Three squares in L-shape - rotated 90 degrees CCW */}
-              {/* Top-left square (was top-right) */}
+            {sidebarCollapsed ? (
               <Box
+                component="img"
+                src="/assets/images/transparent_shortened.png"
+                alt="Toggle"
                 sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: 6,
-                  height: 6,
-                  bgcolor: 'currentColor',
-                  borderRadius: '1px'
+                  width: 32,
+                  height: 32,
+                  filter: 'brightness(0) invert(1)',
+                  objectFit: 'contain',
+                  '&:hover': {
+                    opacity: 1
+                  }
                 }}
               />
-              {/* Top-right square (was bottom-left) */}
+            ) : (
               <Box
                 sx={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: 6,
-                  height: 6,
-                  bgcolor: 'currentColor',
-                  borderRadius: '1px'
+                  width: 16,
+                  height: 16,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  '&:hover': {
+                    color: 'white'
+                  }
                 }}
-              />
-              {/* Bottom-right square (was bottom-right) */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  width: 6,
-                  height: 6,
-                  bgcolor: 'currentColor',
-                  borderRadius: '1px'
-                }}
-              />
-            </Box>
+              >
+                <ArrowRightIcon sx={{ transform: 'rotate(180deg)' }} />
+              </Box>
+            )}
           </IconButton>
         </Box>
       </Box>
@@ -501,7 +610,7 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
                 transition: 'all 0.2s ease-in-out',
                 border: '1px solid rgba(255, 255, 255, 0.3)'
               }}
-              onClick={handleProfileMenuOpen}th
+              onClick={handleProfileMenuOpen}
             >
               {user?.name?.charAt(0).toUpperCase()}
             </Avatar>
@@ -564,15 +673,16 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
       </Drawer>
 
       {/* Top App Bar for Mobile */}
-      <AppBar
-        position="fixed"
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          backgroundColor: theme.palette.background.paper,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          boxShadow: 'none'
-        }}
-      >
+      {!sidebarCollapsed && (
+        <AppBar
+          position="fixed"
+          sx={{
+            display: { xs: 'block', md: 'none' },
+            backgroundColor: theme.palette.background.paper,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            boxShadow: 'none'
+          }}
+        >
         <Toolbar sx={{ justifyContent: 'space-between', minHeight: '64px !important' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton
@@ -585,11 +695,11 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
             </IconButton>
             <Box
               component="img"
-              src="/assets/images/extended_logo_black_white.png"
+              src="/assets/images/transparent_shortened.png"
               alt="Equitle"
               sx={{
                 height: 32,
-                filter: theme.palette.mode === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)',
+                filter: 'brightness(0) invert(1)',
                 objectFit: 'contain'
               }}
               onClick={() => navigate('/')}
@@ -610,6 +720,7 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
           </Box>
         </Toolbar>
       </AppBar>
+      )}
 
 
       {/* Notifications Menu */}
