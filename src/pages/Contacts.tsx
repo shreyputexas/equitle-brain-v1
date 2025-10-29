@@ -121,7 +121,9 @@ const Contacts: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/firebase/contacts');
+      const response = await axios.get('/api/firebase/contacts', {
+        headers: { Authorization: 'Bearer mock-token' }
+      });
       // Map contacts and determine type from tags
       const contactsList = response.data.data?.contacts || response.data.data || [];
       const contactsWithTypes = contactsList.map((contact: any) => {
@@ -180,7 +182,9 @@ const Contacts: React.FC = () => {
       
       console.log('Sending contact data:', contactData);
       
-      const response = await axios.post('/api/firebase/contacts', contactData);
+      const response = await axios.post('/api/firebase/contacts', contactData, {
+        headers: { Authorization: 'Bearer mock-token' }
+      });
       
       console.log('API Response:', response.data);
       
@@ -368,6 +372,8 @@ const Contacts: React.FC = () => {
             };
           }),
           contactType: 'people' // Default fallback
+        }, {
+          headers: { Authorization: 'Bearer mock-token' }
         });
         
         if (response.data.success) {

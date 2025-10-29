@@ -1,4 +1,4 @@
-import { RetellService } from './retell.service';
+import { RetellService, RetellCallAnalytics } from './retell.service';
 import { ElevenLabsService } from './elevenlabs.service';
 import { OpenAIService } from './openai.service';
 import { db } from '../lib/firebase';
@@ -29,6 +29,7 @@ export interface CallSession {
     calling_company?: string;
   };
   metadata?: any;
+  retellAnalytics?: RetellCallAnalytics;
 }
 
 export interface EnhancedCallSession extends CallSession {
@@ -198,7 +199,7 @@ export class VoiceAgentService {
     try {
       // Find the call session by Retell call ID
       let callSession: CallSession | undefined;
-      for (const session of this.activeSessions.values()) {
+      for (const [_, session] of this.activeSessions.entries()) {
         if (session.retellCallId === retellCallId) {
           callSession = session;
           break;
@@ -233,9 +234,9 @@ export class VoiceAgentService {
           updates.endTime = new Date();
           if (callSession.startTime) {
             // Handle both JavaScript Date and Firestore Timestamp objects
-            const startTimeMs = callSession.startTime.getTime ?
+            const startTimeMs = callSession.startTime instanceof Date ?
               callSession.startTime.getTime() :
-              callSession.startTime.toDate().getTime();
+              (callSession.startTime as any).toDate().getTime();
             updates.duration = new Date().getTime() - startTimeMs;
           }
           break;
@@ -346,8 +347,10 @@ export class VoiceAgentService {
         throw new Error('Call session not found');
       }
 
+      const systemPrompt = "You are a professional sales assistant conducting voice calls. Be concise, friendly, and focused on the caller's needs.";
+
       const response = await this.openaiService.generateResponse(
-        callSession.aiPrompt,
+        systemPrompt,
         callSession.transcript,
         userMessage
       );
@@ -399,18 +402,20 @@ export class VoiceAgentService {
       });
       logger.info('Using Single Prompt Agent with Retell built-in LLM for reliable voice');
 
-      // Use Single Prompt Agent with Retell's built-in LLM
+      // Use ElevenLabs voice with custom LLM
       const result = await this.retellService.updateAgent(agentId, {
+        name: `Updated Agent ${agentId}`,
         voice: {
-          type: 'retell',
-          voice_id: 'Sophia', // Use Retell's built-in voice
+          type: 'elevenlabs',
+          voice_id: voiceId
         },
         llm: {
-          type: 'retell',
+          type: 'custom-llm',
+          custom_llm_url: process.env.LLM_WEBSOCKET_URL || 'ws://localhost:4001/llm'
         },
         prompt: prompt,
         language: 'en-US',
-        response_engine: {
+        responseEngine: {
           type: 'retell'
         }
       });
@@ -438,12 +443,14 @@ export class VoiceAgentService {
       // For now, create a new agent for each call
       // In production, you might want to reuse agents or cache them
       const agent = await this.retellService.createAgent({
+        agent_name: `Agent for ${userId}`,
         voice: {
-          type: 'retell',
-          voice_id: 'Sophia', // Use Retell's built-in voice
+          type: 'elevenlabs',
+          voice_id: voiceId, // Use ElevenLabs voice
         },
         llm: {
-          type: 'retell',
+          type: 'custom-llm',
+          custom_llm_url: process.env.LLM_WEBSOCKET_URL || 'ws://localhost:4001/llm'
         },
         prompt: prompt,
         language: 'en-US',
@@ -451,6 +458,10 @@ export class VoiceAgentService {
           type: 'retell'
         }
       });
+
+      if (!agent || !agent.agent_id) {
+        throw new Error('Failed to create agent: Invalid response from Retell API');
+      }
 
       return agent.agent_id;
     } catch (error) {
@@ -549,56 +560,173 @@ export class VoiceAgentService {
    */
   async getEnhancedCallSession(callId: string): Promise<EnhancedCallSession | null> {
     try {
+      logger.info('🔥 Enhanced call session requested', { callId });
+
       const callSession = await this.getCallSession(callId);
       if (!callSession) {
+        logger.warn('Call session not found', { callId });
         return null;
       }
 
+      logger.info('📋 Base call session retrieved', {
+        callId,
+        hasRetellCallId: !!callSession.retellCallId,
+        retellCallId: callSession.retellCallId
+      });
+
       const enhanced: EnhancedCallSession = { ...callSession };
 
-      // Fetch additional data from Retell if retellCallId exists
+      // Fetch comprehensive data from Retell API if retellCallId exists
       if (callSession.retellCallId) {
         try {
-          const retellCall = await this.retellService.getCall(callSession.retellCallId);
-          if (retellCall) {
+          logger.info('Fetching Retell analytics for call details', { callId, retellCallId: callSession.retellCallId });
+
+          const retellAnalytics = await this.retellService.getCallAnalytics(callSession.retellCallId);
+          if (retellAnalytics) {
+            logger.info('Successfully fetched Retell analytics for call details', {
+              callId,
+              hasTranscript: !!retellAnalytics.transcript,
+              sentiment: retellAnalytics.user_sentiment,
+              summary: retellAnalytics.call_summary,
+              successful: retellAnalytics.call_successful
+            });
+
+            logger.info('🔍 Processing Retell sentiment data', {
+              callId,
+              user_sentiment: retellAnalytics.user_sentiment,
+              type: typeof retellAnalytics.user_sentiment
+            });
+
+            // Use Retell's sentiment analysis directly
+            if (retellAnalytics.user_sentiment && typeof retellAnalytics.user_sentiment === 'string') {
+              enhanced.sentiment = retellAnalytics.user_sentiment.toLowerCase() as 'positive' | 'neutral' | 'negative';
+              logger.info('✅ Set sentiment from Retell', { callId, sentiment: enhanced.sentiment });
+            }
+
+            // Use Retell's call summary directly
+            if (retellAnalytics.call_summary && typeof retellAnalytics.call_summary === 'string') {
+              enhanced.summary = retellAnalytics.call_summary;
+            }
+
+            // Set call outcome based on Retell's call_successful flag
+            if (retellAnalytics.call_successful !== undefined && retellAnalytics.call_successful !== null) {
+              enhanced.outcome = retellAnalytics.call_successful ? 'interested' : 'not_interested';
+            }
+
+            // Use Retell's transcript if available and more complete than local transcript
+            if (retellAnalytics.transcript && Array.isArray(retellAnalytics.transcript) && retellAnalytics.transcript.length > 0) {
+              const retellTranscriptText = retellAnalytics.transcript
+                .filter(entry => entry && entry.role && entry.content)
+                .map(entry =>
+                  `${entry.role === 'agent' ? 'AI' : 'User'}: ${entry.content}`
+                );
+
+              // Use Retell transcript if local one is empty or shorter
+              if (!enhanced.transcript || enhanced.transcript.length === 0 ||
+                  retellTranscriptText.length > enhanced.transcript.length) {
+                enhanced.transcript = retellTranscriptText;
+                logger.info('Updated transcript from Retell API', {
+                  callId,
+                  transcriptLength: retellTranscriptText.length
+                });
+              }
+            }
+
+            // Set recording URL from Retell
+            if (retellAnalytics.recording_url) {
+              enhanced.recordingUrl = retellAnalytics.recording_url;
+            }
+
+            // Set call quality based on latency and success
+            if (retellAnalytics.latency?.e2e_latency_p50_ms) {
+              // Simple quality score: lower latency = higher quality
+              const latency = retellAnalytics.latency.e2e_latency_p50_ms;
+              enhanced.callQuality = Math.max(1, Math.min(5, 6 - Math.floor(latency / 1000)));
+            }
+
+            // Populate retellMetadata with comprehensive data
             enhanced.retellMetadata = {
-              recording_url: retellCall.metadata?.recording_url,
-              call_cost: retellCall.metadata?.call_cost,
-              latency: retellCall.metadata?.latency
+              recording_url: retellAnalytics.recording_url,
+              call_cost: retellAnalytics.call_cost?.total_cost,
+              latency: retellAnalytics.latency,
+              transcript_object: retellAnalytics.transcript
             };
-            enhanced.recordingUrl = retellCall.metadata?.recording_url;
+
+            // Update duration if Retell has more accurate data
+            if (retellAnalytics.duration_ms && retellAnalytics.duration_ms > 0) {
+              enhanced.duration = retellAnalytics.duration_ms;
+            }
+
+            // Extract analytics from Retell data
+            if (retellAnalytics.transcript && Array.isArray(retellAnalytics.transcript) && retellAnalytics.transcript.length > 0) {
+              const validTranscript = retellAnalytics.transcript.filter(t => t && t.role && t.content);
+              const agentMessages = validTranscript.filter(t => t.role === 'agent');
+              const userMessages = validTranscript.filter(t => t.role === 'user');
+              const totalMessages = agentMessages.length + userMessages.length;
+
+              enhanced.analytics = {
+                talkRatio: totalMessages > 0 ? (userMessages.length / totalMessages * 100) : 0,
+                interruptions: 0, // Could be calculated from transcript timing
+                avgResponseTime: 0, // Could be calculated from transcript timing
+                wordCount: validTranscript.reduce((sum, t) => {
+                  try {
+                    return sum + (t.content ? t.content.split(' ').length : 0);
+                  } catch {
+                    return sum;
+                  }
+                }, 0),
+                keywordMatches: [] // Could extract key business terms
+              };
+            }
+          } else {
+            logger.warn('No Retell analytics found for call', { callId, retellCallId: callSession.retellCallId });
           }
         } catch (error) {
-          logger.warn('Failed to fetch Retell data for call', { callId, error });
+          logger.error('Failed to fetch Retell analytics for call details', {
+            callId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
         }
       }
 
-      // Generate sentiment analysis if transcript exists
-      if (callSession.transcript && callSession.transcript.length > 0) {
+      // Only fall back to OpenAI analysis if we don't have Retell data
+      if (!enhanced.sentiment && enhanced.transcript && enhanced.transcript.length > 0) {
         try {
-          const sentimentResult = await this.openaiService.analyzeSentiment(callSession.transcript);
+          logger.info('Falling back to OpenAI sentiment analysis', { callId });
+          const sentimentResult = await this.openaiService.analyzeSentiment(enhanced.transcript);
           enhanced.sentiment = sentimentResult.sentiment;
           enhanced.sentimentScore = sentimentResult.score;
         } catch (error) {
-          logger.warn('Failed to analyze sentiment for call', { callId, error });
+          logger.warn('Failed to analyze sentiment with OpenAI', { callId, error });
         }
       }
 
-      // Generate call summary if not already exists
-      if (!enhanced.summary && callSession.transcript && callSession.transcript.length > 0) {
+      // Only generate OpenAI summary if we don't have Retell summary
+      if (!enhanced.summary && enhanced.transcript && enhanced.transcript.length > 0) {
         try {
+          logger.info('Falling back to OpenAI summary generation', { callId });
           const summaryResult = await this.openaiService.generateCallSummary(
-            callSession.transcript,
-            { callId, duration: callSession.duration }
+            enhanced.transcript,
+            { callId, duration: enhanced.duration }
           );
           enhanced.summary = summaryResult.summary;
           enhanced.keyPoints = summaryResult.keyPoints;
           enhanced.actionItems = summaryResult.actionItems;
           enhanced.outcome = summaryResult.outcome as any;
         } catch (error) {
-          logger.warn('Failed to generate call summary', { callId, error });
+          logger.warn('Failed to generate call summary with OpenAI', { callId, error });
         }
       }
+
+      logger.info('Enhanced call session prepared', {
+        callId,
+        hasSentiment: !!enhanced.sentiment,
+        hasSummary: !!enhanced.summary,
+        hasTranscript: !!(enhanced.transcript && enhanced.transcript.length > 0),
+        hasRecording: !!enhanced.recordingUrl,
+        transcriptLength: enhanced.transcript?.length || 0
+      });
 
       return enhanced;
     } catch (error) {
@@ -608,7 +736,7 @@ export class VoiceAgentService {
   }
 
   /**
-   * Get call analytics for a user
+   * Get call analytics for a user with enriched Retell API data
    */
   async getCallAnalytics(userId: string, dateRange?: { start: Date; end: Date }): Promise<CallAnalytics> {
     try {
@@ -632,14 +760,94 @@ export class VoiceAgentService {
 
       console.log('🔍 Mapped calls:', calls.length > 0 ? calls[0] : 'No calls found');
 
-      const analytics = this.calculateAnalytics(calls);
-      console.log('🔍 Calculated analytics:', analytics);
+      // Enrich calls with Retell API data
+      const enrichedCalls = await this.enrichCallsWithRetellData(calls);
+      console.log('🔍 Enriched calls with Retell data, sample:', enrichedCalls.length > 0 ? {
+        id: enrichedCalls[0].id,
+        hasRetellData: !!enrichedCalls[0].retellAnalytics,
+        sentiment: enrichedCalls[0].retellAnalytics?.user_sentiment,
+        successful: enrichedCalls[0].retellAnalytics?.call_successful,
+        duration: enrichedCalls[0].retellAnalytics?.duration_ms
+      } : 'No enriched calls');
+
+      const analytics = this.calculateEnhancedAnalytics(enrichedCalls);
+      console.log('🔍 Calculated enhanced analytics:', analytics);
 
       return analytics;
     } catch (error) {
       logger.error('Failed to get call analytics', error);
       throw error;
     }
+  }
+
+  /**
+   * Enrich calls with Retell API analytics data
+   */
+  private async enrichCallsWithRetellData(calls: CallSession[]): Promise<CallSession[]> {
+    const enrichedCalls: CallSession[] = [];
+
+    for (const call of calls) {
+      try {
+        let enrichedCall = { ...call };
+
+        // Only try to fetch Retell data if we have a retellCallId
+        if (call.retellCallId) {
+          console.log('🔍 Fetching Retell analytics for call:', call.id, 'retellCallId:', call.retellCallId);
+          const retellAnalytics = await this.retellService.getCallAnalytics(call.retellCallId);
+
+          if (retellAnalytics) {
+            enrichedCall.retellAnalytics = retellAnalytics;
+
+            // Update call data with more accurate Retell information if available
+            if (retellAnalytics.duration_ms && retellAnalytics.duration_ms > 0) {
+              enrichedCall.duration = retellAnalytics.duration_ms;
+            }
+
+            if (retellAnalytics.call_status) {
+              // Map Retell statuses to our internal statuses
+              const statusMapping: Record<string, string> = {
+                'ended': 'completed',
+                'ongoing': 'initiated',
+                'registered': 'connecting'
+              };
+              const mappedStatus = statusMapping[retellAnalytics.call_status];
+              if (mappedStatus) {
+                enrichedCall.status = mappedStatus as 'completed' | 'failed' | 'initiated' | 'connecting' | 'in_progress';
+              }
+            }
+
+            // Use Retell transcript if available and our local one is empty
+            if (retellAnalytics.transcript && retellAnalytics.transcript.length > 0) {
+              if (!enrichedCall.transcript || enrichedCall.transcript.length === 0) {
+                enrichedCall.transcript = retellAnalytics.transcript.map(entry =>
+                  `${entry.role === 'agent' ? 'AI' : 'User'}: ${entry.content}`
+                );
+              }
+            }
+
+            console.log('✅ Enriched call with Retell data:', {
+              callId: call.id,
+              sentiment: retellAnalytics.user_sentiment,
+              successful: retellAnalytics.call_successful,
+              duration: retellAnalytics.duration_ms,
+              transcriptLength: retellAnalytics.transcript?.length || 0
+            });
+          } else {
+            console.log('⚠️ No Retell analytics found for call:', call.id);
+          }
+        } else {
+          console.log('⚠️ No retellCallId for call:', call.id);
+        }
+
+        enrichedCalls.push(enrichedCall);
+      } catch (error) {
+        logger.error('Failed to enrich call with Retell data', { callId: call.id, error });
+        // Add the call without enrichment on error
+        enrichedCalls.push(call);
+      }
+    }
+
+    return enrichedCalls;
   }
 
   /**
@@ -702,6 +910,231 @@ export class VoiceAgentService {
         )[0]
       }
     };
+  }
+
+  /**
+   * Calculate enhanced analytics from enriched call data with Retell API data
+   */
+  private calculateEnhancedAnalytics(calls: CallSession[]): CallAnalytics {
+    const totalCalls = calls.length;
+
+    // Use Retell's call_successful flag when available, otherwise fall back to duration-based success
+    const successfulCalls = calls.filter(call => {
+      if (call.retellAnalytics?.call_successful !== undefined) {
+        return call.retellAnalytics.call_successful;
+      }
+      // Fallback to original logic
+      return call.status === 'completed' && call.duration && call.duration > 30000;
+    }).length;
+
+    // Enhanced status tracking using Retell data
+    const callsByStatus = calls.reduce((acc, call) => {
+      let status = call.status;
+
+      // Use more accurate Retell status when available
+      if (call.retellAnalytics?.call_status) {
+        const statusMapping: Record<string, string> = {
+          'ended': 'completed',
+          'ongoing': 'initiated',
+          'registered': 'connecting'
+        };
+        const mappedStatus = statusMapping[call.retellAnalytics.call_status];
+        if (mappedStatus) {
+          status = mappedStatus as 'completed' | 'failed' | 'initiated' | 'connecting' | 'in_progress';
+        }
+      }
+
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Enhanced duration calculation using Retell data
+    const callsWithDuration = calls.filter(call => {
+      const duration = call.retellAnalytics?.duration_ms || call.duration;
+      return duration && duration > 0;
+    });
+
+    const totalDuration = callsWithDuration.reduce((sum, call) => {
+      return sum + (call.retellAnalytics?.duration_ms || call.duration || 0);
+    }, 0);
+
+    const averageDuration = callsWithDuration.length > 0 ? totalDuration / callsWithDuration.length : 0;
+
+    // Sentiment distribution from Retell analytics
+    const sentimentDistribution = calls.reduce((acc, call) => {
+      if (call.retellAnalytics?.user_sentiment) {
+        const sentiment = call.retellAnalytics.user_sentiment.toLowerCase();
+        acc[sentiment] = (acc[sentiment] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Call outcomes - can be enhanced based on call summaries or custom analysis
+    const callsByOutcome = calls.reduce((acc, call) => {
+      let outcome = 'unknown';
+
+      // Try to determine outcome from Retell data
+      if (call.retellAnalytics?.call_successful === true) {
+        outcome = 'interested';
+      } else if (call.retellAnalytics?.call_successful === false) {
+        if (call.retellAnalytics?.disconnection_reason?.includes('no_answer')) {
+          outcome = 'no_answer';
+        } else {
+          outcome = 'not_interested';
+        }
+      }
+
+      acc[outcome] = (acc[outcome] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Voice profile performance from Retell data
+    const voiceProfilePerformance = calls.reduce((acc, call) => {
+      if (call.voiceId && call.retellAnalytics) {
+        let voiceProfile = acc.find(v => v.voiceId === call.voiceId);
+
+        if (!voiceProfile) {
+          voiceProfile = {
+            voiceId: call.voiceId,
+            voiceName: call.voiceId, // Could be enhanced with voice name mapping
+            totalCalls: 0,
+            successRate: 0,
+            avgDuration: 0,
+            avgSentiment: 0
+          };
+          acc.push(voiceProfile);
+        }
+
+        voiceProfile.totalCalls++;
+
+        if (call.retellAnalytics.call_successful) {
+          voiceProfile.successRate = (voiceProfile.successRate * (voiceProfile.totalCalls - 1) + 100) / voiceProfile.totalCalls;
+        } else {
+          voiceProfile.successRate = (voiceProfile.successRate * (voiceProfile.totalCalls - 1)) / voiceProfile.totalCalls;
+        }
+
+        const duration = call.retellAnalytics.duration_ms || 0;
+        voiceProfile.avgDuration = (voiceProfile.avgDuration * (voiceProfile.totalCalls - 1) + duration) / voiceProfile.totalCalls;
+
+        // Sentiment score mapping
+        const sentimentScore = call.retellAnalytics.user_sentiment === 'Positive' ? 1 :
+                              call.retellAnalytics.user_sentiment === 'Negative' ? -1 : 0;
+        voiceProfile.avgSentiment = (voiceProfile.avgSentiment * (voiceProfile.totalCalls - 1) + sentimentScore) / voiceProfile.totalCalls;
+      }
+
+      return acc;
+    }, [] as Array<{
+      voiceId: string;
+      voiceName: string;
+      totalCalls: number;
+      successRate: number;
+      avgDuration: number;
+      avgSentiment: number;
+    }>);
+
+    // Enhanced trends data with Retell timing information
+    const callsByDate = calls.reduce((acc, call) => {
+      let callDate: Date | undefined;
+
+      // Use Retell start timestamp if available, otherwise fall back to our startTime
+      if (call.retellAnalytics?.start_timestamp) {
+        callDate = new Date(call.retellAnalytics.start_timestamp);
+      } else if (call.startTime) {
+        callDate = new Date(call.startTime);
+      }
+
+      if (!callDate) return acc;
+
+      const date = callDate.toISOString().split('T')[0];
+      if (!acc[date]) {
+        acc[date] = { total: 0, successful: 0, totalDuration: 0 };
+      }
+
+      acc[date].total++;
+
+      // Use Retell success indicator
+      if (call.retellAnalytics?.call_successful) {
+        acc[date].successful++;
+      } else if (!call.retellAnalytics && call.status === 'completed' && call.duration && call.duration > 30000) {
+        acc[date].successful++;
+      }
+
+      const duration = call.retellAnalytics?.duration_ms || call.duration || 0;
+      acc[date].totalDuration += duration;
+
+      return acc;
+    }, {} as Record<string, { total: number; successful: number; totalDuration: number }>);
+
+    const trendsData = Object.entries(callsByDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        totalCalls: data.total,
+        successfulCalls: data.successful,
+        avgDuration: data.total > 0 ? data.totalDuration / data.total : 0
+      }));
+
+    // Enhanced key metrics
+    const avgCallsPerDay = trendsData.length > 0 ? totalCalls / trendsData.length : 0;
+    const mostCommonOutcome = Object.entries(callsByOutcome).reduce((a, b) =>
+      (callsByOutcome[a[0]] || 0) > (callsByOutcome[b[0]] || 0) ? a : b, ['unknown', 0]
+    )[0];
+
+    // Calculate additional metrics from Retell data
+    const avgLatency = calls.reduce((sum, call) => {
+      return sum + (call.retellAnalytics?.latency?.e2e_latency_p50_ms || 0);
+    }, 0) / (calls.filter(call => call.retellAnalytics?.latency?.e2e_latency_p50_ms).length || 1);
+
+    const bestPerformingVoice = voiceProfilePerformance.length > 0
+      ? voiceProfilePerformance.reduce((best, current) =>
+          current.successRate > best.successRate ? current : best
+        ).voiceName
+      : 'Unknown';
+
+    return {
+      totalCalls,
+      successfulCalls,
+      successRate: totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0,
+      averageDuration,
+      totalDuration,
+      callsByStatus,
+      callsByOutcome,
+      sentimentDistribution,
+      voiceProfilePerformance,
+      trendsData,
+      keyMetrics: {
+        avgCallsPerDay,
+        mostCommonOutcome,
+        bestPerformingVoice,
+        peakCallingHour: this.calculatePeakCallingHour(calls)
+      }
+    };
+  }
+
+  /**
+   * Calculate peak calling hour from call data
+   */
+  private calculatePeakCallingHour(calls: CallSession[]): number {
+    const hourCounts: Record<number, number> = {};
+
+    calls.forEach(call => {
+      let callDate: Date | undefined;
+
+      if (call.retellAnalytics?.start_timestamp) {
+        callDate = new Date(call.retellAnalytics.start_timestamp);
+      } else if (call.startTime) {
+        callDate = new Date(call.startTime);
+      }
+
+      if (callDate) {
+        const hour = callDate.getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      }
+    });
+
+    return Object.entries(hourCounts).reduce((peak, [hour, count]) =>
+      count > (hourCounts[peak] || 0) ? parseInt(hour) : peak, 14
+    );
   }
 
   /**

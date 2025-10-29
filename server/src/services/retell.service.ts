@@ -1,30 +1,7 @@
-import { Retell } from 'retell-sdk';
+import Retell from 'retell-sdk';
 import logger from '../utils/logger';
 
-export interface RetellCallRequest {
-  phoneNumber: string;
-  agentId: string;
-  dynamicVariables?: Record<string, string>;
-  metadata?: Record<string, any>;
-}
-
-export interface RetellAgentRequest {
-  voice: {
-    type: 'elevenlabs' | 'retell';
-    voice_id?: string;
-  };
-  llm: {
-    type: 'custom' | 'retell';
-    custom_llm_url?: string;
-  };
-  prompt: string;
-  language: string;
-  response_engine: {
-    type: 'retell';
-  };
-}
-
-export interface RetellCall {
+export interface CallData {
   call_id: string;
   status: string;
   phone_number: string;
@@ -32,27 +9,141 @@ export interface RetellCall {
   metadata?: Record<string, any>;
 }
 
-export interface RetellAgent {
-  agent_id: string;
-  name: string;
-  voice: any;
-  llm: any;
-  prompt: string;
-  language: string;
+export interface CallSession {
+  call_id: string;
+  status: string;
+  phoneNumber: string;
+  agentId: string;
+  fromNumber?: string;
+  toNumber?: string;
+  direction?: string;
+  startTime?: Date;
+  endTime?: Date;
+  duration?: number;
+  cost?: number;
+  recordingUrl?: string;
+  metadata?: Record<string, any>;
 }
 
-export interface RetellWebhookEvent {
-  event: string;
+export interface CallAnalytics {
+  total_calls: number;
+  success_rate: number;
+  avg_duration: number;
+  total_cost: number;
+  calls_by_day: Array<{ date: string; count: number }>;
+  top_agents: Array<{ agent_id: string; calls: number }>;
+}
+
+export interface RetellCallAnalytics {
   call_id: string;
+  call_status: string;
+  call_type: 'phone_call' | 'web_call';
   agent_id: string;
-  call_status?: string;
+  duration_ms?: number;
+  disconnection_reason?: string;
+  from_number?: string;
+  to_number?: string;
+  direction?: string;
+  call_analysis?: {
+    call_summary?: string;
+    in_voicemail?: boolean;
+    user_sentiment?: string;
+    call_successful?: boolean;
+  };
   transcript?: Array<{
     role: 'agent' | 'user';
     content: string;
     timestamp: number;
+    words?: Array<{
+      word: string;
+      start: number;
+      end: number;
+    }>;
   }>;
   recording_url?: string;
+  recording_url_scrubbed?: string;
+  public_log_url?: string;
+  start_timestamp?: number;
+  end_timestamp?: number;
   metadata?: Record<string, any>;
+  retell_llm_dynamic_variables?: Record<string, any>;
+  opt_out_sensitive_data_storage?: boolean;
+  latency?: {
+    e2e_latency_p50_ms?: number;
+    e2e_latency_p90_ms?: number;
+    e2e_latency_p95_ms?: number;
+    e2e_latency_p99_ms?: number;
+    llm_latency_p50_ms?: number;
+    llm_latency_p90_ms?: number;
+    llm_latency_p95_ms?: number;
+    llm_latency_p99_ms?: number;
+    tts_latency_p50_ms?: number;
+    tts_latency_p90_ms?: number;
+    tts_latency_p95_ms?: number;
+    tts_latency_p99_ms?: number;
+  };
+  call_cost?: {
+    total_cost?: number;
+    llm_cost?: number;
+    tts_cost?: number;
+    stt_cost?: number;
+    call_cost?: number;
+  };
+  user_sentiment?: string;
+  call_successful?: boolean;
+  call_summary?: string;
+}
+
+export interface AgentCreateRequest {
+  agent_name: string;
+  voice: {
+    type: 'retell' | 'elevenlabs';
+    voice_id: string;
+  };
+  llm: {
+    type: 'retell' | 'custom-llm';
+    custom_llm_url?: string;
+    llm_id?: string;
+  };
+  prompt: string;
+  language?: string;
+  response_engine?: {
+    type: string;
+  };
+}
+
+export interface AgentConfig {
+  name: string;
+  voice?: {
+    type: 'retell' | 'elevenlabs';
+    voice_id: string;
+  };
+  llm?: {
+    type: 'retell' | 'custom-llm';
+    custom_llm_url?: string;
+    llm_id?: string;
+  };
+  prompt?: string;
+  language?: string;
+  responseEngine?: {
+    type: string;
+  };
+}
+
+export interface AgentData {
+  agent_id: string;
+  name: string;
+  voice?: string;
+  llm?: string;
+  prompt: string;
+  language?: string;
+}
+
+export interface PhoneNumber {
+  phone_number: string;
+  phone_number_pretty: string;
+  inbound_agent_id?: string;
+  outbound_agent_id?: string;
 }
 
 export class RetellService {
@@ -64,117 +155,98 @@ export class RetellService {
       throw new Error('RETELL_API_KEY environment variable is required');
     }
 
-    this.client = new Retell({
-      apiKey: apiKey
-    });
+    try {
+      this.client = new Retell({
+        apiKey: apiKey
+      });
 
-    // Debug: Log available methods
-    logger.info('RetellService initialized');
-    logger.info('Retell client properties:', Object.keys(this.client));
+      logger.info('RetellService initialized');
+      logger.info('Retell client properties', {
+        ...Object.getOwnPropertyNames(this.client)
+      });
+    } catch (error) {
+      logger.error('Failed to initialize Retell client', error);
+      throw error;
+    }
   }
 
   /**
-   * Create a new phone call
+   * Test the connection to Retell API
    */
-  async createCall(request: RetellCallRequest): Promise<RetellCall> {
+  async testConnection(): Promise<boolean> {
     try {
-      logger.info('Creating Retell call', { phoneNumber: request.phoneNumber, agentId: request.agentId });
-      logger.info('Available call methods:', Object.keys(this.client.call));
-
-      // Try different API patterns based on Retell SDK structure
-      const fromNumber = process.env.RETELL_PHONE_NUMBER || '';
-      logger.info('Call details', {
-        from: fromNumber,
-        to: request.phoneNumber,
-        agent: request.agentId
-      });
-
-      const callData: any = {
-        from_number: fromNumber,
-        to_number: request.phoneNumber,
-        agent_id: request.agentId,
-        metadata: request.metadata
-      };
-
-      // Add dynamic variables if provided
-      if (request.dynamicVariables) {
-        callData.retell_llm_dynamic_variables = request.dynamicVariables;
-        logger.info('Adding dynamic variables to call', { dynamicVariables: request.dynamicVariables });
-      }
-
-      const response = await this.client.call.createPhoneCall(callData);
-
-      logger.info('Retell API response', response);
-
-      logger.info('Retell call created successfully', { callId: response.call_id });
-
-      return {
-        call_id: response.call_id,
-        status: response.call_status || 'queued',
-        phone_number: request.phoneNumber,
-        agent_id: request.agentId,
-        metadata: request.metadata
-      };
+      await this.client.agent.list({ limit: 1 });
+      logger.info('Retell API connection successful');
+      return true;
     } catch (error) {
-      logger.error('Failed to create Retell call', error);
-      throw new Error(`Failed to create call: ${(error as Error).message}`);
+      logger.error('Retell API connection failed', error);
+      return false;
     }
   }
 
   /**
    * Create a new agent
    */
-  async createAgent(request: RetellAgentRequest): Promise<RetellAgent> {
+  async createAgent(request: AgentCreateRequest): Promise<AgentData | null> {
     try {
-      logger.info('Creating Retell agent');
+      logger.info('Creating Retell agent', {
+        name: request.agent_name,
+        voiceId: request.voice?.voice_id,
+        hasPrompt: !!request.prompt
+      });
 
-      const response = await this.client.agent.create({
-        agent_name: `Equitle-Agent-${Date.now()}`,
+      const agentConfig = {
+        agent_name: request.agent_name,
         voice: {
-          voice_type: request.voice.type,
           voice_id: request.voice.voice_id
         },
-        llm_websocket_url: request.llm.custom_llm_url,
+        llm_websocket_url: request.llm.type === 'custom-llm' ? request.llm.custom_llm_url : undefined,
+        llm_id: request.llm.type === 'retell' ? request.llm.llm_id : undefined,
         prompt: request.prompt,
-        language: request.language,
+        language: request.language as any,
         response_engine: {
-          type: request.response_engine.type
-        },
+          type: (request.response_engine as any).type
+        } as any,
         interruption_sensitivity: 1,
         enable_backchannel: true,
         backchannel_frequency: 0.9,
-        ambient_sound: 'office'
-      });
+        ambient_sound: 'coffee-shop' as any
+      };
 
-      logger.info('Retell agent created successfully', { agentId: response.agent_id });
+      const response = await this.client.agent.create(agentConfig as any);
+
+      logger.info('Retell agent created successfully', {
+        agentId: response.agent_id,
+        name: request.agent_name
+      });
 
       return {
         agent_id: response.agent_id,
         name: response.agent_name || '',
-        voice: response.voice,
-        llm: response.llm_websocket_url,
-        prompt: response.prompt || '',
+        voice: (response as any).voice,
+        llm: (response as any).llm_websocket_url,
+        prompt: (response as any).prompt || '',
         language: response.language || 'en-US'
       };
     } catch (error) {
       logger.error('Failed to create Retell agent', error);
-      throw new Error(`Failed to create agent: ${(error as Error).message}`);
+      return null;
     }
   }
 
   /**
-   * Get call details
+   * Get basic call information from Retell
    */
-  async getCall(callId: string): Promise<RetellCall | null> {
+  async getCall(callId: string): Promise<CallData | null> {
     try {
       const response = await this.client.call.retrieve(callId);
 
       return {
         call_id: response.call_id,
         status: response.call_status || 'unknown',
-        phone_number: response.to_number || '',
+        phone_number: (response as any).to_number || '',
         agent_id: response.agent_id || '',
-        metadata: response.metadata
+        metadata: response.metadata as any
       };
     } catch (error) {
       logger.error('Failed to get Retell call', error);
@@ -183,41 +255,51 @@ export class RetellService {
   }
 
   /**
-   * List all calls with pagination
+   * Get calls from Retell with pagination
    */
-  async listCalls(limit: number = 50, after?: string): Promise<RetellCall[]> {
+  async getCalls(limit: number = 10, startTime?: Date): Promise<CallSession[]> {
     try {
-      const response = await this.client.call.list({
-        limit,
-        after
-      });
+      const params: any = {
+        limit: limit,
+        sort_order: 'desc'
+      };
 
-      return response.data.map(call => ({
+      if (startTime) {
+        (params as any).after = startTime.toISOString();
+      }
+
+      const response = await this.client.call.list(params);
+
+      return (response as any).data?.map((call: any) => ({
         call_id: call.call_id,
         status: call.call_status || 'unknown',
-        phone_number: call.to_number || '',
-        agent_id: call.agent_id || '',
+        phoneNumber: call.to_number || '',
+        agentId: call.agent_id || '',
+        startTime: call.start_timestamp ? new Date(call.start_timestamp * 1000) : undefined,
+        endTime: call.end_timestamp ? new Date(call.end_timestamp * 1000) : undefined,
+        duration: call.duration_ms,
+        recordingUrl: call.recording_url,
         metadata: call.metadata
-      }));
+      })) || [];
     } catch (error) {
-      logger.error('Failed to list Retell calls', error);
+      logger.error('Failed to get Retell calls', error);
       return [];
     }
   }
 
   /**
-   * Get agent details
+   * Get agent configuration
    */
-  async getAgent(agentId: string): Promise<RetellAgent | null> {
+  async getAgent(agentId: string): Promise<AgentData | null> {
     try {
       const response = await this.client.agent.retrieve(agentId);
 
       return {
         agent_id: response.agent_id,
         name: response.agent_name || '',
-        voice: response.voice,
-        llm: response.llm_websocket_url,
-        prompt: response.prompt || '',
+        voice: (response as any).voice,
+        llm: (response as any).llm_websocket_url,
+        prompt: (response as any).prompt || '',
         language: response.language || 'en-US'
       };
     } catch (error) {
@@ -229,18 +311,18 @@ export class RetellService {
   /**
    * List all agents
    */
-  async listAgents(): Promise<RetellAgent[]> {
+  async listAgents(): Promise<AgentData[]> {
     try {
       const response = await this.client.agent.list();
 
-      return response.data.map(agent => ({
+      return (response as any).data?.map((agent: any) => ({
         agent_id: agent.agent_id,
         name: agent.agent_name || '',
-        voice: agent.voice,
-        llm: agent.llm_websocket_url,
-        prompt: agent.prompt || '',
+        voice: (agent as any).voice,
+        llm: (agent as any).llm_websocket_url,
+        prompt: (agent as any).prompt || '',
         language: agent.language || 'en-US'
-      }));
+      })) || [];
     } catch (error) {
       logger.error('Failed to list Retell agents', error);
       return [];
@@ -248,41 +330,56 @@ export class RetellService {
   }
 
   /**
-   * Update an existing agent
+   * Update agent configuration
    */
-  async updateAgent(agentId: string, updates: Partial<RetellAgentRequest>): Promise<RetellAgent | null> {
+  async updateAgent(agentId: string, config: AgentConfig): Promise<AgentData | null> {
     try {
-      const updateData: any = {};
+      logger.info('Updating Retell agent', { agentId, config });
 
-      if (updates.voice) {
-        updateData.voice = {
-          voice_type: updates.voice.type,
-          voice_id: updates.voice.voice_id
+      const updateConfig: any = {};
+
+      if (config.name) {
+        updateConfig.agent_name = config.name;
+      }
+
+      if (config.voice?.voice_id) {
+        updateConfig.voice = {
+          voice_id: config.voice.voice_id
         };
       }
 
-      if (updates.llm?.custom_llm_url) {
-        updateData.llm_websocket_url = updates.llm.custom_llm_url;
+      if (config.llm?.type === 'custom-llm' && config.llm.custom_llm_url) {
+        updateConfig.llm_websocket_url = config.llm.custom_llm_url;
       }
 
-      if (updates.prompt) {
-        updateData.prompt = updates.prompt;
+      if (config.llm?.type === 'retell' && config.llm.llm_id) {
+        updateConfig.llm_id = config.llm.llm_id;
       }
 
-      if (updates.language) {
-        updateData.language = updates.language;
+      if (config.prompt !== undefined) {
+        updateConfig.prompt = config.prompt;
       }
 
-      logger.info('Updating Retell agent with data:', updateData);
-      const response = await this.client.agent.update(agentId, updateData);
-      logger.info('Retell agent update response:', response);
+      if (config.language) {
+        updateConfig.language = config.language;
+      }
+
+      if (config.responseEngine?.type) {
+        updateConfig.response_engine = {
+          type: config.responseEngine.type
+        };
+      }
+
+      const response = await this.client.agent.update(agentId, updateConfig);
+
+      logger.info('Retell agent updated successfully', { agentId });
 
       return {
         agent_id: response.agent_id,
         name: response.agent_name || '',
-        voice: response.voice,
-        llm: response.llm_websocket_url,
-        prompt: response.prompt || '',
+        voice: (response as any).voice,
+        llm: (response as any).llm_websocket_url,
+        prompt: (response as any).prompt || '',
         language: response.language || 'en-US'
       };
     } catch (error) {
@@ -306,80 +403,313 @@ export class RetellService {
   }
 
   /**
-   * Verify webhook signature
+   * Get phone numbers
    */
-  verifyWebhook(body: string, signature: string): boolean {
-    try {
-      // Retell webhook verification logic
-      // This would typically involve HMAC verification with a secret
-      // For now, we'll do basic validation
-      const webhookSecret = process.env.RETELL_WEBHOOK_SECRET;
-      if (!webhookSecret) {
-        logger.warn('RETELL_WEBHOOK_SECRET not configured, skipping verification');
-        return true; // Allow for development
-      }
-
-      // In production, implement proper HMAC-SHA256 verification
-      // const expectedSignature = crypto
-      //   .createHmac('sha256', webhookSecret)
-      //   .update(body)
-      //   .digest('hex');
-
-      // return signature === expectedSignature;
-
-      return true; // For development
-    } catch (error) {
-      logger.error('Failed to verify webhook signature', error);
-      return false;
-    }
-  }
-
-  /**
-   * Parse webhook event
-   */
-  parseWebhookEvent(body: any): RetellWebhookEvent {
-    // According to Retell docs, the payload has an 'event' field and a 'call' object
-    const call = body.call || {};
-    return {
-      event: body.event || 'unknown',
-      call_id: call.call_id || body.call_id || '',
-      agent_id: call.agent_id || body.agent_id || '',
-      call_status: call.call_status || body.call_status,
-      transcript: call.transcript || body.transcript,
-      recording_url: call.recording_url || body.recording_url,
-      metadata: call.metadata || body.metadata
-    };
-  }
-
-  /**
-   * Get phone numbers associated with account
-   */
-  async getPhoneNumbers(): Promise<Array<{ number: string; id: string; name?: string }>> {
+  async getPhoneNumbers(): Promise<PhoneNumber[]> {
     try {
       const response = await this.client.phoneNumber.list();
 
-      return response.data.map(phone => ({
-        id: phone.phone_number_id || '',
-        number: phone.phone_number || '',
-        name: phone.phone_number_pretty || phone.phone_number
-      }));
+      return (response as any).data?.map((phone: any) => ({
+        phone_number: phone.phone_number,
+        phone_number_pretty: phone.phone_number_pretty || phone.phone_number,
+        inbound_agent_id: phone.inbound_agent_id,
+        outbound_agent_id: phone.outbound_agent_id
+      })) || [];
     } catch (error) {
-      logger.error('Failed to get phone numbers', error);
+      logger.error('Failed to get Retell phone numbers', error);
       return [];
     }
   }
 
   /**
-   * Test connection to Retell API
+   * Create a phone call
    */
-  async testConnection(): Promise<boolean> {
+  async createPhoneCall(
+    fromNumber: string,
+    toNumber: string,
+    agentId: string,
+    metadata?: Record<string, any>
+  ): Promise<string | null> {
     try {
-      await this.client.agent.list({ limit: 1 });
-      logger.info('Retell API connection test successful');
-      return true;
+      logger.info('Creating Retell phone call', { fromNumber, toNumber, agentId });
+
+      const response = await this.client.call.createPhoneCall({
+        from_number: fromNumber,
+        to_number: toNumber,
+        override_agent_id: agentId,
+        metadata: metadata || {}
+      });
+
+      logger.info('Retell phone call created', { callId: response.call_id });
+      return response.call_id;
     } catch (error) {
-      logger.error('Retell API connection test failed', error);
-      return false;
+      logger.error('Failed to create Retell phone call', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a call with dynamic variables
+   */
+  async createCall({
+    phoneNumber,
+    agentId,
+    dynamicVariables,
+    metadata
+  }: {
+    phoneNumber: string;
+    agentId: string;
+    dynamicVariables?: Record<string, string>;
+    metadata?: Record<string, any>;
+  }): Promise<{ call_id: string; call_status: string; agent_id: string; [key: string]: any }> {
+    try {
+      // Validate phone number format (E.164)
+      if (!this.isValidE164PhoneNumber(phoneNumber)) {
+        throw new Error(`Invalid phone number format: ${phoneNumber}. Must be in E.164 format (e.g., +1234567890)`);
+      }
+
+      logger.info('Creating Retell call', { agentId, phoneNumber });
+      logger.info('Available call methods', {
+        ...Object.getOwnPropertyNames(this.client.call)
+      });
+
+      const fromNumber = process.env.RETELL_FROM_NUMBER || '+15122012521';
+
+      logger.info('Call details', {
+        agent: agentId,
+        from: fromNumber,
+        to: phoneNumber
+      });
+
+      // Add dynamic variables to call metadata
+      if (dynamicVariables) {
+        logger.info('Adding dynamic variables to call', { dynamicVariables });
+      }
+
+      const callParams: any = {
+        from_number: fromNumber,
+        to_number: phoneNumber,
+        override_agent_id: agentId,
+        metadata: metadata || {},
+      };
+
+      // Add dynamic variables if provided
+      if (dynamicVariables) {
+        callParams.retell_llm_dynamic_variables = dynamicVariables;
+      }
+
+      const response = await this.client.call.createPhoneCall(callParams);
+
+      logger.info('Retell API response', response);
+      logger.info('Retell call created successfully', { callId: response.call_id });
+
+      return {
+        ...response,
+        call_id: response.call_id,
+        call_status: response.call_status || 'registered',
+        agent_id: response.agent_id || agentId
+      };
+    } catch (error: any) {
+      logger.error('Failed to create Retell call', {
+        error: error.message || error,
+        status: error.status || 'unknown',
+        headers: error.headers || {},
+        stack: error.stack
+      });
+      throw new Error(`Failed to create call: ${error.message || error}`);
+    }
+  }
+
+  /**
+   * Validate E.164 phone number format
+   */
+  private isValidE164PhoneNumber(phoneNumber: string): boolean {
+    // E.164 format: + followed by 1-15 digits
+    const e164Regex = /^\+[1-9]\d{1,14}$/;
+    return e164Regex.test(phoneNumber);
+  }
+
+  /**
+   * Get comprehensive call analytics from Retell API
+   */
+  async getCallAnalytics(callId: string): Promise<RetellCallAnalytics | null> {
+    try {
+      logger.info('Fetching detailed call analytics from Retell API', { callId });
+
+      const call = await this.client.call.retrieve(callId);
+
+      if (!call) {
+        logger.warn('Call not found in Retell API', { callId });
+        return null;
+      }
+
+      logger.info('Retell API response received', {
+        callId,
+        status: call.call_status,
+        hasTranscript: !!(call as any).transcript,
+        hasLatency: !!(call as any).latency
+      });
+
+      // Build analytics object with all available data
+      const analytics: RetellCallAnalytics = {
+        call_id: call.call_id,
+        call_status: call.call_status,
+        call_type: call.call_type,
+        agent_id: call.agent_id,
+        duration_ms: call.duration_ms,
+        disconnection_reason: call.disconnection_reason,
+        from_number: (call as any).from_number,
+        to_number: (call as any).to_number,
+        direction: (call as any).direction,
+        start_timestamp: call.start_timestamp,
+        end_timestamp: call.end_timestamp,
+        transcript: call.transcript as any,
+        metadata: call.metadata as any,
+        retell_llm_dynamic_variables: (call as any).retell_llm_dynamic_variables,
+        opt_out_sensitive_data_storage: (call as any).opt_out_sensitive_data_storage,
+        latency: call.latency ? {
+          e2e_latency_p50_ms: (call.latency as any).e2e_latency_p50_ms,
+          e2e_latency_p90_ms: (call.latency as any).e2e_latency_p90_ms,
+          e2e_latency_p95_ms: (call.latency as any).e2e_latency_p95_ms,
+          e2e_latency_p99_ms: (call.latency as any).e2e_latency_p99_ms,
+          llm_latency_p50_ms: (call.latency as any).llm_latency_p50_ms,
+          llm_latency_p90_ms: (call.latency as any).llm_latency_p90_ms,
+          llm_latency_p95_ms: (call.latency as any).llm_latency_p95_ms,
+          llm_latency_p99_ms: (call.latency as any).llm_latency_p99_ms,
+          tts_latency_p50_ms: (call.latency as any).tts_latency_p50_ms,
+          tts_latency_p90_ms: (call.latency as any).tts_latency_p90_ms,
+          tts_latency_p95_ms: (call.latency as any).tts_latency_p95_ms,
+          tts_latency_p99_ms: (call.latency as any).tts_latency_p99_ms,
+        } : undefined,
+        call_cost: call.call_cost ? {
+          total_cost: (call.call_cost as any).total_cost,
+          llm_cost: (call.call_cost as any).llm_cost,
+          tts_cost: (call.call_cost as any).tts_cost,
+          stt_cost: (call.call_cost as any).stt_cost,
+          call_cost: (call.call_cost as any).call_cost,
+        } : undefined,
+        recording_url: call.recording_url || (call as any).recording_multi_channel_url,
+        recording_url_scrubbed: (call as any).recording_url_scrubbed,
+        public_log_url: call.public_log_url,
+
+        // Call analysis data (includes sentiment, summary, success)
+        call_analysis: call.call_analysis,
+
+        // Direct access to key analysis fields for convenience
+        user_sentiment: (call as any).call_analysis?.user_sentiment as any,
+        call_successful: (call as any).call_analysis?.call_successful as any,
+        call_summary: (call as any).call_analysis?.call_summary as any,
+      };
+
+      logger.info('Call analytics processed successfully', {
+        callId,
+        duration: analytics.duration_ms,
+        cost: analytics.call_cost?.total_cost || 0,
+        hasTranscript: !!analytics.transcript,
+        transcriptLength: analytics.transcript?.length || 0
+      });
+
+      return analytics;
+    } catch (error) {
+      logger.error('Failed to get call analytics', { callId, error });
+      return null;
+    }
+  }
+
+  /**
+   * Get call analytics for multiple calls
+   */
+  async getCallsAnalytics(callIds: string[]): Promise<RetellCallAnalytics[]> {
+    try {
+      const analytics = await Promise.all(
+        callIds.map(async (callId) => {
+          try {
+            return await this.getCallAnalytics(callId);
+          } catch (error) {
+            logger.error('Failed to get analytics for call', { callId, error });
+            return null;
+          }
+        })
+      );
+
+      return analytics.filter((result): result is RetellCallAnalytics => result !== null);
+    } catch (error) {
+      logger.error('Failed to get calls analytics', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get aggregated analytics for a time period
+   */
+  async getAggregatedAnalytics(
+    startDate: Date,
+    endDate: Date,
+    agentId?: string
+  ): Promise<CallAnalytics> {
+    try {
+      const calls = await this.getCalls(100, startDate);
+
+      // Filter calls by date range and optionally by agent
+      const filteredCalls = calls.filter(call => {
+        const callDate = call.startTime;
+        if (!callDate) return false;
+
+        const inDateRange = callDate >= startDate && callDate <= endDate;
+        const matchesAgent = !agentId || call.agentId === agentId;
+
+        return inDateRange && matchesAgent;
+      });
+
+      // Calculate aggregated metrics
+      const totalCalls = filteredCalls.length;
+      const successfulCalls = filteredCalls.filter(call => call.status === 'completed').length;
+      const successRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
+
+      const avgDuration = filteredCalls.reduce((sum, call) => {
+        return sum + (call.duration || 0);
+      }, 0) / (totalCalls || 1);
+
+      // Group calls by day
+      const callsByDay: Record<string, number> = {};
+      filteredCalls.forEach(call => {
+        if (call.startTime) {
+          const dateKey = call.startTime.toISOString().split('T')[0];
+          callsByDay[dateKey] = (callsByDay[dateKey] || 0) + 1;
+        }
+      });
+
+      // Get top agents by call count
+      const agentCounts: Record<string, number> = {};
+      filteredCalls.forEach(call => {
+        if (call.agentId) {
+          agentCounts[call.agentId] = (agentCounts[call.agentId] || 0) + 1;
+        }
+      });
+
+      const topAgents = Object.entries(agentCounts)
+        .map(([agentId, calls]) => ({ agent_id: agentId, calls }))
+        .sort((a, b) => b.calls - a.calls)
+        .slice(0, 10);
+
+      return {
+        total_calls: totalCalls,
+        success_rate: successRate,
+        avg_duration: avgDuration,
+        total_cost: 0, // Would need to fetch cost data separately
+        calls_by_day: Object.entries(callsByDay).map(([date, count]) => ({ date, count })),
+        top_agents: topAgents
+      };
+    } catch (error) {
+      logger.error('Failed to get aggregated analytics', error);
+      return {
+        total_calls: 0,
+        success_rate: 0,
+        avg_duration: 0,
+        total_cost: 0,
+        calls_by_day: [],
+        top_agents: []
+      };
     }
   }
 }

@@ -102,8 +102,8 @@ server.on('upgrade', (request, socket, head) => {
 });
 
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), 
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'), // Increased for development
   message: 'Too many requests from this IP, please try again later.'
 });
 
@@ -129,7 +129,8 @@ app.use(cors({
   ],
   credentials: true
 }));
-app.use(limiter);
+// Temporarily disable rate limiter for development
+// app.use(limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
