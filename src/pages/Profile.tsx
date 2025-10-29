@@ -36,7 +36,9 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Fab,
-  Tooltip
+  Tooltip,
+  Stack,
+  InputAdornment
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -47,7 +49,13 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  PhotoCamera as PhotoCameraIcon
+  PhotoCamera as PhotoCameraIcon,
+  Business as BusinessIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationIcon,
+  Language as LanguageIcon,
+  Upload as UploadIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';
@@ -90,7 +98,7 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Searcher profiles state
+  // Investor profiles state
   const [searchers, setSearchers] = useState<SearcherProfile[]>([]);
   const [selectedSearcher, setSelectedSearcher] = useState<string | null>(null);
   const [isAddingSearcher, setIsAddingSearcher] = useState(false);
@@ -495,13 +503,13 @@ export default function Profile() {
         
         setSuccess('Headshot uploaded successfully!');
         
-        // Reload searcher profiles to get the updated data from the database
+        // Reload investor profiles to get the updated data from the database
         try {
           const profiles = await searcherProfilesApi.getSearcherProfiles();
-          console.log('🔄 Reloaded searcher profiles after upload:', profiles);
+          console.log('🔄 Reloaded investor profiles after upload:', profiles);
           setSearchers(profiles);
         } catch (reloadError) {
-          console.error('Error reloading searcher profiles:', reloadError);
+          console.error('Error reloading investor profiles:', reloadError);
         }
       } else {
         setError(response.message || 'Failed to upload headshot');
@@ -671,6 +679,30 @@ export default function Profile() {
     }
   };
 
+  const handleSaveAllFirmInfo = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const userId = getUserId();
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, {
+        searchFundName: searchFundName,
+        searchFundWebsite: searchFundWebsite,
+        searchFundAddress: searchFundAddress,
+        searchFundEmail: searchFundEmail,
+        updatedAt: new Date()
+      }, { merge: true });
+
+      setSuccess('All firm information saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving firm information:', error);
+      setError('Failed to save firm information');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetEducationForm = () => {
     setEducationForm({
       institution: '',
@@ -704,13 +736,13 @@ export default function Profile() {
     resetSearcherForm();
   };
 
-  // Load searcher profiles function
+  // Load investor profiles function
   const loadSearcherProfiles = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Loading searcher profiles...');
+      console.log('🔄 Loading investor profiles...');
       const profiles = await searcherProfilesApi.getSearcherProfiles();
-      console.log('📋 Loaded searcher profiles:', profiles);
+      console.log('📋 Loaded investor profiles:', profiles);
       profiles.forEach(profile => {
         console.log(`🔍 Profile ${profile.name}:`, {
           id: profile.id,
@@ -735,8 +767,8 @@ export default function Profile() {
       setSearchers(profiles);
       console.log('✅ Searchers state updated with', profiles.length, 'profiles');
     } catch (error: any) {
-      console.error('Error loading searcher profiles:', error);
-      setError(error.response?.data?.message || 'Failed to load searcher profiles');
+      console.error('Error loading investor profiles:', error);
+      setError(error.response?.data?.message || 'Failed to load investor profiles');
     } finally {
       setLoading(false);
     }
@@ -779,12 +811,12 @@ export default function Profile() {
     loadSearchFundInfo();
   }, []);
 
-  // Load searcher profiles on component mount
+  // Load investor profiles on component mount
   useEffect(() => {
     loadSearcherProfiles();
   }, []);
 
-  // Refresh searcher profiles when page regains focus
+  // Refresh investor profiles when page regains focus
   useEffect(() => {
     const handleFocus = () => {
       loadSearcherProfiles();
@@ -795,23 +827,51 @@ export default function Profile() {
   }, []);
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Typography variant="h4" sx={{ fontWeight: 600, mb: 1, color: '#000000' }}>
-        My Profile
-      </Typography>
-      
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Manage your searcher profile and background information for personalized pitch generation
-      </Typography>
+    <Box sx={{ mt: 2 }}>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h3" 
+          sx={{ 
+            fontWeight: 400, 
+            color: '#1f2937',
+            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            letterSpacing: '-0.02em',
+            mb: 1
+          }}
+        >
+          My Profile
+        </Typography>
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            color: '#6b7280',
+            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            fontWeight: 400,
+            letterSpacing: '-0.01em'
+          }}
+        >
+          Manage your investor profile and background information for personalized pitch generation
+        </Typography>
+      </Box>
 
+      {/* Success/Error Messages */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3, borderRadius: 2 }} 
+          onClose={() => setError('')}
+        >
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3, borderRadius: 2 }} 
+          onClose={() => setSuccess('')}
+        >
           {success}
         </Alert>
       )}
@@ -822,241 +882,357 @@ export default function Profile() {
         </Box>
       )}
 
-      {/* Search Fund Information */}
-      <Paper sx={{ p: 4, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 600, color: '#000000', mb: 1 }}>
-              Search Fund Information
+      {/* Firm Information */}
+      <Card sx={{ mb: 4, borderRadius: 3, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)', border: '1px solid #e5e7eb' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ mb: 4 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 600,
+                color: '#1f2937',
+                letterSpacing: '-0.01em',
+                mb: 1
+              }}
+            >
+              Firm Information
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Set your search fund name and upload logo for use in documents and materials
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#6b7280',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 400
+              }}
+            >
+              Set your firm name and upload logo for context
             </Typography>
           </Box>
-        </Box>
 
-        {/* Search Fund Name */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
-            Search Fund Name
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Enter your search fund name"
-              value={searchFundName}
-              onChange={(e) => setSearchFundName(e.target.value)}
-              sx={{ maxWidth: 400 }}
-            />
+          {/* Two-column layout for better space utilization */}
+          <Grid container spacing={4}>
+            {/* Left Column - Basic Information */}
+            <Grid item xs={12} md={6}>
+              <Stack spacing={3}>
+                {/* Firm Name */}
+                <Box>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 600,
+                      color: '#1f2937',
+                      mb: 1
+                    }}
+                  >
+                    Firm Name
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter your firm name"
+                    value={searchFundName}
+                    onChange={(e) => setSearchFundName(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <BusinessIcon sx={{ color: '#6b7280' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                      }
+                    }}
+                  />
+                </Box>
+
+                {/* Firm Website */}
+                <Box>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 600,
+                      color: '#1f2937',
+                      mb: 1
+                    }}
+                  >
+                    Firm Website
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter your firm website (e.g., https://example.com)"
+                    value={searchFundWebsite}
+                    onChange={(e) => setSearchFundWebsite(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LanguageIcon sx={{ color: '#6b7280' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                      }
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </Grid>
+
+            {/* Right Column - Contact Information */}
+            <Grid item xs={12} md={6}>
+              <Stack spacing={3}>
+                {/* Office Address */}
+                <Box>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 600,
+                      color: '#1f2937',
+                      mb: 1
+                    }}
+                  >
+                    Office Address
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter your office address"
+                    value={searchFundAddress}
+                    onChange={(e) => setSearchFundAddress(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocationIcon sx={{ color: '#6b7280' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                      }
+                    }}
+                  />
+                </Box>
+
+                {/* Contact Email */}
+                <Box>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 600,
+                      color: '#1f2937',
+                      mb: 1
+                    }}
+                  >
+                    Contact Email
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    variant="outlined"
+                    placeholder="Enter your contact email"
+                    value={searchFundEmail}
+                    onChange={(e) => setSearchFundEmail(e.target.value)}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailIcon sx={{ color: '#6b7280' }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#1f2937',
+                        },
+                      }
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </Grid>
+          </Grid>
+
+          {/* Single Save Button for All Firm Information */}
+          <Box sx={{ mt: 4, pt: 4, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'center' }}>
             <Button
               variant="contained"
-              onClick={handleSearchFundNameSave}
-              disabled={loading || !searchFundName.trim()}
-              sx={{ 
-                bgcolor: '#000000', 
-                '&:hover': { bgcolor: '#333333' },
-                minWidth: 120
+              onClick={handleSaveAllFirmInfo}
+              disabled={loading}
+              sx={{
+                background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+                color: 'white',
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 600,
+                borderRadius: 2,
+                px: 6,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                  transform: 'translateY(-1px)'
+                },
+                '&:disabled': {
+                  backgroundColor: '#9ca3af',
+                  boxShadow: 'none',
+                  transform: 'none'
+                },
+                transition: 'all 0.2s ease'
               }}
             >
-              {loading ? 'Saving...' : 'Save Name'}
+              {loading ? 'Saving...' : 'Save All Firm Information'}
             </Button>
           </Box>
-        </Box>
 
-        {/* Search Fund Website */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
-            Search Fund Website
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Enter your search fund website (e.g., https://example.com)"
-              value={searchFundWebsite}
-              onChange={(e) => setSearchFundWebsite(e.target.value)}
-              sx={{ maxWidth: 400 }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleSearchFundWebsiteSave}
-              disabled={loading || !searchFundWebsite.trim()}
+          {/* Logo Section - Full Width */}
+          <Box sx={{ mt: 4, pt: 4, borderTop: '1px solid #e5e7eb' }}>
+            <Typography 
+              variant="subtitle1" 
               sx={{ 
-                bgcolor: '#000000', 
-                '&:hover': { bgcolor: '#333333' },
-                minWidth: 120
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 600,
+                color: '#1f2937',
+                mb: 3
               }}
             >
-              {loading ? 'Saving...' : 'Save Website'}
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Search Fund Address */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
-            Office Address
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Enter your office address"
-              value={searchFundAddress}
-              onChange={(e) => setSearchFundAddress(e.target.value)}
-              sx={{ maxWidth: 400 }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleSearchFundAddressSave}
-              disabled={loading || !searchFundAddress.trim()}
-              sx={{ 
-                bgcolor: '#000000', 
-                '&:hover': { bgcolor: '#333333' },
-                minWidth: 120
-              }}
-            >
-              {loading ? 'Saving...' : 'Save Address'}
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Search Fund Email */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
-            Contact Email
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Enter your contact email"
-              value={searchFundEmail}
-              onChange={(e) => setSearchFundEmail(e.target.value)}
-              sx={{ maxWidth: 400 }}
-            />
-            <Button
-              variant="contained"
-              onClick={handleSearchFundEmailSave}
-              disabled={loading || !searchFundEmail.trim()}
-              sx={{ 
-                bgcolor: '#000000', 
-                '&:hover': { bgcolor: '#333333' },
-                minWidth: 120
-              }}
-            >
-              {loading ? 'Saving...' : 'Save Email'}
-            </Button>
-          </Box>
-        </Box>
-
-        <Divider sx={{ mb: 4 }} />
-
-        {/* Search Fund Logo */}
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#000000', mb: 2 }}>
-            Search Fund Logo
-          </Typography>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          {/* Logo Display */}
-          <Box sx={{ position: 'relative' }}>
-            {searchFundLogo ? (
-              <Box
-                component="img"
-                src={getAbsoluteHeadshotUrl(searchFundLogo)}
-                alt="Search Fund Logo"
-                sx={{
-                  width: 120,
-                  height: 120,
-                  objectFit: 'contain',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: 2,
-                  bgcolor: '#fafafa',
-                  p: 1
-                }}
-                onLoad={() => console.log('✅ Logo loaded successfully:', getAbsoluteHeadshotUrl(searchFundLogo))}
-                onError={(e) => {
-                  console.log('❌ Logo failed to load:', getAbsoluteHeadshotUrl(searchFundLogo));
-                  console.log('❌ Error details:', e);
-                }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  width: 120,
-                  height: 120,
-                  border: '2px dashed #e0e0e0',
-                  borderRadius: 2,
-                  bgcolor: '#fafafa',
-                  display: 'flex',
-                  alignItems: 'center',
+              Firm Logo
+            </Typography>
+            <Grid container spacing={4} alignItems="center">
+              <Grid item xs={12} md={4}>
+                <Box sx={{ 
+                  width: 120, 
+                  height: 120, 
+                  border: '2px dashed #d1d5db', 
+                  borderRadius: 2, 
+                  display: 'flex', 
+                  alignItems: 'center', 
                   justifyContent: 'center',
-                  flexDirection: 'column',
-                  gap: 1
-                }}
-              >
-                <PhotoCameraIcon sx={{ fontSize: 32, color: '#9e9e9e' }} />
-                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-                  No Logo
-                </Typography>
-              </Box>
-            )}
+                  bgcolor: '#f9fafb'
+                }}>
+                  {searchFundLogo ? (
+                    <img 
+                      src={searchFundLogo} 
+                      alt="Firm Logo" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '100%', 
+                        objectFit: 'contain',
+                        borderRadius: 4
+                      }} 
+                    />
+                  ) : (
+                    <Box sx={{ textAlign: 'center' }}>
+                      <PhotoCameraIcon sx={{ fontSize: 40, color: '#9ca3af', mb: 1 }} />
+                      <Typography variant="caption" sx={{ color: '#6b7280' }}>
+                        No Logo
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={8}>
+                <Stack spacing={2}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<UploadIcon />}
+                    onClick={() => document.getElementById('logo-upload')?.click()}
+                    sx={{
+                      borderColor: '#d1d5db',
+                      color: '#374151',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1,
+                      '&:hover': {
+                        borderColor: '#9ca3af',
+                        backgroundColor: '#f9fafb'
+                      }
+                    }}
+                  >
+                    Upload Logo
+                  </Button>
+                  {searchFundLogo && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleLogoDelete}
+                      sx={{
+                        borderColor: '#fca5a5',
+                        color: '#dc2626',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        fontWeight: 500,
+                        borderRadius: 2,
+                        px: 3,
+                        py: 1,
+                        '&:hover': {
+                          borderColor: '#f87171',
+                          backgroundColor: '#fef2f2'
+                        }
+                      }}
+                    >
+                      Delete Logo
+                    </Button>
+                  )}
+                  <input
+                    id="logo-upload"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleLogoFileSelect(file);
+                      }
+                    }}
+                  />
+                </Stack>
+              </Grid>
+            </Grid>
           </Box>
+        </CardContent>
+      </Card>
 
-          {/* Logo Actions */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <input
-              accept="image/*"
-              style={{ display: 'none' }}
-              id="logo-upload"
-              type="file"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleLogoFileSelect(file);
-                }
-              }}
-            />
-            <label htmlFor="logo-upload">
-              <Button
-                variant="outlined"
-                component="span"
-                startIcon={<PhotoCameraIcon />}
-                disabled={uploadingLogo}
-                sx={{ minWidth: 140 }}
-              >
-                {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
-              </Button>
-            </label>
-            
-            {searchFundLogo && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteIcon />}
-                onClick={handleLogoDelete}
-                disabled={loading}
-                sx={{ minWidth: 140 }}
-              >
-                Delete Logo
-              </Button>
-            )}
-          </Box>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Searcher Profiles */}
+      {/* Investor Profiles */}
       <Paper sx={{ p: 4, position: 'relative' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 600, color: '#000000', mb: 1 }}>
-              Searcher Profiles
+              Investor Profiles
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Manage searcher profiles for personalized pitch generation
+              Manage investor profiles for personalized pitch generation
             </Typography>
           </Box>
           {searchers.length > 0 && (
@@ -1078,24 +1254,34 @@ export default function Profile() {
             <CardContent>
               <PersonIcon sx={{ fontSize: 64, color: '#9e9e9e', mb: 3 }} />
               <Typography variant="h5" color="text.secondary" gutterBottom sx={{ fontWeight: 600 }}>
-                No searcher profiles yet
+                No investor profiles yet
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
-                Create your first searcher profile to start generating personalized pitches
+                Create your first investor profile to start generating personalized pitches
               </Typography>
                 <Button
                   variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setIsAddingSearcher(true)}
-                size="large"
-                sx={{ 
-                  bgcolor: '#000000', 
-                  '&:hover': { bgcolor: '#333333' },
-                  px: 4,
-                  py: 1.5
-                }}
-              >
-                Add First Searcher
+                  startIcon={<AddIcon />}
+                  onClick={() => setIsAddingSearcher(true)}
+                  size="large"
+                  sx={{
+                    background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+                    color: 'white',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    px: 6,
+                    py: 1.5,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+                      transform: 'translateY(-1px)'
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Add First Investor
                 </Button>
             </CardContent>
           </Card>
@@ -1315,27 +1501,6 @@ export default function Profile() {
           </Grid>
         )}
         
-        {/* Add Searcher Profile Button - Always visible */}
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                <Button
-                  variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={() => setIsAddingSearcher(true)}
-            size="large"
-            sx={{
-              borderColor: '#000000',
-              color: '#000000',
-              px: 4,
-              py: 1.5,
-              '&:hover': {
-                borderColor: '#333333',
-                bgcolor: '#F5F5F5'
-              }
-            }}
-          >
-            Add Searcher Profile
-                </Button>
-              </Box>
 
         {/* Team Connection Section - Only show if multiple searchers */}
         {searchers.length > 1 && (
@@ -1391,10 +1556,10 @@ export default function Profile() {
         )}
 
         {/* Floating Action Button */}
-        <Tooltip title="Add Searcher Profile" placement="left">
+        <Tooltip title="Add Investor Profile" placement="left">
           <Fab
             color="primary"
-            aria-label="add searcher"
+            aria-label="add investor"
             onClick={() => setIsAddingSearcher(true)}
             sx={{
               position: 'fixed',
@@ -1426,7 +1591,7 @@ export default function Profile() {
         }}
       >
         <DialogTitle>
-          {isEditingSearcher ? 'Edit Searcher Profile' : 'Add New Searcher Profile'}
+          {isEditingSearcher ? 'Edit Investor Profile' : 'Add New Investor Profile'}
         </DialogTitle>
         <DialogContent>
 
@@ -1594,7 +1759,7 @@ export default function Profile() {
             sx={{ bgcolor: '#000000', '&:hover': { bgcolor: '#333333' } }}
             disabled={loading}
           >
-            {loading ? 'Saving...' : (isEditingSearcher ? 'Update Searcher' : 'Add Searcher')}
+            {loading ? 'Saving...' : (isEditingSearcher ? 'Update Investor' : 'Add Investor')}
           </Button>
         </DialogActions>
       </Dialog>
