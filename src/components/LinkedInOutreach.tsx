@@ -101,6 +101,12 @@ interface LinkedInOutreachProps {
 }
 
 const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated }) => {
+  // Black accent colors for consistency across all pages
+  const ACCENT_BLACK = '#1a1a1a';
+  const ACCENT_GREY = '#2c2c2c';
+  const ACCENT_LIGHT = '#f8f9fa';
+  const ACCENT_BORDER = '#e5e7eb';
+
   // Contact data state
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -423,7 +429,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                     letterSpacing: '-0.01em'
                   }}
                 >
-                  <PersonIcon sx={{ color: '#1E3A8A' }} />
+                  <PersonIcon sx={{ color: ACCENT_BLACK }} />
                   Contact Selection
                 </Typography>
                 <Button
@@ -432,17 +438,17 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   onClick={handleSelectContacts}
                   disabled={loadingContacts}
                   sx={{
-                    backgroundColor: '#1E3A8A',
+                    background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
                     color: 'white',
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontWeight: 600,
                     borderRadius: 2,
                     px: 3,
                     py: 1,
-                    boxShadow: '0 2px 8px rgba(30, 58, 138, 0.3)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
                     '&:hover': {
-                      backgroundColor: '#1E40AF',
-                      boxShadow: '0 4px 12px rgba(30, 58, 138, 0.4)',
+                      background: 'linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
                       transform: 'translateY(-1px)'
                     },
                     '&:disabled': {
@@ -479,9 +485,9 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                           setSelectedContacts(updated);
                         }}
                         sx={{
-                          bgcolor: '#f0fdf4',
-                          color: '#166534',
-                          border: '1px solid #22C55E',
+                          bgcolor: ACCENT_LIGHT,
+                          color: ACCENT_BLACK,
+                          border: `1px solid ${ACCENT_BORDER}`,
                           fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                           fontWeight: 500
                         }}
@@ -528,7 +534,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   m: 0
                 }}
               >
-                <PersonIcon sx={{ color: '#1E3A8A' }} />
+                <PersonIcon sx={{ color: ACCENT_BLACK }} />
                 LinkedIn Profiles (1-10)
               </Typography>
             </Box>
@@ -673,10 +679,10 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                                   fontSize: '0.625rem', 
                                   fontWeight: 600, 
                                   color: selectedContact.type === 'investor' ? '#1E40AF' : 
-                                         selectedContact.type === 'broker' ? '#92400E' : '#166534',
+                                         selectedContact.type === 'broker' ? '#92400E' : ACCENT_BLACK,
                                   textTransform: 'uppercase',
                                   bgcolor: selectedContact.type === 'investor' ? '#DBEAFE' : 
-                                           selectedContact.type === 'broker' ? '#FEF3C7' : '#DCFCE7',
+                                           selectedContact.type === 'broker' ? '#FEF3C7' : ACCENT_LIGHT,
                                   px: 0.5,
                                   py: 0.125,
                                   borderRadius: 0.25
@@ -946,13 +952,13 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                         p: 2,
                         mb: 1.5,
                         border: '1px solid',
-                        borderColor: 'success.main',
+                        borderColor: ACCENT_BORDER,
                         borderRadius: 1.5,
-                        bgcolor: '#F0FDF4',
+                        bgcolor: ACCENT_LIGHT,
                         transition: 'all 0.15s ease',
                         '&:hover': {
-                          borderColor: '#22C55E',
-                          bgcolor: '#F0FDF4'
+                          borderColor: ACCENT_BLACK,
+                          bgcolor: ACCENT_LIGHT
                         }
                       }}
                     >
@@ -1298,11 +1304,11 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                               <Typography variant="caption" sx={{ 
                                 fontWeight: 600, 
                                 color: contact.type === 'investor' ? '#1E40AF' : 
-                                       contact.type === 'broker' ? '#92400E' : '#166534',
+                                       contact.type === 'broker' ? '#92400E' : ACCENT_BLACK,
                                 textTransform: 'uppercase',
                                 fontSize: '0.6875rem',
                                 bgcolor: contact.type === 'investor' ? '#DBEAFE' : 
-                                         contact.type === 'broker' ? '#FEF3C7' : '#DCFCE7',
+                                         contact.type === 'broker' ? '#FEF3C7' : ACCENT_LIGHT,
                                 px: 1,
                                 py: 0.25,
                                 borderRadius: 0.5
