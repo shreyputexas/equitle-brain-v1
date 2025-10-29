@@ -423,7 +423,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                     letterSpacing: '-0.01em'
                   }}
                 >
-                  <PersonIcon sx={{ color: '#f97316' }} />
+                  <PersonIcon sx={{ color: '#1E3A8A' }} />
                   Contact Selection
                 </Typography>
                 <Button
@@ -432,17 +432,17 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   onClick={handleSelectContacts}
                   disabled={loadingContacts}
                   sx={{
-                    backgroundColor: '#f97316',
+                    backgroundColor: '#1E3A8A',
                     color: 'white',
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     fontWeight: 600,
                     borderRadius: 2,
                     px: 3,
                     py: 1,
-                    boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)',
+                    boxShadow: '0 2px 8px rgba(30, 58, 138, 0.3)',
                     '&:hover': {
-                      backgroundColor: '#ea580c',
-                      boxShadow: '0 4px 12px rgba(249, 115, 22, 0.4)',
+                      backgroundColor: '#1E40AF',
+                      boxShadow: '0 4px 12px rgba(30, 58, 138, 0.4)',
                       transform: 'translateY(-1px)'
                     },
                     '&:disabled': {
@@ -528,7 +528,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   m: 0
                 }}
               >
-                <PersonIcon sx={{ color: '#f97316' }} />
+                <PersonIcon sx={{ color: '#1E3A8A' }} />
                 LinkedIn Profiles (1-10)
               </Typography>
             </Box>
@@ -696,9 +696,11 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                                         
                                         // Auto-fill website URL if LinkedIn URL exists
                                         if (selectedContact.linkedin_url && !profile.websiteUrl) {
-                                          handleProfileInputChange(profile.id, 'websiteUrl')({
-                                            target: { value: selectedContact.linkedin_url }
-                                          });
+                                          setBulkProfiles(prev => prev.map(p => 
+                                            p.id === profile.id 
+                                              ? { ...p, websiteUrl: selectedContact.linkedin_url }
+                                              : p
+                                          ));
                                         }
                                       }
                                     }}
@@ -853,13 +855,34 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
           {/* Automated Outreach Section - Generated Messages */}
           {(
             <Paper sx={{ mt: 3, overflow: 'hidden' }}>
-              {/* Black Header Section */}
-              <Box sx={{ p: 2.5, bgcolor: '#000000', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* Black/Grey Gradient Header Section */}
+              <Box sx={{ 
+                p: 2.5, 
+                background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+                color: 'white', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                borderRadius: '12px 12px 0 0',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+              }}>
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: 'white', fontSize: '1.125rem' }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 400, 
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 
+                    color: 'white', 
+                    fontSize: '1.125rem',
+                    letterSpacing: '-0.02em',
+                    mb: 0.5
+                  }}>
                     Generated Outreach Messages
                   </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <Typography variant="caption" sx={{ 
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 400,
+                    letterSpacing: '-0.01em'
+                  }}>
                     AI-generated personalized messages ready for review and approval
                   </Typography>
                 </Box>
@@ -904,7 +927,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                     </>
                   )}
                   {!bulkProfiles.some(p => p.generatedMessage) && (
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
                       Messages will appear here after generation
                     </Typography>
                   )}
@@ -1072,26 +1095,9 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       No Generated Messages Yet
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    <Typography variant="body2" color="text.secondary">
                       Fill in the LinkedIn profiles above and click "Generate All Messages" to create personalized outreach messages.
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Paste LinkedIn profiles in the spreadsheet above
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        →
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Set global preferences
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        →
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Generate messages
-                      </Typography>
-                    </Box>
                   </Box>
                 )}
               </Box>

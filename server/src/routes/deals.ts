@@ -24,6 +24,9 @@ const createDealSchema = Joi.object({
   source: Joi.string().optional(),
   geography: Joi.string().optional(),
   dealSize: Joi.string().optional(),
+  source: Joi.string().optional(),
+  geography: Joi.string().optional(),
+  dealSize: Joi.string().optional(),
 });
 
 const updateDealSchema = Joi.object({
