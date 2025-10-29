@@ -50,7 +50,7 @@ class ContactsApiService {
   private baseURL = '/api';
 
   constructor() {
-    axios.defaults.baseURL = this.baseURL;
+    // Remove baseURL setting to avoid duplication with Vite proxy
     axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
   }
 
@@ -67,7 +67,7 @@ class ContactsApiService {
       if (filters.limit) params.append('limit', filters.limit.toString());
       if (filters.offset) params.append('offset', filters.offset.toString());
 
-      const response = await axios.get(`/firebase/contacts?${params.toString()}`);
+      const response = await axios.get(`/api/firebase/contacts?${params.toString()}`);
       // Handle the nested response structure from firebase API
       const contacts = response.data.data?.contacts || response.data.data || [];
       return {
@@ -85,7 +85,7 @@ class ContactsApiService {
    */
   async getContact(id: string): Promise<ContactResponse> {
     try {
-      const response = await axios.get(`/firebase/contacts/${id}`);
+      const response = await axios.get(`/api/firebase/contacts/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching contact ${id}:`, error);
@@ -98,7 +98,7 @@ class ContactsApiService {
    */
   async createContact(contactData: CreateContactData): Promise<ContactResponse> {
     try {
-      const response = await axios.post('/firebase/contacts', contactData);
+      const response = await axios.post('/api/firebase/contacts', contactData);
       return response.data;
     } catch (error) {
       console.error('Error creating contact:', error);
@@ -111,7 +111,7 @@ class ContactsApiService {
    */
   async updateContact(id: string, contactData: UpdateContactData): Promise<ContactResponse> {
     try {
-      const response = await axios.put(`/firebase/contacts/${id}`, contactData);
+      const response = await axios.put(`/api/firebase/contacts/${id}`, contactData);
       return response.data;
     } catch (error) {
       console.error(`Error updating contact ${id}:`, error);
@@ -124,7 +124,7 @@ class ContactsApiService {
    */
   async deleteContact(id: string): Promise<void> {
     try {
-      await axios.delete(`/firebase/contacts/${id}`);
+      await axios.delete(`/api/firebase/contacts/${id}`);
     } catch (error) {
       console.error(`Error deleting contact ${id}:`, error);
       throw error;
@@ -136,7 +136,7 @@ class ContactsApiService {
    */
   async logInteraction(contactId: string, interactionData: LogInteractionData): Promise<any> {
     try {
-      const response = await axios.post(`/firebase/contacts/${contactId}/interactions`, interactionData);
+      const response = await axios.post(`/api/firebase/contacts/${contactId}/interactions`, interactionData);
       return response.data;
     } catch (error) {
       console.error(`Error logging interaction for contact ${contactId}:`, error);

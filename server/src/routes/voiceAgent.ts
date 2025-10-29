@@ -4,6 +4,7 @@ import { VoiceAgentService } from '../services/voiceAgent.service';
 import { RetellService } from '../services/retell.service';
 import { ElevenLabsService } from '../services/elevenlabs.service';
 import { OpenAIService } from '../services/openai.service';
+import { RetellSyncService } from '../services/retellSyncService';
 import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
 // NOTE: io will be injected via dependency injection to avoid circular imports
@@ -462,6 +463,31 @@ router.get('/calls/:callId/enhanced', firebaseAuthMiddleware, async (req, res) =
   }
 });
 
+/**
+ * TEST ENDPOINT - Remove after debugging
+ */
+router.get('/test-enhanced/:callId', async (req, res) => {
+  try {
+    const { callId } = req.params;
+    console.log('🧪 TEST Enhanced endpoint called for callId:', callId);
+
+    // Initialize services
+    const { voiceAgentService } = getServices();
+    const enhancedCall = await voiceAgentService.getEnhancedCallSession(callId);
+
+    console.log('🧪 Enhanced call result:', JSON.stringify(enhancedCall, null, 2));
+
+    if (!enhancedCall) {
+      return res.status(404).json({ error: 'Call not found' });
+    }
+
+    res.json({ call: enhancedCall });
+  } catch (error) {
+    console.error('🧪 TEST Enhanced endpoint error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 /**
  * GET /api/voice-agent/analytics/dashboard
@@ -850,6 +876,204 @@ router.post('/test-call', firebaseAuthMiddleware, async (req, res) => {
   }
 });
 
-console.log('🚀 Voice Agent Routes Loaded Successfully');
+// ===============================
+// RETELL DATA SYNC ENDPOINTS
+// ===============================
+
+const retellSyncService = new RetellSyncService();
+
+/**
+ * POST /api/voice-agent/sync/start
+ * Start a background job to sync existing calls with Retell API data
+ */
+router.post('/sync/start', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const {
+      batchSize = 10,
+      delayBetweenCalls = 1000,
+      retryAttempts = 3,
+      dateRange
+    } = req.body;
+
+    // Parse date range if provided
+    let parsedDateRange;
+    if (dateRange?.start && dateRange?.end) {
+      parsedDateRange = {
+        start: new Date(dateRange.start),
+        end: new Date(dateRange.end)
+      };
+    }
+
+    const jobId = await retellSyncService.startSyncJob({
+      userId,
+      batchSize,
+      delayBetweenCalls,
+      retryAttempts,
+      dateRange: parsedDateRange
+    });
+
+    logger.info('Retell sync job started', { jobId, userId });
+
+    res.json({
+      success: true,
+      jobId,
+      message: 'Sync job started successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error starting sync job', error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to start sync job'
+    });
+  }
+});
+
+/**
+ * GET /api/voice-agent/sync/status/:jobId
+ * Get the status of a sync job
+ */
+router.get('/sync/status/:jobId', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const jobStatus = await retellSyncService.getSyncJobStatus(jobId);
+
+    if (!jobStatus) {
+      return res.status(404).json({ error: 'Sync job not found' });
+    }
+
+    // Check if user has access to this job
+    if (jobStatus.userId && jobStatus.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({
+      success: true,
+      job: jobStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error getting sync job status', error);
+    res.status(500).json({ error: 'Failed to get sync job status' });
+  }
+});
+
+/**
+ * GET /api/voice-agent/sync/jobs
+ * Get all sync jobs for the current user
+ */
+router.get('/sync/jobs', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const jobs = await retellSyncService.getUserSyncJobs(userId);
+
+    res.json({
+      success: true,
+      jobs,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error getting user sync jobs', error);
+    res.status(500).json({ error: 'Failed to get sync jobs' });
+  }
+});
+
+/**
+ * DELETE /api/voice-agent/sync/cancel/:jobId
+ * Cancel a running sync job
+ */
+router.delete('/sync/cancel/:jobId', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const userId = (req as FirebaseAuthRequest).user?.uid;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Get job to verify ownership
+    const jobStatus = await retellSyncService.getSyncJobStatus(jobId);
+    if (!jobStatus) {
+      return res.status(404).json({ error: 'Sync job not found' });
+    }
+
+    if (jobStatus.userId && jobStatus.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const cancelled = await retellSyncService.cancelSyncJob(jobId);
+
+    if (cancelled) {
+      logger.info('Sync job cancelled', { jobId, userId });
+      res.json({
+        success: true,
+        message: 'Sync job cancelled successfully',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(400).json({ error: 'Could not cancel sync job (may not be running)' });
+    }
+  } catch (error) {
+    logger.error('Error cancelling sync job', error);
+    res.status(500).json({ error: 'Failed to cancel sync job' });
+  }
+});
+
+/**
+ * GET /api/voice-agent/sync/statistics
+ * Get overall sync statistics (admin endpoint)
+ */
+router.get('/sync/statistics', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const statistics = await retellSyncService.getSyncStatistics();
+
+    res.json({
+      success: true,
+      statistics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error getting sync statistics', error);
+    res.status(500).json({ error: 'Failed to get sync statistics' });
+  }
+});
+
+/**
+ * POST /api/voice-agent/sync/cleanup
+ * Clean up old sync jobs (admin endpoint)
+ */
+router.post('/sync/cleanup', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const deletedCount = await retellSyncService.cleanupOldSyncJobs();
+
+    logger.info('Cleaned up old sync jobs', { deletedCount });
+
+    res.json({
+      success: true,
+      deletedCount,
+      message: `Cleaned up ${deletedCount} old sync jobs`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Error cleaning up sync jobs', error);
+    res.status(500).json({ error: 'Failed to cleanup sync jobs' });
+  }
+});
+
+console.log('🚀 Voice Agent Routes Loaded Successfully (with sync endpoints)');
 
 export default router;
