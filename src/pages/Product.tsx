@@ -21,8 +21,8 @@ import {
   Paper,
   Avatar
 } from '@mui/material';
-import MarketingHeader from '../components/MarketingHeader';
-import Footer from '../components/Footer';
+// import MarketingHeader from '../components/MarketingHeader';
+// import Footer from '../components/Footer';
 import {
   ArrowForward as ArrowForwardIcon,
   Check as CheckIcon,
@@ -228,7 +228,7 @@ export default function Product() {
 
   return (
     <>
-      <MarketingHeader />
+      {/* <MarketingHeader /> */}
       
       {/* Header */}
       <Box
@@ -664,7 +664,7 @@ export default function Product() {
           </Box>
         </Container>
       </Box>
-      <Footer />
+      {/* <Footer /> */}
     </>
   );
 }

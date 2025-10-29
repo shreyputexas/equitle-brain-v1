@@ -169,6 +169,8 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
   const [navMenuAnchors, setNavMenuAnchors] = useState<{ [key: string]: HTMLElement | null }>({});
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [notificationsMenuAnchor, setNotificationsMenuAnchor] = useState<null | HTMLElement>(null);
+  const [settingsMenuAnchor, setSettingsMenuAnchor] = useState<null | HTMLElement>(null);
+  const [settingsMenuPosition, setSettingsMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -207,6 +209,26 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
 
   const handleNotificationsMenuClose = () => {
     setNotificationsMenuAnchor(null);
+  };
+
+  const handleSettingsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    console.log('Settings menu opening, anchor element:', event.currentTarget);
+    const rect = event.currentTarget.getBoundingClientRect();
+    console.log('Anchor rect:', rect);
+    
+    // Calculate position with safety checks
+    const top = Math.max(8, rect.top - 8);
+    const left = rect.right + 8;
+    
+    console.log('Calculated position:', { top, left });
+    
+    setSettingsMenuAnchor(event.currentTarget);
+    setSettingsMenuPosition({ top, left });
+  };
+
+  const handleSettingsMenuClose = () => {
+    setSettingsMenuAnchor(null);
+    setSettingsMenuPosition(null);
   };
 
   const toggleExpanded = (itemText: string) => {
@@ -577,8 +599,74 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
       </Box>
 
 
+      {/* Mini Settings Bar */}
+      <Box sx={{ 
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)', 
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        p: sidebarCollapsed ? 1 : 2,
+        mb: 1
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: sidebarCollapsed ? 0 : 2,
+          justifyContent: sidebarCollapsed ? 'center' : 'flex-start'
+        }}>
+          <Tooltip title="Settings" placement="right">
+            <IconButton
+              onClick={sidebarCollapsed ? handleSettingsMenuOpen : () => navigate('/settings')}
+              sx={{
+                width: sidebarCollapsed ? 40 : 'auto',
+                height: 40,
+                borderRadius: 2,
+                color: 'rgba(255, 255, 255, 0.8)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white'
+                },
+                transition: 'all 0.2s ease-in-out'
+              }}
+            >
+              <SettingsIcon />
+            </IconButton>
+          </Tooltip>
+          
+          {!sidebarCollapsed && (
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: 'white',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: 'rgba(255, 255, 255, 0.8)'
+                  }
+                }}
+                onClick={() => navigate('/settings')}
+              >
+                Settings
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: 'rgba(255, 255, 255, 0.9)'
+                  }
+                }}
+                onClick={() => navigate('/profile')}
+              >
+                My Profile
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+
       {/* User Profile Section */}
-      <Box sx={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', p: sidebarCollapsed ? 1 : 2 }}>
+      <Box sx={{ p: sidebarCollapsed ? 1 : 2 }}>
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -763,6 +851,66 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
           />
         </MenuItem>
       </Menu>
+
+      {/* Settings Menu (collapsed style dropdown) */}
+      {sidebarCollapsed && settingsMenuPosition && (
+        <Box
+          onMouseLeave={handleSettingsMenuClose}
+          sx={{
+            position: 'fixed',
+            top: settingsMenuPosition.top,
+            left: settingsMenuPosition.left,
+            bgcolor: '#1a1a1a',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: 2,
+            minWidth: 220,
+            p: 1,
+            zIndex: 9999,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          }}
+        >
+          <Box
+            onClick={() => {
+              navigate('/settings');
+              handleSettingsMenuClose();
+            }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: 1.5,
+              cursor: 'pointer',
+              color: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: 1,
+              '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
+            }}
+          >
+            <Box sx={{ mr: 1.5, color: 'rgba(255, 255, 255, 0.8)', display: 'flex', alignItems: 'center' }}>
+              <SettingsIcon />
+            </Box>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>Settings</Typography>
+          </Box>
+          <Box
+            onClick={() => {
+              navigate('/profile');
+              handleSettingsMenuClose();
+            }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: 1.5,
+              cursor: 'pointer',
+              color: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: 1,
+              '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
+            }}
+          >
+            <Box sx={{ mr: 1.5, color: 'rgba(255, 255, 255, 0.8)', display: 'flex', alignItems: 'center' }}>
+              <PersonIcon />
+            </Box>
+            <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>My Profile</Typography>
+          </Box>
+        </Box>
+      )}
     </>
   );
 }
