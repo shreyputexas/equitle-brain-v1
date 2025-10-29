@@ -26,11 +26,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Grid
 } from '@mui/material';
 import LinkedInOutreach from '../components/LinkedInOutreach';
+import NewBrokerModal from '../components/NewBrokerModal';
 import {
-  BusinessCenter as BusinessCenterIcon,
+  People as PeopleIcon,
   Search as SearchIcon,
   Add as AddIcon,
   Business as BusinessIcon,
@@ -60,10 +62,13 @@ const stages = [
 ];
 
 export default function Brokers() {
+  const ACCENT_MAROON = '#800020';
+  const ACCENT_MAROON_DARK = '#660018';
   const [searchTerm, setSearchTerm] = useState('');
   const [emails, setEmails] = useState<CategorizedEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newBrokerModalOpen, setNewBrokerModalOpen] = useState(false);
 
   // Load broker emails on component mount
   useEffect(() => {
@@ -402,7 +407,7 @@ export default function Brokers() {
             ${((broker.value || 0) / 1000000).toFixed(1)}M
           </Typography>
           <Typography variant="caption" sx={{ color: '#000000' }}>
-            Brokerage Value
+            Investment Value
           </Typography>
         </Box>
         
@@ -429,50 +434,200 @@ export default function Brokers() {
 
   return (
     <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh' }}>
-      {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        mb: 2,
-        bgcolor: 'black',
-        color: 'white',
-        p: 1.5,
-        borderRadius: 0
+      {/* Banner - match Deals style exactly with Maroon accents */}
+      <Box sx={{
+        position: 'relative',
+        bgcolor: 'white',
+        borderRadius: '0 0 32px 32px',
+        overflow: 'hidden',
+        mb: 6,
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
       }}>
-        <Box>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
-            Brokers Pipeline
-          </Typography>
+        {/* Background Pattern (maroon version) */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(128, 0, 32, 0.02) 0%, rgba(102, 0, 24, 0.05) 100%)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -50,
+            right: -50,
+            width: 100,
+            height: 100,
+            background: `linear-gradient(135deg, ${ACCENT_MAROON} 0%, ${ACCENT_MAROON_DARK} 100%)`,
+            borderRadius: '50%',
+            opacity: 0.1
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -30,
+            left: -30,
+            width: 60,
+            height: 60,
+            background: `linear-gradient(135deg, ${ACCENT_MAROON} 0%, ${ACCENT_MAROON_DARK} 100%)`,
+            borderRadius: 2,
+            opacity: 0.1,
+            transform: 'rotate(15deg)'
+          }
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Box sx={{ position: 'relative', zIndex: 2 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    color: '#1e293b',
+                    fontSize: { xs: '2.2rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    textTransform: 'uppercase',
+                    background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  BROKER OUTREACH
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 500,
+                    mb: 3,
+                    color: '#475569',
+                    fontSize: '1.1rem',
+                    lineHeight: 1.5
+                  }}
+                >
+                  Track and manage your broker communications from initial outreach to closing
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: '#64748b',
+                    mb: 4,
+                    maxWidth: '600px',
+                    lineHeight: 1.6
+                  }}
+                >
+                  Track your brokers, send tailored emails, and get notified when new responses come in.
+                </Typography>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="text"
+                    size="large"
+                    startIcon={<AddIcon />}
+                    onClick={() => {
+                      setNewBrokerModalOpen(true);
+                    }}
+                    sx={{
+                      background: 'transparent',
+                      color: '#6b7280',
+                      border: 'none',
+                      boxShadow: 'none',
+                      px: 3,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      textTransform: 'none',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      '&:hover': {
+                        background: '#f9fafb',
+                        color: '#374151',
+                        transform: 'translateY(-1px)'
+                      },
+                      '& .MuiButton-startIcon': {
+                        color: '#6b7280'
+                      },
+                      '&:hover .MuiButton-startIcon': {
+                        color: '#374151'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    New Broker
+                  </Button>
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <Box sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 3,
+                  background: `linear-gradient(135deg, ${ACCENT_MAROON} 0%, ${ACCENT_MAROON_DARK} 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 8px 32px rgba(128, 0, 32, 0.3)`
+                }}>
+                  <BusinessIcon sx={{ fontSize: 64, color: 'white' }} />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            startIcon={<RefreshIcon />}
-            onClick={loadBrokerEmails}
-            sx={{
-              bgcolor: 'white',
-              color: 'black',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)'
-              }
-            }}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            sx={{
-              bgcolor: 'white',
-              color: 'black',
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.9)'
-              }
-            }}
-          >
-            New Broker
-          </Button>
+      </Box>
+
+      {/* Small Pipeline Banner - match Deals style exactly */}
+      <Box sx={{ 
+        background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+        borderRadius: '12px 12px 0 0',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+        mb: 4,
+        p: 4,
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <Box sx={{ position: 'relative', zIndex: 2 }}>
+          <Box sx={{ mb: 2 }}>
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 400, 
+                  color: 'white', 
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.02em',
+                  mb: 1
+                }}
+              >
+                Broker Pipeline
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.8)', 
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 400,
+                  letterSpacing: '-0.01em'
+                }}
+              >
+                Track and manage your broker communications
+              </Typography>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
@@ -489,12 +644,12 @@ export default function Brokers() {
               border: '2px solid #d0d0d0',
               borderRadius: 2,
               '&:hover': {
-                borderColor: '#000000',
+                borderColor: ACCENT_MAROON,
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                 bgcolor: '#ffffff'
               },
               '&.Mui-focused': {
-                borderColor: '#000000',
+                borderColor: ACCENT_MAROON,
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 bgcolor: '#ffffff'
               }
@@ -507,7 +662,7 @@ export default function Brokers() {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#666666' }} />
+                <SearchIcon sx={{ color: ACCENT_MAROON_DARK }} />
               </InputAdornment>
             )
           }}
@@ -548,46 +703,64 @@ export default function Brokers() {
                   flex: 1,
                   minWidth: 0,
                   maxWidth: '33.33%',
-                  p: 1.5,
                   borderRadius: 2,
-                  border: '1px solid #d0d0d0',
-                  bgcolor: '#f5f5f5',
+                  overflow: 'hidden',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}
               >
-                {/* Stage Header */}
-                <Box sx={{ mb: 2 }}>
+                {/* Mini Top Banner - Black/Grey Gradient */}
+                <Box sx={{
+                  background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
+                  color: 'white',
+                  p: 2,
+                  position: 'relative'
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#333333' }}>
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 600, 
+                      color: 'white',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}>
                       {stage.label}
                     </Typography>
-                    <Chip
-                      label={`${stageEmails.length} email${stageEmails.length !== 1 ? 's' : ''}`}
-                      size="small"
-                      sx={{
-                        bgcolor: '#333333',
-                        color: 'white',
-                        fontSize: '0.75rem'
-                      }}
-                    />
+                    <Box sx={{
+                      bgcolor: ACCENT_MAROON,
+                      color: 'white',
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                    }}>
+                      {stageEmails.length} broker{stageEmails.length !== 1 ? 's' : ''}
+                    </Box>
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#666666' }}>
+                  <Typography variant="caption" sx={{ 
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  }}>
                     Broker communications
                   </Typography>
                 </Box>
 
-                {/* Stage Emails */}
-                <Box sx={{ minHeight: 400 }}>
+                {/* Stage Content */}
+                <Box sx={{ 
+                  minHeight: 400, 
+                  bgcolor: 'white',
+                  p: 2
+                }}>
                   {stageEmails.length === 0 ? (
                     <Box sx={{ 
                       textAlign: 'center', 
                       py: 8,
                       border: '2px dashed',
-                      borderColor: 'divider',
+                      borderColor: '#d1d5db',
                       borderRadius: 2,
-                      bgcolor: 'background.default'
+                      bgcolor: '#f9fafb'
                     }}>
-                      <EmailIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                      <EmailIcon sx={{ fontSize: 48, color: '#9ca3af', mb: 2 }} />
                       <Typography variant="body2" color="text.secondary">
                         No broker emails in this stage
                       </Typography>
@@ -606,6 +779,16 @@ export default function Brokers() {
 
       {/* LinkedIn Outreach Section */}
       <LinkedInOutreach />
+
+      {/* New Broker Modal */}
+      <NewBrokerModal
+        open={newBrokerModalOpen}
+        onClose={() => setNewBrokerModalOpen(false)}
+        onSuccess={() => {
+          // Refresh broker data or show success message
+          console.log('Broker created successfully');
+        }}
+      />
     </Box>
   );
 }
