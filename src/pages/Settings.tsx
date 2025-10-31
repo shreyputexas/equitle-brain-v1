@@ -23,12 +23,14 @@ import {
   Notifications as NotificationsIcon,
   Save as SaveIcon,
   Google as GoogleIcon,
-  Microsoft as MicrosoftIcon
+  Microsoft as MicrosoftIcon,
+  AccountTree as ApolloIcon
 } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import integrationService, { Integration } from '../services/integrationService';
 import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
 import MicrosoftConnectDialog from '../components/integrations/MicrosoftConnectDialog';
+import ApolloConnectDialog from '../components/integrations/ApolloConnectDialog';
 import IntegrationCard from '../components/integrations/IntegrationCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -40,6 +42,7 @@ export default function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [microsoftDialogOpen, setMicrosoftDialogOpen] = useState(false);
+  const [apolloDialogOpen, setApolloDialogOpen] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
@@ -57,20 +60,22 @@ export default function Settings() {
     const provider = urlParams.get('provider');
     
     if (integrationStatus === 'success') {
-      const providerName = provider === 'microsoft' ? 'Microsoft' : 'Google';
+      const providerName = provider === 'microsoft' ? 'Microsoft' : provider === 'apollo' ? 'Apollo' : 'Google';
       setSuccess(`${providerName} integration connected successfully!`);
       setConnectDialogOpen(false); // Close the dialog
       setMicrosoftDialogOpen(false); // Close Microsoft dialog
+      setApolloDialogOpen(false); // Close Apollo dialog
       // Remove query param
       window.history.replaceState({}, document.title, window.location.pathname);
       setTimeout(() => {
         loadIntegrations();
       }, 1000);
     } else if (integrationStatus === 'error') {
-      const providerName = provider === 'microsoft' ? 'Microsoft' : 'Google';
+      const providerName = provider === 'microsoft' ? 'Microsoft' : provider === 'apollo' ? 'Apollo' : 'Google';
       setError(`Failed to connect ${providerName} integration. Please try again.`);
       setConnectDialogOpen(false); // Close the dialog
       setMicrosoftDialogOpen(false); // Close Microsoft dialog
+      setApolloDialogOpen(false); // Close Apollo dialog
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       // Only load integrations if we're not handling a callback
@@ -269,6 +274,29 @@ export default function Settings() {
               >
                 Connect Microsoft
               </Button>
+              <Button
+                variant="contained"
+                startIcon={<ApolloIcon />}
+                onClick={() => setApolloDialogOpen(true)}
+                sx={{
+                  background: 'linear-gradient(180deg, #6366f1 0%, #4f46e5 100%)',
+                  color: 'white',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1,
+                  boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                  '&:hover': {
+                    background: 'linear-gradient(180deg, #4f46e5 0%, #4338ca 100%)',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
+                    transform: 'translateY(-1px)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Connect Apollo
+              </Button>
             </Box>
           </Box>
 
@@ -445,6 +473,16 @@ export default function Settings() {
         open={microsoftDialogOpen}
         onClose={() => setMicrosoftDialogOpen(false)}
         onSuccess={handleMicrosoftConnectSuccess}
+      />
+
+      {/* Apollo Connect Dialog */}
+      <ApolloConnectDialog
+        open={apolloDialogOpen}
+        onClose={() => setApolloDialogOpen(false)}
+        onSuccess={() => {
+          setApolloDialogOpen(false);
+          loadIntegrations();
+        }}
       />
     </Box>
   );

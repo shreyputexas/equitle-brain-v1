@@ -16,6 +16,7 @@ import {
 import {
   Google as GoogleIcon,
   Microsoft as MicrosoftIcon,
+  AccountTree as ApolloIcon,
   DriveEta as DriveIcon,
   CloudUpload as OneDriveIcon,
   Event as CalendarIcon,
@@ -50,7 +51,8 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
       case 'calendar': return <CalendarIcon />;
       case 'outlook': return <EmailIcon />;
       case 'teams': return <TeamsIcon />;
-      default: return integration.provider === 'microsoft' ? <MicrosoftIcon /> : <GoogleIcon />;
+      case 'apollo': return <ApolloIcon />;
+      default: return integration.provider === 'apollo' ? <ApolloIcon /> : integration.provider === 'microsoft' ? <MicrosoftIcon /> : <GoogleIcon />;
     }
   };
 
@@ -62,6 +64,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
       case 'calendar': return 'Calendar';
       case 'outlook': return 'Outlook';
       case 'teams': return 'Teams';
+      case 'apollo': return 'Apollo';
       default: return type;
     }
   };
@@ -107,12 +110,17 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: integration.provider === 'microsoft' ? '#0078d4' : '#4285f4' }}>
-              {integration.provider === 'microsoft' ? <MicrosoftIcon /> : <GoogleIcon />}
+            <Avatar sx={{ 
+              bgcolor: integration.provider === 'apollo' ? '#6366f1' : 
+                       integration.provider === 'microsoft' ? '#0078d4' : '#4285f4' 
+            }}>
+              {integration.provider === 'apollo' ? <ApolloIcon /> : 
+               integration.provider === 'microsoft' ? <MicrosoftIcon /> : <GoogleIcon />}
             </Avatar>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                {integration.provider === 'microsoft' ? 'Microsoft' : 'Google'} {getTypeLabel(integration.type)}
+                {integration.provider === 'apollo' ? 'Apollo' : 
+                 integration.provider === 'microsoft' ? 'Microsoft' : 'Google'} {getTypeLabel(integration.type)}
                 {integration.isActive ? (
                   <ConnectedIcon sx={{ color: 'success.main', fontSize: 20 }} />
                 ) : (
@@ -139,6 +147,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
             {integration.type === 'calendar' && 'Calendar events and scheduling'}
             {integration.type === 'outlook' && 'Email management'}
             {integration.type === 'teams' && 'Meeting management'}
+            {integration.type === 'apollo' && 'Contact search and data enrichment'}
           </Typography>
         </Box>
 

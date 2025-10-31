@@ -1,4 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import integrationService, { Integration } from '../services/integrationService';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
   Paper,
@@ -209,12 +212,13 @@ interface ContactResults {
 }
 
 export default function DataEnrichment() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [selectedProvider, setSelectedProvider] = useState<'apollo' | 'zoominfo' | 'grata'>('apollo');
-  const [apolloApiKey, setApolloApiKey] = useState('');
+  const [apolloIntegration, setApolloIntegration] = useState<Integration | null>(null);
   const [zoominfoApiKey, setZoominfoApiKey] = useState('');
   const [grataApiKey, setGrataApiKey] = useState('');
-  const [isValidatingKey, setIsValidatingKey] = useState(false);
-  const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
+  const [isCheckingIntegration, setIsCheckingIntegration] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ScrapingResults | null>(null);
@@ -227,25 +231,44 @@ export default function DataEnrichment() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
-  // Load API key state from localStorage on component mount
+  // Load Apollo integration and API keys for other providers on component mount
   useEffect(() => {
-    const savedApolloKey = localStorage.getItem('apolloApiKey');
     const savedZoominfoKey = localStorage.getItem('zoominfoApiKey');
     const savedGrataKey = localStorage.getItem('grataApiKey');
-    const savedIsKeyValid = localStorage.getItem('isKeyValid');
     const savedSelectedProvider = localStorage.getItem('selectedProvider');
 
-    if (savedApolloKey) setApolloApiKey(savedApolloKey);
     if (savedZoominfoKey) setZoominfoApiKey(savedZoominfoKey);
     if (savedGrataKey) setGrataApiKey(savedGrataKey);
-    if (savedIsKeyValid) {
-      const isValid = savedIsKeyValid === 'true';
-      setIsKeyValid(isValid);
-    }
     if (savedSelectedProvider && ['apollo', 'zoominfo', 'grata'].includes(savedSelectedProvider)) {
       setSelectedProvider(savedSelectedProvider as 'apollo' | 'zoominfo' | 'grata');
     }
-  }, []);
+
+    // Load Apollo integration if user is authenticated
+    if (user) {
+      loadApolloIntegration();
+    }
+  }, [user]);
+
+  // Load Apollo integration from user's connected integrations
+  const loadApolloIntegration = async () => {
+    try {
+      setIsCheckingIntegration(true);
+      const integrations = await integrationService.getIntegrations();
+      const apollo = integrations.find((int: Integration) => int.provider === 'apollo' && int.isActive);
+      
+      if (apollo) {
+        setApolloIntegration(apollo);
+        console.log('Apollo integration found', { integrationId: apollo.id });
+      } else {
+        setApolloIntegration(null);
+      }
+    } catch (error) {
+      console.error('Failed to load Apollo integration:', error);
+      setApolloIntegration(null);
+    } finally {
+      setIsCheckingIntegration(false);
+    }
+  };
 
 
   // Main tab and sub-tab state
@@ -295,23 +318,25 @@ export default function DataEnrichment() {
   const getCurrentApiKey = () => {
     switch (selectedProvider) {
       case 'apollo':
-        return apolloApiKey;
+        // Apollo now uses OAuth, no API key needed
+        return '';
       case 'zoominfo':
         return zoominfoApiKey;
       case 'grata':
         return grataApiKey;
       default:
-        return apolloApiKey;
+        return '';
     }
   };
 
   // Helper function to set API key based on selected provider
   const setCurrentApiKey = (key: string) => {
+    // Apollo no longer uses API keys - use OAuth integration
+    if (selectedProvider === 'apollo') {
+      return;
+    }
+    
     switch (selectedProvider) {
-      case 'apollo':
-        setApolloApiKey(key);
-        localStorage.setItem('apolloApiKey', key);
-        break;
       case 'zoominfo':
         setZoominfoApiKey(key);
         localStorage.setItem('zoominfoApiKey', key);
@@ -371,11 +396,24 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', orgSelectedFile);
-      formData.append('apiKey', getCurrentApiKey());
+      // Only append API key for non-Apollo providers
+      if (selectedProvider !== 'apollo') {
+        formData.append('apiKey', getCurrentApiKey());
+      }
       formData.append('provider', selectedProvider);
+
+      // Add Authorization header for Apollo (OAuth)
+      const headers: HeadersInit = {};
+      if (selectedProvider === 'apollo') {
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
 
       const response = await fetch('http://localhost:4001/api/data-enrichment/organization-enrich', {
         method: 'POST',
+        headers,
         body: formData
       });
 
@@ -462,11 +500,24 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', contactSelectedFile);
-      formData.append('apiKey', getCurrentApiKey());
+      // Only append API key for non-Apollo providers
+      if (selectedProvider !== 'apollo') {
+        formData.append('apiKey', getCurrentApiKey());
+      }
       formData.append('provider', selectedProvider);
+
+      // Add Authorization header for Apollo (OAuth)
+      const headers: HeadersInit = {};
+      if (selectedProvider === 'apollo') {
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
 
       const response = await fetch('http://localhost:4001/api/data-enrichment/contact-enrich', {
         method: 'POST',
+        headers,
         body: formData
       });
 
@@ -556,14 +607,22 @@ export default function DataEnrichment() {
       // No validation needed for investors - structured form ensures valid data
     }
 
+    // For Apollo, check if integration exists
+    if (selectedProvider === 'apollo' && !apolloIntegration) {
+      setMessage('Please connect your Apollo account from Settings first.');
+      setShowError(true);
+      setTimeout(() => {
+        navigate('/settings');
+      }, 2000);
+      return;
+    }
+
     setIsDiscovering(true);
     try {
       const searchPayload: any = {
         contactType: contactSearchType,
-        contactsToFind,
-        apolloApiKey
-        //apiKey: getCurrentApiKey(),  
-        //provider: selectedProvider
+        contactsToFind
+        // Apollo now uses OAuth - API key not needed
       };
 
       // Add appropriate criteria based on contact type
@@ -575,11 +634,21 @@ export default function DataEnrichment() {
         searchPayload.investorCriteria = investorSearchCriteria;
       }
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Add Authorization header for Apollo (OAuth)
+      if (selectedProvider === 'apollo') {
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
       const response = await fetch('/api/data-enrichment/search-contacts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify(searchPayload)
       });
 
@@ -749,7 +818,7 @@ export default function DataEnrichment() {
       return;
     }
 
-    setIsValidatingKey(true);
+    setIsCheckingIntegration(true);
     console.log('Starting API key validation...');
 
     try {
@@ -802,24 +871,21 @@ export default function DataEnrichment() {
       setMessage(`Failed to validate API key: ${error.message || 'Network error - check if server is running on port 4001'}`);
       setShowError(true);
     } finally {
-      setIsValidatingKey(false);
+      setIsCheckingIntegration(false);
     }
   };
 
   const handleRemoveConfiguration = () => {
-    // Clear all API keys from localStorage
-    localStorage.removeItem('apolloApiKey');
+    // Clear all API keys from localStorage (Apollo now uses OAuth, not API keys)
     localStorage.removeItem('zoominfoApiKey');
     localStorage.removeItem('grataApiKey');
     localStorage.removeItem('selectedProvider');
     localStorage.removeItem('isKeyValid');
     
     // Reset state
-    setApolloApiKey('');
     setZoominfoApiKey('');
     setGrataApiKey('');
     setSelectedProvider('apollo');
-    setIsKeyValid(false);
     
     // Close dialog
     setShowApiKeyDialog(false);
@@ -886,11 +952,24 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('apiKey', getCurrentApiKey());
+      // Only append API key for non-Apollo providers
+      if (selectedProvider !== 'apollo') {
+        formData.append('apiKey', getCurrentApiKey());
+      }
       formData.append('provider', selectedProvider);
+
+      // Add Authorization header for Apollo (OAuth)
+      const headers: HeadersInit = {};
+      if (selectedProvider === 'apollo') {
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
 
       const response = await fetch('http://localhost:4001/api/data-enrichment/upload-and-enrich', {
         method: 'POST',
+        headers,
         body: formData
       });
 
@@ -2769,21 +2848,59 @@ export default function DataEnrichment() {
               <MenuItem value="grata">Grata</MenuItem>
             </Select>
           </FormControl>
-          
-          <TextField
-            fullWidth
-            label={`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API Key`}
-            type="password"
-            value={getCurrentApiKey()}
-            onChange={(e) => setCurrentApiKey(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && getCurrentApiKey().trim() && !isValidatingKey) {
-                handleApiKeySubmit();
-              }
-            }}
-            placeholder={`Enter your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key`}
-            sx={{ mb: 2 }}
-          />
+
+          {selectedProvider === 'apollo' ? (
+            <>
+              {apolloIntegration ? (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Apollo Connected ✓
+                  </Typography>
+                  <Typography variant="body2">
+                    Your Apollo account is connected via OAuth. You can now use Apollo features.
+                  </Typography>
+                </Alert>
+              ) : (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Connect Apollo Account
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 2 }}>
+                    Apollo uses OAuth authentication. Please connect your Apollo account from Settings.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => {
+                      setShowApiKeyDialog(false);
+                      navigate('/settings');
+                    }}
+                    sx={{
+                      bgcolor: '#6366f1',
+                      '&:hover': { bgcolor: '#4f46e5' }
+                    }}
+                  >
+                    Go to Settings
+                  </Button>
+                </Alert>
+              )}
+            </>
+          ) : (
+            <TextField
+              fullWidth
+              label={`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API Key`}
+              type="password"
+              value={getCurrentApiKey()}
+              onChange={(e) => setCurrentApiKey(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && getCurrentApiKey().trim() && !isCheckingIntegration) {
+                  handleApiKeySubmit();
+                }
+              }}
+              placeholder={`Enter your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key`}
+              sx={{ mb: 2 }}
+            />
+          )}
 
           <Alert severity="info" sx={{ mb: 2 }}>
             Your API key is stored locally and only used for this session. It's not saved to our servers.
@@ -2796,13 +2913,7 @@ export default function DataEnrichment() {
             {selectedProvider === 'apollo' && (
               <>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  1. Go to Apollo.io → Settings → API Keys
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  2. Click "Activate" on your API key
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  3. Make sure you have API access enabled on your plan
+                  Apollo uses OAuth authentication. Connect your Apollo account from Settings instead of using an API key.
                 </Typography>
               </>
             )}
@@ -2860,21 +2971,42 @@ export default function DataEnrichment() {
             >
               Cancel
             </Button>
-            <Button
-              variant="contained"
-              onClick={handleApiKeySubmit}
-              disabled={!getCurrentApiKey().trim() || isValidatingKey}
-              startIcon={isValidatingKey ? <CircularProgress size={16} /> : <CheckCircleIcon />}
-              sx={{
-                bgcolor: '#000000',
-                '&:hover': { bgcolor: '#333333' },
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500,
-                px: 3
-              }}
-            >
-              {isValidatingKey ? 'Validating...' : 'Validate & Save'}
-            </Button>
+            {selectedProvider === 'apollo' ? (
+              <Button
+                variant="contained"
+                onClick={() => {
+                  setShowApiKeyDialog(false);
+                  navigate('/settings');
+                }}
+                disabled={isCheckingIntegration}
+                startIcon={<CheckCircleIcon />}
+                sx={{
+                  bgcolor: '#6366f1',
+                  '&:hover': { bgcolor: '#4f46e5' },
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500,
+                  px: 3
+                }}
+              >
+                {apolloIntegration ? 'Manage Connection' : 'Connect Apollo'}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleApiKeySubmit}
+                disabled={!getCurrentApiKey().trim() || isCheckingIntegration}
+                startIcon={isCheckingIntegration ? <CircularProgress size={16} /> : <CheckCircleIcon />}
+                sx={{
+                  bgcolor: '#000000',
+                  '&:hover': { bgcolor: '#333333' },
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500,
+                  px: 3
+                }}
+              >
+                {isCheckingIntegration ? 'Validating...' : 'Validate & Save'}
+              </Button>
+            )}
           </Box>
         </DialogActions>
       </Dialog>

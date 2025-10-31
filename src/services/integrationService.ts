@@ -2,8 +2,8 @@ import axios from 'axios';
 
 export interface Integration {
   id: string;
-  provider: 'google' | 'microsoft';
-  type: 'drive' | 'calendar' | 'profile' | 'gmail' | 'meet' | 'onedrive' | 'outlook' | 'teams';
+  provider: 'google' | 'microsoft' | 'apollo';
+  type: 'drive' | 'calendar' | 'profile' | 'gmail' | 'meet' | 'onedrive' | 'outlook' | 'teams' | 'apollo';
   isActive: boolean;
   profile: {
     email: string;
@@ -197,6 +197,25 @@ class IntegrationService {
       return data;
     } catch (error) {
       console.error('Error connecting to Microsoft:', error);
+      throw error;
+    }
+  }
+
+  async connectApollo(scopes?: string[]): Promise<{ authUrl: string }> {
+    try {
+      const response = await axios.post(
+        '/api/integrations/apollo/connect',
+        { scopes },
+        { headers: this.getAuthHeaders() }
+      );
+      // Handle both response formats
+      const data = response.data as any;
+      if (data.success && data.data) {
+        return data.data;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error connecting to Apollo:', error);
       throw error;
     }
   }
