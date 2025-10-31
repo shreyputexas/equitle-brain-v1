@@ -65,16 +65,50 @@ export interface ApolloSearchResponse {
 }
 
 export class ApolloService {
-  private apiKey: string;
+  private apiKey?: string;
+  private accessToken?: string;
   private baseUrl: string;
+  private useOAuth: boolean;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.APOLLO_API_KEY || '';
+  constructor(apiKeyOrToken?: string, useOAuth: boolean = false) {
     this.baseUrl = 'https://api.apollo.io/v1';
+    this.useOAuth = useOAuth;
 
-    if (!this.apiKey) {
-      logger.warn('Apollo API key not found. Set APOLLO_API_KEY environment variable.');
+    if (useOAuth) {
+      this.accessToken = apiKeyOrToken || undefined;
+      if (!this.accessToken) {
+        logger.warn('Apollo access token not provided. OAuth authentication required.');
+      }
+    } else {
+      this.apiKey = apiKeyOrToken || process.env.APOLLO_API_KEY || '';
+      if (!this.apiKey) {
+        logger.warn('Apollo API key not found. Set APOLLO_API_KEY environment variable.');
+      }
     }
+  }
+
+  /**
+   * Get authentication headers for Apollo API requests
+   */
+  private getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache'
+    };
+
+    if (this.useOAuth) {
+      if (!this.accessToken) {
+        throw new Error('Apollo access token not configured. OAuth authentication required.');
+      }
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    } else {
+      if (!this.apiKey) {
+        throw new Error('Apollo API key not configured');
+      }
+      headers['X-Api-Key'] = this.apiKey;
+    }
+
+    return headers;
   }
 
   /**
@@ -82,10 +116,6 @@ export class ApolloService {
    */
   async searchPeople(params: ApolloSearchParams): Promise<ApolloSearchResponse> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
-
       const response: AxiosResponse<ApolloSearchResponse> = await axios.post(
         `${this.baseUrl}/mixed_people/search`,
         {
@@ -93,11 +123,7 @@ export class ApolloService {
           reveal_personal_emails: true  // Enable email reveal for search
         },
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey,
-            'Cache-Control': 'no-cache'
-          }
+          headers: this.getAuthHeaders()
         }
       );
 
@@ -127,9 +153,6 @@ export class ApolloService {
     per_page?: number;
   }): Promise<ApolloPerson[]> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
 
       const searchParams: any = {
         reveal_personal_emails: true,
@@ -159,11 +182,7 @@ export class ApolloService {
         `${this.baseUrl}/mixed_people/search`,
         searchParams,
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey,
-            'Cache-Control': 'no-cache'
-          }
+          headers: this.getAuthHeaders()
         }
       );
 
@@ -193,10 +212,6 @@ export class ApolloService {
     domain?: string;
   }): Promise<{ email?: string; confidence?: number } | null> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
-
       logger.info('Using Apollo Email Finder API', params);
 
       const response = await axios.post(
@@ -208,11 +223,7 @@ export class ApolloService {
           organization_name: params.organization_name
         },
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey,
-            'Cache-Control': 'no-cache'
-          }
+          headers: this.getAuthHeaders()
         }
       );
 
@@ -361,9 +372,6 @@ export class ApolloService {
     domain?: string;
   }): Promise<ApolloPerson | null> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
 
       // Build match request with available data
       const matchRequest: any = {
@@ -388,11 +396,7 @@ export class ApolloService {
         `${this.baseUrl}/people/match`,
         matchRequest,
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey,
-            'Cache-Control': 'no-cache'
-          }
+          headers: this.getAuthHeaders()
         }
       );
 
@@ -484,18 +488,11 @@ export class ApolloService {
    */
   async getOrganization(domain: string): Promise<any> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
-
       const response = await axios.get(`${this.baseUrl}/organizations`, {
         params: {
           q_organization_domains: domain
         },
-        headers: {
-          'X-Api-Key': this.apiKey,
-          'Content-Type': 'application/json'
-        }
+        headers: this.getAuthHeaders()
       });
 
       return response.data;
@@ -517,10 +514,6 @@ export class ApolloService {
     error?: string;
   }> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
-
       logger.info('Apollo: Enriching organization', { domain });
 
       const response = await axios.post(
@@ -529,11 +522,7 @@ export class ApolloService {
           domain: domain
         },
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey,
-            'Cache-Control': 'no-cache'
-          }
+          headers: this.getAuthHeaders()
         }
       );
 
@@ -596,36 +585,42 @@ export class ApolloService {
    */
   async validateApiKey(): Promise<boolean> {
     try {
-      if (!this.apiKey) {
-        logger.error('Apollo API key is not provided');
-        return false;
-      }
+      if (this.useOAuth) {
+        if (!this.accessToken) {
+          logger.error('Apollo access token is not provided');
+          return false;
+        }
 
-      logger.info('Validating Apollo API key');
+        logger.info('Validating Apollo access token');
+      } else {
+        if (!this.apiKey) {
+          logger.error('Apollo API key is not provided');
+          return false;
+        }
+
+        logger.info('Validating Apollo API key');
+      }
 
       // Make a minimal test request
       const response = await axios.post(
         `${this.baseUrl}/mixed_people/search`,
         { per_page: 1 },
         {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Key': this.apiKey
-          },
+          headers: this.getAuthHeaders(),
           timeout: 10000
         }
       );
 
-      // If we get a 200 response, the key is valid
+      // If we get a 200 response, the key/token is valid
       if (response.status === 200) {
-        logger.info('Apollo API key validation successful');
+        logger.info(this.useOAuth ? 'Apollo access token validation successful' : 'Apollo API key validation successful');
         return true;
       }
 
-      logger.warn('Apollo API key validation failed - unexpected response');
+      logger.warn(this.useOAuth ? 'Apollo access token validation failed - unexpected response' : 'Apollo API key validation failed - unexpected response');
       return false;
     } catch (error: any) {
-      logger.error('Apollo API key validation failed', {
+      logger.error(this.useOAuth ? 'Apollo access token validation failed' : 'Apollo API key validation failed', {
         error: error.message,
         status: error.response?.status
       });
@@ -638,20 +633,12 @@ export class ApolloService {
    */
   async searchOrganizations(params: any): Promise<any[]> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
-
       logger.info('Searching organizations with Apollo', { params });
 
       const response = await axios.post(`${this.baseUrl}/organizations/search`, {
         ...params
       }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': this.apiKey,
-          'Cache-Control': 'no-cache'
-        },
+        headers: this.getAuthHeaders(),
         timeout: 30000
       });
 
@@ -679,18 +666,10 @@ export class ApolloService {
    */
   async getOrganizationDetails(organizationId: string): Promise<any> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Apollo API key not configured');
-      }
-
       logger.info('Getting organization details', { organizationId });
 
       const response = await axios.get(`${this.baseUrl}/organizations/${organizationId}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': this.apiKey,
-          'Cache-Control': 'no-cache'
-        },
+        headers: this.getAuthHeaders(),
         timeout: 15000
       });
 

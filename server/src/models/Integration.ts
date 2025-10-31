@@ -1,8 +1,8 @@
 export interface Integration {
   id: string;
   userId: string;
-  provider: 'google' | 'microsoft' | 'slack' | 'salesforce' | 'zoom';
-  type: 'drive' | 'calendar' | 'profile' | 'gmail' | 'mail' | 'teams' | 'workspace' | 'crm' | 'video';
+  provider: 'google' | 'microsoft' | 'slack' | 'salesforce' | 'zoom' | 'apollo';
+  type: 'drive' | 'calendar' | 'profile' | 'gmail' | 'mail' | 'teams' | 'workspace' | 'crm' | 'video' | 'apollo';
   accessToken: string;
   refreshToken: string | undefined;
   expiresAt: Date | undefined;

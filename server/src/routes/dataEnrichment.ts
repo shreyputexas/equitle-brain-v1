@@ -8,9 +8,71 @@ try {
   console.warn('xlsx not found - Excel file processing features will be disabled');
 }
 import { ApolloService } from '../services/apollo.service';
+import IntegrationsFirestoreService from '../services/integrations.firestore.service';
+import ApolloAuthService from '../services/apolloAuth';
+import { firebaseAuthMiddleware as auth, FirebaseAuthRequest } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
 
 const router = express.Router();
+
+// Helper function to get Apollo integration for a user and return a configured ApolloService
+async function getApolloServiceForUser(userId: string): Promise<{ service: ApolloService; integration: any }> {
+  // Get user's Apollo integration
+  const apolloIntegration = await IntegrationsFirestoreService.findFirst({
+    userId,
+    provider: 'apollo',
+    isActive: true
+  });
+
+  if (!apolloIntegration) {
+    throw new Error('Apollo integration not found. Please connect Apollo from Settings.');
+  }
+
+  // Ensure access token is valid (refreshes if needed)
+  const ensureValidApolloAccessToken = async (integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) => {
+    if (!integration.accessToken) {
+      throw new Error('No access token available');
+    }
+
+    if (!integration.expiresAt || !integration.refreshToken) {
+      return integration.accessToken;
+    }
+
+    // If token expires within 5 minutes, refresh it
+    if (ApolloAuthService.isTokenExpiringSoon(integration.expiresAt)) {
+      try {
+        logger.info(`Refreshing Apollo access token for integration ${integration.id}`);
+        const refreshedTokens = await ApolloAuthService.refreshAccessToken(integration.refreshToken);
+
+        // Update the integration with new tokens
+        await IntegrationsFirestoreService.refreshToken(integration.id, {
+          access_token: refreshedTokens.access_token,
+          refresh_token: refreshedTokens.refresh_token,
+          expires_in: refreshedTokens.expires_in,
+          token_type: refreshedTokens.token_type,
+          scope: refreshedTokens.scope
+        });
+
+        return refreshedTokens.access_token;
+      } catch (error) {
+        logger.error('Failed to refresh Apollo access token:', error);
+        throw new Error('Failed to refresh Apollo access token');
+      }
+    }
+
+    return integration.accessToken;
+  };
+
+  const accessToken = await ensureValidApolloAccessToken(apolloIntegration);
+
+  // Create ApolloService with OAuth token
+  const apolloService = new ApolloService(accessToken, true); // useOAuth = true
+
+  return {
+    service: apolloService,
+    integration: apolloIntegration
+  };
+}
 
 // Configure multer for file uploads
 const upload = multer({
@@ -41,62 +103,75 @@ const upload = multer({
 
 /**
  * POST /api/data-enrichment/validate-key
- * Validate Apollo API key
+ * Validate Apollo OAuth integration (no longer uses API keys)
  */
-router.post('/validate-key', async (req, res) => {
+router.post('/validate-key', auth, async (req, res) => {
   try {
-    const { apiKey } = req.body;
+    const userId = (req as FirebaseAuthRequest).userId;
     
-    if (!apiKey) {
-      return res.status(400).json({
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        error: 'API key is required'
+        error: 'User not authenticated'
       });
     }
 
-    // Log the validation attempt (without exposing the full key)
-    logger.info('Apollo API key validation attempt', {
-      apiKeyPrefix: apiKey.substring(0, 8) + '...',
-      keyLength: apiKey.length
-    });
-
-    // Create Apollo service with the provided API key
-    const apolloService = new ApolloService(apiKey);
-    const isValid = await apolloService.validateApiKey();
+    // Check if user has Apollo integration
+    const { service } = await getApolloServiceForUser(userId);
+    const isValid = await service.validateApiKey();
 
     if (isValid) {
-      logger.info('Apollo API key validation successful');
+      logger.info('Apollo OAuth integration validation successful', { userId });
       res.json({
         success: true,
         valid: true,
-        message: 'API key is valid and active'
+        message: 'Apollo integration is valid and active'
       });
     } else {
-      logger.warn('Apollo API key validation failed');
+      logger.warn('Apollo OAuth integration validation failed', { userId });
       res.json({
         success: true,
         valid: false,
-        message: 'API key is invalid, inactive, or lacks required permissions'
+        message: 'Apollo integration is invalid or inactive'
       });
     }
   } catch (error: any) {
-    logger.error('Apollo API key validation error', {
+    logger.error('Apollo integration validation error', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      userId: (req as FirebaseAuthRequest).userId
     });
+    
+    if (error.message.includes('Apollo integration not found')) {
+      return res.status(404).json({
+        success: false,
+        valid: false,
+        error: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      error: 'Failed to validate API key: ' + error.message
+      error: 'Failed to validate Apollo integration: ' + error.message
     });
   }
 });
 
 /**
  * POST /api/data-enrichment/upload-and-enrich
- * Upload Excel file and enrich contacts using Apollo
+ * Upload Excel file and enrich contacts using Apollo OAuth integration
  */
-router.post('/upload-and-enrich', upload.single('file'), async (req, res) => {
+router.post('/upload-and-enrich', auth, upload.single('file'), async (req, res) => {
   try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -104,16 +179,8 @@ router.post('/upload-and-enrich', upload.single('file'), async (req, res) => {
       });
     }
 
-    const { apiKey } = req.body;
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        error: 'Apollo API key is required'
-      });
-    }
-
-    // Create Apollo service with the provided API key
-    const apolloService = new ApolloService(apiKey);
+    // Get Apollo service from user's OAuth integration
+    const { service: apolloService } = await getApolloServiceForUser(userId);
 
     // Parse Excel file
     if (!XLSX) {
@@ -738,19 +805,21 @@ router.post('/generate-csv', async (req, res) => {
  * POST /api/data-enrichment/enrich-single
  * Enrich a single contact
  */
-router.post('/enrich-single', async (req, res) => {
+router.post('/enrich-single', auth, async (req, res) => {
   try {
-    const { apiKey, ...searchParams } = req.body;
+    const userId = (req as FirebaseAuthRequest).userId;
     
-    if (!apiKey) {
-      return res.status(400).json({
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        error: 'Apollo API key is required'
+        error: 'User not authenticated'
       });
     }
 
-    // Create Apollo service with the provided API key
-    const apolloService = new ApolloService(apiKey);
+    const { ...searchParams } = req.body;
+
+    // Get Apollo service from user's OAuth integration
+    const { service: apolloService } = await getApolloServiceForUser(userId);
 
     const enriched = await apolloService.enrichPerson(searchParams);
 
@@ -1018,10 +1087,19 @@ router.get('/load-thesis/:userId', async (req, res) => {
 });
 
 // Contact search endpoint
-router.post('/search-contacts', async (req, res) => {
+router.post('/search-contacts', auth, async (req, res) => {
   try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
     console.log('Search-contacts endpoint called with body:', JSON.stringify(req.body, null, 2));
-    const { contactType, thesisCriteria, brokerCriteria, investorCriteria, searchQuery, contactsToFind, apolloApiKey } = req.body;
+    const { contactType, thesisCriteria, brokerCriteria, investorCriteria, searchQuery, contactsToFind } = req.body;
 
     // Validate criteria based on contact type
     if (contactType === 'people') {
@@ -1043,29 +1121,13 @@ router.post('/search-contacts', async (req, res) => {
       // No validation needed for investors - structured form ensures valid data
     }
 
-    if (!apolloApiKey) {
-      return res.status(400).json({
-        success: false,
-        error: 'Apollo API key is required'
-      });
-    }
-
-    // Create Apollo service with provided API key
-    const apolloService = new ApolloService(apolloApiKey);
-
-    // Validate API key first
-    const isKeyValid = await apolloService.validateApiKey();
-    if (!isKeyValid) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid Apollo API key'
-      });
-    }
+    // Get Apollo service from user's OAuth integration
+    const { service: apolloService } = await getApolloServiceForUser(userId);
 
     logger.info('Starting contact search', {
+      userId,
       contactType,
-      contactsToFind,
-      apiKeyPrefix: apolloApiKey.substring(0, 8) + '...'
+      contactsToFind
     });
 
     let searchParams: any = {
@@ -1683,25 +1745,30 @@ router.post('/download-enriched', (req, res) => {
  * POST /api/data-enrichment/organization-enrich
  * Enrich organization data from Excel file using Apollo Organization Enrichment API
  */
-router.post('/organization-enrich', upload.single('file'), async (req, res) => {
+router.post('/organization-enrich', auth, upload.single('file'), async (req, res) => {
   try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
 
-    const { apiKey } = req.body;
-    if (!apiKey) {
-      return res.status(400).json({ success: false, error: 'Apollo API key is required' });
-    }
-
     logger.info('Starting organization enrichment process', {
+      userId,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       mimeType: req.file.mimetype
     });
 
-    // Initialize Apollo service
-    const apolloService = new ApolloService(apiKey);
+    // Get Apollo service from user's OAuth integration
+    const { service: apolloService } = await getApolloServiceForUser(userId);
 
     // Parse Excel file to extract organization data
     const organizations = parseOrganizationExcelFile(req.file.buffer, req.file.originalname);
@@ -2208,27 +2275,32 @@ function cleanDomain(domain: string): string {
 
 /**
  * POST /api/data-enrichment/contact-enrich
- * Enrich contact data from Excel file using Apollo People Enrichment API
+ * Enrich contact data from Excel file using Apollo OAuth integration
  */
-router.post('/contact-enrich', upload.single('file'), async (req, res) => {
+router.post('/contact-enrich', auth, upload.single('file'), async (req, res) => {
   try {
+    const userId = (req as FirebaseAuthRequest).userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
     }
 
-    const { apiKey } = req.body;
-    if (!apiKey) {
-      return res.status(400).json({ success: false, error: 'Apollo API key is required' });
-    }
-
     logger.info('Starting contact enrichment process', {
+      userId,
       fileName: req.file.originalname,
       fileSize: req.file.size,
       mimeType: req.file.mimetype
     });
 
-    // Initialize Apollo service
-    const apolloService = new ApolloService(apiKey);
+    // Get Apollo service from user's OAuth integration
+    const { service: apolloService } = await getApolloServiceForUser(userId);
 
     // Parse Excel file to extract contact data
     const contacts = parseContactExcelFile(req.file.buffer, req.file.originalname);
@@ -2540,21 +2612,27 @@ function calculateSeniorityScore(title: string): number {
  * POST /api/data-enrichment/search-organizations
  * Search for organizations using Apollo - simple industry + location search
  */
-router.post('/search-organizations', async (req, res) => {
+router.post('/search-organizations', auth, async (req, res) => {
   try {
-    const { searchCriteria, orgsToFind, apiKey } = req.body;
-
-    if (!apiKey) {
-      return res.status(400).json({ success: false, error: 'API key is required' });
+    const userId = (req as FirebaseAuthRequest).userId;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
     }
+
+    const { searchCriteria, orgsToFind } = req.body;
 
     if (!searchCriteria.industries || !searchCriteria.industries.trim()) {
       return res.status(400).json({ success: false, error: 'Industries is required' });
     }
 
-    logger.info('Organization search request', { searchCriteria, orgsToFind });
+    logger.info('Organization search request', { userId, searchCriteria, orgsToFind });
 
-    const apolloService = new ApolloService(apiKey);
+    // Get Apollo service from user's OAuth integration
+    const { service: apolloService } = await getApolloServiceForUser(userId);
 
     // Use Apollo's actual working parameters for organization search
     const searchParams: any = {

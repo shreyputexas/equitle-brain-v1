@@ -4,6 +4,7 @@ import GoogleDriveService from '../services/googleDrive';
 import GoogleCalendarService from '../services/googleCalendar';
 import GmailService from '../services/gmail';
 import { MicrosoftAuthService } from '../services/microsoftAuth';
+import ApolloAuthService from '../services/apolloAuth';
 import IntegrationsFirestoreService from '../services/integrations.firestore.service';
 import { EmailsFirestoreService } from '../services/emails.firestore.service';
 import { firebaseAuthMiddleware as auth, FirebaseAuthRequest } from '../middleware/firebaseAuth';
@@ -1392,6 +1393,188 @@ router.get('/microsoft/outlook/deals', auth, async (req, res) => {
   } catch (error) {
     logger.error('Error fetching deal-related Outlook emails:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch deal-related Outlook emails' });
+  }
+});
+
+// APOLLO INTEGRATION ENDPOINTS
+
+// Helper function to ensure valid access token for Apollo integrations
+async function ensureValidApolloAccessToken(integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) {
+  if (!integration.accessToken) {
+    throw new Error('No access token available');
+  }
+
+  if (!integration.expiresAt || !integration.refreshToken) {
+    return integration.accessToken;
+  }
+
+  // If token expires within 5 minutes, refresh it
+  if (ApolloAuthService.isTokenExpiringSoon(integration.expiresAt)) {
+    try {
+      logger.info(`Refreshing Apollo access token for integration ${integration.id}`);
+      const refreshedTokens = await ApolloAuthService.refreshAccessToken(integration.refreshToken);
+
+      // Update the integration with new tokens
+      await IntegrationsFirestoreService.refreshToken(integration.id, {
+        access_token: refreshedTokens.access_token,
+        refresh_token: refreshedTokens.refresh_token,
+        expires_in: refreshedTokens.expires_in,
+        token_type: refreshedTokens.token_type,
+        scope: refreshedTokens.scope
+      });
+
+      return refreshedTokens.access_token;
+    } catch (error) {
+      logger.error('Failed to refresh Apollo access token:', error);
+      throw new Error('Failed to refresh Apollo access token');
+    }
+  }
+
+  return integration.accessToken;
+}
+
+// Initiate Apollo OAuth flow (requires auth)
+router.post('/apollo/connect', auth, async (req, res) => {
+  try {
+    const { scopes } = req.body; // Optional: specific scopes to request
+    const userId = (req as FirebaseAuthRequest).userId;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    logger.info('Apollo OAuth connect request', { userId, requestedScopes: scopes });
+
+    const requestedScopes = scopes && Array.isArray(scopes) ? scopes : [];
+    const authUrl = ApolloAuthService.getAuthUrl(userId, requestedScopes);
+    
+    logger.info('Generated Apollo auth URL', { authUrl });
+
+    res.json({
+      success: true,
+      data: {
+        authUrl,
+        scopes: requestedScopes.length > 0 ? requestedScopes : ['read_user_profile', 'app_scopes'],
+        type: 'apollo'
+      }
+    });
+  } catch (error) {
+    logger.error('Error initiating Apollo OAuth:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: (req as FirebaseAuthRequest).userId
+    });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to initiate Apollo OAuth flow'
+    });
+  }
+});
+
+// Handle Apollo OAuth callback (NO AUTH REQUIRED - this is the callback)
+router.get('/apollo/callback', async (req, res) => {
+  try {
+    const { code, state, error: oauthError, error_message, status_code } = req.query;
+
+    // Handle OAuth errors from Apollo
+    if (oauthError || status_code) {
+      logger.error('OAuth error from Apollo:', {
+        error: oauthError,
+        error_message,
+        status_code
+      });
+      
+      // Check for permission error (403)
+      if (status_code === '403') {
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=apollo&reason=insufficient_permissions`);
+      }
+      
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=apollo&reason=${encodeURIComponent((oauthError || error_message || 'oauth_error') as string)}`);
+    }
+
+    if (!code || !state) {
+      logger.error('Missing authorization code or state in Apollo OAuth callback', {
+        code: !!code,
+        state: !!state
+      });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=apollo&reason=missing_parameters`);
+    }
+
+    // Validate state parameter
+    const stateValidation = ApolloAuthService.validateState(state as string);
+    
+    if (!stateValidation.isValid) {
+      logger.error('Invalid or expired state parameter', { state, isValid: stateValidation.isValid });
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=apollo&reason=invalid_state`);
+    }
+
+    const userId = stateValidation.userId;
+
+    logger.info('Processing Apollo OAuth callback', {
+      userId,
+      codeLength: (code as string).length
+    });
+
+    // Exchange code for tokens
+    const tokens = await ApolloAuthService.exchangeCodeForTokens(code as string);
+    logger.info('Successfully exchanged code for Apollo tokens', {
+      hasAccessToken: !!tokens.access_token,
+      hasRefreshToken: !!tokens.refresh_token
+    });
+
+    // Get user profile
+    const profile = await ApolloAuthService.getUserProfile(tokens.access_token);
+    logger.info('Retrieved Apollo user profile', {
+      email: profile.email,
+      name: profile.name
+    });
+
+    // Parse scopes
+    const scopeList = tokens.scope ? tokens.scope.split(' ') : ['read_user_profile', 'app_scopes'];
+
+    // Remove existing Apollo integrations for this user
+    const deleted = await IntegrationsFirestoreService.deleteMany({
+      userId: userId as string,
+      provider: 'apollo'
+    });
+
+    if (deleted.count > 0) {
+      logger.info(`Removed ${deleted.count} existing Apollo integration(s) for user ${userId}`);
+    }
+
+    // Create Apollo integration
+    const integration = await IntegrationsFirestoreService.create({
+      userId: userId as string,
+      provider: 'apollo',
+      type: 'apollo',
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+      scope: scopeList,
+      profile: {
+        email: profile.email,
+        name: profile.name,
+        picture: profile.picture
+      },
+      isActive: true
+    });
+
+    logger.info('Apollo OAuth callback completed successfully', {
+      userId,
+      integrationId: integration.id,
+      scopes: scopeList
+    });
+
+    // Redirect to settings page with success status
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=success&provider=apollo&userId=${userId}`);
+  } catch (error) {
+    logger.error('Error handling Apollo OAuth callback:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      state: req.query.state,
+      hasCode: !!req.query.code
+    });
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3001'}/settings?integration=error&provider=apollo&reason=server_error`);
   }
 });
 
