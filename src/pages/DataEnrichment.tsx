@@ -228,6 +228,7 @@ export default function DataEnrichment() {
   const [showError, setShowError] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isKeyValid, setIsKeyValid] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -236,11 +237,15 @@ export default function DataEnrichment() {
     const savedZoominfoKey = localStorage.getItem('zoominfoApiKey');
     const savedGrataKey = localStorage.getItem('grataApiKey');
     const savedSelectedProvider = localStorage.getItem('selectedProvider');
+    const savedIsKeyValid = localStorage.getItem('isKeyValid');
 
     if (savedZoominfoKey) setZoominfoApiKey(savedZoominfoKey);
     if (savedGrataKey) setGrataApiKey(savedGrataKey);
     if (savedSelectedProvider && ['apollo', 'zoominfo', 'grata'].includes(savedSelectedProvider)) {
       setSelectedProvider(savedSelectedProvider as 'apollo' | 'zoominfo' | 'grata');
+    }
+    if (savedIsKeyValid) {
+      setIsKeyValid(savedIsKeyValid === 'true');
     }
 
     // Load Apollo integration if user is authenticated

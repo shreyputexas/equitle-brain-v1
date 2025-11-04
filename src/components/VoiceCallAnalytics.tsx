@@ -25,8 +25,6 @@ import {
   GetApp
 } from '@mui/icons-material';
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,
@@ -34,12 +32,8 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
-  Bar,
-  Legend
+  Bar
 } from 'recharts';
 import { getApiUrl } from '../config/api';
 
@@ -297,7 +291,7 @@ const VoiceCallAnalytics: React.FC<VoiceCallAnalyticsProps> = ({ dateRange }) =>
       {/* Charts Section */}
       <Grid container spacing={3}>
         {/* Call Trends Chart */}
-        <Grid item xs={12} lg={8}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
               Call Trends Over Time
@@ -334,36 +328,6 @@ const VoiceCallAnalytics: React.FC<VoiceCallAnalyticsProps> = ({ dateRange }) =>
                   name="Successful Calls"
                 />
               </AreaChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-
-        {/* Call Status Distribution */}
-        <Grid item xs={12} lg={4}>
-          <Paper sx={{ p: 3, borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              Call Status Distribution
-            </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={Object.entries(analytics.callsByStatus).map(([status, count]) => ({
-                    name: status.charAt(0).toUpperCase() + status.slice(1),
-                    value: count
-                  }))}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {Object.entries(analytics.callsByStatus).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <RechartsTooltip />
-              </PieChart>
             </ResponsiveContainer>
           </Paper>
         </Grid>
