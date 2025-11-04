@@ -69,8 +69,8 @@ export class TemplateEditorService {
       console.error(`Template file not found: ${templatePath}`);
       try {
         console.error(`Templates directory contents:`, fs.readdirSync(this.templatesPath));
-      } catch (e: unknown) {
-        console.error(`Could not read templates directory:`, e instanceof Error ? e.message : 'Unknown error');
+      } catch (e) {
+        console.error(`Could not read templates directory:`, e.message);
       }
       throw new Error(`Template ${templateName} not found at ${templatePath}. Please ensure the template file exists.`);
     }
@@ -87,14 +87,14 @@ export class TemplateEditorService {
       console.log('Text replacement completed successfully');
 
       return modifiedBuffer;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('=== TEMPLATE EDITING ERROR ===');
       console.error('Template name:', templateName);
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       console.error('Error details:', error);
       console.error('==============================');
-      throw new Error(`Failed to edit template ${templateName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to edit template ${templateName}: ${error.message}`);
     }
   }
 
@@ -124,24 +124,61 @@ export class TemplateEditorService {
     // This regex finds { text } pattern and removes the spaces
     normalized = normalized.replace(/\{\s+([a-zA-Z0-9]+)\s+\}/g, '{$1}');
 
-    // Step 3: Merge placeholders split across runs with spell-check markers
-    // Pattern: <w:t>{</w:t>...</w:r>...<w:r>...<w:t>placeholder</w:t>...</w:r>...<w:r>...<w:t>}</w:t>
+    // Step 3: Handle specific case of {investmentinsight} split as {investment and insight}
+    // Pattern: <w:r><w:t>{investment</w:t></w:r><w:r ...><w:t xml:space="preserve">insight} </w:t></w:r>
+    // This pattern spans across two complete runs, so we need to match both run open/close tags
+    console.log('Checking for {investment pattern before replacement...');
+    const investmentPattern = /<w:r[^>]*>\s*<w:t>\{investment<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*<w:t[^>]*xml:space="preserve"[^>]*>insight\}\s*<\/w:t>\s*<\/w:r>/g;
+    const investmentMatches = normalized.match(investmentPattern);
+    console.log('Investment pattern matches:', investmentMatches ? investmentMatches.length : 0);
+    if (investmentMatches) {
+      console.log('First match:', investmentMatches[0].substring(0, 200));
+    }
+
+    // Also check for the pattern without the first run opening tag
+    const simplePattern = /<w:t>\{investment<\/w:t>\s*<\/w:r>\s*<w:r[^>]*>\s*<w:t[^>]*xml:space="preserve"[^>]*>insight\}\s*<\/w:t>/g;
+    normalized = normalized.replace(simplePattern, '<w:t>{investmentinsight}</w:t>');
+    
+    // Step 4: Merge placeholders split across runs with spell-check markers
+    // Pattern in template: <w:t>{</w:t></w:r><w:proofErr.../><w:r><w:t>placeholder</w:t></w:r><w:proofErr.../><w:r><w:t>}</w:t></w:r>
     // We need to merge these into a single <w:t>{placeholder}</w:t>
 
-    // This regex looks for { text } pattern across different runs and merges them
-    // It's more flexible and handles various XML structures
     const beforeMerge = normalized;
-    normalized = normalized.replace(/<w:t>\{<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r>.*?<w:r[^>]*>.*?<w:t>\}<\/w:t>/g,
-      '<w:t>{$1}</w:t>');
+
+    // Handle multiple patterns of split placeholders:
+    let iterations = 0;
+    let prevLength = 0;
+    do {
+      prevLength = normalized.length;
+      
+      // Pattern 1: {</w:t></w:r><w:proofErr.../><w:r...><w:t>WORD</w:t></w:r><w:proofErr.../><w:r...><w:t>}
+      normalized = normalized.replace(/\{<\/w:t><\/w:r><w:proofErr[^>]*\/><w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r><w:proofErr[^>]*\/><w:r[^>]*>.*?<w:t>\}/g,
+        '<w:t>{$1}</w:t>');
+      
+      // Pattern 2: {</w:t></w:r><w:r...><w:t>WORD</w:t></w:r><w:r...><w:t>} (without proofErr)
+      normalized = normalized.replace(/\{<\/w:t><\/w:r><w:r[^>]*>.*?<w:t>([a-zA-Z0-9]+)<\/w:t><\/w:r><w:r[^>]*>.*?<w:t>\}/g,
+        '<w:t>{$1}</w:t>');
+      
+      // Pattern 3: {WORD</w:t></w:r><w:r...><w:t>} (split across runs)
+      normalized = normalized.replace(/\{([a-zA-Z0-9]+)<\/w:t><\/w:r><w:r[^>]*>.*?<w:t>\}/g,
+        '<w:t>{$1}</w:t>');
+      
+      iterations++;
+    } while (prevLength !== normalized.length && iterations < 10);
 
     if (beforeMerge.length !== normalized.length) {
       console.log(`✅ Merged ${(beforeMerge.length - normalized.length)} characters of split placeholders`);
     } else {
       console.log(`⚠️ No split placeholders found to merge`);
       // Log a sample of the XML to help debug
-      const sample = normalized.substring(normalized.indexOf('searchFundName') - 200, normalized.indexOf('searchFundName') + 200);
-      console.log('Sample XML around searchFundName:', sample);
+      if (normalized.indexOf('marketOverview') > 0) {
+        const sample = normalized.substring(normalized.indexOf('marketOverview') - 200, normalized.indexOf('marketOverview') + 200);
+        console.log('Sample XML around marketOverview:', sample);
+      }
     }
+
+    console.log('🔧 NORMALIZATION COMPLETE - Output length:', normalized.length);
+    console.log('🔧 Found placeholders in normalized XML:', (normalized.match(/\{[^}]+\}/g) || []).length);
 
     return normalized;
   }
@@ -149,7 +186,7 @@ export class TemplateEditorService {
   async editIndustryTemplate(templateName: string, data: IndustryTemplateData): Promise<Buffer> {
     // Write to debug file
     const fs = require('fs');
-    const debugFiles = require('fs').readdirSync('/tmp').filter((f: string) => f.startsWith('navy-debug-'));
+    const debugFiles = require('fs').readdirSync('/tmp').filter(f => f.startsWith('navy-debug-'));
     const debugLog = debugFiles.length > 0 ? `/tmp/${debugFiles[debugFiles.length - 1]}` : `/tmp/navy-debug-fallback.log`;
     fs.appendFileSync(debugLog, '\n\n🔵 EDIT INDUSTRY TEMPLATE CALLED\n');
 
@@ -176,8 +213,8 @@ export class TemplateEditorService {
       console.error(`❌ Template file not found: ${templatePath}`);
       try {
         console.error(`Templates directory contents:`, fs.readdirSync(this.templatesPath));
-      } catch (e: unknown) {
-        console.error(`Could not read templates directory:`, e instanceof Error ? e.message : 'Unknown error');
+      } catch (e) {
+        console.error(`Could not read templates directory:`, e.message);
       }
       throw new Error(`Template ${templateName} not found at ${templatePath}. Please ensure the template file exists.`);
     }
@@ -194,13 +231,13 @@ export class TemplateEditorService {
       console.log('Size difference:', modifiedBuffer.length - templateBuffer.length, 'bytes');
 
       return modifiedBuffer;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('=== INDUSTRY TEMPLATE EDITING ERROR ===');
       console.error('Template name:', templateName);
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       console.error('========================================');
-      throw new Error(`Failed to edit industry template ${templateName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to edit industry template ${templateName}: ${error.message}`);
     }
   }
 
@@ -219,7 +256,9 @@ export class TemplateEditorService {
 
       // Normalize placeholders
       console.log('Normalizing split placeholders in XML...');
+      console.log('Before normalization - placeholders found:', (modifiedXml.match(/\{[^}]+\}/g) || []).length);
       modifiedXml = this.normalizePlaceholders(modifiedXml);
+      console.log('After normalization - placeholders found:', (modifiedXml.match(/\{[^}]+\}/g) || []).length);
 
       // Helper to escape XML special characters
       const escapeXml = (text: string): string => {
@@ -232,21 +271,19 @@ export class TemplateEditorService {
       };
 
       // Build replacement map for industry template
-      // NOTE: Placeholder names must match EXACTLY what's in the template file
+      // NOTE: Include all placeholders that should exist after normalization
       const replacements: Record<string, string> = {
         '{industry}': data.industry || '',
-        '{marketOverview}': data.marketOverview || '',
-        '{industryConsolidation}': data.industryConsolidation || '',
-        '{entryBarrier}': data.entryBarrier || '',
-        '{financialProfile}': data.financialProfile || '',
-        '{technology}': data.technology || '',
-        '{investmentinsight}': data.investmentInsight || '', // Try lowercase (no space)
-        '{investmentInsight}': data.investmentInsight || '', // Try camelCase
-        '{investment insight}': data.investmentInsight || '', // Try with space
+        '{marketOverview}': data.marketOverview || 'Market overview content will be added here.',
+        '{industryConsolidation}': data.industryConsolidation || 'Industry consolidation content will be added here.',
+        '{entryBarrier}': data.entryBarrier || 'Entry barrier content will be added here.',
+        '{financialProfile}': data.financialProfile || 'Financial profile content will be added here.',
+        '{technology}': data.technology || 'Technology content will be added here.',
+        '{investmentinsight}': data.investmentInsight || 'Investment insight content will be added here.',
         '{searchFundWebsite}': data.searchFundWebsite || '',
         '{searchFundEmail}': data.searchFundEmail || '',
         '{searchFundAddress}': data.searchFundAddress || '',
-        '{sources}': data.sources || '',
+        '{sources}': data.sources || 'Sources will be added here.',
       };
 
       console.log('=== PERFORMING INDUSTRY TEMPLATE REPLACEMENTS ===');
@@ -279,6 +316,18 @@ export class TemplateEditorService {
           skippedCount++;
         }
       }
+      // CRITICAL: Remove any remaining unreplaced placeholders to prevent Word corruption
+      if (notFoundCount > 0) {
+        console.log('🔧 CLEANING UP UNREPLACED PLACEHOLDERS...');
+        const beforeCleanup = modifiedXml;
+        
+        // Remove any remaining {placeholder} patterns that weren't replaced
+        modifiedXml = modifiedXml.replace(/\{[^}]+\}/g, '');
+        
+        const cleanedCount = (beforeCleanup.match(/\{[^}]+\}/g) || []).length;
+        console.log(`🧹 Removed ${cleanedCount} unreplaced placeholders to prevent corruption`);
+      }
+
       console.log('=== INDUSTRY TEMPLATE REPLACEMENT SUMMARY ===');
       console.log(`  ✅ Replaced: ${replacedCount}`);
       console.log(`  ⚠️ Not found: ${notFoundCount}`);
@@ -293,13 +342,13 @@ export class TemplateEditorService {
       });
 
       return modifiedBuffer;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error in replaceIndustryTextInDocx:', error);
       throw error;
     }
   }
 
-  private async replaceTextInDocx(templateBuffer: Buffer, data: TemplateData): Promise<Buffer> {
+  private async replaceTextInDocx(templateBuffer: Buffer, data: any): Promise<Buffer> {
     try {
       // Load the DOCX file as a ZIP
       const zip = await JSZip.loadAsync(templateBuffer);
@@ -360,7 +409,7 @@ export class TemplateEditorService {
         '{ourStories}': data.content?.ourStories || '',
         '{ourStory}': data.content?.ourStories || '',
 
-        // Individual searcher stories - for navy_blue template
+        // Individual searcher stories - for personal_navy_placeholders template
         '{searcherStory1}': data.content?.searcherStory1 || '',
         '{searcherStory2}': data.content?.searcherStory2 || '',
 
@@ -422,7 +471,7 @@ export class TemplateEditorService {
       });
 
       return modifiedBuffer;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error in replaceTextInDocx:', error);
       throw error;
     }
@@ -442,7 +491,7 @@ export class TemplateEditorService {
         return;
       }
       
-      // Image mapping logic for navy_blue template:
+      // Image mapping logic for industry_navy_placeholders template:
       // Header: image2.png (rId1) = Logo (TOP)
       // Our Story: image1.png (rId8, used 2x) = First headshot (BOTTOM)
       // Our Story: image3.png (rId13, needs to be added) = Second headshot (BOTTOM)
@@ -468,12 +517,12 @@ export class TemplateEditorService {
         const searcher = searcherProfiles[0];
         console.log(`Processing image1.png for first searcher: ${searcher.name}`);
         try {
-          const imageBuffer = await this.downloadImage(searcher.headshotUrl!);
+          const imageBuffer = await this.downloadImage(searcher.headshotUrl);
           if (imageBuffer) {
             zip.file('word/media/image1.png', imageBuffer);
             console.log(`Successfully replaced image1.png with headshot for ${searcher.name}`);
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error(`Error processing first headshot:`, error);
         }
       }
@@ -483,7 +532,7 @@ export class TemplateEditorService {
         const searcher = searcherProfiles[1];
         console.log(`Processing image3.png for second searcher: ${searcher.name}`);
         try {
-          const imageBuffer = await this.downloadImage(searcher.headshotUrl!);
+          const imageBuffer = await this.downloadImage(searcher.headshotUrl);
           if (imageBuffer) {
             // Add image3.png to media folder
             zip.file('word/media/image3.png', imageBuffer);
@@ -493,7 +542,7 @@ export class TemplateEditorService {
             // This will replace the 2nd occurrence of rId8 with rId13
             const documentXml = await zip.file('word/document.xml').async('string');
             let count = 0;
-            const updatedXml = documentXml.replace(/r:embed="rId8"/g, (match: string) => {
+            const updatedXml = documentXml.replace(/r:embed="rId8"/g, (match) => {
               count++;
               if (count === 2) {
                 return 'r:embed="rId13"'; // Replace 2nd instance with rId13 (rId9-12 already exist)
@@ -510,13 +559,13 @@ export class TemplateEditorService {
 
             console.log('Updated document.xml and relationships for second headshot');
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error(`Error processing second headshot:`, error);
         }
       }
 
       console.log('=== IMAGE REPLACEMENT PROCESS COMPLETED ===');
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('=== ERROR IN IMAGE REPLACEMENT ===');
       console.error('Error in replaceImages:', error);
       // Don't throw error - continue with text-only replacement if images fail
@@ -582,13 +631,13 @@ export class TemplateEditorService {
         console.log(`Local image loaded successfully, size: ${buffer.length} bytes`);
         return buffer;
       }
-    } catch (error: unknown) {
-      console.error(`Error loading image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (error) {
+      console.error(`Error loading image: ${error.message}`);
       return null;
     }
   }
 
-  private prepareTemplateData(data: TemplateData): Record<string, any> {
+  private prepareTemplateData(data: TemplateData): any {
     return {
       // Search Fund Information - common placeholders
       searchFundName: data.searchFundName || 'Search Fund',
@@ -646,7 +695,7 @@ export class TemplateEditorService {
     };
   }
 
-  private getImageData(imageUrl?: string): { width: number; height: number; data: Buffer; type: string } | null {
+  private getImageData(imageUrl?: string): any {
     if (!imageUrl) return null;
     
     try {
@@ -665,7 +714,7 @@ export class TemplateEditorService {
           type: 'png' // or determine from file extension
         };
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.warn('Could not load image:', imageUrl, error);
     }
     

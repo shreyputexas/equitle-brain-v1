@@ -28,8 +28,7 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
-# Firebase credentials (sensitive)
-*firebase-adminsdk*.json
+# Firebase service account (sensitive)
 firebase-service-account.json
 
 # IDE
@@ -52,4 +51,16 @@ Thumbs.db
 
 # Uploads
 uploads/
-temp/
+temp/equitle-brain-v1/
+equitle-brain-dev-firebase-adminsdk-fbsvc-f95ee42ed1.json
+
+
+// firebase authentication
+server/secrets/serviceAccountKey.json
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
