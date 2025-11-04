@@ -143,10 +143,12 @@ export default function Login() {
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       borderRadius: 0,
                       '&:hover': {
-                        borderColor: '#10B981'
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
                       },
                       '&.Mui-focused': {
                         borderColor: '#10B981',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05) !important',
                         '& .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#10B981'
                         }
@@ -159,7 +161,11 @@ export default function Login() {
                         opacity: 0.8
                       },
                       '& input': {
-                        color: '#FFFFFF'
+                        color: '#FFFFFF !important'
+                      },
+                      '&.Mui-focused input': {
+                        color: '#FFFFFF !important',
+                        backgroundColor: 'transparent !important'
                       }
                     }
                   },

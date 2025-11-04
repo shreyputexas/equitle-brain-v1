@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import MarketingHeader from '../components/MarketingHeader';
 import Footer from '../components/Footer';
+// import Prism from '../components/Prism';
 
 export default function Network() {
   const [formData, setFormData] = useState({
@@ -38,7 +39,36 @@ export default function Network() {
   };
 
   return (
-    <Box sx={{ background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', minHeight: '100vh' }}>
+    <Box sx={{ background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', minHeight: '100vh', position: 'relative' }}>
+      {/* Prism Background - Full Page */}
+      {/* Temporarily disabled to debug blank page */}
+      {/* <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+          pointerEvents: 'none'
+        }}
+      >
+        <Prism
+          animationType="rotate"
+          timeScale={0.5}
+          height={3.5}
+          baseWidth={5.5}
+          scale={3.6}
+          hueShift={2.1}
+          colorFrequency={1}
+          noise={0.5}
+          glow={1}
+        />
+      </Box> */}
+      
       <MarketingHeader />
       
       {/* Hero Section with Form */}
@@ -49,10 +79,14 @@ export default function Network() {
           alignItems: 'center',
           background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
           color: '#FFFFFF',
-          pt: { xs: 12, md: 14 }
+          pt: { xs: 12, md: 14 },
+          position: 'relative',
+          zIndex: 1,
+          overflow: 'hidden',
+          pointerEvents: 'auto'
         }}
       >
-        <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 } }}>
+        <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 }, position: 'relative', zIndex: 2 }}>
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             {/* Main Heading */}
             <Typography 
@@ -321,7 +355,9 @@ export default function Network() {
         </Container>
       </Box>
       
-      <Footer />
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
+        <Footer />
+      </Box>
     </Box>
   );
 }
