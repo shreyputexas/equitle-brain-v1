@@ -12,6 +12,9 @@ import {
   Chip,
   Grid
 } from '@mui/material';
+import { collection, addDoc } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth } from '../firebase/config';
 import MarketingHeader from '../components/MarketingHeader';
 import Footer from '../components/Footer';
 // import Prism from '../components/Prism';
@@ -23,6 +26,8 @@ export default function Network() {
     type: 'pe-firm'
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -31,11 +36,61 @@ export default function Network() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSelectChange = (e: any) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Here you would typically send the data to your backend
-    alert('Thank you for your interest! We\'ll be in touch soon.');
+    setIsSubmitting(true);
+
+    try {
+      console.log('Firebase app config:', db.app.options);
+      console.log('Attempting to submit to Firebase...', formData);
+
+      // Remove anonymous auth for now - will use Firestore rules instead
+
+      // Test if we can even access the collection reference
+      const collectionRef = collection(db, 'network-requests');
+      console.log('Collection reference created:', collectionRef);
+
+      const docRef = await addDoc(collectionRef, {
+        email: formData.email,
+        phone: formData.phone,
+        type: formData.type,
+        timestamp: new Date().toISOString(),
+        status: 'pending',
+        createdAt: new Date()
+      });
+
+      console.log('Successfully submitted with ID:', docRef.id);
+      alert('Thank you for your interest! We\'ll be in touch soon.');
+
+      setFormData({
+        email: '',
+        phone: '',
+        type: 'pe-firm'
+      });
+    } catch (error: any) {
+      console.error('Full error object:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+
+      if (error.code === 'permission-denied') {
+        alert('Database permissions error. Please contact support.');
+      } else if (error.code === 'unavailable') {
+        alert('Firebase service unavailable. Check if Firestore is enabled.');
+      } else {
+        alert(`Error: ${error.message}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -235,7 +290,7 @@ export default function Network() {
                       <Select
                         name="type"
                         value={formData.type}
-                        onChange={handleInputChange}
+                        onChange={handleSelectChange}
                         required
                         displayEmpty
                         sx={{
@@ -286,11 +341,12 @@ export default function Network() {
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <Button 
+                    <Button
                       type="submit"
-                      variant="contained" 
+                      variant="contained"
                       size="medium"
                       fullWidth
+                      disabled={isSubmitting}
                       sx={{
                         background: `
                           linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
@@ -346,7 +402,7 @@ export default function Network() {
                         },
                       }}
                     >
-                      Request Spot
+{isSubmitting ? 'Submitting...' : 'Request Spot'}
                     </Button>
                   </Grid>
                 </Grid>

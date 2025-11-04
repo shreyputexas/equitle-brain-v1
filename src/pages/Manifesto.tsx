@@ -465,13 +465,11 @@ export default function Manifesto() {
                         height: 120,
                         borderRadius: '50%',
                         background: `
-                          linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                          linear-gradient(180deg, #10B981 0%, #059669 30%, #047857 70%, #065F46 100%),
                           radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
                           radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
                           radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
                         `,
-                        backdropFilter: 'blur(10px)',
-                        opacity: 0.8,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

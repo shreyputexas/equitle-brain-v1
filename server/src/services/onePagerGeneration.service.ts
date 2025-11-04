@@ -124,15 +124,15 @@ export class OnePagerGenerationService {
       console.log('searcherStory2 preview:', parsed.searcherStory2?.substring(0, 100) || 'EMPTY');
       console.log('=== END PARSED CONTENT ===');
       return parsed;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('=== OPENAI API ERROR ===');
-      console.error('Error message:', error?.message);
-      console.error('Error code:', error?.code);
-      console.error('Error type:', error?.type);
-      console.error('Error status:', error?.status);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error code:', (error as any)?.code);
+      console.error('Error type:', (error as any)?.type);
+      console.error('Error status:', (error as any)?.status);
       console.error('Full error:', error);
       console.error('========================');
-      throw new Error(`Failed to generate one-pager content: ${error?.message || error}`);
+      throw new Error(`Failed to generate one-pager content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -699,7 +699,7 @@ FINAL INSTRUCTIONS:
       console.log('=== BASIC DOCUMENT GENERATION COMPLETE ===');
       return await Packer.toBuffer(doc);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating basic document:', error);
       throw new Error('Failed to generate basic document');
     }
@@ -892,13 +892,13 @@ FINAL INSTRUCTIONS:
       console.log('=== INDUSTRY RESEARCH CONTENT GENERATION COMPLETE ===');
 
       return generatedContent;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('=== ERROR IN generateIndustryResearchContent ===');
       console.error('Error:', error);
-      console.error('Error message:', error.message);
-      console.error('Stack:', error.stack);
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Stack:', error instanceof Error ? error.stack : 'No stack available');
       console.error('===================================================');
-      throw new Error(`Failed to generate industry research content: ${error.message}`);
+      throw new Error(`Failed to generate industry research content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -1059,12 +1059,12 @@ FINAL INSTRUCTIONS:
       // Default: use existing basic document generation
       console.log('⚠️ USING BASIC DOCUMENT (template was:', template, ')');
       return await this.generateBasicDocument(thesisData, selectedIndustry);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('=== ERROR IN generateIndustryResearchWithTemplate ===');
       console.error('Error:', error);
       console.error('Template:', template);
       console.error('Industry:', selectedIndustry);
-      console.error('Stack:', error.stack);
+      console.error('Stack:', error instanceof Error ? error.stack : 'No stack available');
       console.error('===================================================');
       throw error;
     }

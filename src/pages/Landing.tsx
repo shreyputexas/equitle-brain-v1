@@ -174,12 +174,13 @@ export default function Landing() {
         sx={{
           minHeight: '120vh',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
           position: 'relative',
           overflow: 'hidden',
           background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
           color: '#FFFFFF',
-          pt: { xs: 12, md: 14 }
+          pt: { xs: 20, md: 24 }
         }}
       >
         <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 } }}>

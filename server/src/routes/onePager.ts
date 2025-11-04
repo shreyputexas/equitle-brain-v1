@@ -1,6 +1,6 @@
 import express from 'express';
 import { onePagerGenerationService, OnePagerRequest } from '../services/onePagerGeneration.service';
-import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware, User } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
 import { db } from '../lib/firebase';
 
@@ -27,8 +27,8 @@ router.get('/test-template', async (req, res) => {
 
     console.log('Template test info:', info);
     res.json(info);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
@@ -61,10 +61,10 @@ router.get('/debug-user-data', async (req, res) => {
         userId
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -111,7 +111,7 @@ router.post('/test-generate', async (req, res) => {
             const searcherProfilesRef = db.collection('users').doc(userId).collection('searcherProfiles');
             const searcherProfilesSnapshot = await searcherProfilesRef.get();
             
-            let actualSearcherProfiles = [];
+            let actualSearcherProfiles: any[] = [];
             if (!searcherProfilesSnapshot.empty) {
               actualSearcherProfiles = searcherProfilesSnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -164,8 +164,8 @@ router.post('/test-generate', async (req, res) => {
               } else {
                 console.log('User document not found');
               }
-            } catch (error) {
-              console.log('Could not fetch user data:', error.message);
+            } catch (error: unknown) {
+              console.log('Could not fetch user data:', error instanceof Error ? error.message : 'Unknown error');
             }
 
             // Generate content first
@@ -196,21 +196,21 @@ router.post('/test-generate', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="test-one-pager.docx"');
     res.send(result);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('=== TEMPLATE GENERATION ERROR ===');
-    console.error('Error:', error.message);
-    console.error('Stack:', error.stack);
+    console.error('Error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Stack:', error instanceof Error ? error.stack : 'No stack available');
     console.error('=== END ERROR ===');
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      stack: error.stack 
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack available'
     });
   }
 });
 
 // Generate one-pager content and DOCX
-router.post('/generate', firebaseAuthMiddleware, async (req, res) => {
+router.post('/generate', firebaseAuthMiddleware, async (req: any, res: any) => {
   try {
     const { searcherProfiles, thesisData, teamConnection, template } = req.body as OnePagerRequest;
 
@@ -255,8 +255,8 @@ router.post('/generate', firebaseAuthMiddleware, async (req, res) => {
         searchFundAddress = userData?.searchFundAddress || '';
         searchFundEmail = userData?.searchFundEmail || '';
       }
-    } catch (error) {
-      logger.warn('Could not fetch user data for template', { error: error.message });
+    } catch (error: unknown) {
+      logger.warn('Could not fetch user data for template', { error: error instanceof Error ? error.message : 'Unknown error' });
     }
 
     // Generate content using OpenAI
@@ -296,9 +296,9 @@ router.post('/generate', firebaseAuthMiddleware, async (req, res) => {
       template: template || 'basic'
     });
 
-  } catch (error: any) {
-    const errorMessage = error?.message || error?.toString() || 'Unknown error';
-    const errorStack = error?.stack || 'No stack trace available';
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : 'Unknown error');
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace available';
 
     logger.error('Error generating one-pager', {
       error: errorMessage,
@@ -308,24 +308,24 @@ router.post('/generate', firebaseAuthMiddleware, async (req, res) => {
 
     console.error('=== ONE-PAGER GENERATION ERROR ===');
     console.error('Error type:', typeof error);
-    console.error('Error constructor:', error?.constructor?.name);
+    console.error('Error constructor:', error instanceof Error ? error.constructor.name : 'Unknown');
     console.error('Error message:', errorMessage);
     console.error('Error stack:', errorStack);
-    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error as object)));
     console.error('===================================');
 
     res.status(500).json({
       success: false,
       message: 'Failed to generate one-pager',
       error: errorMessage,
-      errorType: error?.constructor?.name || typeof error,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
       stack: errorStack
     });
   }
 });
 
 // Get one-pager content only (without DOCX generation)
-router.post('/content', firebaseAuthMiddleware, async (req, res) => {
+router.post('/content', firebaseAuthMiddleware, async (req: any, res: any) => {
   try {
     const { searcherProfiles, thesisData, teamConnection } = req.body as OnePagerRequest;
 
@@ -361,17 +361,17 @@ router.post('/content', firebaseAuthMiddleware, async (req, res) => {
       content
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error generating one-pager content', {
-      error: error.message,
-      stack: error.stack,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack available',
       userId: req.user?.uid
     });
 
     res.status(500).json({
       success: false,
       message: 'Failed to generate one-pager content',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Internal server error'
     });
   }
 });
@@ -431,7 +431,7 @@ router.post('/test-basic-document', async (req, res) => {
           address: userData?.searchFundAddress,
         };
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.log('Could not fetch search fund data for test, continuing without it');
     }
 
@@ -459,22 +459,22 @@ router.post('/test-basic-document', async (req, res) => {
       fileSize: docxBuffer.length
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error generating test industry document', {
-      error: error.message,
-      stack: error.stack
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack available'
     });
 
     res.status(500).json({
       success: false,
       message: 'Failed to generate test industry document',
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
 
 // Generate basic industry research document
-router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res) => {
+router.post('/generate-basic-document', firebaseAuthMiddleware, async (req: any, res: any) => {
   try {
     console.log('=== GENERATE-BASIC-DOCUMENT REQUEST ===');
     console.log('Request body keys:', Object.keys(req.body));
@@ -531,8 +531,8 @@ router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res)
 
         console.log('Fetched search fund data:', searchFundData);
       }
-    } catch (error) {
-      logger.warn('Could not fetch search fund data, continuing without it', { error: error.message });
+    } catch (error: unknown) {
+      logger.warn('Could not fetch search fund data, continuing without it', { error: error instanceof Error ? error.message : 'Unknown error' });
     }
 
     // Generate document with template support
@@ -560,17 +560,17 @@ router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res)
       userId: req.user?.uid
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error generating industry document', {
-      error: error.message,
-      stack: error.stack,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack available',
       userId: req.user?.uid
     });
 
     res.status(500).json({
       success: false,
       message: 'Failed to generate industry document',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Internal server error'
     });
   }
 });
