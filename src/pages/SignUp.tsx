@@ -59,7 +59,7 @@ export default function SignUp() {
                 fontSize: { xs: '2.5rem', md: '4.5rem' },
                 lineHeight: 1.1,
                 mb: 4,
-                    color: '#FFFFFF',
+                color: '#FFFFFF',
                 background: 'linear-gradient(135deg, #FFFFFF 0%, #E5E7EB 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -70,9 +70,9 @@ export default function SignUp() {
             </Typography>
             
             {/* Subheading */}
-                <Typography
+            <Typography
               variant="body1" 
-                  sx={{
+              sx={{
                 fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 400,
                 fontSize: { xs: '1rem', md: '1.25rem' },
@@ -93,7 +93,7 @@ export default function SignUp() {
               {' '}and we'll send you access credentials to get started.
             </Typography>
 
-              </Box>
+          </Box>
 
             {/* Form Section */}
             <Box sx={{ 
@@ -216,12 +216,12 @@ export default function SignUp() {
                   </Grid>
                 </Grid>
               </form>
-              </Box>
+            </Box>
         </Container>
       </Box>
       
       <Box sx={{ position: 'relative', zIndex: 1 }}>
-      <Footer />
+        <Footer />
       </Box>
     </Box>
   );
