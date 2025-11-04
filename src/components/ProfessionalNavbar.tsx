@@ -115,7 +115,8 @@ const navigationItems = [
     badge: null,
     subItems: [
       { text: 'Deals', path: '/outreach/deals', icon: <DealsIcon /> },
-      { text: 'Investors', path: '/outreach/investors', icon: <FundraisingIcon /> },
+      // ARCHIVED: Investors page - hidden from menu but code preserved
+      // { text: 'Investors', path: '/outreach/investors', icon: <FundraisingIcon /> },
       { text: 'Brokers', path: '/outreach/brokers', icon: <HandshakeIcon /> }
     ]
   },
@@ -128,21 +129,23 @@ const navigationItems = [
       { text: 'Voicemails', path: '/mass-voicemail', icon: <VoicemailIcon /> }
     ]
   },
-  {
-    text: 'Investors',
-    icon: <FundraisingIcon />,
-    badge: null,
-    subItems: [
-      { text: 'Limited Partners', path: '/fundraising/limited-partners', icon: <LimitedPartnersIcon /> },
-      { text: 'Funds', path: '/fundraising/funds', icon: <FundsIcon /> }
-    ]
-  },
-  {
-    text: 'Brain',
-    icon: <BrainIcon />,
-    path: '/brain',
-    badge: null
-  }
+  // ARCHIVED: Investors main menu item - hidden from menu but code preserved
+  // {
+  //   text: 'Investors',
+  //   icon: <FundraisingIcon />,
+  //   badge: null,
+  //   subItems: [
+  //     { text: 'Limited Partners', path: '/fundraising/limited-partners', icon: <LimitedPartnersIcon /> },
+  //     { text: 'Funds', path: '/fundraising/funds', icon: <FundsIcon /> }
+  //   ]
+  // },
+  // ARCHIVED: Brain page - hidden from menu but code preserved
+  // {
+  //   text: 'Brain',
+  //   icon: <BrainIcon />,
+  //   path: '/brain',
+  //   badge: null
+  // }
 ];
 
 const recentItems = [

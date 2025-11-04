@@ -1154,7 +1154,7 @@ router.post('/search-contacts', auth, async (req, res) => {
 
       // Industry - Use the exact industry value from the dropdown
       if (thesisCriteria.industries) {
-        orgSearchParams.q_organization_keyword_tags = [thesisCriteria.industries];
+        orgSearchParams.q_keywords = thesisCriteria.industries;
         logger.info(`Searching for companies in: ${thesisCriteria.industries}`);
       }
 
@@ -1274,7 +1274,7 @@ router.post('/search-contacts', auth, async (req, res) => {
       
       // Apply structured filters
       if (brokerCriteria.industries) {
-        searchParams.organization_industry = [brokerCriteria.industries];
+        searchParams.q_keywords = brokerCriteria.industries;
       }
       if (brokerCriteria.location) {
         searchParams.organization_locations = [brokerCriteria.location];
@@ -1311,7 +1311,7 @@ router.post('/search-contacts', auth, async (req, res) => {
       
       // Apply structured filters
       if (investorCriteria.industries) {
-        searchParams.organization_industry = [investorCriteria.industries];
+        searchParams.q_keywords = investorCriteria.industries;
       }
       if (investorCriteria.location) {
         searchParams.organization_locations = [investorCriteria.location];

@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { API_BASE_URL } from '../config/api';
+import { searcherProfilesApi } from '../services/searcherProfilesApi';
 
 interface User {
   id: string;
@@ -52,6 +53,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,32 +71,94 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Fetch user profile from API to get real name (shared function)
+  const fetchUserProfile = async (userId: string, email: string, displayName?: string) => {
+    try {
+      // First, try to get name from primary investor profile
+      try {
+        const profiles = await searcherProfilesApi.getSearcherProfiles();
+        if (profiles.length > 0) {
+          // Get primary profile ID from user document
+          const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`);
+          const primaryProfileId = userResponse.data?.data?.primaryProfileId;
+          
+          // If primary profile is set, use it
+          if (primaryProfileId) {
+            const primaryProfile = profiles.find(p => p.id === primaryProfileId);
+            if (primaryProfile) {
+              console.log('✅ Using primary investor profile name:', primaryProfile.name);
+              return primaryProfile.name;
+            }
+          }
+          
+          // If only one profile exists, use it automatically
+          if (profiles.length === 1) {
+            console.log('✅ Using single investor profile name:', profiles[0].name);
+            return profiles[0].name;
+          }
+        }
+      } catch (profileError) {
+        console.warn('Failed to fetch investor profiles, falling back to user profile:', profileError);
+      }
+      
+      // Fallback to user document name
+      const response = await axios.get(`${API_BASE_URL}/api/auth/me`);
+      if (response.data?.success && response.data?.data) {
+        const profileData = response.data.data;
+        return profileData.name || displayName || email?.split('@')[0] || 'User';
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user profile, using fallback name:', error);
+    }
+    return displayName || email?.split('@')[0] || 'User';
+  };
+
   // Don't set axios base URL globally - let individual services handle their own paths
   // axios.defaults.baseURL = API_BASE_URL;
 
   useEffect(() => {
+
     // Development mode: bypass Firebase auth and use mock user
     if (process.env.NODE_ENV === 'development') {
-      const mockUser: User = {
-        id: 'dev-user-123',
-        email: 'dev@equitle.com',
-        name: 'Development User',
-        role: 'admin',
-        firm: 'Equitle',
-        phone: '',
-        location: '',
-        avatar: undefined
-      };
+      const mockUserId = 'dev-user-123';
+      const mockEmail = 'dev@equitle.com';
       
       // Set mock token and userId for backend
       localStorage.setItem('token', 'mock-token');
-      localStorage.setItem('userId', mockUser.id);
+      localStorage.setItem('userId', mockUserId);
       axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
 
-      console.log('✅ AuthContext: Stored userId in localStorage (dev mode):', mockUser.id);
+      console.log('✅ AuthContext: Stored userId in localStorage (dev mode):', mockUserId);
 
-      setUser(mockUser);
-      setLoading(false);
+      // Fetch real name from profile
+      fetchUserProfile(mockUserId, mockEmail).then((name) => {
+        const mockUser: User = {
+          id: mockUserId,
+          email: mockEmail,
+          name: name,
+          role: 'admin',
+          firm: 'Equitle',
+          phone: '',
+          location: '',
+          avatar: undefined
+        };
+        setUser(mockUser);
+        setLoading(false);
+      }).catch(() => {
+        // Fallback if profile fetch fails
+        const mockUser: User = {
+          id: mockUserId,
+          email: mockEmail,
+          name: 'Development User',
+          role: 'admin',
+          firm: 'Equitle',
+          phone: '',
+          location: '',
+          avatar: undefined
+        };
+        setUser(mockUser);
+        setLoading(false);
+      });
       return;
     }
 
@@ -108,11 +172,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         console.log('✅ AuthContext: Stored userId in localStorage (auth state):', firebaseUser.uid);
 
-        // Create user object from Firebase user
+        // Fetch real name from profile API
+        const realName = await fetchUserProfile(
+          firebaseUser.uid, 
+          firebaseUser.email || '',
+          firebaseUser.displayName || undefined
+        );
+
+        // Create user object from Firebase user with profile name
         const user: User = {
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          name: realName,
           role: 'user',
           firm: '',
           phone: firebaseUser.phoneNumber || '',
@@ -197,8 +268,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(prev => prev ? { ...prev, ...userData } : null);
   };
 
+  const refreshUser = async () => {
+    if (!user) return;
+    
+    try {
+      // Add a small delay to ensure Firestore write completes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newName = await fetchUserProfile(user.id, user.email, user.name);
+      if (newName !== user.name) {
+        setUser({ ...user, name: newName });
+        console.log('✅ Refreshed user display name:', newName);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      // On error, try to fetch profiles directly
+      try {
+        const profiles = await searcherProfilesApi.getSearcherProfiles();
+        const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`);
+        const primaryProfileId = userResponse.data?.data?.primaryProfileId;
+        if (primaryProfileId && profiles.length > 0) {
+          const primaryProfile = profiles.find(p => p.id === primaryProfileId);
+          if (primaryProfile && primaryProfile.name !== user.name) {
+            setUser({ ...user, name: primaryProfile.name });
+            console.log('✅ Updated user display name from profile:', primaryProfile.name);
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback refresh also failed:', fallbackError);
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

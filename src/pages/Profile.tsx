@@ -93,7 +93,7 @@ const getAbsoluteHeadshotUrl = (url: string | undefined): string | undefined => 
 };
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, refreshUser, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -159,6 +159,7 @@ export default function Profile() {
   const [searchFundWebsite, setSearchFundWebsite] = useState('');
   const [searchFundAddress, setSearchFundAddress] = useState('');
   const [searchFundEmail, setSearchFundEmail] = useState('');
+  const [primaryProfileId, setPrimaryProfileId] = useState<string | null>(null);
 
   // Load team connection from Firebase
   useEffect(() => {
@@ -774,7 +775,7 @@ export default function Profile() {
     }
   };
 
-  // Load search fund information on component mount
+  // Load search fund information and primary profile ID on component mount
   useEffect(() => {
     const loadSearchFundInfo = async () => {
       try {
@@ -802,6 +803,10 @@ export default function Profile() {
             setSearchFundAddress(userData.searchFundAddress);
             console.log('✅ Loaded search fund address:', userData.searchFundAddress);
           }
+          if (userData.primaryProfileId) {
+            setPrimaryProfileId(userData.primaryProfileId);
+            console.log('✅ Loaded primary profile ID:', userData.primaryProfileId);
+          }
         }
       } catch (error) {
         console.error('Error loading search fund info:', error);
@@ -815,6 +820,55 @@ export default function Profile() {
   useEffect(() => {
     loadSearcherProfiles();
   }, []);
+
+  // Auto-select primary profile if only one exists and none is selected
+  useEffect(() => {
+    if (searchers.length === 1 && !primaryProfileId) {
+      const userId = getUserId();
+      const userRef = doc(db, 'users', userId);
+      setDoc(userRef, { primaryProfileId: searchers[0].id }, { merge: true }).then(() => {
+        setPrimaryProfileId(searchers[0].id);
+        console.log('✅ Auto-selected single profile as primary:', searchers[0].id);
+      }).catch((error) => {
+        console.error('Error auto-selecting primary profile:', error);
+      });
+    }
+  }, [searchers, primaryProfileId]);
+
+  // Function to set primary profile
+  const handleSetPrimaryProfile = async (profileId: string) => {
+    try {
+      const userId = getUserId();
+      const userRef = doc(db, 'users', userId);
+      await setDoc(userRef, { primaryProfileId: profileId }, { merge: true });
+      setPrimaryProfileId(profileId);
+      
+      // Find the selected profile
+      const selectedProfile = searchers.find(s => s.id === profileId);
+      const profileName = selectedProfile?.name;
+      
+      if (profileName) {
+        setSuccess(`"${profileName}" is now your display profile`);
+        console.log('✅ Set primary profile:', profileId);
+        
+        // Update the user's display name immediately with the profile name we already have
+        if (updateUser) {
+          updateUser({ name: profileName });
+          console.log('✅ Updated display name to:', profileName);
+        }
+        
+        // Also refresh to ensure everything is in sync (async, doesn't block)
+        if (refreshUser) {
+          refreshUser().catch(err => {
+            console.warn('Background refresh failed, but name already updated:', err);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error setting primary profile:', error);
+      setError('Failed to set primary profile');
+    }
+  };
 
   // Refresh investor profiles when page regains focus
   useEffect(() => {
@@ -1421,14 +1475,43 @@ export default function Profile() {
                         )}
                       </Box>
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          {searcher.name}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            {searcher.name}
+                          </Typography>
+                          {primaryProfileId === searcher.id && (
+                            <Chip 
+                              label="You" 
+                              size="small" 
+                              sx={{ 
+                                bgcolor: '#10b981', 
+                                color: 'white',
+                                fontWeight: 600,
+                                fontSize: '0.7rem',
+                                height: 20
+                              }} 
+                            />
+                          )}
+                        </Box>
                         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                           {searcher.title}
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {primaryProfileId !== searcher.id && searchers.length > 1 && (
+                          <Tooltip title="Set as your display profile">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleSetPrimaryProfile(searcher.id)}
+                              sx={{ 
+                                '&:hover': { bgcolor: '#f0fdf4' },
+                                color: '#10b981'
+                              }}
+                            >
+                              <PersonIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <IconButton 
                           size="small" 
                           onClick={() => handleEditSearcher(searcher)}

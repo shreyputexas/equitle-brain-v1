@@ -1652,70 +1652,90 @@ const MyThesis: React.FC = () => {
                   {criteria.map((criterion, index) => {
                     const greenShade = getGreenShade(index);
                     const width = criterion.weight;
+                    const isSmallSegment = width < 12; // Hide text for segments smaller than 12%
 
                     return (
-                      <Box
+                      <Tooltip 
                         key={criterion.id}
-                        onClick={() => handleEditCriteria(criterion)}
-                        sx={{
-                          width: `${width}%`,
-                          height: '100%',
-                          background: greenShade.gradient,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            opacity: 0.8,
-                            transform: 'scaleY(1.05)'
-                          }
-                        }}
+                        title={`${criterion.field} - ${criterion.weight}%`}
+                        arrow
+                        placement="top"
                       >
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: 'white', 
-                            fontWeight: 500,
-                            fontSize: '0.8rem',
-                            textAlign: 'center',
-                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                            lineHeight: 1.2,
-                            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                            letterSpacing: '-0.01em'
-                          }}
-                        >
-                          {criterion.field}
-                        </Typography>
-                        
-                        {/* Weight percentage overlay */}
                         <Box
+                          onClick={() => handleEditCriteria(criterion)}
                           sx={{
-                            position: 'absolute',
-                            top: 4,
-                            right: 4,
-                            bgcolor: 'rgba(255,255,255,0.2)',
-                            borderRadius: 1,
-                            px: 1,
-                            py: 0.5,
-                            cursor: 'pointer',
+                            width: `${width}%`,
+                            height: '100%',
+                            background: greenShade.gradient,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            transition: 'all 0.2s ease',
+                            minWidth: isSmallSegment ? 'auto' : '60px', // Ensure minimum width for text visibility
                             '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.3)'
+                              opacity: 0.8,
+                              transform: 'scaleY(1.05)'
                             }
                           }}
-                          onClick={() => handleWeightEdit(criterion.id, criterion.weight)}
                         >
-                          <Typography variant="caption" sx={{ 
-                            color: 'white', 
-                            fontWeight: 500, 
-                            fontSize: '0.7rem',
-                            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                            letterSpacing: '-0.01em'
-                          }}>
-                            {criterion.weight}%
-                          </Typography>
+                          {/* Only show text label if segment is wide enough */}
+                          {!isSmallSegment && (
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: 'white', 
+                                fontWeight: 500,
+                                fontSize: '0.8rem',
+                                textAlign: 'center',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                                lineHeight: 1.2,
+                                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                letterSpacing: '-0.01em',
+                                px: 0.5,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: '100%'
+                              }}
+                            >
+                              {criterion.field}
+                            </Typography>
+                          )}
+                          
+                          {/* Weight percentage overlay - always visible */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              borderRadius: 1,
+                              px: 0.75,
+                              py: 0.5,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.3)'
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWeightEdit(criterion.id, criterion.weight);
+                            }}
+                          >
+                            <Typography variant="caption" sx={{ 
+                              color: 'white', 
+                              fontWeight: 500, 
+                              fontSize: '0.7rem',
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                              letterSpacing: '-0.01em',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {criterion.weight}%
+                            </Typography>
+                          </Box>
                         </Box>
-                      </Box>
+                      </Tooltip>
                     );
                   })}
                 </Box>
