@@ -150,7 +150,21 @@ DATABASE_URL=postgresql://...
 REDIS_URL=redis://...
 JWT_SECRET=your-production-secret
 OPENAI_API_KEY=your-openai-key
+
+# Email Configuration (for signup notifications)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-sender-email@gmail.com
+SMTP_PASS=your-app-password
+NOTIFICATION_EMAIL=contact@equitle.com
 ```
+
+#### Email Setup Notes
+- **SMTP_HOST**: Your email provider's SMTP server (Gmail: `smtp.gmail.com`, Outlook: `smtp-mail.outlook.com`)
+- **SMTP_PORT**: Usually 587 for TLS or 465 for SSL
+- **SMTP_USER**: The email address that will send notifications
+- **SMTP_PASS**: For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password
+- **NOTIFICATION_EMAIL**: The email address that receives signup notifications (defaults to `contact@equitle.com`)
 
 ### Build and Deploy
 ```bash
