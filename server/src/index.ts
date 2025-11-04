@@ -18,6 +18,8 @@ import reportRoutes from './routes/reports';
 import { errorHandler } from './middleware/errorHandler';
 import { authMiddleware } from './middleware/auth';
 import logger from './utils/logger';
+import { db } from './lib/firebase';
+import { sendSignupNotification } from './services/email.service';
 
 dotenv.config();
 
@@ -74,6 +76,78 @@ io.on('connection', (socket) => {
     logger.info(`Client disconnected: ${socket.id}`);
   });
 });
+
+// Set up Firestore polling for signup requests
+const signupRequestsRef = db.collection('signup-requests');
+const processedSignups = new Set<string>(); // Track processed document IDs
+
+// Poll for new signup requests every 5 seconds
+const POLL_INTERVAL_MS = 5000;
+
+async function checkForNewSignups() {
+  try {
+    logger.debug('Checking for new signup requests...');
+    
+    // Get all pending signup requests (limit to most recent 100 to avoid loading too much)
+    const querySnapshot = await signupRequestsRef
+      .where('status', '==', 'pending')
+      .limit(100)
+      .get();
+
+    logger.debug(`Found ${querySnapshot.size} pending signup requests in Firestore`);
+
+    const newSignups: Array<{ id: string; email: string; timestamp: string }> = [];
+
+    querySnapshot.forEach((doc: any) => {
+      // Skip if we've already processed this document
+      if (processedSignups.has(doc.id)) {
+        return;
+      }
+
+      const data = doc.data();
+      const userEmail = data.email;
+      const timestamp = data.timestamp || data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString();
+
+      newSignups.push({
+        id: doc.id,
+        email: userEmail,
+        timestamp,
+      });
+      processedSignups.add(doc.id);
+    });
+
+    logger.debug(`Found ${newSignups.length} new signups to process`);
+
+    // Process new signups
+    for (const signup of newSignups) {
+      logger.info('New signup request detected', {
+        email: signup.email,
+        documentId: signup.id,
+        timestamp: signup.timestamp,
+      });
+
+      // Send email notification
+      await sendSignupNotification(signup.email, signup.timestamp).catch((error) => {
+        logger.error('Error in sendSignupNotification', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          email: signup.email,
+        });
+      });
+    }
+  } catch (error) {
+    logger.error('Error checking for new signups', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+  }
+}
+
+// Start polling when server starts
+setInterval(checkForNewSignups, POLL_INTERVAL_MS);
+logger.info('Firestore polling initialized for signup-requests collection (checking every 5 seconds)');
+
+// Also check immediately on startup (to catch any signups that happened while server was down)
+checkForNewSignups();
 
 server.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
