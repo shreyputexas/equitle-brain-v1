@@ -5,9 +5,14 @@ import {
   Typography,
   Button,
   TextField,
-  Grid
+  Grid,
+  Dialog,
+  DialogContent
 } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import MarketingHeader from '../components/MarketingHeader';
 import Footer from '../components/Footer';
 
@@ -15,16 +20,34 @@ export default function SignUp() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    console.log('Request credentials for:', email);
-    // Here you would typically send the data to your backend
-    setTimeout(() => {
-      alert('Thank you for your request! We\'ll send you credentials soon.');
+
+    try {
+      console.log('Submitting email to Firebase:', email);
+
+      const collectionRef = collection(db, 'signup-requests');
+      const docRef = await addDoc(collectionRef, {
+        email: email,
+        timestamp: new Date().toISOString(),
+        status: 'pending',
+        createdAt: new Date()
+      });
+
+      console.log('Successfully submitted with ID:', docRef.id);
+      setShowSuccessModal(true);
+      setEmail('');
+    } catch (error: any) {
+      console.error('Error submitting email:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      alert('Failed to submit request. Please try again.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,6 +246,112 @@ export default function SignUp() {
       <Box sx={{ position: 'relative', zIndex: 1 }}>
         <Footer />
       </Box>
+
+      {/* Success Confirmation Modal */}
+      <Dialog
+        open={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+      >
+        <DialogContent sx={{ 
+          p: 6, 
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 3,
+              border: '2px solid rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            <CheckCircleIcon 
+              sx={{ 
+                fontSize: 50, 
+                color: '#10B981',
+                animation: 'scaleIn 0.3s ease-out'
+              }} 
+            />
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              fontWeight: 700,
+              color: '#FFFFFF',
+              mb: 2
+            }}
+          >
+            Confirmed
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              color: 'rgba(255, 255, 255, 0.8)',
+              mb: 4,
+              lineHeight: 1.6
+            }}
+          >
+            Thank you for your request! We'll send you credentials soon.
+          </Typography>
+          <Button
+            onClick={() => setShowSuccessModal(false)}
+            variant="contained"
+            sx={{
+              background: `
+                linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+              `,
+              backdropFilter: 'blur(10px)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              py: 1.5,
+              px: 6,
+              fontSize: '1rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              textTransform: 'none',
+              '&:hover': {
+                background: `
+                  linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%)
+                `,
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
