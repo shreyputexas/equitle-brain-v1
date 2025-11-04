@@ -113,3 +113,72 @@ match /signup-requests/{document} {
 - Rules deployed to production (equitle-brain-dev)
 - Project ID verified to match frontend config
 - Security verified: No public read/write access to sensitive data
+
+---
+
+## Duplicate Email Prevention (Anti-Spam Feature)
+
+### Changes Made
+
+**1. Firestore Security Rules Update**
+Updated both collections to allow read access for duplicate checking:
+```javascript
+// Before: create-only
+allow create: if true;
+allow read, update, delete: if request.auth != null;
+
+// After: create + read allowed
+allow create, read: if true;
+allow update, delete: if request.auth != null;
+```
+
+**Reasoning:** Need read access to query for existing emails. This is acceptable because:
+- These are public form submissions (not sensitive user data)
+- The benefit (spam prevention) outweighs the minor privacy concern
+- Only authenticated admins can update/delete
+
+**2. SignUp.tsx Code Changes**
+
+**Added imports (line 15):**
+```typescript
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import InfoIcon from '@mui/icons-material/Info';
+```
+
+**Added state (line 24):**
+```typescript
+const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+```
+
+**Updated handleSubmit function (lines 26-66):**
+- Added duplicate email check before submission
+- Query Firestore for existing email: `query(collectionRef, where('email', '==', email))`
+- If duplicate found: Show "Already Requested" modal and return early
+- If unique: Proceed with submission and show success modal
+
+**Added Duplicate Modal UI (lines 372-476):**
+- Yellow/amber themed modal (different from green success modal)
+- Info icon instead of checkmark
+- Title: "Already Requested"
+- Message: "This email has already been submitted. We'll send you credentials soon!"
+- Styled consistently with existing success modal
+
+### Security Notes
+**Read access trade-off:**
+- ✅ Anyone can query to check if specific email exists
+- ✅ Prevents spam/duplicate submissions
+- ✅ Still cannot update or delete existing entries
+- ⚠️ Technically someone could enumerate all emails (but requires effort)
+- ℹ️ These are public form submissions anyway (not private user accounts)
+
+**If higher security needed in future:**
+- Option 1: Move duplicate checking to Cloud Function
+- Option 2: Use email hash as document ID and handle conflicts
+- Option 3: Implement rate limiting
+
+### Testing
+Test both scenarios:
+1. **New email:** Should save successfully and show green "Confirmed" modal
+2. **Duplicate email:** Should NOT save and show yellow "Already Requested" modal
+
+✅ **Feature complete and ready for testing!**

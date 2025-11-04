@@ -10,8 +10,9 @@ import {
   DialogContent
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import InfoIcon from '@mui/icons-material/Info';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import MarketingHeader from '../components/MarketingHeader';
 import Footer from '../components/Footer';
@@ -21,15 +22,30 @@ export default function SignUp() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      console.log('Submitting email to Firebase:', email);
+      console.log('Checking for duplicate email:', email);
 
+      // Check if email already exists
       const collectionRef = collection(db, 'signup-requests');
+      const q = query(collectionRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        console.log('Email already exists in database');
+        setShowDuplicateModal(true);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Email is unique, submitting to Firebase...');
+
+      // Email doesn't exist, proceed with submission
       const docRef = await addDoc(collectionRef, {
         email: email,
         timestamp: new Date().toISOString(),
@@ -344,6 +360,112 @@ export default function SignUp() {
                 `,
                 transform: 'translateY(-2px)',
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate Email Modal */}
+      <Dialog
+        open={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+      >
+        <DialogContent sx={{
+          p: 6,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(251, 191, 36, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 3,
+              border: '2px solid rgba(251, 191, 36, 0.3)'
+            }}
+          >
+            <InfoIcon
+              sx={{
+                fontSize: 50,
+                color: '#FBB020',
+                animation: 'scaleIn 0.3s ease-out'
+              }}
+            />
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              fontWeight: 700,
+              color: '#FFFFFF',
+              mb: 2
+            }}
+          >
+            Already Requested
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              color: 'rgba(255, 255, 255, 0.8)',
+              mb: 4,
+              lineHeight: 1.6
+            }}
+          >
+            This email has already been submitted. We'll send you credentials soon!
+          </Typography>
+          <Button
+            onClick={() => setShowDuplicateModal(false)}
+            variant="contained"
+            sx={{
+              background: `
+                linear-gradient(180deg, rgba(251, 191, 36, 0.6) 0%, rgba(245, 158, 11, 0.6) 30%, rgba(217, 119, 6, 0.6) 70%, rgba(180, 83, 9, 0.6) 100%),
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+              `,
+              backdropFilter: 'blur(10px)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(251, 191, 36, 0.4)',
+              py: 1.5,
+              px: 6,
+              fontSize: '1rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              textTransform: 'none',
+              '&:hover': {
+                background: `
+                  linear-gradient(180deg, rgba(251, 191, 36, 0.8) 0%, rgba(245, 158, 11, 0.8) 30%, rgba(217, 119, 6, 0.8) 70%, rgba(180, 83, 9, 0.8) 100%)
+                `,
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)'
               },
               transition: 'all 0.3s ease'
             }}
