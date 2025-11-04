@@ -124,15 +124,15 @@ export class OnePagerGenerationService {
       console.log('searcherStory2 preview:', parsed.searcherStory2?.substring(0, 100) || 'EMPTY');
       console.log('=== END PARSED CONTENT ===');
       return parsed;
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('=== OPENAI API ERROR ===');
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Error code:', (error as any)?.code);
-      console.error('Error type:', (error as any)?.type);
-      console.error('Error status:', (error as any)?.status);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error type:', error?.type);
+      console.error('Error status:', error?.status);
       console.error('Full error:', error);
       console.error('========================');
-      throw new Error(`Failed to generate one-pager content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to generate one-pager content: ${error?.message || error}`);
     }
   }
 
@@ -189,17 +189,51 @@ ${teamConnectionText}
    - Include specific metrics and ranges as provided in the thesis data
 
 3. **"Industries We Serve"** (12 lines maximum):
-   - Identify 3-4 target industries based on BOTH searcher experience AND thesis criteria
-   - If searcher(s) have direct experience in industries that match the thesis, highlight that connection
-   - If no direct experience, focus solely on thesis criteria to identify attractive industries
-   - For each industry, provide 2-3 lines explaining:
-     - Why this industry is attractive based on thesis criteria
-     - The searcher(s)' relevant experience in this space (if any)
-     - Specific opportunities or trends they're targeting
-   - Prioritize industries where searcher experience aligns with thesis criteria
-   - **BE PASSIONATE**: Use enthusiastic language about why these industries excite you
-   - **BE SPECIFIC**: Mention concrete trends, technologies, or market dynamics that drive your interest
-   - **SHOW EXPERTISE**: Demonstrate deep knowledge and genuine excitement for these sectors
+
+   ⚠️ ⚠️ ⚠️ ABSOLUTE REQUIREMENT - READ CAREFULLY ⚠️ ⚠️ ⚠️
+
+   YOU MUST ONLY WRITE ABOUT THE INDUSTRIES LISTED IN THE THESIS CRITERIA.
+   DO NOT MENTION ANY OTHER INDUSTRIES. PERIOD.
+
+   FORBIDDEN - DO NOT MENTION:
+   - Consulting
+   - Technology / Tech / SaaS / Software
+   - Finance / Banking / Private Equity
+   - Any industry from the searcher's background
+   - Any industry not explicitly in the thesis
+
+   REQUIRED - ONLY MENTION:
+   - The exact industries listed in the thesis criteria
+   - Nothing else
+
+   STRUCTURE:
+   1. State ONLY the thesis industries: "We are looking to invest in [thesis industry 1], [thesis industry 2], and [thesis industry 3]"
+   2. For each thesis industry, explain the skills that apply to THAT industry (don't say where skills came from)
+   3. Talk about why you're excited about THOSE SPECIFIC thesis industries
+
+   DO NOT say things like:
+   ❌ "Our background in consulting..."
+   ❌ "Our experience in technology..."
+   ❌ "Though our careers have been in..."
+   ❌ "We worked in [any industry]..."
+
+   ONLY talk about:
+   ✅ The thesis industries
+   ✅ Skills and expertise (without mentioning source industries)
+   ✅ Why these thesis industries are exciting
+
+   **EXAMPLES OF CORRECT RESPONSES:**
+
+   Example 1 - If thesis industries are: Manufacturing, Industrial Services, Distribution
+   "We are looking to invest in manufacturing, industrial services, and distribution businesses. Our expertise in operational optimization and process improvement positions us to drive significant value in these sectors. We understand supply chain dynamics, margin enhancement strategies, and the operational levers that matter most in manufacturing and distribution. We're excited about the resilience and cash flow characteristics of these industries, and we see tremendous opportunity to implement best practices that unlock growth and profitability."
+
+   Example 2 - If thesis industries are: Healthcare Services, Medical Practices
+   "We are targeting healthcare services and medical practices. Our skills in scaling operations, optimizing unit economics, and building high-performing teams translate directly to growing healthcare businesses. We understand the unique regulatory environment, reimbursement models, and operational challenges in healthcare services. We're passionate about improving patient outcomes while building sustainable, profitable businesses in this essential and growing sector."
+
+   Example 3 - If thesis industres are: Business Services, Professional Services
+   "We are seeking opportunities in business services and professional services. Our expertise in evaluating recurring revenue models, assessing competitive positioning, and identifying operational leverage opportunities makes us well-suited for this sector. We understand what drives value in service businesses—customer retention, employee productivity, and scalable delivery models. We're excited to partner with businesses in professional services and help them scale systematically while maintaining quality and margins."
+
+   ⚠️ REMINDER: Only mention thesis industries. Never mention background industries. ⚠️
 
 4. **"Our Stories"** (7 lines maximum):
    - **EMPHASIZE PERSONAL CONNECTION**: If multiple searchers, lead with how and where you met
@@ -459,7 +493,16 @@ SEARCHER_STORY_2:
         content
       };
 
-      return await templateEditorService.editTemplate(request.template, templateData);
+      // Map template names to actual file names
+      let templateName = request.template;
+      if (templateName === 'navy' || templateName === 'industry_navy') {
+        templateName = 'industry_navy_placeholders';
+      } else if (templateName === 'personal_navy') {
+        templateName = 'personal_navy_placeholders';
+      }
+      
+      console.log('Using template name:', templateName);
+      return await templateEditorService.editTemplate(templateName, templateData);
     }
 
     // Fall back to basic template for 'basic' or no template specified
@@ -699,7 +742,7 @@ FINAL INSTRUCTIONS:
       console.log('=== BASIC DOCUMENT GENERATION COMPLETE ===');
       return await Packer.toBuffer(doc);
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error generating basic document:', error);
       throw new Error('Failed to generate basic document');
     }
@@ -892,13 +935,13 @@ FINAL INSTRUCTIONS:
       console.log('=== INDUSTRY RESEARCH CONTENT GENERATION COMPLETE ===');
 
       return generatedContent;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('=== ERROR IN generateIndustryResearchContent ===');
       console.error('Error:', error);
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('Stack:', error instanceof Error ? error.stack : 'No stack available');
+      console.error('Error message:', error.message);
+      console.error('Stack:', error.stack);
       console.error('===================================================');
-      throw new Error(`Failed to generate industry research content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to generate industry research content: ${error.message}`);
     }
   }
 
@@ -932,36 +975,35 @@ FINAL INSTRUCTIONS:
     for (const line of lines) {
       const trimmedLine = line.trim();
 
-      // Detect section headers - support both numbered (1.) and markdown (##) formats
+      // Detect section headers - support **bold**, numbered (1.), and markdown (##) formats
       if (trimmedLine.match(/^(#+\s+|1\.?\s+)?(#\s+)?Home Healthcare Services$/i)) {
         currentSection = 'industry';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|2\.?\s+)?MARKET[\s\-]+OVERVIEW/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|2\.?\s+)?MARKET[\s\-]+OVERVIEW(\*\*)?/i)) {
         currentSection = 'marketOverview';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|3\.?\s+)?(M&A|M\s*&\s*A)[\s\-]+(ACTIVITY|CONSOLIDATION)/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|3\.?\s+)?(M&A|M\s*&\s*A)[\s\-]+(ACTIVITY|CONSOLIDATION)(\s+AND\s+\w+)?(\*\*)?/i)) {
         currentSection = 'industryConsolidation';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|4\.?\s+)?BARRIERS?[\s\-]+TO[\s\-]+ENTRY/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|4\.?\s+)?BARRIERS?[\s\-]+TO[\s\-]+ENTRY(\s+AND\s+\w+)?(\*\*)?/i)) {
         currentSection = 'entryBarrier';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|5\.?\s+)?FINANCIAL[\s\-]+PROFILE/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|5\.?\s+)?FINANCIAL[\s\-]+PROFILE(\s+AND\s+\w+)?(\*\*)?/i)) {
         currentSection = 'financialProfile';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|6\.?\s+)?(TECHNOLOGY|INNOVATION)/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(##\s+|6\.?\s+)?(TECHNOLOGY|INNOVATION|TECHNOLOGY\s+AND\s+INNOVATION)(\s+(TRENDS|AND\s+\w+))?(\*\*)?/i)) {
         currentSection = 'technology';
         continue;
-      } else if (trimmedLine.match(/^(##\s+|7\.?\s+)?(INVESTMENT|VALUE)/i)) {
+      } else if (trimmedLine.match(/^(\*\*)?(\d+\.?\s+)?(##\s+)?(INVESTMENT\s+OPPORTUNITY\s+AND\s+VALUE\s+CREATION|INVESTMENT\s+OPPORTUNITY|INVESTMENT|VALUE\s+CREATION|VALUE)(\*\*)?/i)) {
         currentSection = 'investmentInsight';
         continue;
       }
 
-      // Add content to current section
-      if (currentSection && trimmedLine) {
+      // Add content to current section (skip the header line itself)
+      if (currentSection && trimmedLine && !trimmedLine.match(/^\*\*[A-Z\s&]+\*\*$/)) {
         sections[currentSection].push(trimmedLine);
       }
     }
-
     // Build the structured data
     const parsedData: IndustryTemplateData = {
       industry: selectedIndustry,
@@ -982,6 +1024,39 @@ FINAL INSTRUCTIONS:
     console.log('- Financial Profile length:', parsedData.financialProfile.length);
     console.log('- Technology length:', parsedData.technology.length);
     console.log('- Investment Insight length:', parsedData.investmentInsight.length);
+    console.log('- Investment Insight content preview:', parsedData.investmentInsight.substring(0, 200));
+    
+    // If investment insight is empty, try to find it with a more flexible approach
+    if (!parsedData.investmentInsight.trim()) {
+      console.log('⚠️ Investment Insight section is empty, attempting fallback parsing...');
+      
+      // Look for any section that might contain investment-related content
+      const investmentKeywords = ['investment', 'opportunity', 'value', 'recommendation', 'outlook', 'potential'];
+      let fallbackContent = '';
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (investmentKeywords.some(keyword => line.toLowerCase().includes(keyword))) {
+          // Found a line with investment keywords, collect content until next section
+          let j = i;
+          while (j < lines.length && !lines[j].trim().match(/^(#+\s+|[1-9]\.?\s+)/)) {
+            if (lines[j].trim()) {
+              fallbackContent += lines[j].trim() + '\n';
+            }
+            j++;
+          }
+          break;
+        }
+      }
+      
+      if (fallbackContent.trim()) {
+        parsedData.investmentInsight = fallbackContent.trim();
+        console.log('✅ Found investment content via fallback parsing, length:', parsedData.investmentInsight.length);
+      } else {
+        console.log('❌ No investment content found even with fallback parsing');
+      }
+    }
+    
     console.log('=== PARSING COMPLETE ===');
 
     return parsedData;
@@ -1019,9 +1094,11 @@ FINAL INSTRUCTIONS:
       console.log('Checking template value...');
       console.log('  template value:', template);
       console.log('  template === "navy":', template === 'navy');
+      console.log('  template === "industry_navy":', template === 'industry_navy');
+      console.log('  template === "personal_navy":', template === 'personal_navy');
       console.log('  typeof template:', typeof template);
 
-      if (template === 'navy') {
+      if (template === 'navy' || template === 'industry_navy' || template === 'personal_navy') {
         console.log('✅ USING NAVY TEMPLATE PATH');
         console.log('Step 2a: Parsing content into sections...');
 
@@ -1051,20 +1128,31 @@ FINAL INSTRUCTIONS:
         });
 
         console.log('Step 2d: Calling editIndustryTemplate...');
-        const result = await templateEditorService.editIndustryTemplate('industry_navy_placeholders', templateData);
-        console.log('✅ NAVY TEMPLATE COMPLETED, buffer size:', result.length);
-        return result;
+        // Choose the correct template based on the template type
+        const templateName = template === 'personal_navy' ? 'personal_navy_placeholders' : 'industry_navy_placeholders';
+        console.log('Using template:', templateName);
+        
+        // Use the appropriate template service based on template type
+        if (template === 'personal_navy') {
+          const result = await templateEditorService.editTemplate(templateName, templateData);
+          console.log('✅ PERSONAL NAVY TEMPLATE COMPLETED, buffer size:', result.length);
+          return result;
+        } else {
+          const result = await templateEditorService.editIndustryTemplate(templateName, templateData);
+          console.log('✅ INDUSTRY NAVY TEMPLATE COMPLETED, buffer size:', result.length);
+          return result;
+        }
       }
 
       // Default: use existing basic document generation
       console.log('⚠️ USING BASIC DOCUMENT (template was:', template, ')');
       return await this.generateBasicDocument(thesisData, selectedIndustry);
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('=== ERROR IN generateIndustryResearchWithTemplate ===');
       console.error('Error:', error);
       console.error('Template:', template);
       console.error('Industry:', selectedIndustry);
-      console.error('Stack:', error instanceof Error ? error.stack : 'No stack available');
+      console.error('Stack:', error.stack);
       console.error('===================================================');
       throw error;
     }

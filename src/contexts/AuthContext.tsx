@@ -1,164 +1,308 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  updateProfile,
-  onAuthStateChanged,
-  User,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-} from "firebase/auth";
-import { auth, db } from "../firebase/config";
-import { doc, setDoc, updateDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import * as React from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  User as FirebaseUser 
+} from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { API_BASE_URL } from '../config/api';
+import { searcherProfilesApi } from '../services/searcherProfilesApi';
 
-type Profile = {
-  firstName?: string;
-  lastName?: string;
-  phone?: string | null;
-  location?: string | null;
-  // later steps:
-  searchDetails?: any;
-  teamExperience?: any;
-  preferences?: any;
-  onboardStep?: number;
-};
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role?: string;
+  firm?: string;
+  phone?: string;
+  location?: string;
+  avatar?: string;
+  profile?: {
+    title?: string;
+    bio?: string;
+    timezone?: string;
+    language?: string;
+  };
+  preferences?: {
+    emailNotify: boolean;
+    pushNotify: boolean;
+    calendarNotify: boolean;
+    dealNotify: boolean;
+    autoSave: boolean;
+    darkMode: boolean;
+  };
+}
+
+interface AuthResponse {
+  user: User;
+}
+
+interface LoginResponse {
+  token: string;
+  refreshToken: string;
+  user: User;
+}
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, profile?: Profile) => Promise<void>;
-  saveProfile: (data: Partial<Profile>) => Promise<void>;
-  logout: () => Promise<void>;
-  googleSignIn: () => Promise<void>; // <-- ADDED
+  logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  // keep user in sync with Firebase
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
-
-  const login = async (email: string, password: string) => {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    setUser(cred.user);
-    const token = await cred.user.getIdToken();
-    localStorage.setItem("token", token);
+  // Fetch user profile from API to get real name (shared function)
+  const fetchUserProfile = async (userId: string, email: string, displayName?: string) => {
+    try {
+      // First, try to get name from primary investor profile
+      try {
+        const profiles = await searcherProfilesApi.getSearcherProfiles();
+        if (profiles.length > 0) {
+          // Get primary profile ID from user document
+          const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`);
+          const primaryProfileId = userResponse.data?.data?.primaryProfileId;
+          
+          // If primary profile is set, use it
+          if (primaryProfileId) {
+            const primaryProfile = profiles.find(p => p.id === primaryProfileId);
+            if (primaryProfile) {
+              console.log('✅ Using primary investor profile name:', primaryProfile.name);
+              return primaryProfile.name;
+            }
+          }
+          
+          // If only one profile exists, use it automatically
+          if (profiles.length === 1) {
+            console.log('✅ Using single investor profile name:', profiles[0].name);
+            return profiles[0].name;
+          }
+        }
+      } catch (profileError) {
+        console.warn('Failed to fetch investor profiles, falling back to user profile:', profileError);
+      }
+      
+      // Fallback to user document name
+      const response = await axios.get(`${API_BASE_URL}/api/auth/me`);
+      if (response.data?.success && response.data?.data) {
+        const profileData = response.data.data;
+        return profileData.name || displayName || email?.split('@')[0] || 'User';
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user profile, using fallback name:', error);
+    }
+    return displayName || email?.split('@')[0] || 'User';
   };
 
-  const signup = async (email: string, password: string, profile?: Profile) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    setUser(cred.user);
-    const token = await cred.user.getIdToken();
-    localStorage.setItem("token", token);
+  // Don't set axios base URL globally - let individual services handle their own paths
+  // axios.defaults.baseURL = API_BASE_URL;
 
-    if (profile?.firstName || profile?.lastName) {
-      await updateProfile(cred.user, {
-        displayName: `${profile.firstName ?? ""} ${profile.lastName ?? ""}`.trim(),
+  useEffect(() => {
+
+    // Development mode: bypass Firebase auth and use mock user
+    if (process.env.NODE_ENV === 'development') {
+      const mockUserId = 'dev-user-123';
+      const mockEmail = 'dev@equitle.com';
+      
+      // Set mock token and userId for backend
+      localStorage.setItem('token', 'mock-token');
+      localStorage.setItem('userId', mockUserId);
+      axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
+
+      console.log('✅ AuthContext: Stored userId in localStorage (dev mode):', mockUserId);
+
+      // Fetch real name from profile
+      fetchUserProfile(mockUserId, mockEmail).then((name) => {
+        const mockUser: User = {
+          id: mockUserId,
+          email: mockEmail,
+          name: name,
+          role: 'admin',
+          firm: 'Equitle',
+          phone: '',
+          location: '',
+          avatar: undefined
+        };
+        setUser(mockUser);
+        setLoading(false);
+      }).catch(() => {
+        // Fallback if profile fetch fails
+        const mockUser: User = {
+          id: mockUserId,
+          email: mockEmail,
+          name: 'Development User',
+          role: 'admin',
+          firm: 'Equitle',
+          phone: '',
+          location: '',
+          avatar: undefined
+        };
+        setUser(mockUser);
+        setLoading(false);
       });
+      return;
     }
 
-    const ref = doc(db, "users", cred.user.uid);
-    await setDoc(ref, {
-      email: email.toLowerCase(),
-      firstName: profile?.firstName ?? null,
-      lastName: profile?.lastName ?? null,
-      phone: profile?.phone ?? null,
-      location: profile?.location ?? null,
-      searchDetails: profile?.searchDetails ?? null,
-      teamExperience: profile?.teamExperience ?? null,
-      preferences: profile?.preferences ?? null,
-      onboardStep: 1,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  };
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        // User is signed in
+        const idToken = await firebaseUser.getIdToken();
+        localStorage.setItem('token', idToken);
+        localStorage.setItem('userId', firebaseUser.uid);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
 
-  const saveProfile = async (data: Partial<Profile>) => {
-    const u = auth.currentUser;
-    if (!u) throw new Error("Not authenticated");
-    const ref = doc(db, "users", u.uid);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      await setDoc(ref, {
-        email: u.email ?? "",
-        createdAt: serverTimestamp(),
-        onboardStep: 1,
-        ...data,
-        updatedAt: serverTimestamp(),
-      });
-    } else {
-      await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+        console.log('✅ AuthContext: Stored userId in localStorage (auth state):', firebaseUser.uid);
+
+        // Fetch real name from profile API
+        const realName = await fetchUserProfile(
+          firebaseUser.uid, 
+          firebaseUser.email || '',
+          firebaseUser.displayName || undefined
+        );
+
+        // Create user object from Firebase user with profile name
+        const user: User = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: realName,
+          role: 'user',
+          firm: '',
+          phone: firebaseUser.phoneNumber || '',
+          location: '',
+          avatar: firebaseUser.photoURL || undefined
+        };
+
+        setUser(user);
+      } else {
+        // User is signed out
+        setUser(null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId');
+        delete axios.defaults.headers.common['Authorization'];
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // fetchUserProfile is no longer needed - using Firebase auth state listener
+
+  const login = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      // Get the ID token for backend authentication
+      const idToken = await firebaseUser.getIdToken();
+      localStorage.setItem('token', idToken);
+      localStorage.setItem('userId', firebaseUser.uid);
+
+      console.log('✅ AuthContext: Stored userId in localStorage (login):', firebaseUser.uid);
+
+      // Set axios default header for backend requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+
+      // Create user object from Firebase user
+      const user: User = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+        role: 'user',
+        firm: '',
+        phone: firebaseUser.phoneNumber || '',
+        location: '',
+        avatar: firebaseUser.photoURL || undefined
+      };
+
+      setUser(user);
+      navigate('/outreach/deals');
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      throw new Error(error.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
-    await signOut(auth);
-    setUser(null);
-    localStorage.removeItem("token");
-  };
-
-  // ---- ADDED: Google sign-in ----
-  const googleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
     try {
-      // Prefer popup; fall back to redirect where popups are blocked (iOS/Safari)
-      const cred = await signInWithPopup(auth, provider);
-      setUser(cred.user);
-      const token = await cred.user.getIdToken();
-      localStorage.setItem("token", token);
-
-      // Ensure Firestore user doc exists
-      const ref = doc(db, "users", cred.user.uid);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        const display = cred.user.displayName || "";
-        const [first, ...rest] = display.split(" ").filter(Boolean);
-        const last = rest.join(" ") || null;
-        await setDoc(ref, {
-          email: (cred.user.email || "").toLowerCase(),
-          firstName: first || null,
-          lastName: last,
-          phone: null,
-          location: null,
-          searchDetails: null,
-          teamExperience: null,
-          preferences: null,
-          onboardStep: 1,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await updateDoc(ref, { updatedAt: serverTimestamp() });
-      }
-    } catch (err: any) {
-      if (
-        err?.code === "auth/popup-blocked" ||
-        err?.code === "auth/operation-not-supported-in-this-environment"
-      ) {
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-      throw err;
+      await signOut(auth);
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      delete axios.defaults.headers.common['Authorization'];
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still clear local state even if Firebase logout fails
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      delete axios.defaults.headers.common['Authorization'];
+      navigate('/login');
     }
   };
-  // -------------------------------
+
+  const updateUser = (userData: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...userData } : null);
+  };
+
+  const refreshUser = async () => {
+    if (!user) return;
+    
+    try {
+      // Add a small delay to ensure Firestore write completes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newName = await fetchUserProfile(user.id, user.email, user.name);
+      if (newName !== user.name) {
+        setUser({ ...user, name: newName });
+        console.log('✅ Refreshed user display name:', newName);
+      }
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      // On error, try to fetch profiles directly
+      try {
+        const profiles = await searcherProfilesApi.getSearcherProfiles();
+        const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`);
+        const primaryProfileId = userResponse.data?.data?.primaryProfileId;
+        if (primaryProfileId && profiles.length > 0) {
+          const primaryProfile = profiles.find(p => p.id === primaryProfileId);
+          if (primaryProfile && primaryProfile.name !== user.name) {
+            setUser({ ...user, name: primaryProfile.name });
+            console.log('✅ Updated user display name from profile:', primaryProfile.name);
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback refresh also failed:', fallbackError);
+      }
+    }
+  };
 
   return (
-    <AuthContext.Provider
-      value={{ user, login, signup, saveProfile, logout, googleSignIn }} // <-- expose googleSignIn
-    >
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
-  return ctx;
 };

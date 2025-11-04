@@ -1,17 +1,14 @@
-import React from 'react';
+import * as React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { BrainProvider } from './contexts/BrainContext';
-import PrivateRoute from './components/PrivateRoute';
+import { AppThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout';
+import PrivateRoute from './components/PrivateRoute';
+import ScrollToTop from './components/ScrollToTop';
 
-import Landing from './pages/Landing';
-import Product from './pages/Product';
-import Manifesto from './pages/Manifesto';
-import Network from './pages/Network';
 import Login from './pages/Login';
-import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
 import DealDetail from './pages/DealDetail';
@@ -23,56 +20,85 @@ import Reports from './pages/Reports';
 import Funds from './pages/Funds';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import OAuthCallback from './pages/OAuthCallback';
+import VoiceCalls from './pages/VoiceCalls';
+import MassVoicemail from './pages/MassVoicemail';
+import Investors from './pages/Investors';
+import Brokers from './pages/Brokers';
+import DataEnrichment from './pages/DataEnrichment';
+import MyThesis from './pages/MyThesis';
 
 function App() {
   return (
-    <AuthProvider>
-      <BrainProvider>
-        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <AppThemeProvider>
+      <AuthProvider>
+        <BrainProvider>
+          <ScrollToTop />
+          <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
           <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/product" element={<Product />} />
-            <Route path="/manifesto" element={<Manifesto />} />
-            <Route path="/network" element={<Network />} />
+            {/* Authentication routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            
-            <Route path="/app" element={
+
+            {/* OAuth callback routes */}
+            <Route path="/app/oauth/callback" element={<OAuthCallback />} />
+            <Route path="/integrations/success" element={<OAuthCallback />} />
+            <Route path="/integrations/error" element={<OAuthCallback />} />
+
+            {/* Main app routes - protected */}
+            <Route path="/" element={
               <PrivateRoute>
                 <Layout />
               </PrivateRoute>
             }>
-              <Route index element={<Navigate to="/app/deals/relationships" />} />
-              
-              {/* Deals Routes */}
+              <Route index element={<Navigate to="/outreach/deals" />} />
+
+              {/* Outreach Routes */}
+              <Route path="outreach">
+                <Route path="deals" element={<Deals />} />
+                <Route path="deals/:id" element={<DealDetail />} />
+                {/* ARCHIVED: Investors page route - hidden but code preserved */}
+                {/* <Route path="investors" element={<Investors />} /> */}
+                <Route path="brokers" element={<Brokers />} />
+              </Route>
+
+              {/* Legacy Deals Routes - redirect to new structure */}
               <Route path="deals">
-                <Route path="relationships" element={<Deals />} />
-                <Route path="relationships/:id" element={<DealDetail />} />
+                <Route path="all" element={<Navigate to="/outreach/deals" />} />
+                <Route path="all/:id" element={<Navigate to="/outreach/deals/:id" />} />
               </Route>
-              
-              {/* Fundraising Routes */}
+
+              {/* Fundraising Routes - ARCHIVED: Routes disabled but code preserved */}
               <Route path="fundraising">
-                <Route path="limited-partners" element={<InvestorRelations />} />
-                <Route path="funds" element={<Funds />} />
+                {/* ARCHIVED: Limited Partners route - hidden but code preserved */}
+                {/* <Route path="limited-partners" element={<InvestorRelations />} /> */}
+                {/* ARCHIVED: Funds route - hidden but code preserved */}
+                {/* <Route path="funds" element={<Funds />} /> */}
               </Route>
-              
+
               {/* Settings and other routes */}
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
-              
+              <Route path="voice-calls" element={<VoiceCalls />} />
+              <Route path="mass-voicemail" element={<MassVoicemail />} />
+              <Route path="data-enrichment" element={<DataEnrichment />} />
+              <Route path="my-thesis" element={<MyThesis />} />
+
               {/* Legacy routes - keeping for backward compatibility */}
-              <Route path="dashboard" element={<Navigate to="/deals/relationships" />} />
-              <Route path="companies" element={<Navigate to="/deals/relationships" />} />
-              <Route path="contacts" element={<Navigate to="/deals/relationships" />} />
+              <Route path="dashboard" element={<Navigate to="/outreach/deals" />} />
+              <Route path="companies" element={<Navigate to="/outreach/deals" />} />
+              <Route path="contacts" element={<Contacts />} />
               <Route path="investor-relations" element={<Navigate to="/fundraising/limited-partners" />} />
-              <Route path="brain" element={<Brain />} />
+              {/* ARCHIVED: Brain page route - hidden but code preserved */}
+              {/* <Route path="brain" element={<Brain />} /> */}
               <Route path="reports" element={<Navigate to="/fundraising/funds" />} />
-              <Route path="deals" element={<Navigate to="/deals/relationships" />} />
+              <Route path="deals" element={<Navigate to="/outreach/deals" />} />
+              <Route path="deals/relationships" element={<Navigate to="/outreach/deals" />} />
             </Route>
           </Routes>
-        </Box>
-      </BrainProvider>
-    </AuthProvider>
+          </Box>
+        </BrainProvider>
+      </AuthProvider>
+    </AppThemeProvider>
   );
 }
 

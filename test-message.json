@@ -1,0 +1,7 @@
+{
+  "messageTemplate": "Hi {{contact_name}}, this is calling from Equitle regarding investment opportunities at {{company_name}}. Please give me a call back!",
+  "testContact": {
+    "name": "John Smith",
+    "companyName": "Acme Corp"
+  }
+}

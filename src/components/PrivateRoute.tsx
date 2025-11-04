@@ -8,19 +8,26 @@ interface PrivateRouteProps {
 }
 
 export default function PrivateRoute({ children }: PrivateRouteProps) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  if (!user) {
+  if (loading) {
     return (
       <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          bgcolor: 'background.default'
+        }}
       >
         <CircularProgress />
       </Box>
     );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

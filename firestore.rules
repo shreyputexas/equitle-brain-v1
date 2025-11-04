@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can only access their own data
+    match /users/{userId} {
+      // Allow development user access (remove this in production)
+      allow read, write: if userId == 'dev-user-123' || (request.auth != null && request.auth.uid == userId);
+
+      // User subcollections (deals, investors, etc.)
+      match /{collection}/{document} {
+        // Allow development user access (remove this in production)
+        allow read, write: if userId == 'dev-user-123' || (request.auth != null && request.auth.uid == userId);
+      }
+    }
+
+    // Temporary: Allow specific access to dev-user-123 investmentTheses
+    match /users/dev-user-123/investmentTheses/{thesisId} {
+      allow read, write: if true;
+    }
+
+
+    // Health check endpoint (used by backend)
+    match /_health/{document} {
+      allow read, write: if true;
+    }
+
+    // Deny access to all other documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
