@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -21,8 +21,8 @@ import {
   Paper,
   Avatar
 } from '@mui/material';
-// import MarketingHeader from '../components/MarketingHeader';
-// import Footer from '../components/Footer';
+import MarketingHeader from '../components/MarketingHeader';
+import Footer from '../components/Footer';
 import {
   ArrowForward as ArrowForwardIcon,
   Check as CheckIcon,
@@ -43,7 +43,53 @@ import {
   Api as ApiIcon,
   PhoneAndroid as MobileIcon,
   PhoneAndroid,
-  LockOutlined as LockIcon
+  LockOutlined as LockIcon,
+  Web as ScrapingIcon,
+  Voicemail as VoicemailIcon,
+  Contacts as ContactsIcon,
+  Email as EmailIcon,
+  Search as SearchIcon,
+  Link as LinkIcon,
+  PersonAdd as PersonAddIcon,
+  Business as BusinessIcon2,
+  AttachMoney as AttachMoneyIcon,
+  Store as StoreIcon,
+  Description as DescriptionIcon,
+  TrendingUp as TrendingUpIcon,
+  Assessment as AssessmentIcon2,
+  Score as ScoreIcon,
+  Psychology as PsychologyIcon,
+  Lightbulb as LightbulbIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  TrackChanges as TrackChangesIcon,
+  Timeline as TimelineIcon2,
+  SentimentSatisfied as SentimentIcon,
+  Analytics as AnalyticsIcon2,
+  Label as LabelIcon,
+  Search as SearchIcon2,
+  Person as PersonIcon,
+  Schedule as ScheduleIcon,
+  Autorenew as AutorenewIcon,
+  BarChart as BarChartIcon,
+  Psychology as PsychologyIcon2,
+  RecordVoiceOver as RecordVoiceOverIcon,
+  ContentCopy as ContentCopyIcon,
+  Campaign as CampaignIcon,
+  SentimentSatisfied as SentimentSatisfiedIcon,
+  Analytics as AnalyticsIcon3,
+  HeadsetMic as HeadsetMicIcon,
+  LibraryBooks as LibraryBooksIcon,
+  Tune as TuneIcon,
+  Psychology as PsychologyIcon3,
+  Speed as SpeedIcon2,
+  Message as MessageIcon,
+  TrendingUp as TrendingUpIcon2,
+  AutoAwesome as AutoAwesomeIcon2,
+  Group as GroupIcon,
+  AccountBalance as AccountBalanceIcon,
+  Schedule as ScheduleIcon2,
+  Analytics as AnalyticsIcon4,
+  Timeline as TimelineIcon3
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -64,116 +110,183 @@ function TabPanel(props: TabPanelProps) {
 
 export default function Product() {
   const navigate = useNavigate();
-  const [tabValue, setTabValue] = useState(0);
+  const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Product - Equitle';
+  }, []);
+
+  useEffect(() => {
+    // Handle hash navigation
+    const hash = window.location.hash;
+    if (hash === '#integrations') {
+      setTimeout(() => {
+        const element = document.getElementById('integrations');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  }, []);
+
+  const handleNextFeature = () => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    const totalFeatures = features.reduce((total, category) => total + category.items.length, 0);
+    setCurrentFeatureIndex((prev) => (prev + 1) % totalFeatures);
+    
+    // Reset animation state after animation completes
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 800);
+  };
+
+  const handlePrevFeature = () => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
+    const totalFeatures = features.reduce((total, category) => total + category.items.length, 0);
+    setCurrentFeatureIndex((prev) => (prev - 1 + totalFeatures) % totalFeatures);
+    
+    // Reset animation state after animation completes
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 800);
+  };
 
   const features = [
     {
-      category: 'Automated Note Taking',
-      icon: <AIIcon sx={{ fontSize: 40 }} />,
+      category: 'Lead Management',
+      icon: <ContactsIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [
         {
-          title: 'Meeting Intelligence',
-          description: 'AI automatically captures and transcribes meeting notes, extracting key insights and action items',
-          benefits: ['Real-time transcription', 'Action item extraction', 'Key insight identification']
-        },
-        {
-          title: 'Smart Note Organization',
-          description: 'Automatically categorizes and tags notes for easy retrieval and analysis',
-          benefits: ['Auto-categorization', 'Smart tagging', 'Searchable database']
-        },
-        {
-          title: 'Intelligence Integration',
-          description: 'Meeting insights are automatically added to your deal intelligence and relationship profiles',
-          benefits: ['Deal context updates', 'Relationship scoring', 'Pipeline intelligence']
+          title: 'Lead Management',
+          description: 'Find new leads by integrating your data providers, enrich existing contacts, and discover brokers, investors, and target companies.',
+          benefits: [
+            { text: 'Find new leads', icon: <SearchIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Data provider integration', icon: <LinkIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Enrich existing contacts', icon: <PersonAddIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Discover brokers', icon: <BusinessIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Find investors', icon: <AttachMoneyIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Target companies', icon: <StoreIcon sx={{ fontSize: 16 }} /> }
+          ]
         }
       ]
     },
     {
-      category: 'Automated Calling',
+      category: 'Thesis Management',
+      icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
+      items: [
+        {
+          title: 'Thesis Management',
+          description: 'Develop your investment thesis to power the central knowledge base of Equitle. It will be used as context for industry reports, outreach, and more.',
+          benefits: [
+            { text: 'Industry Report Creation', icon: <DescriptionIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Market Analysis', icon: <TrendingUpIcon sx={{ fontSize: 16 }} /> },
+            { text: 'One Pager Generation', icon: <AssessmentIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Weightage', icon: <ScoreIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Scorecards', icon: <ScoreIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Deal Intelligence', icon: <LightbulbIcon sx={{ fontSize: 16 }} /> }
+          ]
+        }
+      ]
+    },
+    {
+      category: 'Pipeline Autopopulation',
+      icon: <TimelineIcon sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
+      items: [
+        {
+          title: 'Pipeline Autopopulation',
+          description: 'Visual pipeline management to track deals from initial contact to closing with automated workflows and comprehensive analytics.',
+          benefits: [
+            { text: 'Autopopulation', icon: <AutoAwesomeIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Deal Tracking', icon: <TrackChangesIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Stage Management', icon: <TimelineIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Sentiment Analysis', icon: <SentimentIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Campaign Analytics', icon: <AnalyticsIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Document Tagging', icon: <LabelIcon sx={{ fontSize: 16 }} /> }
+          ]
+        }
+      ]
+    },
+    {
+      category: 'Automated Email Campaigns',
+      icon: <EmailIcon sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
+      items: [
+        {
+          title: 'Automated Email Campaigns',
+          description: 'AI-powered email generation and sequencing for personalized outreach campaigns based on detailed analysis and research on target companies, brokers, and investors.',
+          benefits: [
+            { text: 'Comprehensive Research', icon: <SearchIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Personalization', icon: <PersonIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Schedule Emails', icon: <ScheduleIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Automated Follow Ups', icon: <AutorenewIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Performance Analytics', icon: <BarChartIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Sentiment Analysis', icon: <PsychologyIcon2 sx={{ fontSize: 16 }} /> }
+          ]
+        }
+      ]
+    },
+    {
+      category: 'Automated Calls',
       icon: <PhoneAndroid sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [
         {
-          title: 'Prospect Outreach Automation',
-          description: 'AI automatically calls POCs at prospective businesses based on your criteria and timing',
-          benefits: ['Automated dialing', 'Smart scheduling', 'Call outcome tracking']
-        },
-        {
-          title: 'Intelligent Conversation Flow',
-          description: 'AI conducts initial conversations to qualify prospects and gather key information',
-          benefits: ['Natural conversation', 'Qualification questions', 'Information capture']
-        },
-        {
-          title: 'Follow-up Management',
-          description: 'Automatically schedules follow-ups and tracks conversation history with prospects',
-          benefits: ['Auto-scheduling', 'Conversation tracking', 'Relationship building']
+          title: 'Automated Calls & Voicemails',
+          description: 'Agentic voice calls in your voice, with personalized messages based on the prospect\'s data and interaction history. Send automated voicemails in your voice to prospects to book a follow up call.',
+          benefits: [
+            { text: 'Agentic Voice Calls', icon: <RecordVoiceOverIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Voice Cloning', icon: <ContentCopyIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Voicemail Campaigns', icon: <CampaignIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Sentiment Analysis', icon: <SentimentSatisfiedIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Call Analytics', icon: <AnalyticsIcon3 sx={{ fontSize: 16 }} /> },
+            { text: 'Hands-Free Experience', icon: <HeadsetMicIcon sx={{ fontSize: 16 }} /> }
+          ]
         }
       ]
     },
     {
-      category: 'Deal Management',
-      icon: <BusinessIcon sx={{ fontSize: 40 }} />,
-      color: '#10B981',
-      items: [
-        {
-          title: 'Pipeline Management',
-          description: 'Complete deal lifecycle management from sourcing to exit',
-          benefits: ['Visual pipeline', 'Stage tracking', 'Milestone alerts']
-        },
-        {
-          title: 'Document Management',
-          description: 'Centralized document storage with version control and security',
-          benefits: ['Secure storage', 'Version control', 'Access permissions']
-        },
-        {
-          title: 'Due Diligence Workflows',
-          description: 'Streamlined DD processes with automated checklists and reviews',
-          benefits: ['Automated workflows', 'Progress tracking', 'Collaboration tools']
-        }
-      ]
-    },
-    {
-      category: 'Brain',
-      icon: <AIIcon sx={{ fontSize: 40 }} />,
+      category: 'One Pager Generation',
+      icon: <AssessmentIcon sx={{ fontSize: 40 }} />,
       color: '#9CA3AF',
       items: [
         {
-          title: 'Central LLM Intelligence',
-          description: 'A central large language model that serves as your AI-powered knowledge base and advisor',
-          benefits: ['Natural language queries', 'Contextual responses', 'Intelligent insights']
-        },
-        {
-          title: 'Knowledge Base Integration',
-          description: 'Connects all your data sources to create a comprehensive knowledge base for informed decision making',
-          benefits: ['Unified data access', 'Cross-reference insights', 'Historical context']
-        },
-        {
-          title: 'Intelligent Recommendations',
-          description: 'AI-powered suggestions based on your deal history, market data, and investment patterns',
-          benefits: ['Deal recommendations', 'Risk assessments', 'Strategic guidance']
+          title: 'One Pager Generation',
+          description: 'Autogenerate one pagers for investment opportunities and firm pitch with template management and engagement analytics, using context from your investment thesis and profile.',
+          benefits: [
+            { text: 'Template Library', icon: <LibraryBooksIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Content Optimization', icon: <TuneIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Contextual Understanding', icon: <PsychologyIcon3 sx={{ fontSize: 16 }} /> },
+            { text: '20 Second Generation', icon: <SpeedIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Personalized Messaging', icon: <MessageIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Latest Industry Insights', icon: <TrendingUpIcon2 sx={{ fontSize: 16 }} /> }
+          ]
         }
       ]
     },
     {
-      category: 'Collaboration',
-      icon: <GroupsIcon sx={{ fontSize: 40 }} />,
-      color: '#3B82F6',
+      category: 'Investor Reporting',
+      icon: <BusinessIcon sx={{ fontSize: 40 }} />,
+      color: '#9CA3AF',
       items: [
         {
-          title: 'Team Workspace',
-          description: 'Collaborative environment for deal teams and stakeholders',
-          benefits: ['Real-time collaboration', 'Task management', 'Communication hub']
-        },
-        {
-          title: 'Workflow Automation',
-          description: 'Automated workflows for repetitive tasks and approvals',
-          benefits: ['Process automation', 'Approval workflows', 'Notifications']
-        },
-        {
-          title: 'Stakeholder Portal',
-          description: 'Secure portal for external stakeholders and LPs',
-          benefits: ['External access', 'Branded portal', 'Controlled sharing']
+          title: 'Investor Reporting',
+          description: 'Automated investor reporting to keep your investors updated on your progress, spending, and pipeline. Send reports on progress and potential acquisitions to keep them in the loop.',
+          benefits: [
+            { text: 'Automated Reports', icon: <AutoAwesomeIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'LP Updates', icon: <GroupIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Budget Reports', icon: <AccountBalanceIcon sx={{ fontSize: 16 }} /> },
+            { text: 'Custom Update Frequency', icon: <ScheduleIcon2 sx={{ fontSize: 16 }} /> },
+            { text: 'Engagement Analytics', icon: <AnalyticsIcon4 sx={{ fontSize: 16 }} /> },
+            { text: 'Pipeline Updates', icon: <TimelineIcon3 sx={{ fontSize: 16 }} /> }
+          ]
         }
       ]
     }
@@ -181,24 +294,19 @@ export default function Product() {
 
   const integrations = [
     {
-      category: 'CRM Systems',
-      items: ['Salesforce', 'HubSpot', 'Microsoft Dynamics', 'Pipedrive'],
-      icon: <BusinessIcon />
+      category: 'Data Providers',
+      items: ['Grata', 'ZoomInfo', 'Apollo', 'LinkedIn Sales Navigator'],
+      icon: <ScrapingIcon />
     },
     {
-      category: 'Data Rooms',
-      items: ['Datasite', 'Intralinks', 'DealRoom', 'SecureDocs'],
-      icon: <LockIcon />
+      category: 'Suite',
+      items: ['Google Workspace', 'Microsoft 365', 'Google Drive', 'OneDrive'],
+      icon: <IntegrationIcon />
     },
     {
       category: 'Financial Data',
       items: ['PitchBook', 'Preqin', 'Bloomberg', 'FactSet'],
       icon: <DataIcon />
-    },
-    {
-      category: 'Productivity',
-      items: ['Microsoft 365', 'Google Workspace', 'Slack', 'Zoom'],
-      icon: <IntegrationIcon />
     }
   ];
 
@@ -206,303 +314,376 @@ export default function Product() {
   const faqs = [
     {
       question: 'How does Equitle\'s AI work?',
-      answer: 'Equitle uses advanced machine learning algorithms trained on private equity data to identify patterns, assess risks, and predict outcomes. Our AI continuously learns from your firm\'s investment patterns and market data to provide increasingly accurate insights.'
+      answer: 'Equitle stores your deal pipeline history so our fine-tuned large language model can answer questions accurately and provide proper insights.'
+    },
+    {
+      question: 'How do the automated voicemails work?',
+      answer: 'Equitle sends automated voicemails to your prospects in your voice, with a personalized message based on the prospect\'s data and interaction history. The main goal is to book a follow up call with the prospect.'
     },
     {
       question: 'What integrations are available?',
-      answer: 'Equitle integrates with leading CRMs (Salesforce, HubSpot), data rooms (Datasite, Intralinks), financial data providers (PitchBook, Preqin), and productivity tools (Microsoft 365, Google Workspace). We also offer API access for custom integrations.'
+      answer: 'Equitle integrates with data providers (Apollo, Grata, ZoomInfo), your productivity tools (Microsoft 365, Google Workspace), and your financial data providers (PitchBook, Preqin, Bloomberg, FactSet).'
     },
     {
-      question: 'How secure is my data?',
-      answer: 'Your data security is our top priority. We use bank-grade encryption, maintain SOC 2 Type II compliance, and offer data residency options. All data is encrypted in transit and at rest, with comprehensive audit trails and access controls.'
+      question: 'Why not use existing softwares to source deals?',
+      answer: 'Equitle is built specifically for private equity firms to source deals and manage the entire deal pipeline. It is 1 platform that consolidates your entire tech stack so you can focus on closing isntead of tedious work.'
     },
     {
-      question: 'Can I customize workflows?',
-      answer: 'Yes, Equitle is highly customizable. You can create custom workflows, fields, reports, and dashboards tailored to your firm\'s specific processes. Our workflow automation engine can be configured to match your existing procedures.'
-    },
-    {
-      question: 'What support is included?',
-      answer: 'All plans include comprehensive onboarding, training, and ongoing support. Our customer success team provides dedicated support, regular check-ins, and best practice guidance to ensure you get maximum value from the platform.'
+      question: 'How does investor communication work?',
+      answer: 'Operators have a hard time dealing with investor relations while sourcing a deal. Equitle updates your investors on your progress, spending, and pipeline on a frequency decided by you.'
     }
   ];
 
   return (
     <>
-      {/* <MarketingHeader /> */}
+      <MarketingHeader />
       
-      {/* Header */}
-      <Box
-        sx={{
-          pt: { xs: 16, md: 20 },
-          py: 8,
-          background: 'linear-gradient(135deg, #FFFFFF 0%, #F8F8FF 100%)',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.05)'
-        }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={8}>
-              <Chip 
-                label="PRODUCT OVERVIEW" 
-                sx={{ 
-                  mb: 3,
-                  background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.1) 0%, rgba(124, 122, 237, 0.1) 100%)',
-                  border: '1px solid rgba(94, 92, 230, 0.2)',
-                  fontWeight: 600
-                }}
-              />
-              <Typography 
-                variant="h1" 
-                sx={{ 
-                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 700,
-                  fontSize: { xs: '2.5rem', md: '3.5rem' },
-                  lineHeight: 1.2,
-                  mb: 3
-                }}
-              >
-                The Complete Platform for 
-                <Box 
-                  component="span" 
-                  sx={{ 
-                    background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent'
-                  }}
-                >
-                  {' '}Searchers
-                </Box>
-              </Typography>
-              <Typography variant="h5" sx={{ color: 'text.secondary', mb: 4, lineHeight: 1.6 }}>
-                From deal sourcing to portfolio management, Equitle provides the AI-powered tools and insights you need to succeed in your search.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-                <Button 
-                  variant="contained" 
-                  size="large"
-                  endIcon={<ArrowForwardIcon />}
-                  onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle?month=2025-09', '_blank')}
-                  sx={{
-                    background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-                    py: 1.5,
-                  px: 4
-                  }}
-                >
-                  Discover Equitle
-                </Button>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Box
-                sx={{
-                  height: 400,
-                  borderRadius: 3,
-                  background: 'linear-gradient(135deg, rgba(94, 92, 230, 0.05) 0%, rgba(124, 122, 237, 0.05) 100%)',
-                  border: '1px solid rgba(94, 92, 230, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                <Box
-                  component="svg"
-                  width="280"
-                  height="280"
-                  viewBox="0 0 280 280"
-                  sx={{ filter: 'drop-shadow(0 4px 12px rgba(94, 92, 230, 0.15))' }}
-                >
-                  {/* Background circles */}
-                  <circle cx="140" cy="140" r="120" fill="rgba(94, 92, 230, 0.08)" />
-                  <circle cx="140" cy="140" r="90" fill="rgba(124, 122, 237, 0.12)" />
-                  
-                  {/* Main dashboard elements */}
-                  <rect x="60" y="80" width="160" height="120" rx="8" fill="white" stroke="rgba(94, 92, 230, 0.2)" strokeWidth="2" />
-                  
-                  {/* Chart bars */}
-                  <rect x="80" y="140" width="12" height="40" fill="#5E5CE6" rx="2" />
-                  <rect x="100" y="120" width="12" height="60" fill="#7C7AED" rx="2" />
-                  <rect x="120" y="130" width="12" height="50" fill="#9CA3AF" rx="2" />
-                  <rect x="140" y="110" width="12" height="70" fill="#5E5CE6" rx="2" />
-                  <rect x="160" y="125" width="12" height="55" fill="#7C7AED" rx="2" />
-                  <rect x="180" y="135" width="12" height="45" fill="#9CA3AF" rx="2" />
-                  
-                  {/* Chart line */}
-                  <path d="M75 100 Q100 90 125 95 T175 85 T200 80" stroke="#5E5CE6" strokeWidth="3" fill="none" strokeLinecap="round" />
-                  
-                  {/* Floating elements */}
-                  <circle cx="200" cy="60" r="8" fill="#5E5CE6" opacity="0.8" />
-                  <circle cx="70" cy="200" r="6" fill="#7C7AED" opacity="0.6" />
-                  <circle cx="210" cy="220" r="10" fill="#9CA3AF" opacity="0.4" />
-                  
-                  {/* Connection lines */}
-                  <path d="M200 60 L220 40" stroke="rgba(94, 92, 230, 0.3)" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M70 200 L50 220" stroke="rgba(124, 122, 237, 0.3)" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M210 220 L230 200" stroke="rgba(156, 163, 175, 0.3)" strokeWidth="2" strokeLinecap="round" />
-                  
-                  {/* Data points */}
-                  <circle cx="75" cy="100" r="3" fill="#5E5CE6" />
-                  <circle cx="125" cy="95" r="3" fill="#5E5CE6" />
-                  <circle cx="175" cy="85" r="3" fill="#5E5CE6" />
-                  <circle cx="200" cy="80" r="3" fill="#5E5CE6" />
-                </Box>
-              </Box>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
 
       {/* Feature Categories */}
-      <Box sx={{ py: 12, background: 'white' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
+      <Box sx={{ pt: 24, pb: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
+        <Box sx={{ textAlign: 'center', mb: 12, px: { xs: 2, md: 4 } }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                color: '#FFFFFF'
               }}
             >
-              Comprehensive Feature Set
+              Our Feature Set
             </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Everything you need to manage your search fund operations
+          </Box>
+          <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+            Everything you need to manage your sourcing operations
             </Typography>
           </Box>
 
-          <Tabs 
-            value={tabValue} 
-            onChange={(e, v) => setTabValue(v)} 
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{ mb: 6, '& .MuiTab-root': { minWidth: 200 } }}
+        <Box sx={{ position: 'relative', height: '450px', overflow: 'hidden', px: { xs: 2, md: 4 } }}>
+          {/* Left Arrow */}
+          <Button
+            onClick={handlePrevFeature}
+            sx={{
+              position: 'absolute',
+              left: { xs: 'calc(50% - 500px - 60px)', md: 'calc(50% - 500px - 80px)' },
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#FFFFFF',
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              minWidth: 'auto',
+              width: '40px',
+              height: '40px',
+              zIndex: 10,
+              backgroundColor: 'transparent'
+            }}
           >
-            {features.map((feature, index) => (
-              <Tab 
-                key={index}
-                label={feature.category} 
-                icon={React.cloneElement(feature.icon, { 
-                  sx: { fontSize: 24, color: '#9CA3AF' } 
-                })}
-                iconPosition="start"
-                sx={{ 
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  minHeight: 64
-                }}
-              />
-            ))}
-          </Tabs>
+            &lt;
+          </Button>
 
-          {features.map((feature, index) => (
-            <TabPanel key={index} value={tabValue} index={index}>
-              <Fade in timeout={500}>
-                <Grid container spacing={4}>
-                  {feature.items.map((item, idx) => (
-                    <Grid item xs={12} md={4} key={idx}>
-                      <Card
+          {/* Right Arrow */}
+          <Button
+            onClick={handleNextFeature}
+                sx={{ 
+              position: 'absolute',
+              right: { xs: 'calc(50% - 500px - 60px)', md: 'calc(50% - 500px - 80px)' },
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: '#FFFFFF',
+              fontSize: '2rem',
+              fontWeight: 'bold',
+              minWidth: 'auto',
+              width: '40px',
+              height: '40px',
+              zIndex: 10,
+              backgroundColor: 'transparent'
+            }}
+          >
+            &gt;
+          </Button>
+
+          <Box sx={{ 
+            position: 'relative', 
+            width: '100%', 
+            maxWidth: '1000px', 
+            height: '100%',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+                {features.flatMap((category, categoryIdx) => 
+                  category.items.map((item, itemIdx) => {
+                    const globalIndex = features.slice(0, categoryIdx).reduce((acc, cat) => acc + cat.items.length, 0) + itemIdx;
+                    return (
+                      <Box
+                        key={`${categoryIdx}-${itemIdx}`}
                         sx={{
-                          p: 3,
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          width: '100%',
                           height: '100%',
-                          border: '1px solid rgba(94, 92, 230, 0.08)',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: '0 12px 32px rgba(94, 92, 230, 0.15)',
-                            border: '1px solid rgba(156, 163, 175, 0.2)'
-                          }
+                          zIndex: globalIndex === currentFeatureIndex ? 2 : 1,
+                          transform: globalIndex === currentFeatureIndex 
+                            ? 'translateX(0)' 
+                            : globalIndex < currentFeatureIndex 
+                              ? 'translateX(-100%)' 
+                              : 'translateX(100%)',
+                          opacity: globalIndex === currentFeatureIndex ? 1 : 0,
+                          transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                          willChange: 'transform, opacity'
                         }}
                       >
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        <Card
+                          sx={{
+                            p: 4,
+                            height: '100%',
+                            background: `
+                              linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                              radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                              radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                            `,
+                            backdropFilter: 'blur(10px)',
+                            border: '2px solid rgba(16, 185, 129, 0.3)',
+                            borderRadius: 0,
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background: `
+                                repeating-linear-gradient(
+                                  0deg,
+                                  transparent,
+                                  transparent 2px,
+                                  rgba(255,255,255,0.03) 2px,
+                                  rgba(255,255,255,0.03) 4px
+                                ),
+                                repeating-linear-gradient(
+                                  90deg,
+                                  transparent,
+                                  transparent 2px,
+                                  rgba(0,0,0,0.02) 2px,
+                                  rgba(0,0,0,0.02) 4px
+                                )
+                              `,
+                              pointerEvents: 'none',
+                              zIndex: 1
+                            }
+                          }}
+                        >
+                          <Box sx={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                            <Box>
+                              <Typography 
+                                variant="h4" 
+                                sx={{ 
+                                  fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+                                  fontWeight: 600,
+                                  mb: 2,
+                                  color: '#FFFFFF'
+                                }}
+                              >
                           {item.title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, lineHeight: 1.7 }}>
+                              
+                              <Typography 
+                                variant="body1" 
+                                sx={{ 
+                                  color: 'rgba(255, 255, 255, 0.9)', 
+                                  mb: 0,
+                                  lineHeight: 1.6,
+                                  fontSize: '1.1rem'
+                                }}
+                              >
                           {item.description}
                         </Typography>
+                            </Box>
+                            
+                            <Box>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
                         <List dense>
-                          {item.benefits.map((benefit, benefitIdx) => (
-                            <ListItem key={benefitIdx} sx={{ px: 0, py: 0.5 }}>
+                          {item.benefits.slice(0, 3).map((benefit, benefitIdx) => (
+                            <ListItem key={benefitIdx} sx={{ px: 0, py: 0.25 }}>
                               <ListItemIcon sx={{ minWidth: 28 }}>
-                                <CheckIcon sx={{ fontSize: 16, color: '#9CA3AF' }} />
+                                {typeof benefit === 'string' ? (
+                                  <CheckIcon sx={{ fontSize: 16, color: '#FFFFFF' }} />
+                                ) : (
+                                  benefit.icon
+                                )}
                               </ListItemIcon>
-                              <ListItemText 
-                                primary={benefit}
-                                primaryTypographyProps={{
-                                  fontSize: '0.875rem',
-                                  color: 'text.secondary'
+                              <ListItemText
+                                primary={typeof benefit === 'string' ? benefit : benefit.text}
+                                sx={{
+                                  '& .MuiListItemText-primary': {
+                                    fontSize: '1rem',
+                                    color: 'rgba(255, 255, 255, 0.95)'
+                                  }
                                 }}
                               />
                             </ListItem>
                           ))}
                         </List>
-                      </Card>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <List dense>
+                          {item.benefits.slice(3, 6).map((benefit, benefitIdx) => (
+                            <ListItem key={benefitIdx + 3} sx={{ px: 0, py: 0.25 }}>
+                              <ListItemIcon sx={{ minWidth: 28 }}>
+                                {typeof benefit === 'string' ? (
+                                  <CheckIcon sx={{ fontSize: 16, color: '#FFFFFF' }} />
+                                ) : (
+                                  benefit.icon
+                                )}
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary={typeof benefit === 'string' ? benefit : benefit.text}
+                                sx={{
+                                  '& .MuiListItemText-primary': {
+                                    fontSize: '1rem',
+                                    color: 'rgba(255, 255, 255, 0.95)'
+                                  }
+                                }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Grid>
                     </Grid>
-                  ))}
-                </Grid>
-              </Fade>
-            </TabPanel>
-          ))}
-        </Container>
+                            </Box>
+                          </Box>
+                        </Card>
+                      </Box>
+                    );
+                  })
+                )}
+                
+            {/* Feature Counter */}
+            <Box sx={{ 
+              position: 'absolute', 
+              bottom: 20, 
+              right: 20, 
+              background: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              px: 2,
+              py: 1,
+              zIndex: 3
+            }}>
+              <Typography variant="body2" sx={{ color: '#FFFFFF', fontSize: '0.875rem' }}>
+                {currentFeatureIndex + 1} of {features.reduce((total, category) => total + category.items.length, 0)}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       </Box>
 
       {/* Integrations */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
+      <Box id="integrations" sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Seamless Integrations
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Connect with the tools you already use
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
+          <Grid container spacing={4} justifyContent="center">
             {integrations.map((integration, index) => (
-              <Grid item xs={12} md={6} lg={3} key={index}>
+              <Grid item xs={12} md={6} lg={4} key={index}>
                 <Card
                   sx={{
                     p: 3,
                     height: '100%',
                     textAlign: 'center',
-                    border: '1px solid rgba(94, 92, 230, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '2px solid #000000',
+                    borderRadius: 0,
+                    position: 'relative',
+                    overflow: 'hidden',
                     '&:hover': {
-                      boxShadow: '0 8px 24px rgba(94, 92, 230, 0.1)'
+                      background: `
+                        linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 80%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                      `,
+                      backdropFilter: 'blur(10px)',
+                      opacity: 0.8,
+                      '& .MuiSvgIcon-root': {
+                        color: '#FFFFFF !important'
+                      }
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: `
+                        repeating-linear-gradient(
+                          0deg,
+                          transparent,
+                          transparent 2px,
+                          rgba(255,255,255,0.03) 2px,
+                          rgba(255,255,255,0.03) 4px
+                        ),
+                        repeating-linear-gradient(
+                          90deg,
+                          transparent,
+                          transparent 2px,
+                          rgba(0,0,0,0.02) 2px,
+                          rgba(0,0,0,0.02) 4px
+                        )
+                      `,
+                      pointerEvents: 'none',
+                      zIndex: 1
                     }
                   }}
                 >
-                  <Box sx={{ mb: 2, color: '#9CA3AF' }}>
+                  <Box sx={{ mb: 2, color: '#10B981', position: 'relative', zIndex: 2 }}>
                     {integration.icon}
                   </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                    {integration.category}
-                  </Typography>
-                  <List dense>
-                    {integration.items.map((item, idx) => (
-                      <ListItem key={idx} sx={{ px: 0, justifyContent: 'center' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {item}
-                        </Typography>
-                      </ListItem>
-                    ))}
-                  </List>
+                  <Box sx={{ position: 'relative', zIndex: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#FFFFFF' }}>
+                      {integration.category}
+                    </Typography>
+                    <List dense>
+                      {integration.items.map((item, idx) => (
+                        <ListItem key={idx} sx={{ px: 0, justifyContent: 'center' }}>
+                          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                            {item}
+                          </Typography>
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
                 </Card>
               </Grid>
             ))}
           </Grid>
 
           <Box sx={{ textAlign: 'center', mt: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Don't see your tool? We offer custom integrations and API access.
             </Typography>
           </Box>
@@ -510,78 +691,23 @@ export default function Product() {
       </Box>
 
 
-      {/* Platform Architecture */}
-      <Box sx={{ py: 12, background: '#FAFAFA' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography 
-              variant="h2" 
-              sx={{ 
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 700,
-                mb: 2
-              }}
-            >
-              Built for Scale
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Modern architecture designed to grow with your firm
-            </Typography>
-          </Box>
-
-          <Grid container spacing={4}>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <CloudIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                  Cloud-Native
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Built on modern cloud infrastructure for reliability, scalability, and performance
-                </Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <MobileIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                  Mobile Ready
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Access your deals and portfolio data from anywhere with our responsive design
-                </Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card sx={{ p: 3, textAlign: 'center', height: '100%' }}>
-                <ApiIcon sx={{ fontSize: 48, color: '#9CA3AF', mb: 2 }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                  API-First
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Comprehensive APIs enable custom integrations and workflow automation
-                </Typography>
-              </Card>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
 
       {/* FAQs */}
-      <Box sx={{ py: 12, background: 'white' }}>
+      <Box sx={{ py: 12, background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', color: '#FFFFFF' }}>
         <Container maxWidth="md">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography 
               variant="h2" 
               sx={{ 
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
                 fontWeight: 700,
-                mb: 2
+                mb: 2,
+                color: '#FFFFFF'
               }}
             >
               Frequently Asked Questions
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
               Everything you need to know about Equitle
             </Typography>
           </Box>
@@ -591,27 +717,29 @@ export default function Product() {
               key={index}
               sx={{ 
                 mb: 2, 
-                border: '1px solid rgba(94, 92, 230, 0.08)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '2px solid #000000',
+                borderRadius: 0,
                 '&:before': { display: 'none' },
                 '&.Mui-expanded': {
-                  boxShadow: '0 4px 12px rgba(94, 92, 230, 0.1)'
+                  background: 'rgba(16, 185, 129, 0.1)'
                 }
               }}
             >
               <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
+                expandIcon={<ExpandMoreIcon sx={{ color: '#10B981' }} />}
                 sx={{ 
                   '& .MuiAccordionSummary-content': {
                     my: 2
                   }
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#FFFFFF' }}>
                   {faq.question}
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                <Typography variant="body1" sx={{ lineHeight: 1.7, color: 'rgba(255, 255, 255, 0.8)' }}>
                   {faq.answer}
                 </Typography>
               </AccordionDetails>
@@ -621,50 +749,7 @@ export default function Product() {
       </Box>
 
       {/* CTA */}
-      <Box 
-        sx={{ 
-          py: 12, 
-          background: 'linear-gradient(135deg, #9CA3AF 0%, #374151 100%)',
-          color: 'white'
-        }}
-      >
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography 
-              variant="h2" 
-              sx={{ 
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 700,
-                mb: 2
-              }}
-            >
-              Ready to Transform Your Deal Flow?
-            </Typography>
-            <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-              Join a community of searchers using Equitle to make smarter investment decisions
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Button 
-                variant="contained" 
-                size="large"
-                onClick={() => window.open('https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle', '_blank')}
-                sx={{
-                  background: 'white',
-                  color: '#374151',
-                  py: 1.5,
-                  px: 4,
-                  '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.95)'
-                  }
-                }}
-              >
-                Book Demo
-              </Button>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
-      {/* <Footer /> */}
+      <Footer />
     </>
   );
 }
