@@ -50,6 +50,7 @@ export interface ApolloSearchParams {
   q_organization_id?: string;
   person_titles?: string[];
   organization_locations?: string[];
+  q_keywords?: string;
   page?: number;
   per_page?: number;
 }

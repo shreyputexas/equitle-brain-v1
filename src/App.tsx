@@ -56,7 +56,8 @@ function App() {
               <Route path="outreach">
                 <Route path="deals" element={<Deals />} />
                 <Route path="deals/:id" element={<DealDetail />} />
-                <Route path="investors" element={<Investors />} />
+                {/* ARCHIVED: Investors page route - hidden but code preserved */}
+                {/* <Route path="investors" element={<Investors />} /> */}
                 <Route path="brokers" element={<Brokers />} />
               </Route>
 
@@ -66,10 +67,12 @@ function App() {
                 <Route path="all/:id" element={<Navigate to="/outreach/deals/:id" />} />
               </Route>
 
-              {/* Fundraising Routes */}
+              {/* Fundraising Routes - ARCHIVED: Routes disabled but code preserved */}
               <Route path="fundraising">
-                <Route path="limited-partners" element={<InvestorRelations />} />
-                <Route path="funds" element={<Funds />} />
+                {/* ARCHIVED: Limited Partners route - hidden but code preserved */}
+                {/* <Route path="limited-partners" element={<InvestorRelations />} /> */}
+                {/* ARCHIVED: Funds route - hidden but code preserved */}
+                {/* <Route path="funds" element={<Funds />} /> */}
               </Route>
 
               {/* Settings and other routes */}
@@ -85,7 +88,8 @@ function App() {
               <Route path="companies" element={<Navigate to="/outreach/deals" />} />
               <Route path="contacts" element={<Contacts />} />
               <Route path="investor-relations" element={<Navigate to="/fundraising/limited-partners" />} />
-              <Route path="brain" element={<Brain />} />
+              {/* ARCHIVED: Brain page route - hidden but code preserved */}
+              {/* <Route path="brain" element={<Brain />} /> */}
               <Route path="reports" element={<Navigate to="/fundraising/funds" />} />
               <Route path="deals" element={<Navigate to="/outreach/deals" />} />
               <Route path="deals/relationships" element={<Navigate to="/outreach/deals" />} />
