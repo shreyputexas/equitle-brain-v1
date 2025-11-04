@@ -50,14 +50,66 @@ export interface RetellCallAnalytics {
     user_sentiment?: string;
     call_successful?: boolean;
   };
+  // Plain text transcript string
+  transcript_text?: string;
+  
+  // Structured transcript array with timestamps and word-level data
   transcript?: Array<{
     role: 'agent' | 'user';
     content: string;
-    timestamp: number;
+    timestamp?: number;
     words?: Array<{
       word: string;
       start: number;
       end: number;
+    }>;
+  }>;
+  
+  // Transcript with tool call invocations weaved in
+  transcript_with_tool_calls?: Array<{
+    role: 'agent' | 'user' | 'tool';
+    content: string;
+    timestamp?: number;
+    words?: Array<{
+      word: string;
+      start: number;
+      end: number;
+    }>;
+    tool_calls?: Array<{
+      id: string;
+      type: string;
+      function: {
+        name: string;
+        arguments: string;
+      };
+    }>;
+    tool_results?: Array<{
+      tool_call_id: string;
+      content: string;
+    }>;
+  }>;
+  
+  // Scrubbed transcript without PII
+  scrubbed_transcript_with_tool_calls?: Array<{
+    role: 'agent' | 'user' | 'tool';
+    content: string;
+    timestamp?: number;
+    words?: Array<{
+      word: string;
+      start: number;
+      end: number;
+    }>;
+    tool_calls?: Array<{
+      id: string;
+      type: string;
+      function: {
+        name: string;
+        arguments: string;
+      };
+    }>;
+    tool_results?: Array<{
+      tool_call_id: string;
+      content: string;
     }>;
   }>;
   recording_url?: string;
@@ -543,10 +595,35 @@ export class RetellService {
         return null;
       }
 
+      // Extract transcript data - handle both string and object formats
+      // Handle null/undefined safely - avoid any errors that could break call loading
+      let transcriptText: string | undefined;
+      let transcriptObject: Array<any> | undefined;
+
+      try {
+        if (call.transcript) {
+          if (typeof call.transcript === 'string') {
+            transcriptText = call.transcript;
+          } else if (Array.isArray(call.transcript)) {
+            transcriptObject = call.transcript;
+          }
+        }
+      } catch (e) {
+        logger.warn('Error extracting transcript', { callId, error: e });
+      }
+
+      // Try to get transcript_object if transcript wasn't an array
+      if (!transcriptObject && Array.isArray((call as any).transcript_object)) {
+        transcriptObject = (call as any).transcript_object;
+      }
+      
       logger.info('Retell API response received', {
         callId,
         status: call.call_status,
-        hasTranscript: !!(call as any).transcript,
+        hasTranscriptText: !!transcriptText,
+        hasTranscriptObject: !!transcriptObject,
+        hasTranscriptWithToolCalls: !!(call as any).transcript_with_tool_calls,
+        hasScrubbedTranscript: !!(call as any).scrubbed_transcript_with_tool_calls,
         hasLatency: !!(call as any).latency
       });
 
@@ -563,7 +640,31 @@ export class RetellService {
         direction: (call as any).direction,
         start_timestamp: call.start_timestamp,
         end_timestamp: call.end_timestamp,
-        transcript: call.transcript as any,
+        
+        // Extract all transcript formats
+        transcript_text: transcriptText,
+        // Always ensure transcript is an array for backward compatibility
+        // Convert string to array format if needed, or return empty array if none exists
+        transcript: transcriptObject || (transcriptText ? 
+          transcriptText.split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+              // Try to parse "Role: content" format
+              const match = line.match(/^(Agent|User|AI):\s*(.+)$/i);
+              if (match) {
+                return {
+                  role: match[1].toLowerCase() === 'agent' || match[1].toLowerCase() === 'ai' ? 'agent' : 'user',
+                  content: match[2].trim()
+                };
+              }
+              // Fallback: treat as user message
+              return {
+                role: 'user' as const,
+                content: line.trim()
+              };
+            }) : []),
+        transcript_with_tool_calls: (call as any).transcript_with_tool_calls,
+        scrubbed_transcript_with_tool_calls: (call as any).scrubbed_transcript_with_tool_calls,
         metadata: call.metadata as any,
         retell_llm_dynamic_variables: (call as any).retell_llm_dynamic_variables,
         opt_out_sensitive_data_storage: (call as any).opt_out_sensitive_data_storage,
@@ -605,8 +706,11 @@ export class RetellService {
         callId,
         duration: analytics.duration_ms,
         cost: analytics.call_cost?.total_cost || 0,
-        hasTranscript: !!analytics.transcript,
-        transcriptLength: analytics.transcript?.length || 0
+        hasTranscriptText: !!analytics.transcript_text,
+        hasTranscriptObject: !!analytics.transcript,
+        hasTranscriptWithToolCalls: !!analytics.transcript_with_tool_calls,
+        transcriptTextLength: analytics.transcript_text?.length || 0,
+        transcriptObjectLength: analytics.transcript?.length || 0
       });
 
       return analytics;
