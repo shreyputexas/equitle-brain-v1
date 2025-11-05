@@ -3,14 +3,14 @@ import { getAuth } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 
-// Your Firebase config
+// Your Firebase config - using environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyDuJtDrZHzQAW-M8rbkVPl8oTalxU1f6ko",
-  authDomain: "equitle-brain-dev.firebaseapp.com",
-  projectId: "equitle-brain-dev",
-  storageBucket: "equitle-brain-dev.firebasestorage.app",
-  messagingSenderId: "44990905496",
-  appId: "1:44990905496:web:f6cfc91b23549793cc64ed",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: "G-6GZHY4SQB9"
 };
 
