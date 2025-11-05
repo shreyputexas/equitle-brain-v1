@@ -3,6 +3,8 @@ import { io, Socket } from 'socket.io-client';
 import { getApiUrl, getSocketUrl } from '../config/api';
 import VoiceCallAnalytics from '../components/VoiceCallAnalytics';
 import CallInspectionModal from '../components/CallInspectionModal';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import {
   Box,
   Paper,
@@ -70,7 +72,9 @@ import {
   Assignment as AssignmentIcon,
   ExpandMore as ExpandMoreIcon,
   Business as BusinessIcon,
-  Analytics as AnalyticsIcon
+  Analytics as AnalyticsIcon,
+  CheckCircle as CheckCircleIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 
 interface VoiceProfile {
@@ -263,6 +267,49 @@ export default function VoiceCalls() {
 
   const handleVoiceChange = (event: any) => {
     setSelectedVoice(event.target.value);
+  };
+
+  const handleCustomVoiceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomVoiceLoading(true);
+
+    try {
+      console.log('Checking for duplicate email:', customVoiceEmail);
+
+      // Check if email already exists
+      const collectionRef = collection(db, 'custom-voice-requests');
+      const q = query(collectionRef, where('email', '==', customVoiceEmail));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        console.log('Email already exists in database');
+        setShowCustomVoiceDuplicate(true);
+        setCustomVoiceLoading(false);
+        return;
+      }
+
+      console.log('Email is unique, submitting to Firebase...');
+
+      // Email doesn't exist, proceed with submission
+      const docRef = await addDoc(collectionRef, {
+        email: customVoiceEmail,
+        timestamp: new Date().toISOString(),
+        status: 'pending',
+        createdAt: new Date()
+      });
+
+      console.log('Successfully submitted with ID:', docRef.id);
+      setShowCustomVoiceSuccess(true);
+      setCustomVoiceEmail('');
+      setShowCustomVoiceDialog(false);
+    } catch (error: any) {
+      console.error('Error submitting email:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      alert('Failed to submit request. Please try again.');
+    } finally {
+      setCustomVoiceLoading(false);
+    }
   };
 
 
@@ -1277,7 +1324,7 @@ export default function VoiceCalls() {
                 />
 
                 {/* Voice Selection */}
-                <FormControl fullWidth sx={{ mb: 3 }}>
+                <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel>Voice Profile (Optional)</InputLabel>
                   <Select
                     value={selectedVoice}
@@ -1301,6 +1348,25 @@ export default function VoiceCalls() {
                     ))}
                   </Select>
                 </FormControl>
+                
+                {/* Custom Voice Request Button */}
+                <Box sx={{ mb: 3, textAlign: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setShowCustomVoiceDialog(true)}
+                    sx={{
+                      color: 'text.secondary',
+                      borderColor: 'divider',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        color: 'primary.main'
+                      }
+                    }}
+                  >
+                    Contact us to get your custom voice built in
+                  </Button>
+                </Box>
 
 
                 {/* Advanced Options Toggle */}
@@ -2362,6 +2428,328 @@ export default function VoiceCalls() {
         onClose={handleCloseCallInspection}
         callId={selectedCallId}
       />
+
+      {/* Custom Voice Request Dialog */}
+      <Dialog
+        open={showCustomVoiceDialog}
+        onClose={() => {
+          setShowCustomVoiceDialog(false);
+          setCustomVoiceEmail('');
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: 'white', pb: 2 }}>
+          Request Custom Voice
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: '#888', mb: 3 }}>
+            Enter your email address and we'll contact you about building your custom voice profile.
+          </Typography>
+          <form onSubmit={handleCustomVoiceSubmit}>
+            <TextField
+              fullWidth
+              placeholder="your@email.com"
+              type="email"
+              value={customVoiceEmail}
+              onChange={(e) => setCustomVoiceEmail(e.target.value)}
+              required
+              disabled={customVoiceLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: '#000000',
+                  borderRadius: 0,
+                  px: 2,
+                  backgroundColor: '#FFFFFF',
+                  '& fieldset': {
+                    borderColor: '#000000',
+                    borderWidth: '1px',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#000000',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#000000',
+                  },
+                },
+                '& .MuiInputBase-input::placeholder': {
+                  color: 'rgba(0, 0, 0, 0.6)',
+                  opacity: 1,
+                  textAlign: 'center',
+                },
+                '& .MuiInputBase-input': {
+                  textAlign: 'center',
+                },
+              }}
+            />
+            <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Button
+                onClick={() => {
+                  setShowCustomVoiceDialog(false);
+                  setCustomVoiceEmail('');
+                }}
+                disabled={customVoiceLoading}
+                sx={{ color: '#888' }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={customVoiceLoading || !customVoiceEmail.trim()}
+                sx={{
+                  background: `
+                    linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                    radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+                  `,
+                  backdropFilter: 'blur(10px)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  py: 1.5,
+                  px: 4,
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  '&:disabled': {
+                    opacity: 0.6
+                  }
+                }}
+              >
+                {customVoiceLoading ? 'Sending...' : 'Submit Request'}
+              </Button>
+            </Box>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Confirmation Modal */}
+      <Dialog
+        open={showCustomVoiceSuccess}
+        onClose={() => setShowCustomVoiceSuccess(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+      >
+        <DialogContent sx={{ 
+          p: 6, 
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 3,
+              border: '2px solid rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            <CheckCircleIcon 
+              sx={{ 
+                fontSize: 50, 
+                color: '#10B981',
+                animation: 'scaleIn 0.3s ease-out'
+              }} 
+            />
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              fontWeight: 700,
+              color: '#FFFFFF',
+              mb: 2
+            }}
+          >
+            Request Submitted
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              color: 'rgba(255, 255, 255, 0.8)',
+              mb: 4,
+              lineHeight: 1.6
+            }}
+          >
+            Thank you for your request! We'll contact you soon about building your custom voice profile.
+          </Typography>
+          <Button
+            onClick={() => setShowCustomVoiceSuccess(false)}
+            variant="contained"
+            sx={{
+              background: `
+                linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+              `,
+              backdropFilter: 'blur(10px)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              py: 1.5,
+              px: 6,
+              fontSize: '1rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              textTransform: 'none',
+              '&:hover': {
+                background: `
+                  linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%)
+                `,
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate Email Modal */}
+      <Dialog
+        open={showCustomVoiceDuplicate}
+        onClose={() => setShowCustomVoiceDuplicate(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+          }
+        }}
+        sx={{
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }
+        }}
+      >
+        <DialogContent sx={{
+          p: 6,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              backgroundColor: 'rgba(251, 191, 36, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 3,
+              border: '2px solid rgba(251, 191, 36, 0.3)'
+            }}
+          >
+            <InfoIcon
+              sx={{
+                fontSize: 50,
+                color: '#FBB020',
+                animation: 'scaleIn 0.3s ease-out'
+              }}
+            />
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              fontWeight: 700,
+              color: '#FFFFFF',
+              mb: 2
+            }}
+          >
+            Already Requested
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
+              color: 'rgba(255, 255, 255, 0.8)',
+              mb: 4,
+              lineHeight: 1.6
+            }}
+          >
+            This email has already been submitted. We'll contact you soon about building your custom voice profile!
+          </Typography>
+          <Button
+            onClick={() => setShowCustomVoiceDuplicate(false)}
+            variant="contained"
+            sx={{
+              background: `
+                linear-gradient(180deg, rgba(251, 191, 36, 0.6) 0%, rgba(245, 158, 11, 0.6) 30%, rgba(217, 119, 6, 0.6) 70%, rgba(180, 83, 9, 0.6) 100%),
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
+              `,
+              backdropFilter: 'blur(10px)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(251, 191, 36, 0.4)',
+              py: 1.5,
+              px: 6,
+              fontSize: '1rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              textTransform: 'none',
+              '&:hover': {
+                background: `
+                  linear-gradient(180deg, rgba(251, 191, 36, 0.8) 0%, rgba(245, 158, 11, 0.8) 30%, rgba(217, 119, 6, 0.8) 70%, rgba(180, 83, 9, 0.8) 100%)
+                `,
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Close
+          </Button>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
