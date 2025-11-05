@@ -76,8 +76,9 @@ export default function Login() {
           src="/assets/images/extended_logo_black_white.png"
           alt="Equitle"
           sx={{
-            height: { xs: '4rem', md: '6rem' },
+            height: { xs: '8rem', md: '16rem' },
             width: 'auto',
+            maxWidth: '90%',
             objectFit: 'contain',
             filter: 'brightness(0) invert(1)',
             opacity: 0.95
