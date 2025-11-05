@@ -246,7 +246,7 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
   const handleLogout = () => {
     logout();
     handleProfileMenuClose();
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path: string, parentText?: string) => {
