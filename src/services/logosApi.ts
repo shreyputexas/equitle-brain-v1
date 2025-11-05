@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:4001/api';
+import { getApiUrl } from '../config/api';
 
 export interface LogoUploadResponse {
   success: boolean;
@@ -18,7 +17,7 @@ export const logosApi = {
     const formData = new FormData();
     formData.append('logo', file);
 
-    const response = await axios.post<LogoUploadResponse>(`${API_BASE_URL}/logos/upload`, formData, {
+    const response = await axios.post<LogoUploadResponse>(getApiUrl('logos/upload'), formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
         'Authorization': 'Bearer mock-token'
@@ -29,7 +28,7 @@ export const logosApi = {
   },
 
   deleteLogo: async (): Promise<LogoDeleteResponse> => {
-    const response = await axios.delete<LogoDeleteResponse>(`${API_BASE_URL}/logos`, {
+    const response = await axios.delete<LogoDeleteResponse>(getApiUrl('logos'), {
       headers: {
         'Authorization': 'Bearer mock-token'
       }

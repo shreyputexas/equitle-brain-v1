@@ -10,10 +10,13 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "tsc && vite build",
     "build:server": "tsc -p server/tsconfig.json",
-    "preview": "vite preview",
+    "build:production": "NODE_ENV=production npm run build:server",
     "start": "node dist/server/index.js",
+    "start:production": "NODE_ENV=production node dist/server/index.js",
+    "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx"
+    "lint": "eslint . --ext .ts,.tsx",
+    "postinstall": "npm run build:server"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",

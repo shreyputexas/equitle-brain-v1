@@ -21,6 +21,7 @@ import {
   CardContent,
   Divider
 } from '@mui/material';
+import { getApiUrl, getSocketUrl } from '../config/api';
 import {
   Close as CloseIcon,
   Assessment as ReportIcon,
@@ -124,7 +125,7 @@ export default function ReportModal({ open, onClose, onSuccess }: ReportModalPro
       };
 
       // TODO: Replace with actual API call
-      const response = await fetch('http://localhost:4001/api/reports', {
+      const response = await fetch(getApiUrl('reports'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

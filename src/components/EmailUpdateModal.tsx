@@ -23,6 +23,7 @@ import {
   FormControlLabel,
   Divider
 } from '@mui/material';
+import { getApiUrl, getSocketUrl } from '../config/api';
 import {
   Close as CloseIcon,
   Email as EmailIcon,
@@ -138,7 +139,7 @@ export default function EmailUpdateModal({ open, onClose, onSuccess }: EmailUpda
       };
 
       // TODO: Replace with actual Gmail API integration
-      const response = await fetch('http://localhost:4001/api/emails/send-update', {
+      const response = await fetch(getApiUrl('emails/send-update'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

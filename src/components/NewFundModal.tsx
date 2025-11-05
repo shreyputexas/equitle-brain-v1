@@ -18,6 +18,7 @@ import {
   CircularProgress,
   IconButton
 } from '@mui/material';
+import { getApiUrl, getSocketUrl } from '../config/api';
 import {
   Close as CloseIcon,
   AccountBalance as FundIcon,
@@ -132,7 +133,7 @@ export default function NewFundModal({ open, onClose, onSuccess }: NewFundModalP
 
       // TODO: Replace with actual API call
       console.log('Creating fund with data:', fundData);
-      const response = await fetch('http://localhost:4001/api/firebase-funds', {
+      const response = await fetch(getApiUrl('firebase-funds'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
