@@ -141,8 +141,8 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
   const fetchContacts = async () => {
     setLoadingContacts(true);
     try {
-      const response = await axios.get('/api/firebase/contacts');
-      const contactsList = response.data.data?.contacts || response.data.data || [];
+      const response = await axios.get<any>('/api/firebase/contacts');
+      const contactsList = response.data?.data?.contacts || response.data?.data || [];
       
       // Apply the same type determination logic as Contacts.tsx
       const contactsWithTypes = contactsList.map((contact: any) => {

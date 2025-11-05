@@ -91,7 +91,7 @@ class InvestorsApiService {
 
   static async getInvestors(): Promise<Investor[]> {
     try {
-      const response = await axios.get<{ success: boolean; data: Investor[] }>(getApiUrl('firebase-investors'), {
+      const response = await axios.get<{ success: boolean; data: Investor[] | { investors: Investor[] }; investors?: Investor[] }>(getApiUrl('firebase-investors'), {
         headers: this.getAuthHeaders()
       });
 
@@ -100,8 +100,8 @@ class InvestorsApiService {
       // Handle the actual API response structure
       if (response.data.success && response.data.data) {
         // Check if data has investors property (Firestore service returns { investors: [...] })
-        if (response.data.data.investors && Array.isArray(response.data.data.investors)) {
-          return response.data.data.investors;
+        if ((response.data.data as any).investors && Array.isArray((response.data.data as any).investors)) {
+          return (response.data.data as any).investors;
         }
         // Or if data is the investors array directly
         return Array.isArray(response.data.data) ? response.data.data : [];

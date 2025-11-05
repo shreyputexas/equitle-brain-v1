@@ -138,7 +138,7 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
   const loadContacts = async () => {
     try {
       const response = await contactsApi.getContacts();
-      const contacts = response.data?.contacts || response.data || [];
+      const contacts = response.contacts || [];
       setAvailableContacts(contacts);
     } catch (err) {
       console.error('Error loading contacts:', err);
@@ -149,7 +149,7 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
     try {
       // Pull brokers from contacts with type 'broker'
       const response = await contactsApi.getContacts();
-      const contacts = response.data?.contacts || response.data || [];
+      const contacts = response.contacts || [];
       const brokerContacts = contacts.filter((contact: any) => contact.type === 'broker');
       setExistingBrokers(brokerContacts);
     } catch (err) {

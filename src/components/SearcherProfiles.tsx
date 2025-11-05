@@ -85,6 +85,11 @@ interface SearcherProfile {
   };
 }
 
+// Allow partially filled nested contactInfo during form editing
+type PartialSearcherProfile = Partial<Omit<SearcherProfile, 'contactInfo'>> & {
+  contactInfo?: Partial<SearcherProfile['contactInfo']>;
+};
+
 interface SearcherProfilesProps {
   searchers: SearcherProfile[];
   onAddSearcher: (searcher: SearcherProfile) => void;
@@ -100,7 +105,7 @@ export default function SearcherProfiles({
 }: SearcherProfilesProps) {
   const [isAddingSearcher, setIsAddingSearcher] = useState(false);
   const [editingSearcher, setEditingSearcher] = useState<SearcherProfile | null>(null);
-  const [newSearcher, setNewSearcher] = useState<Partial<SearcherProfile>>({
+  const [newSearcher, setNewSearcher] = useState<PartialSearcherProfile>({
     name: '',
     title: '',
     bio: '',
@@ -140,10 +145,11 @@ export default function SearcherProfiles({
           dealTypes: []
         },
         personalValues: newSearcher.personalValues || [],
-        contactInfo: newSearcher.contactInfo || {
-          email: '',
-          phone: '',
-          location: ''
+        contactInfo: {
+          email: newSearcher.contactInfo?.email ?? '',
+          phone: newSearcher.contactInfo?.phone ?? '',
+          linkedin: newSearcher.contactInfo?.linkedin,
+          location: newSearcher.contactInfo?.location ?? ''
         }
       };
       onAddSearcher(searcher);

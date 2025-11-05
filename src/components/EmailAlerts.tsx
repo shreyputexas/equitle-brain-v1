@@ -15,6 +15,7 @@ import {
   Tooltip,
   Divider
 } from '@mui/material';
+import { Stack } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   Email as EmailIcon,
@@ -142,7 +143,7 @@ const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
         </Tooltip>
       </Box>
 
-      <Box spacing={2}>
+      <Stack spacing={2}>
         {emails.map((email) => {
           const sentimentStyle = getSentimentColor(email.sentiment);
 
@@ -235,7 +236,7 @@ const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
             </Card>
           );
         })}
-      </Box>
+      </Stack>
     </Box>
   );
 };

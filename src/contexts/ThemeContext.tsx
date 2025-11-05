@@ -2,6 +2,7 @@ import * as React from 'react';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import '@mui/x-data-grid/themeAugmentation';
 
 interface ThemeContextType {
   isDarkMode: boolean;
@@ -276,7 +277,7 @@ interface ThemeProviderProps {
 }
 
 export const AppThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem('darkMode');
     if (saved !== null) {
@@ -286,7 +287,7 @@ export const AppThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => 
   });
 
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => {
+    setIsDarkMode((prev: boolean) => {
       const newMode = !prev;
       localStorage.setItem('darkMode', JSON.stringify(newMode));
       return newMode;

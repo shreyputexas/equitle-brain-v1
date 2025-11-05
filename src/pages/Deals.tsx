@@ -48,6 +48,7 @@ import {
   TrendingUp as TrendingUpIcon,
   Schedule as ScheduleIcon,
   Business as BusinessIcon,
+  BusinessCenter as BusinessCenterIcon,
   ViewKanban as KanbanIcon,
   ViewList as ListView,
   Edit as EditIcon,
@@ -1580,12 +1581,13 @@ Regards`,
             columns={columns}
             initialState={{
               pagination: {
-                paginationModel: { page: 0, pageSize: 10 }
+                pageSize: 10
               }
             }}
-            pageSizeOptions={[10, 25, 50]}
+            pageSize={10}
+            rowsPerPageOptions={[10, 25, 50]}
             checkboxSelection
-            disableRowSelectionOnClick
+            disableSelectionOnClick
             onRowClick={(params) => navigate(`/deals/${params.row.id}`)}
             sx={{
               border: 'none',

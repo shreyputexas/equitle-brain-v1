@@ -9,11 +9,11 @@ gsap.registerPlugin(InertiaPlugin);
 
 const throttle = (func: Function, limit: number) => {
   let lastCall = 0;
-  return function (...args: any[]) {
+  return (...args: any[]) => {
     const now = performance.now();
     if (now - lastCall >= limit) {
       lastCall = now;
-      func.apply(this, args);
+      func(...args);
     }
   };
 };
@@ -195,11 +195,11 @@ const DotGrid = ({
       ro = new ResizeObserver(buildGrid);
       wrapperRef.current && ro.observe(wrapperRef.current);
     } else {
-      window.addEventListener('resize', buildGrid);
+      globalThis.addEventListener('resize', buildGrid as EventListener);
     }
     return () => {
       if (ro) ro.disconnect();
-      else window.removeEventListener('resize', buildGrid);
+      else globalThis.removeEventListener('resize', buildGrid as EventListener);
     };
   }, [buildGrid]);
 

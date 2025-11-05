@@ -67,7 +67,7 @@ export const searcherProfilesApi = {
   // Get all searcher profiles
   async getSearcherProfiles(): Promise<SearcherProfile[]> {
     try {
-      const response = await axios.get(API_BASE_URL, {
+      const response = await axios.get<{ data: { searcherProfiles: SearcherProfile[] } }>(API_BASE_URL, {
         headers: getAuthHeaders()
       });
       return response.data.data.searcherProfiles;
@@ -80,7 +80,7 @@ export const searcherProfilesApi = {
   // Get a specific searcher profile
   async getSearcherProfile(searcherId: string): Promise<SearcherProfile> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/${searcherId}`, {
+      const response = await axios.get<{ data: { searcherProfile: SearcherProfile } }>(`${API_BASE_URL}/${searcherId}`, {
         headers: getAuthHeaders()
       });
       return response.data.data.searcherProfile;
@@ -93,7 +93,7 @@ export const searcherProfilesApi = {
   // Create a new searcher profile
   async createSearcherProfile(searcherData: CreateSearcherProfileRequest): Promise<SearcherProfile> {
     try {
-      const response = await axios.post(API_BASE_URL, searcherData, {
+      const response = await axios.post<{ data: { searcherProfile: SearcherProfile } }>(API_BASE_URL, searcherData, {
         headers: getAuthHeaders()
       });
       return response.data.data.searcherProfile;
@@ -113,7 +113,7 @@ export const searcherProfilesApi = {
         headers: getAuthHeaders()
       });
       
-      const response = await axios.put(`${API_BASE_URL}/${searcherId}`, updateData, {
+      const response = await axios.put<{ data: { searcherProfile: SearcherProfile } }>(`${API_BASE_URL}/${searcherId}`, updateData, {
         headers: getAuthHeaders()
       });
       

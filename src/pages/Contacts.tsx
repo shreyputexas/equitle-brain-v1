@@ -29,7 +29,7 @@ import {
   Badge,
   ListItemIcon
 } from '@mui/material';
-import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridSelectionModel } from '@mui/x-data-grid';
 import SearchIcon from '@mui/icons-material/Search';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
@@ -83,7 +83,7 @@ const Contacts: React.FC = () => {
   const [selectedType, setSelectedType] = useState<ContactType>('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
-  const [selectedRows, setSelectedRows] = useState<GridRowSelectionModel>([]);
+  const [selectedRows, setSelectedRows] = useState<GridSelectionModel>([]);
   const [addMenuAnchorEl, setAddMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [editingField, setEditingField] = useState<{contactId: string, field: string} | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
@@ -121,11 +121,11 @@ const Contacts: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/firebase/contacts', {
+      const response = await axios.get<any>('/api/firebase/contacts', {
         headers: { Authorization: 'Bearer mock-token' }
       });
       // Map contacts and determine type from tags
-      const contactsList = response.data.data?.contacts || response.data.data || [];
+      const contactsList = response.data?.data?.contacts || response.data?.data || [];
       const contactsWithTypes = contactsList.map((contact: any) => {
         // Determine contact type from tags
         let contactType: ContactType = 'deal';
@@ -182,14 +182,14 @@ const Contacts: React.FC = () => {
       
       console.log('Sending contact data:', contactData);
       
-      const response = await axios.post('/api/firebase/contacts', contactData, {
+      const response = await axios.post<any>('/api/firebase/contacts', contactData, {
         headers: { Authorization: 'Bearer mock-token' }
       });
       
       console.log('API Response:', response.data);
       
       // Add the new contact with proper type mapping
-      const contactResponse = response.data.data?.contact || response.data.data;
+      const contactResponse = response.data?.data?.contact || response.data?.data;
       const addedContact = {
         ...contactResponse,
         first_name: newContact.first_name,
@@ -248,7 +248,7 @@ const Contacts: React.FC = () => {
       const updateData: any = {};
       updateData[editingField.field] = editingValue;
 
-      await axios.put(`/api/firebase/contacts/${editingField.contactId}`, updateData, {
+      await axios.put<any>(`/api/firebase/contacts/${editingField.contactId}`, updateData, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
         }
@@ -336,7 +336,7 @@ const Contacts: React.FC = () => {
         });
         
         // Import contacts via bulk-save API
-        const response = await axios.post('/api/firebase/contacts/bulk-save', {
+        const response = await axios.post<any>('/api/firebase/contacts/bulk-save', {
           contacts: contactsToImport.map((c: any) => {
             // Parse type field (defaults to 'deal' if not specified or invalid)
             let contactType = 'people';
@@ -402,8 +402,8 @@ const Contacts: React.FC = () => {
 
     try {
       // Delete each selected contact
-      const deletePromises = selectedRows.map(contactId =>
-        axios.delete(`/api/firebase/contacts/${contactId}`, {
+      const deletePromises = selectedRows.map((contactId: string | number) =>
+        axios.delete<any>(`/api/firebase/contacts/${contactId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
           }
@@ -1409,16 +1409,13 @@ const Contacts: React.FC = () => {
             columns={columns}
             loading={loading}
             checkboxSelection
-            disableRowSelectionOnClick
+            disableSelectionOnClick
             rowHeight={70}
-            onRowSelectionModelChange={(newSelection) => setSelectedRows(newSelection)}
-            pageSizeOptions={[10, 25, 50, 100]}
+            onSelectionModelChange={(newSelection) => setSelectedRows(newSelection)}
+            pageSize={25}
+            rowsPerPageOptions={[10, 25, 50, 100]}
             disableColumnMenu={false}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 25 },
-              },
-            }}
+            
             sx={{
               border: 'none',
               fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

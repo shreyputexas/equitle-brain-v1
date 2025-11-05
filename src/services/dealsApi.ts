@@ -156,7 +156,7 @@ class DealsApiService {
       if (filters.limit) params.append('limit', filters.limit.toString());
       if (filters.offset) params.append('offset', filters.offset.toString());
 
-      const response = await axios.get(`/firebase-deals?${params.toString()}`, {
+      const response = await axios.get<{ data?: DealsResponse; success?: boolean }>(`/firebase-deals?${params.toString()}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deals: [], total: 0 } }
@@ -165,12 +165,12 @@ class DealsApiService {
       console.log('Deals API response.data:', response.data);
       console.log('Deals API response.data.data:', response.data?.data);
       
-      if (!response.data || !response.data.data) {
+      if (!response.data || !(response.data as any).data) {
         console.error('Invalid API response structure:', response.data);
         throw new Error('Invalid API response structure');
       }
       
-      return response.data.data;
+      return (response.data as any).data as DealsResponse;
     } catch (error) {
       console.error('Error fetching deals:', error);
       throw error;
@@ -182,7 +182,7 @@ class DealsApiService {
    */
   async getDeal(id: string): Promise<DealResponse> {
     try {
-      const response = await axios.get(`/firebase-deals/${id}`, {
+      const response = await axios.get<{ data: DealResponse }>(`/firebase-deals/${id}`, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deal: {} } }
@@ -199,7 +199,7 @@ class DealsApiService {
    */
   async createDeal(dealData: CreateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.post(`/firebase-deals`, dealData, {
+      const response = await axios.post<{ data: DealResponse }>(`/firebase-deals`, dealData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deal: {} } }
@@ -216,7 +216,7 @@ class DealsApiService {
    */
   async updateDeal(id: string, dealData: UpdateDealData): Promise<DealResponse> {
     try {
-      const response = await axios.put(`/firebase-deals/${id}`, dealData, {
+      const response = await axios.put<{ data: DealResponse }>(`/firebase-deals/${id}`, dealData, {
         headers: this.getAuthHeaders()
       });
       // Firebase API returns { success: true, data: { deal: {} } }
