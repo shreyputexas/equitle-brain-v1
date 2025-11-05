@@ -4,6 +4,14 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
 
+// Minimal file type used in this service to avoid reliance on Express.Multer typings
+interface UploadedFile {
+  filename: string;
+  originalname: string;
+  size: number;
+  mimetype: string;
+}
+
 // Configure multer for headshots
 const headshotStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -43,7 +51,7 @@ const logoStorage = multer.diskStorage({
 });
 
 // File filter to only allow images
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (req: any, file: { mimetype: string }, cb: multer.FileFilterCallback) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
@@ -68,7 +76,7 @@ export const logoUpload = multer({
 });
 
 export class ImageUploadService {
-  async uploadHeadshot(file: Express.Multer.File, searcherId: string): Promise<string> {
+  async uploadHeadshot(file: UploadedFile, searcherId: string): Promise<string> {
     try {
       // Return relative URL for consistency with existing system
       const imageUrl = `uploads/headshots/${file.filename}`;
@@ -109,7 +117,7 @@ export class ImageUploadService {
     }
   }
 
-  async uploadLogo(file: Express.Multer.File, userId: string): Promise<string> {
+  async uploadLogo(file: UploadedFile, userId: string): Promise<string> {
     try {
       // Generate a public URL for the uploaded logo with full base URL
       const baseUrl = process.env.BASE_URL || 'http://localhost:4001';
