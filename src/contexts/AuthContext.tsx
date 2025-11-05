@@ -8,7 +8,8 @@ import {
   onAuthStateChanged, 
   User as FirebaseUser 
 } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { API_BASE_URL } from '../config/api';
 import { searcherProfilesApi } from '../services/searcherProfilesApi';
 
@@ -74,39 +75,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Fetch user profile from API to get real name (shared function)
   const fetchUserProfile = async (userId: string, email: string, displayName?: string) => {
     try {
-      // First, try to get name from primary investor profile
+      // Read user doc from Firestore for persisted display settings
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+
+      let primaryProfileId: string | undefined;
+      let storedName: string | undefined;
+      if (userSnap.exists()) {
+        const data = userSnap.data() as any;
+        primaryProfileId = data?.primaryProfileId;
+        storedName = data?.name || data?.displayName;
+      }
+
+      // If a name is stored directly on the user doc, use it first
+      if (storedName && typeof storedName === 'string' && storedName.trim().length > 0) {
+        return storedName.trim();
+      }
+
+      // Otherwise, if a primary profile is set, use that profile's name
       try {
         const profiles = await searcherProfilesApi.getSearcherProfiles();
-        if (profiles.length > 0) {
-          // Get primary profile ID from user document
-          const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`);
-          const primaryProfileId = userResponse.data?.data?.primaryProfileId;
-          
-          // If primary profile is set, use it
-          if (primaryProfileId) {
-            const primaryProfile = profiles.find(p => p.id === primaryProfileId);
-            if (primaryProfile) {
-              console.log('✅ Using primary investor profile name:', primaryProfile.name);
-              return primaryProfile.name;
-            }
-          }
-          
-          // If only one profile exists, use it automatically
-          if (profiles.length === 1) {
-            console.log('✅ Using single investor profile name:', profiles[0].name);
-            return profiles[0].name;
+        if (primaryProfileId && profiles.length > 0) {
+          const primaryProfile = profiles.find(p => p.id === primaryProfileId);
+          if (primaryProfile?.name) {
+            console.log('✅ Using primary investor profile name:', primaryProfile.name);
+            return primaryProfile.name;
           }
         }
+
+        // If only one profile exists, use it automatically
+        if (profiles.length === 1) {
+          console.log('✅ Using single investor profile name:', profiles[0].name);
+          return profiles[0].name;
+        }
       } catch (profileError) {
-        console.warn('Failed to fetch investor profiles, falling back to user profile:', profileError);
+        console.warn('Failed to fetch investor profiles, falling back to auth profile:', profileError);
       }
-      
-      // Fallback to user document name
-      const response = await axios.get(`${API_BASE_URL}/api/auth/me`);
-      if (response.data?.success && response.data?.data) {
-        const profileData = response.data.data;
-        return profileData.name || displayName || email?.split('@')[0] || 'User';
-      }
+
+      // Fallback to Firebase auth displayName or email prefix
+      return displayName || email?.split('@')[0] || 'User';
     } catch (error) {
       console.warn('Failed to fetch user profile, using fallback name:', error);
     }
@@ -252,7 +259,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       delete axios.defaults.headers.common['Authorization'];
-      navigate('/login');
+      navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
       // Still clear local state even if Firebase logout fails
@@ -260,7 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       delete axios.defaults.headers.common['Authorization'];
-      navigate('/login');
+      navigate('/');
     }
   };
 
@@ -284,9 +291,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Failed to refresh user:', error);
       // On error, try to fetch profiles directly
       try {
+        const userRef = doc(db, 'users', user.id);
+        const userSnap = await getDoc(userRef);
+        const data = userSnap.exists() ? (userSnap.data() as any) : {};
+        const primaryProfileId = data?.primaryProfileId;
         const profiles = await searcherProfilesApi.getSearcherProfiles();
-        const userResponse = await axios.get(`${API_BASE_URL}/api/auth/me`);
-        const primaryProfileId = userResponse.data?.data?.primaryProfileId;
         if (primaryProfileId && profiles.length > 0) {
           const primaryProfile = profiles.find(p => p.id === primaryProfileId);
           if (primaryProfile && primaryProfile.name !== user.name) {
