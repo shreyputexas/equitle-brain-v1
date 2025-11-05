@@ -1361,7 +1361,10 @@ export default function VoiceCalls() {
                   <Button
                     variant="outlined"
                     size="small"
-                    onClick={() => setShowCustomVoiceDialog(true)}
+                    component="a"
+                    href="https://calendly.com/contact-equitle/pe-firm-partnership-meeting-equitle"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     sx={{
                       color: 'text.secondary',
                       borderColor: 'divider',
