@@ -3,13 +3,15 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
-  signInWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
   signOut, 
   onAuthStateChanged, 
   User as FirebaseUser 
 } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { API_BASE_URL } from '../config/api';
 import { searcherProfilesApi } from '../services/searcherProfilesApi';
 
@@ -52,6 +54,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, firm?: string, role?: string, phone?: string, location?: string) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   refreshUser: () => Promise<void>;
@@ -230,11 +233,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Set axios default header for backend requests
       axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
 
-      // Create user object from Firebase user
+      // Fetch real name from profile
+      const realName = await fetchUserProfile(
+        firebaseUser.uid, 
+        firebaseUser.email || '',
+        firebaseUser.displayName || undefined
+      );
+
+      // Create user object from Firebase user with profile name
       const user: User = {
         id: firebaseUser.uid,
         email: firebaseUser.email || '',
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+        name: realName,
         role: 'user',
         firm: '',
         phone: firebaseUser.phoneNumber || '',
@@ -247,6 +257,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Login failed:', error);
       throw new Error(error.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signup = async (email: string, password: string, name: string, firm?: string, role?: string, phone?: string, location?: string) => {
+    try {
+      setLoading(true);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      // Update Firebase Auth display name
+      await updateProfile(firebaseUser, { displayName: name });
+      
+      // Create user document in Firestore
+      const userRef = doc(db, 'users', firebaseUser.uid);
+      await setDoc(userRef, {
+        email: email.toLowerCase(),
+        name: name,
+        firm: firm || '',
+        role: role || '',
+        phone: phone || '',
+        location: location || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Get the ID token for backend authentication
+      const idToken = await firebaseUser.getIdToken();
+      localStorage.setItem('token', idToken);
+      localStorage.setItem('userId', firebaseUser.uid);
+
+      console.log('✅ AuthContext: Created user and stored userId:', firebaseUser.uid);
+
+      // Set axios default header for backend requests
+      axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+
+      // Create user object
+      const user: User = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        name: name,
+        role: role || 'user',
+        firm: firm || '',
+        phone: phone || '',
+        location: location || '',
+        avatar: firebaseUser.photoURL || undefined
+      };
+
+      setUser(user);
+      navigate('/outreach/deals');
+    } catch (error: any) {
+      console.error('Signup failed:', error);
+      throw new Error(error.message || 'Signup failed');
     } finally {
       setLoading(false);
     }
@@ -310,7 +374,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
