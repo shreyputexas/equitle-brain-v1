@@ -4,7 +4,7 @@ import { getApiUrl, getSocketUrl } from '../config/api';
 import VoiceCallAnalytics from '../components/VoiceCallAnalytics';
 import CallInspectionModal from '../components/CallInspectionModal';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db } from '../lib/firebase';
 import {
   Box,
   Paper,
