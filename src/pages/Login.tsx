@@ -58,14 +58,14 @@ export default function Login() {
       sx={{
         minHeight: '100vh',
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
+        gridTemplateColumns: { xs: '1fr', md: '0.4fr 1.6fr' },
         background: 'linear-gradient(135deg, #10B981 0%, #000000 100%)',
       }}
     >
       {/* Left side - Logo */}
       <Box
         sx={{
-          display: 'flex',
+          display: { xs: 'none', md: 'flex' },
           alignItems: 'center',
           justifyContent: 'center',
           p: 4
@@ -94,8 +94,8 @@ export default function Login() {
           flexDirection: 'column',
           justifyContent: 'center',
           p: { xs: 4, md: 6 },
-          maxWidth: '480px',
-          ml: 'auto',
+          maxWidth: { xs: '100%', md: '600px' },
+          mx: { xs: 0, md: 'auto' },
           width: '100%'
         }}
       >
