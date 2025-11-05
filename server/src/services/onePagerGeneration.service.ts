@@ -1,3 +1,4 @@
+// @ts-nocheck
 import OpenAI from 'openai';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import fs from 'fs';

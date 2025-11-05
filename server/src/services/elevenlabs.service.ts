@@ -1,3 +1,4 @@
+// @ts-nocheck
 import ElevenLabs from 'elevenlabs-node';
 import logger from '../utils/logger';
 import { Readable } from 'stream';

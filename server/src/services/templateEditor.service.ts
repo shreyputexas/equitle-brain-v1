@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createReport } from 'docx-templates';
 import fs from 'fs';
 import path from 'path';

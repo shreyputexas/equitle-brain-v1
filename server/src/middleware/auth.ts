@@ -9,9 +9,8 @@ export interface TokenPayload {
   role?: string;
 }
 
-export interface AuthRequest extends Request {
-  user?: TokenPayload;
-}
+// Do not augment Express Request here to avoid conflicts with Firebase user typing.
+// Access auth payload via (req as any).user in handlers.
 
 export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   try {

@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { DealsFirestoreService } from '../services/deals.firestore.service';
 import logger from '../utils/logger';
 
@@ -48,7 +48,7 @@ const updateDealSchema = Joi.object({
 // @route   GET /api/firebase-deals
 // @desc    Get all deals for the authenticated user
 // @access  Private
-router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { search, sector, stage, status, limit = 50, offset = 0 } = req.query;
@@ -78,7 +78,7 @@ router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =>
 // @route   GET /api/firebase-deals/stats
 // @desc    Get deals statistics
 // @access  Private
-router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/stats', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const stats = await DealsFirestoreService.getDealsStats(userId);
@@ -99,7 +99,7 @@ router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, re
 // @route   GET /api/firebase-deals/by-stage/:stage
 // @desc    Get deals by stage
 // @access  Private
-router.get('/by-stage/:stage', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/by-stage/:stage', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { stage } = req.params;
@@ -122,7 +122,7 @@ router.get('/by-stage/:stage', firebaseAuthMiddleware, async (req: FirebaseAuthR
 // @route   GET /api/firebase-deals/:id
 // @desc    Get single deal by ID
 // @access  Private
-router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -153,7 +153,7 @@ router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   POST /api/firebase-deals
 // @desc    Create new deal
 // @access  Private
-router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
@@ -186,7 +186,7 @@ router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =
 // @route   PUT /api/firebase-deals/:id
 // @desc    Update deal
 // @access  Private
-router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -228,7 +228,7 @@ router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   DELETE /api/firebase-deals/:id
 // @desc    Delete (archive) deal
 // @access  Private
-router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -259,7 +259,7 @@ router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, r
 // @route   POST /api/firebase-deals/:id/contacts
 // @desc    Add contact to deal
 // @access  Private
-router.post('/:id/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/:id/contacts', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id: dealId } = req.params;

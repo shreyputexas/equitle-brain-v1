@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { DocumentsFirestoreService, uploadMiddleware } from '../services/documents.firestore.service';
 import logger from '../utils/logger';
 
@@ -19,7 +19,7 @@ const updateDocumentSchema = Joi.object({
 // @route   GET /api/firebase-documents
 // @desc    Get all documents for the authenticated user
 // @access  Private
-router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { dealId, category, search, limit = 50, offset = 0 } = req.query;
@@ -48,7 +48,7 @@ router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =>
 // @route   GET /api/firebase-documents/stats
 // @desc    Get document statistics
 // @access  Private
-router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/stats', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const stats = await DocumentsFirestoreService.getDocumentsStats(userId);
@@ -69,7 +69,7 @@ router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, re
 // @route   GET /api/firebase-documents/search
 // @desc    Search documents
 // @access  Private
-router.get('/search', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/search', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { q } = req.query;
@@ -99,7 +99,7 @@ router.get('/search', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, r
 // @route   GET /api/firebase-documents/by-category/:category
 // @desc    Get documents by category
 // @access  Private
-router.get('/by-category/:category', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/by-category/:category', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { category } = req.params;
@@ -122,7 +122,7 @@ router.get('/by-category/:category', firebaseAuthMiddleware, async (req: Firebas
 // @route   GET /api/firebase-documents/:id
 // @desc    Get single document by ID
 // @access  Private
-router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -153,7 +153,7 @@ router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   GET /api/firebase-documents/:id/download
 // @desc    Get download URL for document
 // @access  Private
-router.get('/:id/download', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id/download', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -184,7 +184,7 @@ router.get('/:id/download', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 // @route   POST /api/firebase-documents/upload
 // @desc    Upload new document
 // @access  Private
-router.post('/upload', firebaseAuthMiddleware, uploadMiddleware.single('file'), async (req: FirebaseAuthRequest, res) => {
+router.post('/upload', firebaseAuthMiddleware, uploadMiddleware.single('file'), async (req, res) => {
   try {
     const userId = req.userId!;
     const file = req.file;
@@ -232,7 +232,7 @@ router.post('/upload', firebaseAuthMiddleware, uploadMiddleware.single('file'), 
 // @route   PUT /api/firebase-documents/:id
 // @desc    Update document metadata
 // @access  Private
-router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -274,7 +274,7 @@ router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   DELETE /api/firebase-documents/:id
 // @desc    Delete document
 // @access  Private
-router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;

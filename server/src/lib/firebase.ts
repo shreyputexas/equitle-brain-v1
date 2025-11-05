@@ -7,14 +7,11 @@ import { resolve } from 'path';
 import logger from '../utils/logger';
 
 // Initialize Firebase Admin SDK
-let app: admin.app.App | undefined;
-
 const initializeFirebase = (): admin.app.App => {
   try {
     // If already initialized, reuse the existing app
     if (admin.apps.length > 0) {
-      app = admin.apps[0];
-      return app;
+      return admin.app();
     }
 
     const useEmulators = process.env.FIREBASE_USE_EMULATORS === 'true';
@@ -25,7 +22,7 @@ const initializeFirebase = (): admin.app.App => {
       // ------------------------------
       logger.info('🔧 Initializing Firebase with emulators');
 
-      app = admin.initializeApp({
+      const app = admin.initializeApp({
         projectId: process.env.FIREBASE_PROJECT_ID || 'equitle-brain-dev',
       });
 
@@ -56,7 +53,7 @@ const initializeFirebase = (): admin.app.App => {
 
       const serviceAccount = JSON.parse(readFileSync(resolvedPath, 'utf8'));
 
-      app = admin.initializeApp({
+      const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: process.env.FIREBASE_PROJECT_ID,
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
@@ -66,7 +63,7 @@ const initializeFirebase = (): admin.app.App => {
     }
 
     logger.info('✅ Firebase Admin SDK initialized successfully');
-    return app;
+    return admin.app();
   } catch (error) {
     logger.error('❌ Firebase Admin SDK initialization failed:', error);
     throw error;
@@ -74,12 +71,12 @@ const initializeFirebase = (): admin.app.App => {
 };
 
 // Initialize Firebase
-app = initializeFirebase();
+initializeFirebase();
 
-// Export Firebase services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+// Export Firebase services using default app
+export const auth = getAuth();
+export const db = getFirestore();
+export const storage = getStorage();
 
 // ------------------------------
 // 🔧 Firestore Helper Utilities

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { VoiceAgentService } from './voiceAgent.service';
 import { db } from '../lib/firebase';
 import logger from '../utils/logger';

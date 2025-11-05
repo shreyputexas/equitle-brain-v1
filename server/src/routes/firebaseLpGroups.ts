@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { LPGroupsFirestoreService } from '../services/lpGroups.firestore.service';
 import logger from '../utils/logger';
 
@@ -27,7 +27,7 @@ const updateLPGroupSchema = Joi.object({
 // @route   GET /api/firebase-lp-groups
 // @desc    Get all LP groups for the authenticated user
 // @access  Private
-router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const result = await LPGroupsFirestoreService.getAllLPGroups(userId);
@@ -48,7 +48,7 @@ router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =>
 // @route   GET /api/firebase-lp-groups/:id
 // @desc    Get single LP group by ID
 // @access  Private
-router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -79,7 +79,7 @@ router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   POST /api/firebase-lp-groups
 // @desc    Create new LP group
 // @access  Private
-router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
@@ -103,6 +103,7 @@ router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =
 
     // Sanitize input
     const groupData = {
+      type: 'custom',
       name: value.name.trim(),
       description: value.description?.trim() || null,
       criteria: value.criteria || null,
@@ -129,7 +130,7 @@ router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =
 // @route   PUT /api/firebase-lp-groups/:id
 // @desc    Update LP group
 // @access  Private
-router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -186,7 +187,7 @@ router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   DELETE /api/firebase-lp-groups/:id
 // @desc    Delete LP group
 // @access  Private
-router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -224,7 +225,7 @@ router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, r
 // @route   POST /api/firebase-lp-groups/:id/members
 // @desc    Add investor to group
 // @access  Private
-router.post('/:id/members', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/:id/members', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -270,7 +271,7 @@ router.post('/:id/members', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 // @route   DELETE /api/firebase-lp-groups/:id/members/:investorId
 // @desc    Remove investor from group
 // @access  Private
-router.delete('/:id/members/:investorId', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id/members/:investorId', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id, investorId } = req.params;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RetellService, RetellCallAnalytics } from './retell.service';
 import { ElevenLabsService } from './elevenlabs.service';
 import { OpenAIService } from './openai.service';

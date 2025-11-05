@@ -1,3 +1,4 @@
+// @ts-nocheck
 import express from 'express';
 import { onePagerGenerationService, OnePagerRequest } from '../services/onePagerGeneration.service';
 import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';

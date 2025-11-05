@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { InvestorsFirestoreService } from '../services/investors.firestore.service';
 import logger from '../utils/logger';
 
@@ -60,7 +60,7 @@ const addEntitySchema = Joi.object({
 // @route   GET /api/firebase-investors
 // @desc    Get all investors for the authenticated user
 // @access  Private
-router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const result = await InvestorsFirestoreService.getAllInvestors(userId);
@@ -81,7 +81,7 @@ router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =>
 // @route   GET /api/firebase-investors/stats
 // @desc    Get investor statistics
 // @access  Private
-router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/stats', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const stats = await InvestorsFirestoreService.getInvestorsStats(userId);
@@ -102,7 +102,7 @@ router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, re
 // @route   GET /api/firebase-investors/search
 // @desc    Search investors
 // @access  Private
-router.get('/search', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/search', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { q } = req.query;
@@ -132,7 +132,7 @@ router.get('/search', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, r
 // @route   GET /api/firebase-investors/by-type/:type
 // @desc    Get investors by type
 // @access  Private
-router.get('/by-type/:type', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/by-type/:type', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { type } = req.params;
@@ -155,7 +155,7 @@ router.get('/by-type/:type', firebaseAuthMiddleware, async (req: FirebaseAuthReq
 // @route   GET /api/firebase-investors/:id
 // @desc    Get single investor by ID
 // @access  Private
-router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -186,7 +186,7 @@ router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   POST /api/firebase-investors
 // @desc    Create new investor
 // @access  Private
-router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
@@ -257,7 +257,7 @@ router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =
 // @route   PUT /api/firebase-investors/:id
 // @desc    Update investor
 // @access  Private
-router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -299,7 +299,7 @@ router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   DELETE /api/firebase-investors/:id
 // @desc    Delete investor
 // @access  Private
-router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -330,7 +330,7 @@ router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, r
 // @route   POST /api/firebase-investors/:id/entities
 // @desc    Add entity to investor
 // @access  Private
-router.post('/:id/entities', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/:id/entities', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id: investorId } = req.params;

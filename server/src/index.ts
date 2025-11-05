@@ -71,7 +71,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 4001;
+const PORT = Number(process.env.PORT) || 4001;
 
 // WebSocket server for Retell LLM integration
 const wss = new WebSocketServer({
@@ -402,19 +402,27 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // Connect to Firebase (non-blocking to allow server to start)
-  connectFirebase().catch(error => {
-    console.error('Firebase connection failed but server will continue:', error.message);
-  });
+  (async () => {
+    try {
+      await connectFirebase();
+    } catch (error: any) {
+      console.error('Firebase connection failed but server will continue:', error?.message || error);
+    }
+  })();
 
   // Start email sync (also non-blocking)
-  EmailSyncService.startEmailSync().catch(error => {
-    console.error('Email sync failed to start but server will continue:', error.message);
-  });
+  (async () => {
+    try {
+      await EmailSyncService.startEmailSync();
+    } catch (error: any) {
+      console.error('Email sync failed to start but server will continue:', error?.message || error);
+    }
+  })();
 });
 
 export { io };
