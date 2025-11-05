@@ -4,6 +4,19 @@ import logger from '../utils/logger';
 
 const router = express.Router();
 
+// Add CORS headers for signup notifications route
+router.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 /**
  * POST /api/signup-notifications
  * Send email notification when a new signup request is received
