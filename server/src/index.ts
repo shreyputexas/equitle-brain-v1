@@ -45,6 +45,7 @@ import voiceAgentRoutes from './routes/voiceAgent';
 import campaignRoutes from './routes/campaigns';
 import massVoicemailRoutes from './routes/massVoicemail';
 import linkedinOutreachRoutes from './routes/linkedinOutreach';
+import signupNotificationsRoutes from './routes/signupNotifications';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
 
 import { errorHandler } from './middleware/errorHandler';
@@ -291,6 +292,7 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/mass-voicemail', massVoicemailRoutes);
 // LinkedIn outreach routes
 app.use('/api/linkedin-outreach', linkedinOutreachRoutes);
+app.use('/api/signup-notifications', signupNotificationsRoutes);
 // app.use('/api/gmail', gmailRoutes);
 
 app.use(errorHandler);
