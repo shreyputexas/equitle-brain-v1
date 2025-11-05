@@ -42,16 +42,22 @@ const initializeFirebase = (): admin.app.App => {
       delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
       delete process.env.FIREBASE_STORAGE_EMULATOR_HOST;
 
+      // Try environment variable first, fallback to file
+      const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
       const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
 
-      if (!serviceAccountPath) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_PATH is required for cloud Firebase');
+      let serviceAccount;
+
+      if (serviceAccountJson) {
+        logger.info('🔎 Using service account from environment variable');
+        serviceAccount = JSON.parse(serviceAccountJson);
+      } else if (serviceAccountPath) {
+        const resolvedPath = resolve(serviceAccountPath);
+        logger.info(`🔎 Using service account at: ${resolvedPath}`);
+        serviceAccount = JSON.parse(readFileSync(resolvedPath, 'utf8'));
+      } else {
+        throw new Error('Either FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_SERVICE_ACCOUNT_PATH is required for cloud Firebase');
       }
-
-      const resolvedPath = resolve(serviceAccountPath);
-      logger.info(`🔎 Using service account at: ${resolvedPath}`);
-
-      const serviceAccount = JSON.parse(readFileSync(resolvedPath, 'utf8'));
 
       const app = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
