@@ -75,6 +75,7 @@ import {
   Campaign as CampaignIcon,
   VolumeUp as SpeakerIcon,
   Handshake as HandshakeIcon
+  , Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -245,6 +246,7 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
   const handleLogout = () => {
     logout();
     handleProfileMenuClose();
+    navigate('/login');
   };
 
   const isActive = (path: string, parentText?: string) => {
@@ -719,6 +721,40 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
           )}
           
         </Box>
+        {/* Logout control */}
+        {sidebarCollapsed ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+            <Tooltip title="Logout">
+              <IconButton
+                onClick={handleLogout}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
+                }}
+              >
+                <LogoutIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        ) : (
+          <Button
+            onClick={handleLogout}
+            variant="outlined"
+            startIcon={<LogoutIcon />}
+            fullWidth
+            sx={{
+              mt: 1,
+              color: 'white',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderColor: 'rgba(255, 255, 255, 0.5)'
+              }
+            }}
+          >
+            Logout
+          </Button>
+        )}
       </Box>
     </Box>
   );
@@ -852,6 +888,36 @@ export default function ProfessionalNavbar({ onSidebarCollapsedChange }: Profess
             primary="Report ready"
             secondary="Q4 Fundraising report is available"
           />
+        </MenuItem>
+      </Menu>
+
+      {/* Profile Menu */}
+      <Menu
+        anchorEl={profileMenuAnchor}
+        open={Boolean(profileMenuAnchor)}
+        onClose={handleProfileMenuClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          sx: {
+            minWidth: 200,
+            mt: 1,
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+          }
+        }}
+      >
+        <MenuItem onClick={() => { navigate('/profile'); handleProfileMenuClose(); }}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          Profile
+        </MenuItem>
+        <MenuItem onClick={handleLogout}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          Logout
         </MenuItem>
       </Menu>
 
