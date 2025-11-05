@@ -233,6 +233,13 @@ export default function VoiceCalls() {
   const [voiceName, setVoiceName] = useState('');
   const [voiceDescription, setVoiceDescription] = useState('');
   const [uploadingVoice, setUploadingVoice] = useState(false);
+  
+  // Custom voice request state
+  const [showCustomVoiceDialog, setShowCustomVoiceDialog] = useState(false);
+  const [customVoiceEmail, setCustomVoiceEmail] = useState('');
+  const [customVoiceLoading, setCustomVoiceLoading] = useState(false);
+  const [showCustomVoiceSuccess, setShowCustomVoiceSuccess] = useState(false);
+  const [showCustomVoiceDuplicate, setShowCustomVoiceDuplicate] = useState(false);
 
   // Tab management
   const [currentTab, setCurrentTab] = useState(0);
