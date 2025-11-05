@@ -285,12 +285,24 @@ export class VoiceAgentService {
       const calls = snapshot.docs
         .map(doc => {
           const data = doc.data();
+          // Convert Firestore Timestamps to JavaScript Dates
+          const startTime = data.startTime?.toDate ? data.startTime.toDate() : data.startTime;
+          const endTime = data.endTime?.toDate ? data.endTime.toDate() : data.endTime;
+          
+          // Calculate duration if missing but we have both start and end times
+          let duration = data.duration;
+          if (!duration && startTime && endTime) {
+            const startMs = startTime instanceof Date ? startTime.getTime() : new Date(startTime).getTime();
+            const endMs = endTime instanceof Date ? endTime.getTime() : new Date(endTime).getTime();
+            duration = endMs - startMs;
+          }
+          
           return {
             id: doc.id,
             ...data,
-            // Convert Firestore Timestamps to JavaScript Dates
-            startTime: data.startTime?.toDate ? data.startTime.toDate() : data.startTime,
-            endTime: data.endTime?.toDate ? data.endTime.toDate() : data.endTime,
+            startTime,
+            endTime,
+            duration, // Use calculated duration if original was missing
           } as CallSession;
         })
         .sort((a, b) => {
