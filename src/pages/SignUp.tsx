@@ -1,479 +1,404 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Container,
-  Typography,
-  Button,
+  Paper,
   TextField,
-  Grid,
-  Dialog,
-  DialogContent
+  Button,
+  Typography,
+  Link,
+  Alert,
+  InputAdornment,
+  IconButton,
+  Divider,
+  Grid
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import InfoIcon from '@mui/icons-material/Info';
+import {
+  Visibility,
+  VisibilityOff,
+  Email as EmailIcon,
+  Lock as LockIcon,
+  Person as PersonIcon,
+  Business as BusinessIcon,
+  Work as WorkIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationIcon
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import MarketingHeader from '../components/MarketingHeader';
-import Footer from '../components/Footer';
 
-export default function SignUp() {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+export default function Signup() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    firm: '',
+    role: '',
+    phone: '',
+    location: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
+  const navigate = useNavigate();
+
+  const handleInputChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+  };
+
+  const validateForm = () => {
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('Name, email, and password are required');
+      return false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
+    if (!validateForm()) return;
+
     setLoading(true);
 
     try {
-      console.log('Checking for duplicate email:', email);
-
-      // Check if email already exists
-      const collectionRef = collection(db, 'signup-requests');
-      const q = query(collectionRef, where('email', '==', email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        console.log('Email already exists in database');
-        setShowDuplicateModal(true);
-        setLoading(false);
-        return;
-      }
-
-      console.log('Email is unique, submitting to Firebase...');
-
-      // Email doesn't exist, proceed with submission
-      const docRef = await addDoc(collectionRef, {
-        email: email,
-        timestamp: new Date().toISOString(),
-        status: 'pending',
-        createdAt: new Date()
+      const response = await fetch('http://localhost:4001/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          firm: formData.firm,
+          role: formData.role,
+          phone: formData.phone,
+          location: formData.location
+        }),
       });
 
-      console.log('Successfully submitted with ID:', docRef.id);
-      setShowSuccessModal(true);
-      setEmail('');
-    } catch (error: any) {
-      console.error('Error submitting email:', error);
-      console.error('Error code:', error.code);
-      console.error('Error message:', error.message);
-      alert('Failed to submit request. Please try again.');
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Registration failed');
+      }
+
+      // Registration successful, redirect to login
+      navigate('/login', {
+        state: {
+          message: 'Registration successful! Please log in with your credentials.'
+        }
+      });
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-  };
-
   return (
-    <Box sx={{ background: 'linear-gradient(180deg, #000000 0%, #434343 100%)', minHeight: '100vh' }}>
-      <MarketingHeader />
-      
-      {/* Hero Section with Form */}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0A0F1C 0%, #111827 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        py: 4
+      }}
+    >
       <Box
         sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          background: 'linear-gradient(180deg, #000000 0%, #434343 100%)',
-          color: '#FFFFFF',
-          pt: { xs: 12, md: 14 },
-          position: 'relative',
-          overflow: 'hidden'
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage:
+            'radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 50%), ' +
+            'radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.15) 0%, transparent 50%)',
+          pointerEvents: 'none'
         }}
-      >
-        <Container maxWidth={false} sx={{ px: { xs: 2, md: 4 }, position: 'relative', zIndex: 1 }}>
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            {/* Main Heading */}
-            <Typography 
-              variant="h1" 
-              sx={{
-                fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
-                fontWeight: 800,
-                fontSize: { xs: '2.5rem', md: '4.5rem' },
-                lineHeight: 1.1,
-                mb: 4,
-                color: '#FFFFFF',
-                background: 'linear-gradient(135deg, #FFFFFF 0%, #E5E7EB 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
-            >
-              Request Credentials
-            </Typography>
-            
-            {/* Subheading */}
-            <Typography
-              variant="body1" 
-              sx={{
-                fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
-                fontWeight: 400,
-                fontSize: { xs: '1rem', md: '1.25rem' },
-                mb: 6,
-                color: 'rgba(255, 255, 255, 0.8)',
-                maxWidth: '800px',
-                mx: 'auto',
-                lineHeight: 1.6
-              }}
-            >
-              Enter your{' '}
-              <Box component="span" sx={{ 
-                color: '#10B981',
-                fontWeight: 600
-              }}>
-                email address
-              </Box>
-              {' '}and we'll send you access credentials to get started.
-            </Typography>
+      />
 
-          </Box>
-
-            {/* Form Section */}
-            <Box sx={{ 
-              maxWidth: '1400px', 
-              mx: 'auto', 
-              px: { xs: 4, md: 8 },
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '16px',
-              py: 6,
-              backdropFilter: 'blur(10px)'
-            }}>
-              <form onSubmit={handleSubmit}>
-                <Grid container spacing={3} alignItems="center" justifyContent="center">
-                  <Grid item xs={12} sm={8} md={6}>
-                    <TextField
-                      fullWidth
-                      placeholder="john@domain.com"
-                      name="email"
-                      type="email"
-                      value={email}
-                      onChange={handleInputChange}
-                      required
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          color: '#000000',
-                          borderRadius: 0,
-                          px: 2,
-                          backgroundColor: '#FFFFFF',
-                          '& fieldset': {
-                            borderColor: '#000000',
-                            borderWidth: '1px',
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#000000',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#000000',
-                          },
-                        },
-                        '& .MuiInputBase-input::placeholder': {
-                          color: 'rgba(0, 0, 0, 0.6)',
-                          opacity: 1,
-                          textAlign: 'center',
-                        },
-                        '& .MuiInputBase-input': {
-                          textAlign: 'center',
-                        },
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={4} md={3}>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      size="medium"
-                      fullWidth
-                      disabled={loading}
-                      sx={{
-                        background: `
-                          linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
-                          radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                          radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
-                          radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
-                        `,
-                        backdropFilter: 'blur(10px)',
-                        color: '#FFFFFF',
-                        border: '1px solid rgba(16, 185, 129, 0.4)',
-                        py: 1.5,
-                        px: 4,
-                        fontSize: '1.1rem',
-                        fontWeight: 600,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        borderRadius: '8px',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          background: `
-                            repeating-linear-gradient(
-                              0deg,
-                              transparent,
-                              transparent 2px,
-                              rgba(255,255,255,0.03) 2px,
-                              rgba(255,255,255,0.03) 4px
-                            ),
-                            repeating-linear-gradient(
-                              90deg,
-                              transparent,
-                              transparent 2px,
-                              rgba(0,0,0,0.02) 2px,
-                              rgba(0,0,0,0.02) 4px
-                            )
-                          `,
-                          pointerEvents: 'none',
-                          zIndex: 1
-                        },
-                        '&::after': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: '-100%',
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                          animation: 'slideShine 1.5s infinite',
-                          zIndex: 2
-                        },
-                        '&:disabled': {
-                          opacity: 0.6
-                        }
-                      }}
-                    >
-                      {loading ? 'Sending...' : 'Request Credentials'}
-                    </Button>
-                  </Grid>
-                </Grid>
-              </form>
-            </Box>
-        </Container>
-      </Box>
-      
-      <Box sx={{ position: 'relative', zIndex: 1 }}>
-        <Footer />
-      </Box>
-
-      {/* Success Confirmation Modal */}
-      <Dialog
-        open={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: '16px',
-            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
-          }
-        }}
+      <Paper
+        elevation={24}
         sx={{
-          '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(4px)'
-          }
-        }}
-      >
-        <DialogContent sx={{ 
-          p: 6, 
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Box
-            sx={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 3,
-              border: '2px solid rgba(16, 185, 129, 0.3)'
-            }}
-          >
-            <CheckCircleIcon 
-              sx={{ 
-                fontSize: 50, 
-                color: '#10B981',
-                animation: 'scaleIn 0.3s ease-out'
-              }} 
-            />
-          </Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
-              fontWeight: 700,
-              color: '#FFFFFF',
-              mb: 2
-            }}
-          >
-            Confirmed
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
-              color: 'rgba(255, 255, 255, 0.8)',
-              mb: 4,
-              lineHeight: 1.6
-            }}
-          >
-            Thank you for your request! We'll send you credentials soon.
-          </Typography>
-          <Button
-            onClick={() => setShowSuccessModal(false)}
-            variant="contained"
-            sx={{
-              background: `
-                linear-gradient(180deg, rgba(16, 185, 129, 0.6) 0%, rgba(5, 150, 105, 0.6) 30%, rgba(4, 120, 87, 0.6) 70%, rgba(6, 78, 59, 0.6) 100%),
-                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
-                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
-              `,
-              backdropFilter: 'blur(10px)',
-              color: '#FFFFFF',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              py: 1.5,
-              px: 6,
-              fontSize: '1rem',
-              fontWeight: 600,
-              borderRadius: '8px',
-              textTransform: 'none',
-              '&:hover': {
-                background: `
-                  linear-gradient(180deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 30%, rgba(4, 120, 87, 0.8) 70%, rgba(6, 78, 59, 0.8) 100%)
-                `,
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-              },
-              transition: 'all 0.3s ease'
-            }}
-          >
-            Close
-          </Button>
-        </DialogContent>
-      </Dialog>
-
-      {/* Duplicate Email Modal */}
-      <Dialog
-        open={showDuplicateModal}
-        onClose={() => setShowDuplicateModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: '16px',
-            background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
-          }
-        }}
-        sx={{
-          '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(4px)'
-          }
-        }}
-      >
-        <DialogContent sx={{
           p: 6,
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <Box
-            sx={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(251, 191, 36, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 3,
-              border: '2px solid rgba(251, 191, 36, 0.3)'
-            }}
-          >
-            <InfoIcon
-              sx={{
-                fontSize: 50,
-                color: '#FBB020',
-                animation: 'scaleIn 0.3s ease-out'
-              }}
-            />
-          </Box>
+          width: '100%',
+          maxWidth: 600,
+          position: 'relative',
+          background: 'rgba(17, 24, 39, 0.9)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 3
+        }}
+      >
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
           <Typography
-            variant="h4"
+            variant="h3"
             sx={{
-              fontFamily: "'Darker Grotesque', 'Outfit', 'Inter', 'Poppins', 'Roboto', 'Helvetica', 'Arial', sans-serif",
               fontWeight: 700,
-              color: '#FFFFFF',
-              mb: 2
+              background: 'linear-gradient(135deg, #6366F1 0%, #EC4899 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 1
             }}
           >
-            Already Requested
+            Join Equitle Brain
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              fontFamily: "'Poppins', 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif",
-              color: 'rgba(255, 255, 255, 0.8)',
-              mb: 4,
-              lineHeight: 1.6
-            }}
-          >
-            This email has already been submitted. We'll send you credentials soon!
+          <Typography variant="body1" color="text.secondary">
+            Create your account to get started
           </Typography>
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Full Name"
+                value={formData.name}
+                onChange={handleInputChange('name')}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PersonIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange('email')}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EmailIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleInputChange('password')}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Confirm Password"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={handleInputChange('confirmPassword')}
+                required
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LockIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Firm/Company"
+                value={formData.firm}
+                onChange={handleInputChange('firm')}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <BusinessIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Role/Title"
+                value={formData.role}
+                onChange={handleInputChange('role')}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <WorkIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                value={formData.phone}
+                onChange={handleInputChange('phone')}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <PhoneIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Location"
+                value={formData.location}
+                onChange={handleInputChange('location')}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LocationIcon sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+          </Grid>
+
           <Button
-            onClick={() => setShowDuplicateModal(false)}
+            fullWidth
+            type="submit"
             variant="contained"
+            size="large"
+            disabled={loading}
             sx={{
-              background: `
-                linear-gradient(180deg, rgba(251, 191, 36, 0.6) 0%, rgba(245, 158, 11, 0.6) 30%, rgba(217, 119, 6, 0.6) 70%, rgba(180, 83, 9, 0.6) 100%),
-                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
-                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, transparent 50%)
-              `,
-              backdropFilter: 'blur(10px)',
-              color: '#FFFFFF',
-              border: '1px solid rgba(251, 191, 36, 0.4)',
+              mt: 4,
               py: 1.5,
-              px: 6,
-              fontSize: '1rem',
-              fontWeight: 600,
-              borderRadius: '8px',
-              textTransform: 'none',
+              background: 'linear-gradient(135deg, #6366F1 0%, #EC4899 100%)',
               '&:hover': {
-                background: `
-                  linear-gradient(180deg, rgba(251, 191, 36, 0.8) 0%, rgba(245, 158, 11, 0.8) 30%, rgba(217, 119, 6, 0.8) 70%, rgba(180, 83, 9, 0.8) 100%)
-                `,
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)'
-              },
-              transition: 'all 0.3s ease'
+                background: 'linear-gradient(135deg, #818CF8 0%, #F472B6 100%)'
+              }
             }}
           >
-            Close
+            {loading ? 'Creating Account...' : 'Create Account'}
           </Button>
-        </DialogContent>
-      </Dialog>
+
+          <Divider sx={{ my: 3 }}>
+            <Typography variant="body2" color="text.secondary">
+              OR
+            </Typography>
+          </Divider>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            size="large"
+            sx={{ py: 1.5, mb: 2 }}
+          >
+            Continue with Google
+          </Button>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            size="large"
+            sx={{ py: 1.5 }}
+          >
+            Continue with Microsoft
+          </Button>
+        </form>
+
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Already have an account?{' '}
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => navigate('/login')}
+              sx={{ color: 'primary.main', textDecoration: 'none' }}
+            >
+              Sign in here
+            </Link>
+          </Typography>
+        </Box>
+      </Paper>
     </Box>
   );
 }
