@@ -4,8 +4,7 @@ import { Box } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { BrainProvider } from './contexts/BrainContext';
 import { AppThemeProvider } from './contexts/ThemeContext';
-import Layout from './components/Layout';
-import PrivateRoute from './components/PrivateRoute';
+import AppLayout from './components/AppLayout';
 import Landing from './pages/Landing';
 import Product from './pages/Product';
 import Manifesto from './pages/Manifesto';
@@ -54,29 +53,27 @@ function App() {
             <Route path="/integrations/success" element={<OAuthCallback />} />
             <Route path="/integrations/error" element={<OAuthCallback />} />
 
-            {/* Protected app shell */}
-            <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+            {/* Protected app routes */}
+            <Route element={<AppLayout />}>
               <Route path="/outreach/deals" element={<Deals />} />
               <Route path="/outreach/deals/:id" element={<DealDetail />} />
               <Route path="/outreach/brokers" element={<Brokers />} />
-
-              {/* Settings and other routes */}
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/voice-calls" element={<VoiceCalls />} />
               <Route path="/mass-voicemail" element={<MassVoicemail />} />
               <Route path="/data-enrichment" element={<DataEnrichment />} />
               <Route path="/my-thesis" element={<MyThesis />} />
-
-              {/* Legacy redirects */}
-              <Route path="/dashboard" element={<Navigate to="/outreach/deals" />} />
-              <Route path="/companies" element={<Navigate to="/outreach/deals" />} />
               <Route path="/contacts" element={<Contacts />} />
-              <Route path="/investor-relations" element={<Navigate to="/fundraising/limited-partners" />} />
-              <Route path="/reports" element={<Navigate to="/fundraising/funds" />} />
-              <Route path="/deals" element={<Navigate to="/outreach/deals" />} />
-              <Route path="/deals/relationships" element={<Navigate to="/outreach/deals" />} />
             </Route>
+
+            {/* Legacy redirects */}
+            <Route path="/dashboard" element={<Navigate to="/outreach/deals" replace />} />
+            <Route path="/companies" element={<Navigate to="/outreach/deals" replace />} />
+            <Route path="/investor-relations" element={<Navigate to="/fundraising/limited-partners" replace />} />
+            <Route path="/reports" element={<Navigate to="/fundraising/funds" replace />} />
+            <Route path="/deals" element={<Navigate to="/outreach/deals" replace />} />
+            <Route path="/deals/relationships" element={<Navigate to="/outreach/deals" replace />} />
 
             {/* Fallback: redirect unknown routes to marketing site */}
             <Route path="*" element={<Navigate to="/" replace />} />
