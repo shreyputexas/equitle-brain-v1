@@ -89,7 +89,7 @@ const activeCampaignExecutions: Map<string, CampaignExecution> = new Map();
  */
 router.post('/parse-csv', firebaseAuthMiddleware, upload.single('csv'), async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const csvFile = req.file;
 
     if (!userId) {
@@ -138,7 +138,7 @@ router.post('/parse-csv', firebaseAuthMiddleware, upload.single('csv'), async (r
  */
 router.post('/', firebaseAuthMiddleware, upload.single('csv'), async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const csvFile = req.file;
     const {
       name,
@@ -235,7 +235,7 @@ router.post('/', firebaseAuthMiddleware, upload.single('csv'), async (req, res) 
  */
 router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const limit = parseInt(req.query.limit as string) || 50;
 
     if (!userId) {
@@ -275,7 +275,7 @@ router.get('/', firebaseAuthMiddleware, async (req, res) => {
  */
 router.get('/:campaignId', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { campaignId } = req.params;
 
     if (!userId) {
@@ -305,7 +305,7 @@ router.get('/:campaignId', firebaseAuthMiddleware, async (req, res) => {
  */
 router.get('/:campaignId/stats', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { campaignId } = req.params;
 
     if (!userId) {
@@ -343,7 +343,7 @@ router.get('/:campaignId/stats', firebaseAuthMiddleware, async (req, res) => {
  */
 router.post('/:campaignId/start', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { campaignId } = req.params;
 
     if (!userId) {
@@ -385,7 +385,7 @@ router.post('/:campaignId/start', firebaseAuthMiddleware, async (req, res) => {
  */
 router.post('/:campaignId/pause', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { campaignId } = req.params;
 
     if (!userId) {
@@ -425,7 +425,7 @@ router.post('/:campaignId/pause', firebaseAuthMiddleware, async (req, res) => {
  */
 router.delete('/:campaignId', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { campaignId } = req.params;
 
     if (!userId) {

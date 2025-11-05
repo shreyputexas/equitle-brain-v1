@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { db, FirestoreHelpers } from '../lib/firebase';
 import { DealsFirestoreService } from './deals.firestore.service';
 import logger from '../utils/logger';

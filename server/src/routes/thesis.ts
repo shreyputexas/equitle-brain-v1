@@ -1,12 +1,12 @@
 import express from 'express';
 import { ThesisFirestoreService } from '../services/thesis.firestore.service';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import logger from '../utils/logger';
 
 const router = express.Router();
 
 // Get all investment theses for a user
-router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const theses = await ThesisFirestoreService.getTheses(userId);
@@ -27,7 +27,7 @@ router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =>
 });
 
 // Get a single investment thesis by ID
-router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -45,7 +45,7 @@ router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 });
 
 // Create a new investment thesis
-router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const thesisData = req.body;
@@ -64,7 +64,7 @@ router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =
 });
 
 // Update an existing investment thesis
-router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -78,7 +78,7 @@ router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 });
 
 // Delete an investment thesis
-router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;

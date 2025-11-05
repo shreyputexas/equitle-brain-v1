@@ -234,7 +234,7 @@ router.post('/webhook', async (req, res) => {
     //   return res.status(401).json({ error: 'Invalid webhook signature' });
     // }
 
-    const event = retellService.parseWebhookEvent(req.body);
+    const event = (retellService as any).parseWebhookEvent?.(req.body) || req.body;
 
     logger.info('Parsed Retell webhook', {
       event: event.event,
@@ -377,7 +377,7 @@ router.post('/llm-webhook', async (req, res) => {
  */
 router.get('/calls', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const limit = parseInt(req.query.limit as string) || 50;
 
     if (!userId) {
@@ -402,7 +402,7 @@ router.get('/calls', firebaseAuthMiddleware, async (req, res) => {
 router.get('/calls/:callId', firebaseAuthMiddleware, async (req, res) => {
   try {
     const { callId } = req.params;
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -436,7 +436,7 @@ router.get('/calls/:callId', firebaseAuthMiddleware, async (req, res) => {
 router.get('/calls/:callId/enhanced', firebaseAuthMiddleware, async (req, res) => {
   try {
     const { callId } = req.params;
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -496,7 +496,7 @@ router.get('/test-enhanced/:callId', async (req, res) => {
 router.get('/analytics/dashboard', async (req, res) => {
   try {
     // For testing without auth - use mock user
-    const userId = (req as FirebaseAuthRequest).user?.uid || 'dev-user-123';
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id || 'dev-user-123';
     const { startDate, endDate } = req.query;
 
     console.log('🎯 ANALYTICS DASHBOARD ROUTE HIT');
@@ -537,7 +537,7 @@ router.get('/analytics/dashboard', async (req, res) => {
  */
 router.get('/analytics/trends', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { days = '30' } = req.query;
 
     if (!userId) {
@@ -575,7 +575,7 @@ router.get('/analytics/trends', firebaseAuthMiddleware, async (req, res) => {
  */
 router.post('/analytics/batch-analyze', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const { limit = 50 } = req.body;
 
     if (!userId) {
@@ -607,7 +607,7 @@ router.post('/analytics/batch-analyze', firebaseAuthMiddleware, async (req, res)
 router.get('/calls/:callId/recording', firebaseAuthMiddleware, async (req, res) => {
   try {
     const { callId } = req.params;
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -640,7 +640,7 @@ router.get('/calls/:callId/recording', firebaseAuthMiddleware, async (req, res) 
 router.post('/voice-clone', firebaseAuthMiddleware, upload.single('audio'), async (req, res) => {
   try {
     const { name, description, isDefault } = req.body;
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     const audioFile = req.file;
 
     if (!userId) {
@@ -815,10 +815,10 @@ router.post('/update-agent', async (req, res) => {
 
     const updatedAgent = await retellService.updateAgent(agentId, {
       llm: {
-        type: 'custom',
+        type: 'custom-llm',
         custom_llm_url: `${process.env.BACKEND_URL?.replace('https://', 'wss://')}/llm`,
       }
-    });
+    } as any);
 
     res.json({
       success: true,
@@ -839,7 +839,7 @@ router.post('/update-agent', async (req, res) => {
 router.post('/test-call', firebaseAuthMiddleware, async (req, res) => {
   try {
     const { phoneNumber } = req.body;
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -888,7 +888,7 @@ const retellSyncService = new RetellSyncService();
  */
 router.post('/sync/start', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
@@ -940,7 +940,7 @@ router.post('/sync/start', firebaseAuthMiddleware, async (req, res) => {
 router.get('/sync/status/:jobId', firebaseAuthMiddleware, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const userId = (req as FirebaseAuthRequest).user?.uid;
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });

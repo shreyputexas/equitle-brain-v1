@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { FundsFirestoreService } from '../services/funds.firestore.service';
 import logger from '../utils/logger';
 
@@ -49,7 +49,7 @@ const updateFundSchema = Joi.object({
 // @route   GET /api/firebase-funds
 // @desc    Get all funds for the authenticated user
 // @access  Private
-router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const result = await FundsFirestoreService.getAllFunds(userId);
@@ -70,7 +70,7 @@ router.get('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =>
 // @route   GET /api/firebase-funds/stats
 // @desc    Get funds statistics
 // @access  Private
-router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/stats', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const stats = await FundsFirestoreService.getFundsStats(userId);
@@ -91,7 +91,7 @@ router.get('/stats', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, re
 // @route   GET /api/firebase-funds/search
 // @desc    Search funds
 // @access  Private
-router.get('/search', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/search', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { q } = req.query;
@@ -121,7 +121,7 @@ router.get('/search', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, r
 // @route   GET /api/firebase-funds/by-status/:status
 // @desc    Get funds by status
 // @access  Private
-router.get('/by-status/:status', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/by-status/:status', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { status } = req.params;
@@ -144,7 +144,7 @@ router.get('/by-status/:status', firebaseAuthMiddleware, async (req: FirebaseAut
 // @route   GET /api/firebase-funds/by-type/:type
 // @desc    Get funds by type
 // @access  Private
-router.get('/by-type/:type', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/by-type/:type', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { type } = req.params;
@@ -167,7 +167,7 @@ router.get('/by-type/:type', firebaseAuthMiddleware, async (req: FirebaseAuthReq
 // @route   GET /api/firebase-funds/:id
 // @desc    Get single fund by ID
 // @access  Private
-router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -198,7 +198,7 @@ router.get('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   POST /api/firebase-funds
 // @desc    Create new fund
 // @access  Private
-router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
@@ -231,7 +231,7 @@ router.post('/', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) =
 // @route   PUT /api/firebase-funds/:id
 // @desc    Update fund
 // @access  Private
-router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -273,7 +273,7 @@ router.put('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res)
 // @route   PUT /api/firebase-funds/:id/progress
 // @desc    Update fund progress (raised amount and investor count)
 // @access  Private
-router.put('/:id/progress', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/:id/progress', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -313,7 +313,7 @@ router.put('/:id/progress', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 // @route   DELETE /api/firebase-funds/:id
 // @desc    Delete fund
 // @access  Private
-router.delete('/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;

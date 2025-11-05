@@ -67,7 +67,7 @@ router.get('/all', async (req, res) => {
     });
 
     // Map the contacts to match the frontend interface
-    const formattedContacts = contacts.map(contact => ({
+    const formattedContacts = contacts.map((contact: any) => ({
       id: contact.id,
       name: contact.name,
       first_name: contact.name.split(' ')[0] || '',
@@ -374,13 +374,13 @@ router.post('/bulk-save', async (req, res) => {
 
     logger.info(`Bulk saving ${enrichedContacts.length} ${contactType} contacts for user ${userId}`);
 
-    const savedContacts = [];
-    const skippedContacts = [];
+    const savedContacts: any[] = [];
+    const skippedContacts: string[] = [];
 
     for (const enrichedContact of enrichedContacts) {
       try {
         // Check if contact already exists (by email or name+company combination)
-        let existingContact = null;
+        let existingContact: any = null;
         
         if (enrichedContact.email && 
             enrichedContact.email !== 'email_not_unlocked' && 

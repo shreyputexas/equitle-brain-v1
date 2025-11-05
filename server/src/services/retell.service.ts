@@ -223,6 +223,27 @@ export class RetellService {
   }
 
   /**
+   * Normalize Retell webhook payloads into a consistent shape
+   */
+  parseWebhookEvent(body: any): {
+    event: string;
+    call_id: string;
+    agent_id: string;
+    call_status?: string;
+    transcript?: any[] | string;
+    metadata?: Record<string, any>;
+  } {
+    const event = body.event || body.type || body.name || 'unknown';
+    const call_id = body.call_id || body.call?.call_id || body.data?.call_id || '';
+    const agent_id = body.agent_id || body.call?.agent_id || body.data?.agent_id || '';
+    const call_status = body.call_status || body.call?.call_status || body.data?.call_status;
+    const transcript = body.transcript || body.transcript_object || body.call?.transcript || body.call?.transcript_object || [];
+    const metadata = body.metadata || body.call?.metadata || body.data?.metadata;
+
+    return { event, call_id, agent_id, call_status, transcript, metadata };
+  }
+
+  /**
    * Test the connection to Retell API
    */
   async testConnection(): Promise<boolean> {

@@ -43,7 +43,7 @@ async function ensureValidAccessToken(integration: { expiresAt: Date | null; ref
  */
 router.get('/emails/normalized', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
@@ -66,7 +66,7 @@ router.get('/emails/normalized', auth, async (req, res) => {
     }
 
     // Get valid access token
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidAccessToken(gmailIntegration as any);
 
     // Fetch messages from Gmail
     const gmailResponse = await GmailService.listMessages(validAccessToken, {
@@ -110,7 +110,7 @@ router.get('/emails/normalized', auth, async (req, res) => {
  */
 router.get('/emails/crm-relevant', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
@@ -133,7 +133,7 @@ router.get('/emails/crm-relevant', auth, async (req, res) => {
     }
 
     // Get valid access token
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidAccessToken(gmailIntegration as any);
 
     // Search for business-related emails
     const businessQuery = 'meeting OR proposal OR contract OR deal OR investment OR client OR customer';
@@ -174,7 +174,7 @@ router.get('/emails/crm-relevant', auth, async (req, res) => {
  */
 router.get('/contacts/extracted', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
@@ -197,7 +197,7 @@ router.get('/contacts/extracted', auth, async (req, res) => {
     }
 
     // Get valid access token
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidAccessToken(gmailIntegration as any);
 
     // Fetch recent emails
     const gmailResponse = await GmailService.listMessages(validAccessToken, {
@@ -268,7 +268,7 @@ router.get('/emails/deals', auth, async (req, res) => {
     }
 
     // Get valid access token
-    const validAccessToken = await ensureValidAccessToken(gmailIntegration);
+    const validAccessToken = await ensureValidAccessToken(gmailIntegration as any);
 
     // Search for deal-related emails
     const dealQuery = 'deal OR investment OR funding OR valuation OR "term sheet" OR "due diligence" OR acquisition OR merger OR equity OR venture';
@@ -330,7 +330,7 @@ router.get('/drive/files', auth, async (req, res) => {
     }
 
     // Get valid access token
-    const validAccessToken = await ensureValidAccessToken(driveIntegration);
+    const validAccessToken = await ensureValidAccessToken(driveIntegration as any);
 
     // Fetch files from Google Drive
     const files = await GoogleDriveService.listFiles(validAccessToken);

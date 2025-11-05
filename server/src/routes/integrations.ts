@@ -78,7 +78,7 @@ router.get('/test', async (req, res) => {
     const hasRedirectUri = !!process.env.GOOGLE_REDIRECT_URI;
 
     // Generate a test OAuth URL to debug
-    let testAuthUrl = null;
+    let testAuthUrl: string | null = null;
     if (hasClientId && hasClientSecret && hasRedirectUri) {
       const testScopes = GoogleAuthService.getScopes(['profile']);
       testAuthUrl = GoogleAuthService.getAuthUrl(testScopes, 'test-user');
@@ -139,13 +139,13 @@ router.get('/microsoft/test', async (req, res) => {
 // Get user's integrations (requires auth)
 router.get('/', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
-    logger.info('Fetching integrations for user', { userId, userEmail: (req as FirebaseAuthRequest).user?.email });
+    logger.info('Fetching integrations for user', { userId, userEmail: (req as any).user?.email });
 
     const userIntegrations = await IntegrationsFirestoreService.findMany({
       userId
@@ -179,7 +179,7 @@ router.get('/', auth, async (req, res) => {
 // Initiate Google OAuth flow (requires auth)
 router.post('/google/connect', auth, async (req, res) => {
   const { types } = req.body; // ['profile', 'drive', 'calendar', 'gmail']
-  const userId = (req as FirebaseAuthRequest).userId;
+  const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
   try {
 
@@ -290,7 +290,7 @@ router.get('/google/callback', async (req, res) => {
     }
 
     // Create integrations for each type
-    const createdIntegrations = [];
+    const createdIntegrations: any[] = [];
     for (const type of types) {
       // Remove existing integration of same type
       const deleted = await IntegrationsFirestoreService.deleteMany({
@@ -348,7 +348,7 @@ router.get('/google/callback', async (req, res) => {
 router.post('/:id/fix-outlook', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -374,8 +374,8 @@ router.post('/:id/fix-outlook', auth, async (req, res) => {
 
     // Update the integration to add services array with outlook
     await IntegrationsFirestoreService.update(id, {
-      services: ['outlook', 'onedrive', 'teams'] // Add all common services
-    });
+      services: ['outlook', 'onedrive', 'teams'] as any
+    } as any);
 
     logger.info('Successfully added services array to Microsoft integration', { integrationId: id });
 
@@ -393,7 +393,7 @@ router.post('/:id/fix-outlook', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -431,7 +431,7 @@ router.delete('/:id', auth, async (req, res) => {
 // Get Google Drive files (requires auth)
 router.get('/google/drive/files', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -467,7 +467,7 @@ router.get('/google/drive/files', auth, async (req, res) => {
 // Get Google Drive folders (requires auth)
 router.get('/google/drive/folders', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -829,7 +829,7 @@ router.post('/microsoft/connect', auth, async (req, res) => {
     logger.error('Error initiating Microsoft OAuth:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      userId: (req as FirebaseAuthRequest).userId,
+      userId: (req as any).userId || (req as any).user?.id || (req as any).user?.uid,
       types: req.body?.types
     });
     res.status(500).json({ 
@@ -964,7 +964,7 @@ router.get('/microsoft/callback', async (req, res) => {
 // Get OneDrive files (requires auth)
 router.get('/microsoft/onedrive/files', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -1022,7 +1022,7 @@ router.get('/microsoft/onedrive/files', auth, async (req, res) => {
 // Get OneDrive folders (requires auth)
 router.get('/microsoft/onedrive/folders', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -1080,7 +1080,7 @@ router.get('/microsoft/onedrive/folders', auth, async (req, res) => {
 // Get Outlook messages (requires auth)
 router.get('/microsoft/outlook/messages', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     const { maxResults = 50, filter } = req.query;
 
     if (!userId) {
@@ -1144,7 +1144,7 @@ router.get('/microsoft/outlook/messages', auth, async (req, res) => {
 // Send Outlook email (requires auth)
 router.post('/microsoft/outlook/send', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     const emailData = req.body;
 
     if (!userId) {
@@ -1211,7 +1211,7 @@ router.post('/microsoft/outlook/send', auth, async (req, res) => {
 // Get Teams meetings (requires auth)
 router.get('/microsoft/teams/meetings', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     const { startTime, endTime } = req.query;
 
     if (!userId) {
@@ -1275,7 +1275,7 @@ router.get('/microsoft/teams/meetings', auth, async (req, res) => {
 // Create Teams meeting (requires auth)
 router.post('/microsoft/teams/meetings', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     const meetingData = req.body;
 
     if (!userId) {
@@ -1340,7 +1340,7 @@ router.post('/microsoft/teams/meetings', auth, async (req, res) => {
 // Get deal-related Outlook emails (requires auth)
 router.get('/microsoft/outlook/deals', auth, async (req, res) => {
   try {
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
     const { maxResults = 50 } = req.query;
 
     if (!userId) {
@@ -1437,7 +1437,7 @@ async function ensureValidApolloAccessToken(integration: { expiresAt?: Date | nu
 router.post('/apollo/connect', auth, async (req, res) => {
   try {
     const { scopes } = req.body; // Optional: specific scopes to request
-    const userId = (req as FirebaseAuthRequest).userId;
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -1535,8 +1535,8 @@ router.get('/apollo/callback', async (req, res) => {
     // Remove existing Apollo integrations for this user
     const deleted = await IntegrationsFirestoreService.deleteMany({
       userId: userId as string,
-      provider: 'apollo'
-    });
+      provider: 'apollo' as any
+    } as any);
 
     if (deleted.count > 0) {
       logger.info(`Removed ${deleted.count} existing Apollo integration(s) for user ${userId}`);
@@ -1545,8 +1545,8 @@ router.get('/apollo/callback', async (req, res) => {
     // Create Apollo integration
     const integration = await IntegrationsFirestoreService.create({
       userId: userId as string,
-      provider: 'apollo',
-      type: 'apollo',
+      provider: 'apollo' as any,
+      type: 'apollo' as any,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       expiresAt: new Date(Date.now() + tokens.expires_in * 1000),

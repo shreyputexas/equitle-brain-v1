@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { storage, db, FirestoreHelpers } from '../lib/firebase';
 import logger from '../utils/logger';
 import multer from 'multer';

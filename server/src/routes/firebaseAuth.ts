@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { FirebaseAuthService } from '../services/firebaseAuth.service';
 import logger from '../utils/logger';
 
@@ -82,7 +82,7 @@ router.post('/register', async (req, res) => {
 // @route   GET /api/auth/me
 // @desc    Get current user data
 // @access  Private
-router.get('/me', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/me', firebaseAuthMiddleware, async (req, res) => {
   try {
     const uid = req.userId!;
     const userData = await FirebaseAuthService.getUserData(uid);
@@ -118,7 +118,7 @@ router.get('/me', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) 
 // @route   PUT /api/auth/profile
 // @desc    Update user profile
 // @access  Private
-router.put('/profile', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/profile', firebaseAuthMiddleware, async (req, res) => {
   try {
     const uid = req.userId!;
     const user = await FirebaseAuthService.updateProfile(uid, req.body);
@@ -140,7 +140,7 @@ router.put('/profile', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, 
 // @route   PUT /api/auth/preferences
 // @desc    Update user preferences
 // @access  Private
-router.put('/preferences', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/preferences', firebaseAuthMiddleware, async (req, res) => {
   try {
     const uid = req.userId!;
     const preferences = await FirebaseAuthService.updatePreferences(uid, req.body);
@@ -162,7 +162,7 @@ router.put('/preferences', firebaseAuthMiddleware, async (req: FirebaseAuthReque
 // @route   POST /api/auth/change-password
 // @desc    Change user password
 // @access  Private
-router.post('/change-password', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/change-password', firebaseAuthMiddleware, async (req, res) => {
   try {
     // Validate input
     const { error, value } = changePasswordSchema.validate(req.body);
@@ -203,7 +203,7 @@ router.post('/change-password', firebaseAuthMiddleware, async (req: FirebaseAuth
 // @route   DELETE /api/auth/account
 // @desc    Delete user account
 // @access  Private
-router.delete('/account', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/account', firebaseAuthMiddleware, async (req, res) => {
   try {
     const uid = req.userId!;
 
@@ -225,7 +225,7 @@ router.delete('/account', firebaseAuthMiddleware, async (req: FirebaseAuthReques
 // @route   POST /api/auth/send-email-verification
 // @desc    Send email verification link
 // @access  Private
-router.post('/send-email-verification', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/send-email-verification', firebaseAuthMiddleware, async (req, res) => {
   try {
     const uid = req.userId!;
     const link = await FirebaseAuthService.sendEmailVerification(uid);
@@ -307,7 +307,7 @@ router.post('/verify-token', async (req, res) => {
 // @route   POST /api/auth/set-role
 // @desc    Set user role (admin only)
 // @access  Private (Admin)
-router.post('/set-role', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/set-role', firebaseAuthMiddleware, async (req, res) => {
   try {
     // Check if current user is admin
     const currentUserRole = req.user!.customClaims?.role;

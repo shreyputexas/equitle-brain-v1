@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import logger from '../utils/logger';
 
 export interface ApolloPerson {
@@ -117,7 +117,7 @@ export class ApolloService {
    */
   async searchPeople(params: ApolloSearchParams): Promise<ApolloSearchResponse> {
     try {
-      const response: AxiosResponse<ApolloSearchResponse> = await axios.post(
+      const response = await axios.post<ApolloSearchResponse>(
         `${this.baseUrl}/mixed_people/search`,
         {
           ...params,
@@ -179,7 +179,7 @@ export class ApolloService {
         searchParams
       });
 
-      const response: AxiosResponse<ApolloSearchResponse> = await axios.post(
+      const response = await axios.post<ApolloSearchResponse>(
         `${this.baseUrl}/mixed_people/search`,
         searchParams,
         {
@@ -215,7 +215,7 @@ export class ApolloService {
     try {
       logger.info('Using Apollo Email Finder API', params);
 
-      const response = await axios.post(
+      const response = await axios.post<any>(
         `${this.baseUrl}/email_finder`,
         {
           first_name: params.first_name,
@@ -393,7 +393,7 @@ export class ApolloService {
         matchRequest.q_organization_domains = params.domain;
       }
 
-      const response: AxiosResponse = await axios.post(
+      const response = await axios.post<any>(
         `${this.baseUrl}/people/match`,
         matchRequest,
         {
@@ -459,7 +459,7 @@ export class ApolloService {
     enriched: ApolloPerson | null;
     error?: string;
   }>> {
-    const results = [];
+    const results: any[] = [];
     
     for (const person of peopleData) {
       try {
@@ -489,7 +489,7 @@ export class ApolloService {
    */
   async getOrganization(domain: string): Promise<any> {
     try {
-      const response = await axios.get(`${this.baseUrl}/organizations`, {
+      const response = await axios.get<any>(`${this.baseUrl}/organizations`, {
         params: {
           q_organization_domains: domain
         },
@@ -517,7 +517,7 @@ export class ApolloService {
     try {
       logger.info('Apollo: Enriching organization', { domain });
 
-      const response = await axios.post(
+      const response = await axios.post<any>(
         `${this.baseUrl}/organizations/enrich`,
         {
           domain: domain
@@ -603,7 +603,7 @@ export class ApolloService {
       }
 
       // Make a minimal test request
-      const response = await axios.post(
+      const response = await axios.post<any>(
         `${this.baseUrl}/mixed_people/search`,
         { per_page: 1 },
         {
@@ -636,7 +636,7 @@ export class ApolloService {
     try {
       logger.info('Searching organizations with Apollo', { params });
 
-      const response = await axios.post(`${this.baseUrl}/organizations/search`, {
+      const response = await axios.post<any>(`${this.baseUrl}/organizations/search`, {
         ...params
       }, {
         headers: this.getAuthHeaders(),
@@ -669,7 +669,7 @@ export class ApolloService {
     try {
       logger.info('Getting organization details', { organizationId });
 
-      const response = await axios.get(`${this.baseUrl}/organizations/${organizationId}`, {
+      const response = await axios.get<any>(`${this.baseUrl}/organizations/${organizationId}`, {
         headers: this.getAuthHeaders(),
         timeout: 15000
       });

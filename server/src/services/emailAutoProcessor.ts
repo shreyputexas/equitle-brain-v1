@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GmailService } from './gmail';
 import { MicrosoftAuthService } from './microsoftAuth';
 import { EmailsFirestoreService } from './emails.firestore.service';

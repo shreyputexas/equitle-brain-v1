@@ -1,6 +1,6 @@
 import express from 'express';
 import Joi from 'joi';
-import { firebaseAuthMiddleware, FirebaseAuthRequest } from '../middleware/firebaseAuth';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 import { ContactsActivitiesFirestoreService } from '../services/contactsActivities.firestore.service';
 import logger from '../utils/logger';
 
@@ -99,7 +99,7 @@ const createCommunicationSchema = Joi.object({
 // @route   GET /api/firebase-contacts
 // @desc    Get all contacts for the authenticated user
 // @access  Private
-router.get('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/contacts', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { dealId, search, status, limit = 50, offset = 0 } = req.query;
@@ -128,7 +128,7 @@ router.get('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest,
 // @route   GET /api/firebase-contacts/:id
 // @desc    Get single contact by ID
 // @access  Private
-router.get('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/contacts/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -159,7 +159,7 @@ router.get('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 // @route   POST /api/firebase-contacts
 // @desc    Create new contact
 // @access  Private
-router.post('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/contacts', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
@@ -192,7 +192,7 @@ router.post('/contacts', firebaseAuthMiddleware, async (req: FirebaseAuthRequest
 // @route   PUT /api/firebase-contacts/:id
 // @desc    Update contact
 // @access  Private
-router.put('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.put('/contacts/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -234,7 +234,7 @@ router.put('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequ
 // @route   DELETE /api/firebase-contacts/:id
 // @desc    Delete contact
 // @access  Private
-router.delete('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.delete('/contacts/:id', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { id } = req.params;
@@ -265,7 +265,7 @@ router.delete('/contacts/:id', firebaseAuthMiddleware, async (req: FirebaseAuthR
 // @route   POST /api/firebase/contacts/bulk-save
 // @desc    Bulk save enriched contacts from Apollo
 // @access  Private
-router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { contacts: enrichedContacts, contactType } = req.body;
@@ -276,21 +276,22 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req: FirebaseA
 
     logger.info(`Bulk saving ${enrichedContacts.length} ${contactType} contacts for user ${userId}`);
 
-    const savedContacts = [];
-    const skippedContacts = [];
+    const savedContacts: any[] = [];
+    const skippedContacts: string[] = [];
 
     for (const enrichedContact of enrichedContacts) {
       try {
         logger.info(`Processing contact: ${enrichedContact.name}`, { enrichedContact });
         
         // Check if contact already exists by email
-        let existingContacts = [];
+        let existingContacts: any[] = [];
         if (enrichedContact.email && 
             enrichedContact.email !== 'email_not_unlocked' && 
             !enrichedContact.email.includes('email_not_unlocked')) {
-          existingContacts = await ContactsActivitiesFirestoreService.getAllContacts(userId, {
-            email: enrichedContact.email
+          const result = await ContactsActivitiesFirestoreService.getAllContacts(userId, {
+            search: enrichedContact.email
           });
+          existingContacts = Array.isArray(result) ? result : (result.contacts || []);
         }
 
         let savedContact;
@@ -363,7 +364,7 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req: FirebaseA
 // @route   GET /api/firebase-activities
 // @desc    Get all activities for the authenticated user
 // @access  Private
-router.get('/activities', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/activities', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { dealId, contactId, type, limit = 50, offset = 0 } = req.query;
@@ -392,7 +393,7 @@ router.get('/activities', firebaseAuthMiddleware, async (req: FirebaseAuthReques
 // @route   POST /api/firebase-activities
 // @desc    Create new activity
 // @access  Private
-router.post('/activities', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/activities', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
@@ -427,7 +428,7 @@ router.post('/activities', firebaseAuthMiddleware, async (req: FirebaseAuthReque
 // @route   GET /api/firebase-communications
 // @desc    Get all communications for the authenticated user
 // @access  Private
-router.get('/communications', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.get('/communications', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
     const { dealId, contactId, type, limit = 50, offset = 0 } = req.query;
@@ -456,7 +457,7 @@ router.get('/communications', firebaseAuthMiddleware, async (req: FirebaseAuthRe
 // @route   POST /api/firebase-communications
 // @desc    Create new communication
 // @access  Private
-router.post('/communications', firebaseAuthMiddleware, async (req: FirebaseAuthRequest, res) => {
+router.post('/communications', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
 
