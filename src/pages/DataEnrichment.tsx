@@ -46,6 +46,7 @@ import {
   Switch
 } from '@mui/material';
 import {
+import { getApiUrl, getSocketUrl } from '../config/api';
   CloudUpload as CloudUploadIcon,
   Search as SearchIcon,
   Download as DownloadIcon,
@@ -416,7 +417,7 @@ export default function DataEnrichment() {
         }
       }
 
-      const response = await fetch('http://localhost:4001/api/data-enrichment/organization-enrich', {
+      const response = await fetch(getApiUrl('data-enrichment/organization-enrich'), {
         method: 'POST',
         headers,
         body: formData
@@ -520,7 +521,7 @@ export default function DataEnrichment() {
         }
       }
 
-      const response = await fetch('http://localhost:4001/api/data-enrichment/contact-enrich', {
+      const response = await fetch(getApiUrl('data-enrichment/contact-enrich'), {
         method: 'POST',
         headers,
         body: formData
@@ -717,7 +718,7 @@ export default function DataEnrichment() {
     }
 
     try {
-      const response = await fetch('http://localhost:4001/api/data-enrichment/download-search-results', {
+      const response = await fetch(getApiUrl('data-enrichment/download-search-results'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -769,7 +770,7 @@ export default function DataEnrichment() {
       localStorage.setItem('thesisCriteria', JSON.stringify(thesisCriteria));
       
       // Also save to backend for persistence across devices
-      const response = await fetch('http://localhost:4001/api/data-enrichment/save-thesis', {
+      const response = await fetch(getApiUrl('data-enrichment/save-thesis'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -827,7 +828,7 @@ export default function DataEnrichment() {
     console.log('Starting API key validation...');
 
     try {
-      const url = 'http://localhost:4001/api/data-enrichment/validate-key';
+      const url = getApiUrl('data-enrichment/validate-key');
       console.log('Sending request to:', url);
 
       const response = await fetch(url, {
@@ -972,7 +973,7 @@ export default function DataEnrichment() {
         }
       }
 
-      const response = await fetch('http://localhost:4001/api/data-enrichment/upload-and-enrich', {
+      const response = await fetch(getApiUrl('data-enrichment/upload-and-enrich'), {
         method: 'POST',
         headers,
         body: formData
@@ -1004,7 +1005,7 @@ export default function DataEnrichment() {
       setIsProcessing(true);
       
       // Generate enriched CSV in original format
-      const response = await fetch('http://localhost:4001/api/data-enrichment/generate-csv', {
+      const response = await fetch(getApiUrl('data-enrichment/generate-csv'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

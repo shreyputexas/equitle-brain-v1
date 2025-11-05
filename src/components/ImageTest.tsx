@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Avatar, Card, CardContent } from '@mui/material';
+import { getApiUrl, getSocketUrl } from '../config/api';
 
 interface ImageTestProps {
   searcherProfiles: Array<{
@@ -26,7 +27,7 @@ const getAbsoluteHeadshotUrl = (url: string | undefined): string | undefined => 
   }
 
   // If URL is relative, prepend the base URL
-  const baseUrl = 'http://localhost:4001';
+  const baseUrl = getSocketUrl();
   
   // Ensure URL starts with / if it doesn't already
   let finalUrl = url;

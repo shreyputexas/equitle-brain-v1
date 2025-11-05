@@ -25,6 +25,7 @@ import {
   Edit as EditIcon
 } from '@mui/icons-material';
 import { Deal } from '../services/dealsApi';
+import { getApiUrl, getSocketUrl } from '../config/api';
 
 interface EditDealModalProps {
   open: boolean;
@@ -138,7 +139,7 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
         ...(formData.description.trim() && { description: formData.description.trim() })
       };
 
-      const response = await fetch(`http://localhost:4001/api/firebase-deals/${deal.id}`, {
+      const response = await fetch(getApiUrl(`firebase-deals/${deal.id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

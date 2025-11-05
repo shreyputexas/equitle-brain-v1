@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getApiUrl, getSocketUrl } from '../config/api';
 import {
   Box,
   Paper,
@@ -113,7 +114,7 @@ const MassVoicemail: React.FC = () => {
     loadCampaigns();
 
     // Initialize Socket.io connection
-    const socket = io('http://localhost:4001');
+    const socket = io(getSocketUrl());
 
     // Listen for campaign progress updates
     socket.on('campaign-progress', (data) => {
@@ -175,7 +176,7 @@ const MassVoicemail: React.FC = () => {
 
   const loadVoiceClones = async () => {
     try {
-      const response = await fetch('http://localhost:4001/api/mass-voicemail/voices');
+      const response = await fetch(getApiUrl('mass-voicemail/voices'));
       const data = await response.json();
       setVoiceClones(data);
     } catch (error) {
@@ -185,7 +186,7 @@ const MassVoicemail: React.FC = () => {
 
   const loadCampaigns = async () => {
     try {
-      const response = await fetch('http://localhost:4001/api/mass-voicemail/campaigns');
+      const response = await fetch(getApiUrl('mass-voicemail/campaigns'));
       const data = await response.json();
       setCampaigns(data);
     } catch (error) {
@@ -303,8 +304,8 @@ const MassVoicemail: React.FC = () => {
 
     try {
       const endpoint = personalized
-        ? `http://localhost:4001/api/mass-voicemail/campaigns/${selectedCampaign.id}/send-personalized-voicemails`
-        : `http://localhost:4001/api/mass-voicemail/campaigns/${selectedCampaign.id}/send-voicemails`;
+        ? getApiUrl(`mass-voicemail/campaigns/${selectedCampaign.id}/send-personalized-voicemails`)
+        : getApiUrl(`mass-voicemail/campaigns/${selectedCampaign.id}/send-voicemails`);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -1268,7 +1269,7 @@ const MassVoicemail: React.FC = () => {
                             variant="outlined"
                             startIcon={<FileDownload />}
                             onClick={() => {
-                              window.open(`http://localhost:4001/api/mass-voicemail/campaigns/${campaign.id}/download`, '_blank');
+                              window.open(getApiUrl(`mass-voicemail/campaigns/${campaign.id}/download`), '_blank');
                             }}
                             sx={{
                               borderRadius: 3,

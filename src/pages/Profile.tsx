@@ -60,6 +60,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';
 import { getUserId } from '../utils/auth';
+import { getApiUrl, getSocketUrl } from '../config/api';
 
 
 // BULLETPROOF Helper function to ensure headshot URL is absolute
@@ -78,7 +79,7 @@ const getAbsoluteHeadshotUrl = (url: string | undefined): string | undefined => 
   }
 
   // If URL is relative, prepend the base URL
-  const baseUrl = 'http://localhost:4001';
+  const baseUrl = getSocketUrl();
   
   // Ensure URL starts with / if it doesn't already
   let finalUrl = url;
