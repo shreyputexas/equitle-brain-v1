@@ -1,12 +1,12 @@
 import type { FirebaseUser } from '../middleware/firebaseAuth';
-import type { TokenPayload } from '../services/auth.service';
 
 declare global {
   namespace Express {
-    interface User extends TokenPayload {}
     interface Request {
-      user?: FirebaseUser | TokenPayload;
+      // Firebase-authenticated user injected by firebaseAuthMiddleware
+      user?: FirebaseUser;
       userId?: string;
+      // Multer-processed uploads
       file?: any;
       files?: any;
     }
