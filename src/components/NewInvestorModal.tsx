@@ -134,7 +134,7 @@ export default function NewInvestorModal({ open, onClose, onSuccess }: NewInvest
   const loadContacts = async () => {
     try {
       const response = await contactsApi.getContacts();
-      const contacts = response.data?.contacts || response.data || [];
+      const contacts = response.contacts || [];
       setAvailableContacts(contacts);
     } catch (err) {
       console.error('Error loading contacts:', err);
@@ -145,7 +145,7 @@ export default function NewInvestorModal({ open, onClose, onSuccess }: NewInvest
     try {
       // Pull investors from contacts with type 'investor'
       const response = await contactsApi.getContacts();
-      const contacts = response.data?.contacts || response.data || [];
+      const contacts = response.contacts || [];
       const investorContacts = contacts.filter((contact: any) => contact.type === 'investor');
       setExistingInvestors(investorContacts);
     } catch (err) {

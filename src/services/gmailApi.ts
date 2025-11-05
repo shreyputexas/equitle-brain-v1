@@ -91,7 +91,7 @@ class GmailApiService {
    */
   async sendEmail(emailData: SendEmailData): Promise<SendEmailResponse> {
     try {
-      const response = await axios.post('/gmail/send', emailData);
+      const response = await axios.post<SendEmailResponse>('/gmail/send', emailData);
       return response.data;
     } catch (error: any) {
       console.error('Error sending email:', error);
@@ -115,7 +115,7 @@ class GmailApiService {
     contactId?: string;
   }): Promise<SendEmailResponse> {
     try {
-      const response = await axios.post(`/gmail/reply/${messageId}`, replyData);
+      const response = await axios.post<SendEmailResponse>(`/gmail/reply/${messageId}`, replyData);
       return response.data;
     } catch (error: any) {
       console.error('Error replying to email:', error);
@@ -142,7 +142,7 @@ class GmailApiService {
       if (filters.maxResults) params.append('maxResults', filters.maxResults.toString());
       if (filters.pageToken) params.append('pageToken', filters.pageToken);
 
-      const response = await axios.get(`/gmail/messages?${params.toString()}`);
+      const response = await axios.get<MessagesResponse>(`/gmail/messages?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Gmail messages:', error);
@@ -160,7 +160,7 @@ class GmailApiService {
    */
   async getMessage(messageId: string): Promise<{ message: GmailMessage }> {
     try {
-      const response = await axios.get(`/gmail/messages/${messageId}`);
+      const response = await axios.get<{ message: GmailMessage }>(`/gmail/messages/${messageId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Error fetching Gmail message ${messageId}:`, error);
@@ -187,7 +187,7 @@ class GmailApiService {
       if (filters.maxResults) params.append('maxResults', filters.maxResults.toString());
       if (filters.pageToken) params.append('pageToken', filters.pageToken);
 
-      const response = await axios.get(`/gmail/threads?${params.toString()}`);
+      const response = await axios.get<ThreadsResponse>(`/gmail/threads?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Gmail threads:', error);
@@ -205,7 +205,7 @@ class GmailApiService {
    */
   async getLabels(): Promise<LabelsResponse> {
     try {
-      const response = await axios.get('/gmail/labels');
+      const response = await axios.get<LabelsResponse>('/gmail/labels');
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Gmail labels:', error);

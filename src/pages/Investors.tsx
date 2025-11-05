@@ -102,10 +102,8 @@ export default function Investors() {
   };
 
   const getEmailsForStage = (stageValue: string) => {
-    if (stageValue === 'all') {
-      return emails;
-    }
-    return emails.filter(email => email.subCategory === stageValue);
+    // Currently no sub-category on CategorizedEmail; show all per stage buckets
+    return emails;
   };
 
   const getSentimentColor = (sentiment: string) => {
@@ -691,9 +689,9 @@ export default function Investors() {
           {stages.map((stage) => {
             const stageEmails = getEmailsForStage(stage.value).filter(email => 
               searchTerm === '' || 
-              email.prospect_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              email.prospect_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              email.email_subject?.toLowerCase().includes(searchTerm.toLowerCase())
+              email.from.emailAddress.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              email.from.emailAddress.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              email.subject?.toLowerCase().includes(searchTerm.toLowerCase())
             );
             
             return (

@@ -1,4 +1,5 @@
 import { createTheme } from '@mui/material/styles';
+import '@mui/x-data-grid/themeAugmentation';
 
 const theme = createTheme({
   palette: {
@@ -387,14 +388,14 @@ const theme = createTheme({
           }
         }
       },
-      MuiDataGrid: {
+    },
+    MuiDataGrid: {
         styleOverrides: {
           root: {
             fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             border: 'none'
           }
         }
-      }
     }
   }
 });

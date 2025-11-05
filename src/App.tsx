@@ -12,7 +12,7 @@ import Network from './pages/Network';
 import ScrollToTop from './components/ScrollToTop';
 
 import Login from './pages/Login';
-import SignUp from './pages/SignUp';
+import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
 import DealDetail from './pages/DealDetail';
@@ -48,7 +48,7 @@ function App() {
 
             {/* Authentication routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
+            <Route path="/signup" element={<Signup />} />
 
             {/* OAuth callback routes */}
             <Route path="/app/oauth/callback" element={<OAuthCallback />} />

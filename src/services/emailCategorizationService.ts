@@ -256,7 +256,7 @@ class EmailCategorizationService {
       console.log('🤖 Fetching AI-categorized emails from Firebase...');
       
       // Fetch from Firebase API (emails already processed with AI by backend)
-      const response = await axios.get(`/api/firebase-emails?limit=${maxResults}`, {
+      const response = await axios.get<{ success: boolean; data: any[] }>(`/api/firebase-emails?limit=${maxResults}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

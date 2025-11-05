@@ -15,7 +15,7 @@ class HeadshotsApi {
       const formData = new FormData();
       formData.append('headshot', file);
 
-      const response = await axios.post(`${this.baseURL}/upload/${searcherId}`, formData, {
+      const response = await axios.post<HeadshotUploadResponse>(`${this.baseURL}/upload/${searcherId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': 'Bearer mock-token'
@@ -31,7 +31,7 @@ class HeadshotsApi {
 
   async deleteHeadshot(searcherId: string): Promise<HeadshotUploadResponse> {
     try {
-      const response = await axios.delete(`${this.baseURL}/${searcherId}`, {
+      const response = await axios.delete<HeadshotUploadResponse>(`${this.baseURL}/${searcherId}`, {
         headers: {
           'Authorization': 'Bearer mock-token'
         }

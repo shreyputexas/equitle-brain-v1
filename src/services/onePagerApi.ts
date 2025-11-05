@@ -74,7 +74,7 @@ class OnePagerApi {
 
   async generateContent(request: OnePagerRequest): Promise<OnePagerResponse> {
     try {
-      const response = await axios.post(`${this.baseURL}/content`, request, {
+      const response = await axios.post<OnePagerResponse>(`${this.baseURL}/content`, request, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -89,7 +89,7 @@ class OnePagerApi {
 
   async generateDocx(request: OnePagerRequest): Promise<Blob> {
     try {
-      const response = await axios.post(`${this.baseURL}/generate`, request, {
+      const response = await axios.post<Blob>(`${this.baseURL}/generate`, request, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`

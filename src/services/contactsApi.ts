@@ -67,9 +67,9 @@ class ContactsApiService {
       if (filters.limit) params.append('limit', filters.limit.toString());
       if (filters.offset) params.append('offset', filters.offset.toString());
 
-      const response = await axios.get(`/api/firebase/contacts?${params.toString()}`);
+      const response = await axios.get<any>(`/api/firebase/contacts?${params.toString()}`);
       // Handle the nested response structure from firebase API
-      const contacts = response.data.data?.contacts || response.data.data || [];
+      const contacts = response.data?.data?.contacts || response.data?.data || [];
       return {
         contacts,
         total: contacts.length
@@ -85,7 +85,7 @@ class ContactsApiService {
    */
   async getContact(id: string): Promise<ContactResponse> {
     try {
-      const response = await axios.get(`/api/firebase/contacts/${id}`);
+      const response = await axios.get<ContactResponse>(`/api/firebase/contacts/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching contact ${id}:`, error);
@@ -98,7 +98,7 @@ class ContactsApiService {
    */
   async createContact(contactData: CreateContactData): Promise<ContactResponse> {
     try {
-      const response = await axios.post('/api/firebase/contacts', contactData);
+      const response = await axios.post<ContactResponse>('/api/firebase/contacts', contactData);
       return response.data;
     } catch (error) {
       console.error('Error creating contact:', error);
@@ -111,7 +111,7 @@ class ContactsApiService {
    */
   async updateContact(id: string, contactData: UpdateContactData): Promise<ContactResponse> {
     try {
-      const response = await axios.put(`/api/firebase/contacts/${id}`, contactData);
+      const response = await axios.put<ContactResponse>(`/api/firebase/contacts/${id}`, contactData);
       return response.data;
     } catch (error) {
       console.error(`Error updating contact ${id}:`, error);
@@ -136,7 +136,7 @@ class ContactsApiService {
    */
   async logInteraction(contactId: string, interactionData: LogInteractionData): Promise<any> {
     try {
-      const response = await axios.post(`/api/firebase/contacts/${contactId}/interactions`, interactionData);
+      const response = await axios.post<any>(`/api/firebase/contacts/${contactId}/interactions`, interactionData);
       return response.data;
     } catch (error) {
       console.error(`Error logging interaction for contact ${contactId}:`, error);

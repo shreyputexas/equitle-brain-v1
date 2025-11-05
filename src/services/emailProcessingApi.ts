@@ -1,4 +1,9 @@
-import { ApiResponse } from '../types/api';
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
 export interface ProcessedEmail {
   id: string;
