@@ -10,9 +10,8 @@ import Product from './pages/Product';
 import Manifesto from './pages/Manifesto';
 import Network from './pages/Network';
 import ScrollToTop from './components/ScrollToTop';
-
 import Login from './pages/Login';
-import SignUp from './pages/Signup';
+import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import Deals from './pages/Deals';
 import DealDetail from './pages/DealDetail';
