@@ -17,7 +17,7 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { collection, addDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
-import { db, auth } from '../firebase/config';
+import { db, auth } from '../lib/firebase';
 import MarketingHeader from '../components/MarketingHeader';
 import Footer from '../components/Footer';
 

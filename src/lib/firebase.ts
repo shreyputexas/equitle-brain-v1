@@ -3,14 +3,29 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
-// Firebase configuration
+// Validate required environment variables early to fail fast in misconfigured environments
+const requiredEnvMissing: string[] = [];
+if (!import.meta.env.VITE_FIREBASE_API_KEY) requiredEnvMissing.push('VITE_FIREBASE_API_KEY');
+if (!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN) requiredEnvMissing.push('VITE_FIREBASE_AUTH_DOMAIN');
+if (!import.meta.env.VITE_FIREBASE_PROJECT_ID) requiredEnvMissing.push('VITE_FIREBASE_PROJECT_ID');
+if (!import.meta.env.VITE_FIREBASE_STORAGE_BUCKET) requiredEnvMissing.push('VITE_FIREBASE_STORAGE_BUCKET');
+if (!import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID) requiredEnvMissing.push('VITE_FIREBASE_MESSAGING_SENDER_ID');
+if (!import.meta.env.VITE_FIREBASE_APP_ID) requiredEnvMissing.push('VITE_FIREBASE_APP_ID');
+
+if (requiredEnvMissing.length > 0) {
+  throw new Error(`Missing Firebase environment variables: ${requiredEnvMissing.join(', ')}`);
+}
+
+// Firebase configuration (no unsafe fallbacks)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-api-key',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'equitle-brain-dev.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'equitle-brain-dev',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'equitle-brain-dev.appspot.com',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:123456789:web:abc123def456',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  // measurementId is optional for analytics; include if present
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase - check if app already exists to prevent duplicate initialization
