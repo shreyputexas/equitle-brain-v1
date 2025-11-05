@@ -77,6 +77,9 @@ function App() {
               <Route path="/deals" element={<Navigate to="/outreach/deals" />} />
               <Route path="/deals/relationships" element={<Navigate to="/outreach/deals" />} />
             </Route>
+
+            {/* Fallback: redirect unknown routes to marketing site */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Box>
         </BrainProvider>
