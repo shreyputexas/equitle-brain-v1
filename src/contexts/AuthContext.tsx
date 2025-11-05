@@ -307,6 +307,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       setUser(user);
+      
+      // Send email notification to admin (non-blocking)
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+      fetch(`${apiBaseUrl}/api/signup-notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      }).catch(err => {
+        console.error('Failed to send signup notification:', err);
+        // Don't block the user flow if email fails
+      });
+      
       navigate('/outreach/deals');
     } catch (error: any) {
       console.error('Signup failed:', error);
