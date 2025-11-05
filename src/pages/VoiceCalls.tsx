@@ -1649,16 +1649,6 @@ export default function VoiceCalls() {
                         </Typography>
                       )}
                     </Box>
-                    <Chip
-                      label={getStatusText(call.status)}
-                      size="small"
-                      sx={{
-                        bgcolor: `${getStatusColor(call.status)}20`,
-                        color: getStatusColor(call.status),
-                        border: `1px solid ${getStatusColor(call.status)}`,
-                        fontSize: '0.7rem'
-                      }}
-                    />
                   </Box>
 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

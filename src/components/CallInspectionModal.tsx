@@ -292,13 +292,8 @@ const CallInspectionModal: React.FC<CallInspectionModalProps> = ({ open, onClose
               </Grid>
             </Grid>
 
-            {/* Status and Outcome */}
+            {/* Outcome */}
             <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-              <Chip
-                label={`Status: ${callData.status}`}
-                color="primary"
-                variant="outlined"
-              />
               {callData.outcome && (
                 <Chip
                   label={`Outcome: ${callData.outcome.replace('_', ' ')}`}
