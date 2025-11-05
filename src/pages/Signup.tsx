@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import MarketingHeader from '../components/MarketingHeader';
+import { getApiUrl } from '../config/api';
 import Footer from '../components/Footer';
 
 export default function SignUp() {
@@ -54,6 +55,18 @@ export default function SignUp() {
       });
 
       console.log('Successfully submitted with ID:', docRef.id);
+
+      // Send email notification to admin (non-blocking)
+      fetch(getApiUrl('signup-notifications'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      }).catch(err => {
+        console.error('Failed to send signup notification:', err);
+        // Don't block the user flow if email fails
+      });
       setShowSuccessModal(true);
       setEmail('');
     } catch (error: any) {
