@@ -225,7 +225,7 @@ app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 app.use('/api/integrations', (req, res, next) => {
   console.log('Integration route hit:', req.path, req.method);
   // Skip auth middleware for the OAuth callback routes
-  if (req.path === '/google/callback' || req.path === '/microsoft/callback') {
+  if (req.path === '/google/callback' || req.path === '/microsoft/callback' || req.path === '/apollo/callback') {
     console.log('Skipping auth for OAuth callback');
     return next();
   }
