@@ -91,7 +91,8 @@ router.get('/debug/test-images', async (req, res) => {
     
     for (const profile of searcherProfiles) {
       const relativeUrl = profile.headshotUrl;
-      const absoluteUrl = `http://localhost:4001/${relativeUrl}`;
+      const baseUrl = process.env.BACKEND_URL || 'http://localhost:4001';
+      const absoluteUrl = `${baseUrl}/${relativeUrl}`;
       
       console.log(`Testing image for ${profile.name}:`);
       console.log(`  Relative URL: ${relativeUrl}`);
