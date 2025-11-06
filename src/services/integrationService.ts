@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { auth } from '../lib/firebase';
 
 export interface Integration {
   id: string;
@@ -136,20 +137,35 @@ export interface TeamsMeeting {
 }
 
 class IntegrationService {
-  private getAuthToken() {
-    // Get token from localStorage (set by AuthContext)
-    return localStorage.getItem('token') || '';
+  private async getAuthToken() {
+    try {
+      // Get current Firebase user
+      const user = auth.currentUser;
+      if (user) {
+        // Get fresh token (automatically refreshes if expired)
+        const freshToken = await user.getIdToken();
+        localStorage.setItem('token', freshToken);
+        return freshToken;
+      }
+
+      // Fallback to stored token
+      return localStorage.getItem('token') || '';
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return localStorage.getItem('token') || '';
+    }
   }
 
-  private getAuthHeaders() {
-    const token = this.getAuthToken();
+  private async getAuthHeaders() {
+    const token = await this.getAuthToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
   async getIntegrations(): Promise<Integration[]> {
     try {
+      const headers = await this.getAuthHeaders();
       const response = await axios.get('/api/integrations', {
-        headers: this.getAuthHeaders()
+        headers
       });
       // Handle both response formats
       const data = response.data as any;
@@ -168,7 +184,7 @@ class IntegrationService {
       const response = await axios.post(
         '/api/integrations/google/connect',
         { types },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       // Handle both response formats
       const data = response.data as any;
@@ -187,7 +203,7 @@ class IntegrationService {
       const response = await axios.post(
         '/api/integrations/microsoft/connect',
         { types },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       // Handle both response formats
       const data = response.data as any;
@@ -206,7 +222,7 @@ class IntegrationService {
       const response = await axios.post(
         '/api/integrations/apollo/connect',
         { scopes },
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       // Handle both response formats
       const data = response.data as any;
@@ -223,7 +239,7 @@ class IntegrationService {
   async disconnectIntegration(integrationId: string): Promise<void> {
     try {
       await axios.delete(`/api/integrations/${integrationId}`, {
-        headers: this.getAuthHeaders()
+        headers: await this.getAuthHeaders()
       });
     } catch (error) {
       console.error('Error disconnecting integration:', error);
@@ -234,7 +250,7 @@ class IntegrationService {
   async getDriveFiles(): Promise<DriveFile[]> {
     try {
       const response = await axios.get(`/api/integrations/google/drive/files`, {
-        headers: this.getAuthHeaders()
+        headers: await this.getAuthHeaders()
       });
       return (response.data as { data: DriveFile[] }).data;
     } catch (error) {
@@ -246,7 +262,7 @@ class IntegrationService {
   async getDriveFolders(): Promise<DriveFile[]> {
     try {
       const response = await axios.get(`/api/integrations/google/drive/folders`, {
-        headers: this.getAuthHeaders()
+        headers: await this.getAuthHeaders()
       });
       return (response.data as { data: DriveFile[] }).data;
     } catch (error) {
@@ -263,7 +279,7 @@ class IntegrationService {
       
       const response = await axios.get(
         `/api/integrations/google/calendar/events?${params}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: CalendarEvent[] }).data;
     } catch (error) {
@@ -291,7 +307,7 @@ class IntegrationService {
       const response = await axios.post(
         `/api/integrations/google/calendar/events`,
         eventData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: CalendarEvent }).data;
     } catch (error) {
@@ -366,7 +382,7 @@ class IntegrationService {
 
       const response = await axios.get(
         `/api/integrations/google/gmail/messages?${params}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: { messages: GmailMessage[]; nextPageToken?: string; resultSizeEstimate: number } }).data;
     } catch (error) {
@@ -389,7 +405,7 @@ class IntegrationService {
       const response = await axios.post(
         `/api/integrations/google/gmail/send`,
         emailData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: GmailMessage }).data;
     } catch (error) {
@@ -402,7 +418,7 @@ class IntegrationService {
     try {
       const response = await axios.get(
         `/api/integrations/google/gmail/labels`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: GmailLabel[] }).data;
     } catch (error) {
@@ -416,7 +432,7 @@ class IntegrationService {
       await axios.post(
         `/api/integrations/google/gmail/messages/${messageId}/read`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
     } catch (error) {
       console.error('Error marking Gmail message as read:', error);
@@ -428,7 +444,7 @@ class IntegrationService {
   async getOneDriveFiles(): Promise<OneDriveFile[]> {
     try {
       const response = await axios.get('/api/integrations/microsoft/onedrive/files', {
-        headers: this.getAuthHeaders()
+        headers: await this.getAuthHeaders()
       });
       return (response.data as { data: OneDriveFile[] }).data;
     } catch (error) {
@@ -440,7 +456,7 @@ class IntegrationService {
   async getOneDriveFolders(): Promise<OneDriveFile[]> {
     try {
       const response = await axios.get('/api/integrations/microsoft/onedrive/folders', {
-        headers: this.getAuthHeaders()
+        headers: await this.getAuthHeaders()
       });
       return (response.data as { data: OneDriveFile[] }).data;
     } catch (error) {
@@ -460,7 +476,7 @@ class IntegrationService {
 
       const response = await axios.get(
         `/api/integrations/microsoft/outlook/messages?${params}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: OutlookMessage[] }).data;
     } catch (error) {
@@ -481,7 +497,7 @@ class IntegrationService {
       const response = await axios.post(
         '/api/integrations/microsoft/outlook/send',
         emailData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: OutlookMessage }).data;
     } catch (error) {
@@ -495,7 +511,7 @@ class IntegrationService {
       await axios.post(
         `/api/integrations/microsoft/outlook/messages/${messageId}/read`,
         {},
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
     } catch (error) {
       console.error('Error marking Outlook message as read:', error);
@@ -514,7 +530,7 @@ class IntegrationService {
 
       const response = await axios.get(
         `/api/integrations/microsoft/teams/meetings?${params}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: TeamsMeeting[] }).data;
     } catch (error) {
@@ -539,7 +555,7 @@ class IntegrationService {
       const response = await axios.post(
         '/api/integrations/microsoft/teams/meetings',
         meetingData,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: TeamsMeeting }).data;
     } catch (error) {
@@ -597,7 +613,7 @@ class IntegrationService {
     try {
       const response = await axios.get(
         `/api/integrations/microsoft/outlook/deals?maxResults=${maxResults}`,
-        { headers: this.getAuthHeaders() }
+        { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: { emails: any[] } }).data.emails || [];
     } catch (error) {
