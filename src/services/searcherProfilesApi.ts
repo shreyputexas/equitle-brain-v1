@@ -67,13 +67,21 @@ export const searcherProfilesApi = {
   // Get all searcher profiles
   async getSearcherProfiles(): Promise<SearcherProfile[]> {
     try {
-      const response = await axios.get<{ data: { searcherProfiles: SearcherProfile[] } }>(API_BASE_URL, {
+      const response = await axios.get<{ success?: boolean; data?: { searcherProfiles: SearcherProfile[] } }>(API_BASE_URL, {
         headers: getAuthHeaders()
       });
-      return response.data.data.searcherProfiles;
+      
+      // Handle both success and error response structures
+      if (response.data.success === false || !response.data.data) {
+        console.warn('API returned unsuccessful response or missing data:', response.data);
+        return [];
+      }
+      
+      return response.data.data.searcherProfiles || [];
     } catch (error) {
       console.error('Error fetching searcher profiles:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent page crashes
+      return [];
     }
   },
 
