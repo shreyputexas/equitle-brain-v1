@@ -193,7 +193,8 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {(() => {
               const getScopes = (): string[] => {
-                return Array.isArray(integration.scope) ? integration.scope : integration.scope.split(',');
+                if (!integration.scope) return [];
+                return Array.isArray(integration.scope) ? integration.scope : String(integration.scope).split(',');
               };
               const scopes = getScopes();
               return (

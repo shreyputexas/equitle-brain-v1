@@ -98,18 +98,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Otherwise, if a primary profile is set, use that profile's name
       try {
         const profiles = await searcherProfilesApi.getSearcherProfiles();
-        if (primaryProfileId && profiles.length > 0) {
-          const primaryProfile = profiles.find(p => p.id === primaryProfileId);
-          if (primaryProfile?.name) {
-            console.log('✅ Using primary investor profile name:', primaryProfile.name);
-            return primaryProfile.name;
+        // Ensure profiles is an array before using array methods
+        if (Array.isArray(profiles)) {
+          if (primaryProfileId && profiles.length > 0) {
+            const primaryProfile = profiles.find(p => p.id === primaryProfileId);
+            if (primaryProfile?.name) {
+              console.log('✅ Using primary investor profile name:', primaryProfile.name);
+              return primaryProfile.name;
+            }
           }
-        }
 
-        // If only one profile exists, use it automatically
-        if (profiles.length === 1) {
-          console.log('✅ Using single investor profile name:', profiles[0].name);
-          return profiles[0].name;
+          // If only one profile exists, use it automatically
+          if (profiles.length === 1) {
+            console.log('✅ Using single investor profile name:', profiles[0].name);
+            return profiles[0].name;
+          }
         }
       } catch (profileError) {
         console.warn('Failed to fetch investor profiles, falling back to auth profile:', profileError);
@@ -374,7 +377,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = userSnap.exists() ? (userSnap.data() as any) : {};
         const primaryProfileId = data?.primaryProfileId;
         const profiles = await searcherProfilesApi.getSearcherProfiles();
-        if (primaryProfileId && profiles.length > 0) {
+        // Ensure profiles is an array before using array methods
+        if (Array.isArray(profiles) && primaryProfileId && profiles.length > 0) {
           const primaryProfile = profiles.find(p => p.id === primaryProfileId);
           if (primaryProfile && primaryProfile.name !== user.name) {
             setUser({ ...user, name: primaryProfile.name });

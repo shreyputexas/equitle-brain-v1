@@ -742,10 +742,24 @@ export default function Profile() {
   const loadSearcherProfiles = async () => {
     try {
       setLoading(true);
+      setError(''); // Clear any previous errors
       console.log('🔄 Loading investor profiles...');
       const profiles = await searcherProfilesApi.getSearcherProfiles();
+      
+      // Ensure profiles is an array
+      if (!Array.isArray(profiles)) {
+        console.warn('⚠️ Profiles is not an array:', profiles);
+        setSearchers([]);
+        setLoading(false);
+        return;
+      }
+      
       console.log('📋 Loaded investor profiles:', profiles);
       profiles.forEach(profile => {
+        if (!profile || !profile.name) {
+          console.warn('⚠️ Invalid profile object:', profile);
+          return;
+        }
         console.log(`🔍 Profile ${profile.name}:`, {
           id: profile.id,
           name: profile.name,
@@ -768,9 +782,18 @@ export default function Profile() {
       });
       setSearchers(profiles);
       console.log('✅ Searchers state updated with', profiles.length, 'profiles');
+      
+      if (profiles.length === 0) {
+        console.log('ℹ️ No investor profiles found - this is normal for new users');
+        // Don't show error for empty profiles - it's a valid state
+        setError('');
+      }
     } catch (error: any) {
-      console.error('Error loading investor profiles:', error);
-      setError(error.response?.data?.message || 'Failed to load investor profiles');
+      console.error('❌ Error loading investor profiles:', error);
+      // Only show error if there was an actual exception (network error, etc)
+      // Since getSearcherProfiles now returns [] instead of throwing, this catch is rare
+      setError('Failed to load investor profiles. Please refresh the page.');
+      setSearchers([]); // Set empty array on error
     } finally {
       setLoading(false);
     }

@@ -67,13 +67,68 @@ export const searcherProfilesApi = {
   // Get all searcher profiles
   async getSearcherProfiles(): Promise<SearcherProfile[]> {
     try {
-      const response = await axios.get<{ data: { searcherProfiles: SearcherProfile[] } }>(API_BASE_URL, {
-        headers: getAuthHeaders()
+      const response = await axios.get<{ success?: boolean; data?: { searcherProfiles?: SearcherProfile[] }; message?: string }>(API_BASE_URL, {
+        headers: getAuthHeaders(),
+        validateStatus: (status) => status < 500 // Don't throw on 4xx errors, let us handle them
       });
-      return response.data.data.searcherProfiles;
-    } catch (error) {
+      
+      // Check for HTTP error status codes (4xx)
+      if (response.status >= 400 && response.status < 500) {
+        console.warn('API returned client error status:', response.status, response.data);
+        return [];
+      }
+      
+      // Check if response structure is valid
+      if (!response.data) {
+        console.warn('API returned no data:', response);
+        return [];
+      }
+      
+      // Handle error response structures
+      if (response.data.success === false) {
+        console.warn('API returned unsuccessful response:', response.data);
+        return [];
+      }
+      
+      // Safely access nested properties - check each level before accessing
+      const responseData = response.data;
+      if (!responseData || typeof responseData !== 'object') {
+        console.warn('API response.data is not an object:', responseData);
+        return [];
+      }
+      
+      const dataField = (responseData as any).data;
+      if (!dataField || typeof dataField !== 'object') {
+        console.warn('API response missing or invalid data field:', responseData);
+        return [];
+      }
+      
+      // Ensure searcherProfiles exists and is an array
+      const profiles = dataField.searcherProfiles;
+      if (profiles === undefined || profiles === null) {
+        console.warn('API response missing searcherProfiles field:', dataField);
+        return [];
+      }
+      
+      if (!Array.isArray(profiles)) {
+        console.warn('API response searcherProfiles is not an array:', profiles);
+        return [];
+      }
+      
+      return profiles;
+    } catch (error: any) {
       console.error('Error fetching searcher profiles:', error);
-      throw error;
+      // Log more details for debugging
+      if (error.response) {
+        console.error('Error response status:', error.response.status);
+        console.error('Error response data:', error.response.data);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error setting up request:', error.message);
+      }
+      // Return empty array instead of throwing to prevent page crashes
+      return [];
     }
   },
 
