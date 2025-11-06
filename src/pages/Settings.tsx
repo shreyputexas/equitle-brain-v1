@@ -26,7 +26,6 @@ import {
   Microsoft as MicrosoftIcon,
   AccountTree as ApolloIcon
 } from '@mui/icons-material';
-import { useLocation } from 'react-router-dom';
 import integrationService, { Integration } from '../services/integrationService';
 import GoogleConnectDialog from '../components/integrations/GoogleConnectDialog';
 import MicrosoftConnectDialog from '../components/integrations/MicrosoftConnectDialog';
@@ -35,8 +34,7 @@ import IntegrationCard from '../components/integrations/IntegrationCard';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Settings() {
-  const { user } = useAuth();
-  const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +44,15 @@ export default function Settings() {
   const [success, setSuccess] = useState<string | null>(null);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
+
+  // Show loading state while auth is loading
+  if (authLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   useEffect(() => {
     // Only load integrations if user is authenticated
@@ -81,6 +88,7 @@ export default function Settings() {
       // Only load integrations if we're not handling a callback
       loadIntegrations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const loadIntegrations = async () => {
@@ -93,11 +101,13 @@ export default function Settings() {
       if (!token) {
         console.warn('No authentication token available');
         setIntegrations([]);
+        setLoading(false);
         return;
       }
       
       const data = await integrationService.getIntegrations();
-      setIntegrations(data);
+      // Ensure data is always an array
+      setIntegrations(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load integrations:', err);
       setError(err instanceof Error ? err.message : 'Failed to load integrations');
@@ -343,15 +353,22 @@ export default function Settings() {
             </Box>
           ) : (
             <Grid container spacing={3}>
-              {integrations.map((integration) => (
-                <Grid item xs={12} md={6} lg={4} key={integration.id}>
-                  <IntegrationCard
-                    integration={integration}
-                    onDisconnect={handleDisconnect}
-                    onReconnect={() => setConnectDialogOpen(true)}
-                  />
-                </Grid>
-              ))}
+              {Array.isArray(integrations) && integrations.map((integration) => {
+                // Validate integration object has required fields
+                if (!integration || !integration.id) {
+                  console.warn('Invalid integration object:', integration);
+                  return null;
+                }
+                return (
+                  <Grid item xs={12} md={6} lg={4} key={integration.id}>
+                    <IntegrationCard
+                      integration={integration}
+                      onDisconnect={handleDisconnect}
+                      onReconnect={() => setConnectDialogOpen(true)}
+                    />
+                  </Grid>
+                );
+              })}
             </Grid>
           )}
         </CardContent>

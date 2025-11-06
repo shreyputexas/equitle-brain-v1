@@ -170,12 +170,15 @@ class IntegrationService {
       // Handle both response formats
       const data = response.data as any;
       if (data.success && data.data) {
-        return data.data;
+        // Ensure data.data is an array
+        return Array.isArray(data.data) ? data.data : [];
       }
-      return data;
+      // If data is directly an array, return it, otherwise return empty array
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error fetching integrations:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent page crashes
+      return [];
     }
   }
 
