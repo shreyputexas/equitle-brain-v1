@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
   // Fallback based on environment
   if (import.meta.env.PROD) {
     // Production: Use your production API domain
-    return 'https://api.equitle.com';
+    return 'https://equitle-api.onrender.com';
   } else {
     // Development: Use relative URL to leverage Vite proxy
     return '';
