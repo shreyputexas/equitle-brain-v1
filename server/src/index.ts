@@ -68,7 +68,12 @@ const io = new Server(server, {
       "http://localhost:3002",
       "https://equitle.com",
       "https://www.equitle.com",
-      "https://api.equitle.com"
+      "https://api.equitle.com",
+      "https://equitle-api.onrender.com",
+      // Add deployment patterns
+      /^https:\/\/.*\.onrender\.com$/,
+      /^https:\/\/.*\.vercel\.app$/,
+      /^https:\/\/.*\.netlify\.app$/
     ],
     methods: ["GET", "POST"]
   }
@@ -115,11 +120,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:4001", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      imgSrc: ["'self'", "data:", "http://localhost:4001", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "https://equitle-api.onrender.com", "https://equitle.com", "https://www.equitle.com"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", "https:", "data:"],
-      connectSrc: ["'self'", "http://localhost:4001"],
+      connectSrc: ["'self'", "http://localhost:4001", "https://equitle-api.onrender.com", "https://equitle.com", "https://www.equitle.com"],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -132,7 +137,14 @@ app.use(cors({
     "http://localhost:3002",
     "https://equitle.com",
     "https://www.equitle.com",
-    "https://api.equitle.com"
+    "https://api.equitle.com",
+    "https://equitle-api.onrender.com",
+    // Add Render.com deployment patterns
+    /^https:\/\/.*\.onrender\.com$/,
+    // Add common frontend deployment patterns
+    /^https:\/\/.*\.vercel\.app$/,
+    /^https:\/\/.*\.netlify\.app$/,
+    /^https:\/\/.*\.github\.io$/
   ],
   credentials: true
 }));

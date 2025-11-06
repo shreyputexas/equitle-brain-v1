@@ -215,7 +215,7 @@ const MassVoicemail: React.FC = () => {
     formData.append('contacts', file);
 
     try {
-      const response = await fetch('http://localhost:4001/api/mass-voicemail/parse-contacts', {
+      const response = await fetch(getApiUrl('mass-voicemail/parse-contacts'), {
         method: 'POST',
         body: formData,
       });
@@ -237,7 +237,7 @@ const MassVoicemail: React.FC = () => {
     formData.append('name', cloneName);
 
     try {
-      const response = await fetch('http://localhost:4001/api/mass-voicemail/clone-voice', {
+      const response = await fetch(getApiUrl('mass-voicemail/clone-voice'), {
         method: 'POST',
         body: formData,
       });
@@ -267,7 +267,7 @@ const MassVoicemail: React.FC = () => {
     formData.append('contacts', contactsFile);
 
     try {
-      const response = await fetch('http://localhost:4001/api/mass-voicemail/create-campaign', {
+      const response = await fetch(getApiUrl('mass-voicemail/create-campaign'), {
         method: 'POST',
         body: formData,
       });

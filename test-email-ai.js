@@ -36,7 +36,8 @@ async function testEmailAnalysis() {
     console.log('---');
     
     try {
-      const response = await fetch('http://localhost:4001/api/email-processing/test-ai-public', {
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:4001';
+      const response = await fetch(`${baseUrl}/api/email-processing/test-ai-public`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
