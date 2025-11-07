@@ -1474,6 +1474,16 @@ router.post('/apollo/connect', auth, async (req, res) => {
 // Handle Apollo OAuth callback (NO AUTH REQUIRED - this is the callback)
 router.get('/apollo/callback', async (req, res) => {
   try {
+    logger.info('Apollo OAuth callback received', {
+      path: req.path,
+      method: req.method,
+      query: req.query,
+      headers: {
+        host: req.headers.host,
+        'user-agent': req.headers['user-agent']
+      }
+    });
+
     const { code, state, error: oauthError, error_message, status_code } = req.query;
 
     // Handle OAuth errors from Apollo

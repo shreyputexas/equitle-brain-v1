@@ -21,7 +21,8 @@ export interface ApolloUserProfile {
 export class ApolloAuthService {
   private static readonly CLIENT_ID = process.env.APOLLO_CLIENT_ID || 'APOLLO_CLIENT_ID_PLACEHOLDER';
   private static readonly CLIENT_SECRET = process.env.APOLLO_CLIENT_SECRET || 'APOLLO_CLIENT_SECRET_PLACEHOLDER';
-  private static readonly REDIRECT_URI = process.env.APOLLO_REDIRECT_URI || 'https://neat-berries-dress.loca.lt/api/integrations/apollo/callback';
+  // Handle multiple redirect URIs (Apollo allows multiple in registration, but we use only the first one)
+  private static readonly REDIRECT_URI = (process.env.APOLLO_REDIRECT_URI || 'https://neat-berries-dress.loca.lt/api/integrations/apollo/callback').split(',')[0].trim();
   private static readonly BASE_URL = 'https://app.apollo.io';
   private static readonly API_BASE_URL = 'https://app.apollo.io/api/v1';
 
@@ -37,6 +38,7 @@ export class ApolloAuthService {
   /**
    * Get scopes for Apollo OAuth
    * Apollo uses scopes like: contacts_search, person_read, read_user_profile, app_scopes
+   * According to Apollo docs: scopes should be space-separated and URL-encoded in the URL
    */
   static getScopes(requestedScopes: string[] = []): string {
     // Default scopes - read_user_profile and app_scopes are usually required
@@ -45,14 +47,16 @@ export class ApolloAuthService {
     // Add requested scopes
     const allScopes = [...defaultScopes, ...requestedScopes];
     
-    // Remove duplicates and join with URL-encoded spaces
+    // Remove duplicates and join with spaces (URLSearchParams will encode them)
     const uniqueScopes = Array.from(new Set(allScopes));
     
-    return uniqueScopes.join('%20'); // URL-encoded space
+    return uniqueScopes.join(' '); // Space-separated (will be URL-encoded by URLSearchParams)
   }
 
   /**
    * Generate Apollo OAuth authorization URL
+   * According to Apollo OAuth 2.0 documentation:
+   * https://app.apollo.io/oauth/authorize?client_id=...&redirect_uri=...&response_type=code&scope=...&state=...
    */
   static getAuthUrl(userId: string, requestedScopes: string[] = []): string {
     if (!this.CLIENT_ID || this.CLIENT_ID === 'APOLLO_CLIENT_ID_PLACEHOLDER') {
@@ -67,26 +71,27 @@ export class ApolloAuthService {
     const timestamp = Date.now();
     const state = `${userId}:${timestamp}`;
 
-    // Get scopes
+    // Get scopes (space-separated)
     const scopes = this.getScopes(requestedScopes);
 
-    // Apollo uses hash routing, so params go in the hash part
-    // Format: https://app.apollo.io/#/oauth/authorize?client_id=...&redirect_uri=...&response_type=code&scope=...&state=...
+    // Build authorization URL according to Apollo OAuth 2.0 documentation
+    // Format: https://app.apollo.io/oauth/authorize?client_id=...&redirect_uri=...&response_type=code&scope=...&state=...
     const params = new URLSearchParams({
       client_id: this.CLIENT_ID,
       redirect_uri: this.REDIRECT_URI,
       response_type: 'code',
-      scope: decodeURIComponent(scopes), // Decode for URLSearchParams, it will re-encode properly
+      scope: scopes, // URLSearchParams will automatically URL-encode spaces as %20
       state: state
     });
 
-    // Apollo uses hash routing - query params go after the hash
-    const authUrl = `${this.BASE_URL}/#/oauth/authorize?${params.toString()}`;
+    // Apollo OAuth authorization endpoint (NOT hash routing)
+    const authUrl = `${this.BASE_URL}/oauth/authorize?${params.toString()}`;
 
     logger.info('Generated Apollo OAuth URL', {
       userId,
       scopes: requestedScopes,
-      timestamp
+      timestamp,
+      authUrl: authUrl.replace(this.CLIENT_ID, 'CLIENT_ID_HIDDEN') // Log without exposing client ID
     });
 
     return authUrl;
