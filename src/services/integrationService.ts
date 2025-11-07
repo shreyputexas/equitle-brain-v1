@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { auth } from '../lib/firebase';
+import { getApiUrl } from '../config/api';
 
 export interface Integration {
   id: string;
@@ -164,7 +165,7 @@ class IntegrationService {
   async getIntegrations(): Promise<Integration[]> {
     try {
       const headers = await this.getAuthHeaders();
-      const response = await axios.get('/api/integrations', {
+      const response = await axios.get(getApiUrl('integrations'), {
         headers
       });
       // Handle both response formats
@@ -185,7 +186,7 @@ class IntegrationService {
   async connectGoogle(types: string[]): Promise<{ authUrl: string }> {
     try {
       const response = await axios.post(
-        '/api/integrations/google/connect',
+        getApiUrl('integrations/google/connect'),
         { types },
         { headers: await this.getAuthHeaders() }
       );
@@ -204,7 +205,7 @@ class IntegrationService {
   async connectMicrosoft(types: string[]): Promise<{ authUrl: string }> {
     try {
       const response = await axios.post(
-        '/api/integrations/microsoft/connect',
+        getApiUrl('integrations/microsoft/connect'),
         { types },
         { headers: await this.getAuthHeaders() }
       );
@@ -223,7 +224,7 @@ class IntegrationService {
   async connectApollo(scopes?: string[]): Promise<{ authUrl: string }> {
     try {
       const response = await axios.post(
-        '/api/integrations/apollo/connect',
+        getApiUrl('integrations/apollo/connect'),
         { scopes },
         { headers: await this.getAuthHeaders() }
       );
@@ -241,7 +242,7 @@ class IntegrationService {
 
   async disconnectIntegration(integrationId: string): Promise<void> {
     try {
-      await axios.delete(`/api/integrations/${integrationId}`, {
+      await axios.delete(getApiUrl(`integrations/${integrationId}`), {
         headers: await this.getAuthHeaders()
       });
     } catch (error) {
@@ -252,7 +253,7 @@ class IntegrationService {
 
   async getDriveFiles(): Promise<DriveFile[]> {
     try {
-      const response = await axios.get(`/api/integrations/google/drive/files`, {
+      const response = await axios.get(getApiUrl('integrations/google/drive/files'), {
         headers: await this.getAuthHeaders()
       });
       return (response.data as { data: DriveFile[] }).data;
@@ -264,7 +265,7 @@ class IntegrationService {
 
   async getDriveFolders(): Promise<DriveFile[]> {
     try {
-      const response = await axios.get(`/api/integrations/google/drive/folders`, {
+      const response = await axios.get(getApiUrl('integrations/google/drive/folders'), {
         headers: await this.getAuthHeaders()
       });
       return (response.data as { data: DriveFile[] }).data;
@@ -281,7 +282,7 @@ class IntegrationService {
       if (timeMax) params.append('timeMax', timeMax);
       
       const response = await axios.get(
-        `/api/integrations/google/calendar/events?${params}`,
+        `${getApiUrl('integrations/google/calendar/events')}?${params}`,
         { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: CalendarEvent[] }).data;
@@ -308,7 +309,7 @@ class IntegrationService {
   }): Promise<CalendarEvent> {
     try {
       const response = await axios.post(
-        `/api/integrations/google/calendar/events`,
+        getApiUrl('integrations/google/calendar/events'),
         eventData,
         { headers: await this.getAuthHeaders() }
       );
@@ -384,7 +385,7 @@ class IntegrationService {
       if (options.pageToken) params.append('pageToken', options.pageToken);
 
       const response = await axios.get(
-        `/api/integrations/google/gmail/messages?${params}`,
+        `${getApiUrl('integrations/google/gmail/messages')}?${params}`,
         { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: { messages: GmailMessage[]; nextPageToken?: string; resultSizeEstimate: number } }).data;
@@ -406,7 +407,7 @@ class IntegrationService {
   }): Promise<GmailMessage> {
     try {
       const response = await axios.post(
-        `/api/integrations/google/gmail/send`,
+        getApiUrl('integrations/google/gmail/send'),
         emailData,
         { headers: await this.getAuthHeaders() }
       );
@@ -420,7 +421,7 @@ class IntegrationService {
   async getGmailLabels(): Promise<GmailLabel[]> {
     try {
       const response = await axios.get(
-        `/api/integrations/google/gmail/labels`,
+        getApiUrl('integrations/google/gmail/labels'),
         { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: GmailLabel[] }).data;
@@ -433,7 +434,7 @@ class IntegrationService {
   async markGmailAsRead(messageId: string): Promise<void> {
     try {
       await axios.post(
-        `/api/integrations/google/gmail/messages/${messageId}/read`,
+        getApiUrl(`integrations/google/gmail/messages/${messageId}/read`),
         {},
         { headers: await this.getAuthHeaders() }
       );
@@ -446,7 +447,7 @@ class IntegrationService {
   // Microsoft-specific methods
   async getOneDriveFiles(): Promise<OneDriveFile[]> {
     try {
-      const response = await axios.get('/api/integrations/microsoft/onedrive/files', {
+      const response = await axios.get(getApiUrl('integrations/microsoft/onedrive/files'), {
         headers: await this.getAuthHeaders()
       });
       return (response.data as { data: OneDriveFile[] }).data;
@@ -458,7 +459,7 @@ class IntegrationService {
 
   async getOneDriveFolders(): Promise<OneDriveFile[]> {
     try {
-      const response = await axios.get('/api/integrations/microsoft/onedrive/folders', {
+      const response = await axios.get(getApiUrl('integrations/microsoft/onedrive/folders'), {
         headers: await this.getAuthHeaders()
       });
       return (response.data as { data: OneDriveFile[] }).data;
@@ -478,7 +479,7 @@ class IntegrationService {
       if (options.filter) params.append('filter', options.filter);
 
       const response = await axios.get(
-        `/api/integrations/microsoft/outlook/messages?${params}`,
+        `${getApiUrl('integrations/microsoft/outlook/messages')}?${params}`,
         { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: OutlookMessage[] }).data;
@@ -498,7 +499,7 @@ class IntegrationService {
   }): Promise<OutlookMessage> {
     try {
       const response = await axios.post(
-        '/api/integrations/microsoft/outlook/send',
+        getApiUrl('integrations/microsoft/outlook/send'),
         emailData,
         { headers: await this.getAuthHeaders() }
       );
@@ -512,7 +513,7 @@ class IntegrationService {
   async markOutlookAsRead(messageId: string): Promise<void> {
     try {
       await axios.post(
-        `/api/integrations/microsoft/outlook/messages/${messageId}/read`,
+        getApiUrl(`integrations/microsoft/outlook/messages/${messageId}/read`),
         {},
         { headers: await this.getAuthHeaders() }
       );
@@ -532,7 +533,7 @@ class IntegrationService {
       if (options.endTime) params.append('endTime', options.endTime);
 
       const response = await axios.get(
-        `/api/integrations/microsoft/teams/meetings?${params}`,
+        `${getApiUrl('integrations/microsoft/teams/meetings')}?${params}`,
         { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: TeamsMeeting[] }).data;
@@ -556,7 +557,7 @@ class IntegrationService {
   }): Promise<TeamsMeeting> {
     try {
       const response = await axios.post(
-        '/api/integrations/microsoft/teams/meetings',
+        getApiUrl('integrations/microsoft/teams/meetings'),
         meetingData,
         { headers: await this.getAuthHeaders() }
       );
@@ -615,7 +616,7 @@ class IntegrationService {
   async getDealRelatedOutlookEmails(maxResults: number = 50): Promise<any[]> {
     try {
       const response = await axios.get(
-        `/api/integrations/microsoft/outlook/deals?maxResults=${maxResults}`,
+        `${getApiUrl('integrations/microsoft/outlook/deals')}?maxResults=${maxResults}`,
         { headers: await this.getAuthHeaders() }
       );
       return (response.data as { data: { emails: any[] } }).data.emails || [];
