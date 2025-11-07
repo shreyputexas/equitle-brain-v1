@@ -84,13 +84,16 @@ export class ApolloAuthService {
       state: state
     });
 
-    // Apollo OAuth authorization endpoint (NOT hash routing)
+    // Apollo OAuth authorization endpoint
+    // Note: This endpoint will return 404 if the app is not registered in Apollo
+    // Register your app at: Apollo Settings → Integrations → API → OAuth registration
     const authUrl = `${this.BASE_URL}/oauth/authorize?${params.toString()}`;
 
     logger.info('Generated Apollo OAuth URL', {
       userId,
       scopes: requestedScopes,
       timestamp,
+      redirectUri: this.REDIRECT_URI,
       authUrl: authUrl.replace(this.CLIENT_ID, 'CLIENT_ID_HIDDEN') // Log without exposing client ID
     });
 
