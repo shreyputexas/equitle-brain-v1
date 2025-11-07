@@ -119,22 +119,22 @@ export class ApolloAuthService {
       const tokenUrl = `${this.API_BASE_URL}/oauth/token`;
 
       // Build form data as per Apollo documentation
-      // Required parameters: grant_type, code, client_id, client_secret
-      // Optional: redirect_uri
+      // Required parameters: grant_type, code, client_id, client_secret, redirect_uri
+      // Apollo requires redirect_uri to match the one used in authorization request
       const formData = new URLSearchParams();
       formData.append('grant_type', 'authorization_code');
       formData.append('code', code);
       formData.append('client_id', this.CLIENT_ID);
       formData.append('client_secret', this.CLIENT_SECRET);
-
-      // Add redirect_uri if provided (optional - only if changing redirect URL)
-      if (redirectUri) {
-        formData.append('redirect_uri', redirectUri);
-      }
+      
+      // Always include redirect_uri - use provided one or fall back to configured one
+      const finalRedirectUri = redirectUri || this.REDIRECT_URI;
+      formData.append('redirect_uri', finalRedirectUri);
 
       logger.info('Exchanging Apollo authorization code for tokens', {
         codeLength: code.length,
-        hasRedirectUri: !!redirectUri,
+        redirectUri: finalRedirectUri,
+        usingProvidedRedirectUri: !!redirectUri,
         clientIdPrefix: this.CLIENT_ID.substring(0, 8) + '...'
       });
 
@@ -367,6 +367,13 @@ export class ApolloAuthService {
   static isTokenExpiringSoon(expiresAt: Date): boolean {
     const fiveMinutes = 5 * 60 * 1000;
     return (expiresAt.getTime() - Date.now()) <= fiveMinutes;
+  }
+
+  /**
+   * Get the configured redirect URI
+   */
+  static getRedirectUri(): string {
+    return this.REDIRECT_URI;
   }
 }
 

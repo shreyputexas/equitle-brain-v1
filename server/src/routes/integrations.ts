@@ -1533,7 +1533,8 @@ router.get('/apollo/callback', async (req, res) => {
     if (!userId) {
       logger.info('Apollo OAuth callback without userId (likely playground test) - exchanging code for tokens to verify flow');
       try {
-        const tokens = await ApolloAuthService.exchangeCodeForTokens(code as string);
+        // Pass redirect URI to match what was used in authorization
+        const tokens = await ApolloAuthService.exchangeCodeForTokens(code as string, ApolloAuthService.getRedirectUri());
         logger.info('Playground test successful - tokens received', {
           hasAccessToken: !!tokens.access_token,
           hasRefreshToken: !!tokens.refresh_token
@@ -1572,7 +1573,8 @@ router.get('/apollo/callback', async (req, res) => {
     });
 
     // Exchange code for tokens
-    const tokens = await ApolloAuthService.exchangeCodeForTokens(code as string);
+    // Pass the redirect URI to match what was used in authorization
+    const tokens = await ApolloAuthService.exchangeCodeForTokens(code as string, ApolloAuthService.getRedirectUri());
     logger.info('Successfully exchanged code for Apollo tokens', {
       hasAccessToken: !!tokens.access_token,
       hasRefreshToken: !!tokens.refresh_token
