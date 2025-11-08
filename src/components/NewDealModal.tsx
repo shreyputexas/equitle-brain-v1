@@ -137,10 +137,11 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       console.log('Fetching contacts...');
       const response = await contactsApi.getContacts();
       console.log('Contacts response:', response);
-      // Transform contacts to include name field and isPrimary
+      // Transform contacts to include isPrimary field
       const transformedContacts = response.contacts.map((contact: any) => ({
         ...contact,
-        name: `${contact.first_name} ${contact.last_name}`.trim(),
+        // Use contact.name if it exists, otherwise try to construct from first_name/last_name
+        name: contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unnamed Contact',
         isPrimary: false
       }));
       console.log('Transformed contacts:', transformedContacts);
