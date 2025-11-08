@@ -138,6 +138,9 @@ class DealsApiService {
 
   private getAuthHeaders() {
     const token = this.getAuthToken();
+    if (!token) {
+      console.warn('dealsApi: No auth token available');
+    }
     // For development, use mock token if no real token exists
     const authToken = token || 'mock-token';
     return { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' };
@@ -303,6 +306,20 @@ class DealsApiService {
       });
     } catch (error) {
       console.error(`Error adding contact to deal ${dealId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a contact from a deal
+   */
+  async removeContactFromDeal(dealId: string, contactId: string): Promise<void> {
+    try {
+      await axios.delete(getApiUrl(`firebase-deals/${dealId}/contacts/${contactId}`), {
+        headers: this.getAuthHeaders()
+      });
+    } catch (error) {
+      console.error(`Error removing contact from deal ${dealId}:`, error);
       throw error;
     }
   }

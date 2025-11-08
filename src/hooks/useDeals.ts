@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { dealsApi, Deal, SearchFilters } from '../services/dealsApi';
 
-export const useDeals = (filters: SearchFilters = {}) => {
+export const useDeals = (filters: SearchFilters = {}, ready: boolean = true) => {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,18 +17,18 @@ export const useDeals = (filters: SearchFilters = {}) => {
       console.log('useDeals: response.deals:', response.deals);
       console.log('useDeals: response.deals length:', response.deals?.length);
       console.log('useDeals: response.total:', response.total);
-      
+
       if (!response || !response.deals) {
         console.error('useDeals: Invalid response structure:', response);
         throw new Error('Invalid response structure: missing deals array');
       }
-      
+
       // Ensure we have a valid array
       const dealsArray = Array.isArray(response.deals) ? response.deals : [];
       console.log('useDeals: Setting deals array:', dealsArray);
       console.log('useDeals: Deals array length:', dealsArray.length);
       console.log('useDeals: First deal:', dealsArray[0]);
-      
+
       setDeals(dealsArray);
       setTotal(response.total || dealsArray.length);
       console.log('useDeals: Set deals state:', dealsArray.length, 'deals');
@@ -48,9 +48,13 @@ export const useDeals = (filters: SearchFilters = {}) => {
   };
 
   useEffect(() => {
+    if (!ready) {
+      console.log('useDeals: Not ready yet, skipping fetch');
+      return;
+    }
     console.log('useDeals: useEffect triggered, calling fetchDeals');
     fetchDeals();
-  }, [JSON.stringify(filters)]); // Re-fetch when filters change
+  }, [JSON.stringify(filters), ready]); // Re-fetch when filters change or ready state changes
   
   // Also log when deals state changes
   useEffect(() => {

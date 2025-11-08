@@ -108,6 +108,8 @@ export const FirestoreHelpers = {
   arrayRemove: (...elements: any[]) => admin.firestore.FieldValue.arrayRemove(...elements),
 
   increment: (value: number) => admin.firestore.FieldValue.increment(value),
+
+  deleteField: () => admin.firestore.FieldValue.delete(),
 };
 
 // ------------------------------
