@@ -2,17 +2,19 @@ import axios from 'axios';
 import { auth } from './firebase';
 
 // Create axios instance
-const axiosInstance = axios.create();
+const axiosInstance = axios.create({});
 
 // Request interceptor to add fresh token to every request
 axiosInstance.interceptors.request.use(
-  async (config) => {
+  async (config: any) => {
     try {
       const currentUser = auth.currentUser;
       if (currentUser) {
         // Force token refresh if it's close to expiring
         const idToken = await currentUser.getIdToken(true);
-        config.headers.Authorization = `Bearer ${idToken}`;
+        if (config.headers) {
+          config.headers.Authorization = `Bearer ${idToken}`;
+        }
       }
     } catch (error) {
       console.error('Failed to get auth token:', error);
@@ -41,7 +43,9 @@ axiosInstance.interceptors.response.use(
           const idToken = await currentUser.getIdToken(true);
 
           // Update the authorization header
-          originalRequest.headers.Authorization = `Bearer ${idToken}`;
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${idToken}`;
+          }
           axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
           localStorage.setItem('token', idToken);
 
