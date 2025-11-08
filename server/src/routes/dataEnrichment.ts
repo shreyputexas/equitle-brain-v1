@@ -17,8 +17,15 @@ import logger from '../utils/logger';
 const router = express.Router();
 
 // Helper function to get Apollo integration for a user and return a configured ApolloService
-async function getApolloServiceForUser(userId: string): Promise<{ service: ApolloService; integration: any }> {
-  // Get user's Apollo integration
+async function getApolloServiceForUser(userId: string, apiKey?: string): Promise<{ service: ApolloService; integration: any | null }> {
+  // If API key is provided, use it directly (skip OAuth integration)
+  if (apiKey) {
+    logger.info('Using provided Apollo API key for user', { userId, hasApiKey: !!apiKey });
+    const apolloService = new ApolloService(apiKey);
+    return { service: apolloService, integration: null };
+  }
+
+  // Otherwise, try to get user's Apollo OAuth integration
   const apolloIntegration = await IntegrationsFirestoreService.findFirst({
     userId,
     provider: 'apollo',
@@ -26,7 +33,7 @@ async function getApolloServiceForUser(userId: string): Promise<{ service: Apoll
   });
 
   if (!apolloIntegration) {
-    throw new Error('Apollo integration not found. Please connect Apollo from Settings.');
+    throw new Error('Apollo integration not found and no API key provided. Please connect Apollo from Settings or provide an API key.');
   }
 
   // Ensure access token is valid (refreshes if needed)
@@ -104,12 +111,13 @@ const upload = multer({
 
 /**
  * POST /api/data-enrichment/validate-key
- * Validate Apollo OAuth integration (no longer uses API keys)
+ * Validate Apollo OAuth integration or API key
  */
 router.post('/validate-key', auth, async (req, res) => {
   try {
-  const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
-    
+    const userId = (req as any).userId || (req as any).user?.id || (req as any).user?.uid;
+    const { provider, apiKey } = req.body;
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -117,43 +125,61 @@ router.post('/validate-key', auth, async (req, res) => {
       });
     }
 
-    // Check if user has Apollo integration
-    const { service } = await getApolloServiceForUser(userId);
-    const isValid = await service.validateApiKey();
+    if (provider === 'apollo') {
+      // For Apollo, check OAuth integration OR validate provided API key
+      try {
+        const { service } = await getApolloServiceForUser(userId, apiKey);
+        const isValid = await service.validateApiKey();
 
-    if (isValid) {
-      logger.info('Apollo OAuth integration validation successful', { userId });
-      res.json({
-        success: true,
-        valid: true,
-        message: 'Apollo integration is valid and active'
-      });
-    } else {
-      logger.warn('Apollo OAuth integration validation failed', { userId });
-      res.json({
-        success: true,
-        valid: false,
-        message: 'Apollo integration is invalid or inactive'
-      });
+        if (isValid) {
+          const message = apiKey ? 'Apollo API key is valid' : 'Apollo OAuth integration is valid and active';
+          logger.info('Apollo validation successful', { userId, usingApiKey: !!apiKey });
+          return res.json({
+            success: true,
+            valid: true,
+            message
+          });
+        } else {
+          const message = apiKey ? 'Apollo API key is invalid' : 'Apollo OAuth integration is invalid';
+          logger.warn('Apollo validation failed - invalid key/token', { userId, usingApiKey: !!apiKey });
+          return res.json({
+            success: true,
+            valid: false,
+            message
+          });
+        }
+      } catch (error: any) {
+        logger.warn('Apollo validation error', { userId, usingApiKey: !!apiKey, error: error.message });
+        const message = apiKey ? 'Invalid Apollo API key' : error.message;
+        return res.json({
+          success: true,
+          valid: false,
+          message
+        });
+      }
     }
-  } catch (error: any) {
-    logger.error('Apollo integration validation error', {
-      error: error.message,
-      stack: error.stack,
-      userId: (req as any).userId || (req as any).user?.id || (req as any).user?.uid
-    });
-    
-    if (error.message.includes('Apollo integration not found')) {
-      return res.status(404).json({
+
+    // For other providers (existing logic)
+    if (!provider || !apiKey) {
+      return res.status(400).json({
         success: false,
-        valid: false,
-        error: error.message
+        error: 'Provider and API key are required for validation'
       });
     }
-    
+
+    // ... (existing validation logic for other providers would go here)
+
+    return res.json({
+      success: false,
+      valid: false,
+      message: `Validation not implemented for provider: ${provider}`
+    });
+  } catch (error: any) {
+    logger.error('API key validation error', { error: error.message, stack: error.stack });
     res.status(500).json({
       success: false,
-      error: 'Failed to validate Apollo integration: ' + error.message
+      valid: false,
+      message: 'Internal server error during validation'
     });
   }
 });
@@ -180,8 +206,9 @@ router.post('/upload-and-enrich', auth, upload.single('file'), async (req, res) 
       });
     }
 
-    // Get Apollo service from user's OAuth integration
-    const { service: apolloService } = await getApolloServiceForUser(userId);
+    // Get Apollo service from user's OAuth integration or API key
+    const apiKey = req.body.apiKey;
+    const { service: apolloService } = await getApolloServiceForUser(userId, apiKey);
 
     // Parse Excel file
     if (!XLSX) {
@@ -819,8 +846,9 @@ router.post('/enrich-single', auth, async (req, res) => {
 
     const { ...searchParams } = req.body;
 
-    // Get Apollo service from user's OAuth integration
-    const { service: apolloService } = await getApolloServiceForUser(userId);
+    // Get Apollo service from user's OAuth integration or API key
+    const apiKey = req.body.apiKey;
+    const { service: apolloService } = await getApolloServiceForUser(userId, apiKey);
 
     const enriched = await apolloService.enrichPerson(searchParams);
 
@@ -1122,8 +1150,9 @@ router.post('/search-contacts', auth, async (req, res) => {
       // No validation needed for investors - structured form ensures valid data
     }
 
-    // Get Apollo service from user's OAuth integration
-    const { service: apolloService } = await getApolloServiceForUser(userId);
+    // Get Apollo service from user's OAuth integration or API key
+    const apiKey = req.body.apiKey;
+    const { service: apolloService } = await getApolloServiceForUser(userId, apiKey);
 
     logger.info('Starting contact search', {
       userId,
@@ -1768,8 +1797,9 @@ router.post('/organization-enrich', auth, upload.single('file'), async (req, res
       mimeType: req.file.mimetype
     });
 
-    // Get Apollo service from user's OAuth integration
-    const { service: apolloService } = await getApolloServiceForUser(userId);
+    // Get Apollo service from user's OAuth integration or API key
+    const apiKey = req.body.apiKey;
+    const { service: apolloService } = await getApolloServiceForUser(userId, apiKey);
 
     // Parse Excel file to extract organization data
     const organizations = parseOrganizationExcelFile(req.file.buffer, req.file.originalname);
@@ -2300,8 +2330,9 @@ router.post('/contact-enrich', auth, upload.single('file'), async (req, res) => 
       mimeType: req.file.mimetype
     });
 
-    // Get Apollo service from user's OAuth integration
-    const { service: apolloService } = await getApolloServiceForUser(userId);
+    // Get Apollo service from user's OAuth integration or API key
+    const apiKey = req.body.apiKey;
+    const { service: apolloService } = await getApolloServiceForUser(userId, apiKey);
 
     // Parse Excel file to extract contact data
     const contacts = parseContactExcelFile(req.file.buffer, req.file.originalname);
@@ -2632,8 +2663,9 @@ router.post('/search-organizations', auth, async (req, res) => {
 
     logger.info('Organization search request', { userId, searchCriteria, orgsToFind });
 
-    // Get Apollo service from user's OAuth integration
-    const { service: apolloService } = await getApolloServiceForUser(userId);
+    // Get Apollo service from user's OAuth integration or API key
+    const apiKey = req.body.apiKey;
+    const { service: apolloService } = await getApolloServiceForUser(userId, apiKey);
 
     // Use Apollo's actual working parameters for organization search
     const searchParams: any = {
