@@ -717,7 +717,7 @@ export default function DealPipeline({
         
         setDealsInAllOnly(prev => {
           const newSet = new Set(prev);
-          if (targetStage === 'all') {
+          if ((targetStage as string) === 'all') {
             newSet.delete(dealToMove.id);
           }
           return newSet;
@@ -875,7 +875,9 @@ export default function DealPipeline({
         // Update the cache
         setUpdatedDealContacts(prev => {
           const newMap = new Map(prev);
-          newMap.set(editingDealId, currentDealContacts);
+          if (currentDealContacts) {
+            newMap.set(editingDealId, currentDealContacts);
+          }
           return newMap;
         });
       }
@@ -1305,7 +1307,7 @@ export default function DealPipeline({
             cursor: 'grabbing',
           },
         }}
-        onClick={(e) => {
+        onClick={(e: React.MouseEvent) => {
           // Prevent click when dragging
           if (!isDragging) {
             // Toggle expansion instead of opening modal
