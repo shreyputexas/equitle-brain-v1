@@ -58,28 +58,58 @@ export interface UpdateSearcherProfileRequest {
   avatar?: string;
 }
 
-const getAuthHeaders = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`,
-  'Content-Type': 'application/json'
-});
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token') || 'mock-token';
+  const userId = localStorage.getItem('userId');
+
+  console.log('🔐 Auth Debug:', {
+    hasToken: !!localStorage.getItem('token'),
+    token: token === 'mock-token' ? 'mock-token' : 'real-token',
+    userId: userId,
+    message: token === 'mock-token'
+      ? '⚠️ Using mock-token - will fetch data from dev-user-123'
+      : '✅ Using real token - will fetch data from authenticated user'
+  });
+
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+};
 
 export const searcherProfilesApi = {
   // Get all searcher profiles
   async getSearcherProfiles(): Promise<SearcherProfile[]> {
     try {
+      console.log('🚀 API Call: GET', API_BASE_URL);
       const response = await axios.get<{ success?: boolean; data?: { searcherProfiles: SearcherProfile[] } }>(API_BASE_URL, {
         headers: getAuthHeaders()
       });
-      
+
+      console.log('📥 API Response:', {
+        status: response.status,
+        success: response.data.success,
+        hasData: !!response.data.data,
+        profileCount: response.data.data?.searcherProfiles?.length || 0
+      });
+
       // Handle both success and error response structures
       if (response.data.success === false || !response.data.data) {
-        console.warn('API returned unsuccessful response or missing data:', response.data);
+        console.warn('⚠️ API returned unsuccessful response or missing data:', response.data);
         return [];
       }
-      
-      return response.data.data.searcherProfiles || [];
-    } catch (error) {
-      console.error('Error fetching searcher profiles:', error);
+
+      const profiles = response.data.data.searcherProfiles || [];
+      console.log(`✅ Successfully fetched ${profiles.length} searcher profiles:`, profiles.map(p => ({ id: p.id, name: p.name })));
+      return profiles;
+    } catch (error: any) {
+      console.error('❌ Error fetching searcher profiles:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: API_BASE_URL,
+        fullError: error
+      });
       // Return empty array instead of throwing to prevent page crashes
       return [];
     }

@@ -155,8 +155,15 @@ router.get('/debug/test-images', async (req, res) => {
 router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = req.userId!;
+
+    // DEBUG: Log which user is fetching profiles
+    console.log('🔍 GET /api/searcher-profiles - userId:', userId);
+
     const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
-    
+
+    console.log(`✅ Found ${searcherProfiles.length} profiles for user ${userId}:`,
+      searcherProfiles.map(p => ({ id: p.id, name: p.name })));
+
     res.json({
       success: true,
       data: {

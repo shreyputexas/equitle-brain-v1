@@ -55,7 +55,8 @@ import {
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
   Language as LanguageIcon,
-  Upload as UploadIcon
+  Upload as UploadIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';
@@ -739,12 +740,26 @@ export default function Profile() {
   };
 
   // Load investor profiles function
-  const loadSearcherProfiles = async () => {
+  const loadSearcherProfiles = async (forceRefresh = false) => {
     try {
       setLoading(true);
-      console.log('🔄 Loading investor profiles...');
+      setError(''); // Clear any previous errors
+      console.log('🔄 Loading investor profiles...', forceRefresh ? '(Force Refresh)' : '');
+      console.log('🔑 Current auth state:', {
+        hasToken: !!localStorage.getItem('token'),
+        userId: localStorage.getItem('userId'),
+        token: localStorage.getItem('token') === 'mock-token' ? 'mock-token' : 'real-token'
+      });
+
       const profiles = await searcherProfilesApi.getSearcherProfiles();
       console.log('📋 Loaded investor profiles:', profiles);
+      console.log(`📊 Total profiles loaded: ${profiles.length}`);
+
+      if (profiles.length === 0) {
+        console.warn('⚠️ No profiles returned from API - this might indicate an error');
+        console.warn('⚠️ Check the console for API errors above');
+      }
+
       profiles.forEach(profile => {
         console.log(`🔍 Profile ${profile.name}:`, {
           id: profile.id,
@@ -756,7 +771,7 @@ export default function Profile() {
           educationCount: profile.education?.length || 0,
           experienceCount: profile.experience?.length || 0
         });
-        
+
         // Test if the image URL is accessible
         if (profile.headshotUrl) {
           const testImg = new Image();
@@ -768,9 +783,13 @@ export default function Profile() {
       });
       setSearchers(profiles);
       console.log('✅ Searchers state updated with', profiles.length, 'profiles');
+
+      if (forceRefresh) {
+        setSuccess('Profiles refreshed successfully!');
+      }
     } catch (error: any) {
-      console.error('Error loading investor profiles:', error);
-      setError(error.response?.data?.message || 'Failed to load investor profiles');
+      console.error('❌ Error loading investor profiles:', error);
+      setError(error.response?.data?.message || 'Failed to load investor profiles. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -1290,11 +1309,24 @@ export default function Profile() {
               Manage investor profiles for personalized pitch generation
             </Typography>
           </Box>
-          {searchers.length > 0 && (
-            <Typography variant="body2" color="text.secondary">
-              {searchers.length} profile{searchers.length !== 1 ? 's' : ''}
-            </Typography>
-          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {searchers.length > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                {searchers.length} profile{searchers.length !== 1 ? 's' : ''}
+              </Typography>
+            )}
+            <Tooltip title="Refresh profiles">
+              <IconButton
+                onClick={() => loadSearcherProfiles(true)}
+                disabled={loading}
+                sx={{
+                  '&:hover': { bgcolor: '#f5f5f5' }
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
         {searchers.length === 0 ? (
           <Card 
