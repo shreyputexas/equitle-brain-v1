@@ -34,9 +34,9 @@ router.get('/test-template', async (req, res) => {
 });
 
 // Debug endpoint to check user profile data
-router.get('/debug-user-data', async (req, res) => {
+router.get('/debug-user-data', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
     
@@ -108,7 +108,7 @@ router.post('/test-generate', async (req, res) => {
     };
 
             // Get actual searcher profiles from database
-            const userId = 'dev-user-123';
+            const userId = 'test-user-123'; // Using test user for debug endpoint
             const searcherProfilesRef = db.collection('users').doc(userId).collection('searcherProfiles');
             const searcherProfilesSnapshot = await searcherProfilesRef.get();
             
@@ -244,17 +244,19 @@ router.post('/generate', firebaseAuthMiddleware, async (req, res) => {
     let searchFundEmail = '';
 
     try {
-      const userId = req.user?.uid || 'dev-user-123';
-      const userRef = db.collection('users').doc(userId);
-      const userDoc = await userRef.get();
-      
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        searchFundName = userData?.searchFundName || '';
-        searchFundWebsite = userData?.searchFundWebsite || '';
-        searchFundLogo = userData?.searchFundLogo || '';
-        searchFundAddress = userData?.searchFundAddress || '';
-        searchFundEmail = userData?.searchFundEmail || '';
+      const userId = req.user?.uid;
+      if (userId) {
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          searchFundName = userData?.searchFundName || '';
+          searchFundWebsite = userData?.searchFundWebsite || '';
+          searchFundLogo = userData?.searchFundLogo || '';
+          searchFundAddress = userData?.searchFundAddress || '';
+          searchFundEmail = userData?.searchFundEmail || '';
+        }
       }
     } catch (error) {
       logger.warn('Could not fetch user data for template', { error: error.message });
@@ -410,7 +412,7 @@ router.post('/test-basic-document', async (req, res) => {
       template: template || 'basic'
     });
 
-    // Fetch search fund data (using dev user for test)
+    // Fetch search fund data (using test user)
     let searchFundData = {
       name: undefined,
       website: undefined,
@@ -419,7 +421,7 @@ router.post('/test-basic-document', async (req, res) => {
     };
 
     try {
-      const userId = 'dev-user-123';
+      const userId = 'test-user-123'; // Using test user for debug endpoint
       const userRef = db.collection('users').doc(userId);
       const userDoc = await userRef.get();
 
@@ -517,20 +519,22 @@ router.post('/generate-basic-document', firebaseAuthMiddleware, async (req, res)
     };
 
     try {
-      const userId = req.user?.uid || 'dev-user-123';
-      const userRef = db.collection('users').doc(userId);
-      const userDoc = await userRef.get();
+      const userId = req.user?.uid;
+      if (userId) {
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
 
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        searchFundData = {
-          name: userData?.searchFundName,
-          website: userData?.searchFundWebsite,
-          email: userData?.searchFundEmail,
-          address: userData?.searchFundAddress,
-        };
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          searchFundData = {
+            name: userData?.searchFundName,
+            website: userData?.searchFundWebsite,
+            email: userData?.searchFundEmail,
+            address: userData?.searchFundAddress,
+          };
 
-        console.log('Fetched search fund data:', searchFundData);
+          console.log('Fetched search fund data:', searchFundData);
+        }
       }
     } catch (error) {
       logger.warn('Could not fetch search fund data, continuing without it', { error: error.message });

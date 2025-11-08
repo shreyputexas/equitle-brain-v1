@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from '../lib/axios';
 import { useNavigate } from 'react-router-dom';
 import { 
   signInWithEmailAndPassword,
@@ -130,58 +130,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // axios.defaults.baseURL = API_BASE_URL;
 
   useEffect(() => {
-
-    // Development mode: bypass Firebase auth and use mock user
-    if (process.env.NODE_ENV === 'development') {
-      const mockUserId = 'dev-user-123';
-      const mockEmail = 'dev@equitle.com';
-      
-      // Set mock token and userId for backend
-      localStorage.setItem('token', 'mock-token');
-      localStorage.setItem('userId', mockUserId);
-      axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
-
-      console.log('✅ AuthContext: Stored userId in localStorage (dev mode):', mockUserId);
-
-      // Fetch real name from profile
-      fetchUserProfile(mockUserId, mockEmail).then((name) => {
-        const mockUser: User = {
-          id: mockUserId,
-          email: mockEmail,
-          name: name,
-          role: 'admin',
-          firm: 'Equitle',
-          phone: '',
-          location: '',
-          avatar: undefined
-        };
-        setUser(mockUser);
-        setLoading(false);
-      }).catch(() => {
-        // Fallback if profile fetch fails
-        const mockUser: User = {
-          id: mockUserId,
-          email: mockEmail,
-          name: 'Development User',
-          role: 'admin',
-          firm: 'Equitle',
-          phone: '',
-          location: '',
-          avatar: undefined
-        };
-        setUser(mockUser);
-        setLoading(false);
-      });
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         // User is signed in
         const idToken = await firebaseUser.getIdToken();
         localStorage.setItem('token', idToken);
         localStorage.setItem('userId', firebaseUser.uid);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+        // Note: axios interceptor now handles auth headers automatically
 
         console.log('✅ AuthContext: Stored userId in localStorage (auth state):', firebaseUser.uid);
 
@@ -210,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('userId');
-        delete axios.defaults.headers.common['Authorization'];
+        // Note: axios interceptor handles auth headers automatically
       }
       setLoading(false);
     });
@@ -233,8 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ AuthContext: Stored userId in localStorage (login):', firebaseUser.uid);
 
-      // Set axios default header for backend requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+      // Note: axios interceptor handles auth headers automatically
 
       // Fetch real name from profile
       const realName = await fetchUserProfile(
@@ -294,8 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ AuthContext: Created user and stored userId:', firebaseUser.uid);
 
-      // Set axios default header for backend requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${idToken}`;
+      // Note: axios interceptor handles auth headers automatically
 
       // Create user object
       const user: User = {
@@ -339,7 +292,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
-      delete axios.defaults.headers.common['Authorization'];
+      // Note: axios interceptor handles auth headers automatically
       navigate('/');
     } catch (error) {
       console.error('Logout failed:', error);
@@ -347,7 +300,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
-      delete axios.defaults.headers.common['Authorization'];
+      // Note: axios interceptor handles auth headers automatically
       navigate('/');
     }
   };

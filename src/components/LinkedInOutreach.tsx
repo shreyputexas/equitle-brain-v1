@@ -47,7 +47,7 @@ import {
   Close as CloseIcon,
   Email as EmailIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import axios from '../lib/axios';
 
 interface Contact {
   id: string;

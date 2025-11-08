@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createContext, useContext, useState, useCallback } from 'react';
-import axios from 'axios';
+import axios from '../lib/axios';
 
 interface BrainQuery {
   id: string;

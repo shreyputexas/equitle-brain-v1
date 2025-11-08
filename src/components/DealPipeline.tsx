@@ -1170,12 +1170,28 @@ export default function DealPipeline({
           newSet.delete(selectedDealId);
           return newSet;
         });
+        // Close edit card if it's open for this deal
+        if (editingDealId === selectedDealId) {
+          handleCloseEdit();
+        }
         // Refresh to remove deleted deal
         onRefresh();
         setDeleteConfirmOpen(false);
-      } catch (error) {
+        setSnackbarMessage(`✓ Deal deleted successfully`);
+        setSnackbarOpen(true);
+      } catch (error: any) {
         console.error('Error deleting deal:', error);
+        const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+        setSnackbarMessage(`Error deleting deal: ${errorMessage}`);
+        setSnackbarOpen(true);
       }
+    }
+  };
+
+  const handleDeleteFromEdit = () => {
+    if (editingDealId) {
+      setSelectedDealId(editingDealId);
+      setDeleteConfirmOpen(true);
     }
   };
 
@@ -1199,6 +1215,19 @@ export default function DealPipeline({
     if (score >= 80) return 'success.main';
     if (score >= 60) return 'warning.main';
     return 'error.main';
+  };
+
+  const formatDealValue = (value: number): string => {
+    if (value >= 1000000) {
+      // Show in millions
+      return `$${(value / 1000000).toFixed(1)}M`;
+    } else if (value >= 1000) {
+      // Show in thousands
+      return `$${(value / 1000).toFixed(0)}K`;
+    } else {
+      // Show as is
+      return `$${value.toFixed(0)}`;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -1455,7 +1484,7 @@ export default function DealPipeline({
                       fontSize: '0.9375rem'
                     }}
                   >
-                    ${((deal.value || 0) / 1000000).toFixed(1)}M
+                    {formatDealValue(deal.value || 0)}
                   </Typography>
                 </Box>
                 
@@ -1473,7 +1502,7 @@ export default function DealPipeline({
                       mb: 0.5
                     }}
                   >
-                    Lead Partner
+                    Main Contact
                   </Typography>
                   <Typography 
                     variant="body2" 
@@ -1484,7 +1513,7 @@ export default function DealPipeline({
                       fontSize: '0.8125rem'
                     }}
                   >
-                    {deal.leadPartner || 'Unassigned'}
+                    {deal.leadPartner || (deal.people && deal.people.length > 0 ? deal.people[0].name : 'Unassigned')}
                   </Typography>
                 </Box>
               </Box>
@@ -2089,7 +2118,7 @@ export default function DealPipeline({
                       letterSpacing: '-0.01em'
                     }}
                   >
-                    ${(totalValue / 1000000).toFixed(1)}M total value
+                    {formatDealValue(totalValue)} total value
                   </Typography>
                 </Box>
 
@@ -2419,47 +2448,62 @@ export default function DealPipeline({
                   )}
 
                   {/* Actions */}
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 2, borderTop: '1px solid #e5e7eb' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 2, borderTop: '1px solid #e5e7eb' }}>
                     <Button
-                      onClick={handleCloseEdit}
+                      onClick={handleDeleteFromEdit}
                       sx={{
-                        color: '#6b7280',
+                        color: '#dc2626',
                         fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                         '&:hover': {
-                          bgcolor: '#f3f4f6'
+                          bgcolor: '#fee2e2'
                         }
                       }}
+                      startIcon={<DeleteIcon />}
                     >
-                      Cancel
+                      Delete Deal
                     </Button>
-                    <Button
-                      variant="contained"
-                      onClick={handleSaveEdit}
-                      disabled={savingDeal}
-                      sx={{
-                        bgcolor: '#000000',
-                        color: 'white',
-                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        '&:hover': {
-                          bgcolor: '#111827'
-                        },
-                        '&:disabled': {
-                          bgcolor: '#9ca3af',
-                          color: 'white'
-                        },
-                        position: 'relative',
-                        minWidth: 120
-                      }}
-                    >
-                      {savingDeal ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CircularProgress size={14} sx={{ color: 'white' }} />
-                          <span>Saving...</span>
-                        </Box>
-                      ) : (
-                        'Save Changes'
-                      )}
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        onClick={handleCloseEdit}
+                        sx={{
+                          color: '#6b7280',
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          '&:hover': {
+                            bgcolor: '#f3f4f6'
+                          }
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleSaveEdit}
+                        disabled={savingDeal}
+                        sx={{
+                          bgcolor: '#000000',
+                          color: 'white',
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          '&:hover': {
+                            bgcolor: '#111827'
+                          },
+                          '&:disabled': {
+                            bgcolor: '#9ca3af',
+                            color: 'white'
+                          },
+                          position: 'relative',
+                          minWidth: 120
+                        }}
+                      >
+                        {savingDeal ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={14} sx={{ color: 'white' }} />
+                            <span>Saving...</span>
+                          </Box>
+                        ) : (
+                          'Save Changes'
+                        )}
+                      </Button>
+                    </Box>
                   </Box>
                 </CardContent>
               </Card>
@@ -2686,7 +2730,7 @@ export default function DealPipeline({
                 {selectedCompany?.company}
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {selectedCompany?.sector} • ${((selectedCompany?.value || 0) / 1000000).toFixed(1)}M
+                {selectedCompany?.sector} • {formatDealValue(selectedCompany?.value || 0)}
               </Typography>
             </Box>
             <IconButton onClick={() => setCompanyModalOpen(false)} sx={{ color: 'white' }}>
@@ -2710,8 +2754,8 @@ export default function DealPipeline({
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 3 }}>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">Lead Partner</Typography>
-                    <Typography variant="body1">{selectedCompany.leadPartner}</Typography>
+                    <Typography variant="body2" color="text.secondary">Main Contact</Typography>
+                    <Typography variant="body1">{selectedCompany.leadPartner || (selectedCompany.people && selectedCompany.people.length > 0 ? selectedCompany.people[0].name : 'Unassigned')}</Typography>
                   </Box>
                   <Box>
                     <Typography variant="body2" color="text.secondary">Probability</Typography>
@@ -2837,7 +2881,7 @@ export default function DealPipeline({
                       letterSpacing: '-0.01em'
                     }}
                   >
-                  ${((activeDeal.value || 0) / 1000000).toFixed(1)}M
+                  {formatDealValue(activeDeal.value || 0)}
                 </Typography>
                 <Typography 
                   variant="caption" 
@@ -2859,7 +2903,7 @@ export default function DealPipeline({
                       fontWeight: 500
                     }}
                   >
-                  Lead Partner
+                  Main Contact
                 </Typography>
                 <Typography 
                   variant="body2" 
@@ -2869,7 +2913,7 @@ export default function DealPipeline({
                     fontWeight: 500
                   }}
                 >
-                  {activeDeal.leadPartner}
+                  {activeDeal.leadPartner || (activeDeal.people && activeDeal.people.length > 0 ? activeDeal.people[0].name : 'Unassigned')}
                 </Typography>
               </Box>
               <Box>

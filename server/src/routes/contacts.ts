@@ -41,10 +41,14 @@ const updateContactSchema = Joi.object({
 
 // @route   GET /api/contacts/all
 // @desc    Get all contacts for the authenticated user (simpler version for contacts page)
-// @access  Private (but allows dev-user-123 as fallback for development)
-router.get('/all', async (req, res) => {
+// @access  Private
+router.get('/all', authMiddleware, async (req, res) => {
   try {
-    const userId = (req as any).user?.id || 'dev-user-123';
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const contacts = await prisma.contact.findMany({
       where: { userId },
@@ -207,10 +211,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 // @route   POST /api/contacts
 // @desc    Create new contact
-// @access  Private (but allows dev-user-123 as fallback for development)
-router.post('/', async (req, res) => {
+// @access  Private
+router.post('/', authMiddleware, async (req, res) => {
   try {
-    const userId = (req as any).user?.id || 'dev-user-123';
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     // Validate input
     const { error, value } = createContactSchema.validate(req.body);
@@ -361,11 +369,14 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 
 // @route   POST /api/contacts/bulk-save
 // @desc    Bulk save enriched contacts from Apollo
-// @access  Private (but allows dev-user-123 as fallback for development)
-router.post('/bulk-save', async (req, res) => {
+// @access  Private
+router.post('/bulk-save', authMiddleware, async (req, res) => {
   try {
-    // Use authenticated user if available, otherwise use dev user for development
-    const userId = (req as any).user?.id || 'dev-user-123';
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     const { contacts: enrichedContacts, contactType } = req.body;
 
     if (!enrichedContacts || !Array.isArray(enrichedContacts)) {

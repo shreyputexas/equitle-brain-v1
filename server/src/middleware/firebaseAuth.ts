@@ -34,32 +34,6 @@ export const firebaseAuthMiddleware = async (req: Request, res: Response, next: 
 
     const idToken = authHeader.replace('Bearer ', '');
 
-    // Development mode: accept mock tokens
-    if (process.env.NODE_ENV !== 'production' && (idToken === 'mock-token' || idToken === 'Bearer mock-token')) {
-      // Create a mock user for development
-      (req as FirebaseAuthRequest).user = {
-        uid: 'dev-user-123',
-        email: 'dev@example.com',
-        emailVerified: true,
-        displayName: 'Development User',
-        photoURL: undefined,
-        disabled: false,
-        metadata: {
-          creationTime: new Date().toISOString(),
-          lastSignInTime: new Date().toISOString()
-        },
-        customClaims: {}
-      };
-      (req as FirebaseAuthRequest).userId = 'dev-user-123';
-      
-      logger.debug('Development mode: using mock user', {
-        uid: 'dev-user-123',
-        email: 'dev@example.com'
-      });
-      
-      return next();
-    }
-
     // Verify the Firebase ID token
     const decodedToken = await auth.verifyIdToken(idToken);
 

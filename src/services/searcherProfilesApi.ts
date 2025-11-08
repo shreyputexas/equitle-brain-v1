@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 
 const API_BASE_URL = '/api/searcher-profiles';
 
@@ -59,16 +59,16 @@ export interface UpdateSearcherProfileRequest {
 }
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') || 'mock-token';
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Authentication required. Please log in.');
+  }
   const userId = localStorage.getItem('userId');
 
   console.log('🔐 Auth Debug:', {
     hasToken: !!localStorage.getItem('token'),
-    token: token === 'mock-token' ? 'mock-token' : 'real-token',
     userId: userId,
-    message: token === 'mock-token'
-      ? '⚠️ Using mock-token - will fetch data from dev-user-123'
-      : '✅ Using real token - will fetch data from authenticated user'
+    message: '✅ Using authenticated token'
   });
 
   return {
