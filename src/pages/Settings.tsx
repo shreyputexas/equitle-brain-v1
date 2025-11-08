@@ -107,7 +107,57 @@ export default function Settings() {
       
       const data = await integrationService.getIntegrations();
       // Ensure data is always an array
-      setIntegrations(Array.isArray(data) ? data : []);
+      const rawIntegrations = Array.isArray(data) ? data : [];
+      
+      // Group Google integrations by provider and email
+      const groupedIntegrations: (Integration & { originalIds?: string[] })[] = [];
+      const googleGroups = new Map<string, Integration[]>();
+      
+      rawIntegrations.forEach((integration) => {
+        // Group Google integrations by provider + email
+        if (integration.provider === 'google') {
+          const key = `${integration.provider}-${integration.profile?.email || 'unknown'}`;
+          if (!googleGroups.has(key)) {
+            googleGroups.set(key, []);
+          }
+          googleGroups.get(key)!.push(integration);
+        } else {
+          // For non-Google integrations, add them as-is
+          groupedIntegrations.push(integration);
+        }
+      });
+      
+      // Combine Google integrations into single entries
+      googleGroups.forEach((googleIntegrations) => {
+        if (googleIntegrations.length === 0) return;
+        
+        // Use the first integration as the base
+        const baseIntegration = googleIntegrations[0];
+        
+        // Collect all types and scopes
+        const types = googleIntegrations.map(i => i.type);
+        const allScopes = new Set<string>();
+        googleIntegrations.forEach(i => {
+          const scopes = Array.isArray(i.scope) ? i.scope : String(i.scope || '').split(',').filter(s => s.trim());
+          scopes.forEach(s => allScopes.add(s.trim()));
+        });
+        
+        // Store all original IDs for disconnect
+        const originalIds = googleIntegrations.map(i => i.id);
+        
+        // Create combined integration
+        const combinedIntegration: Integration & { originalIds?: string[] } = {
+          ...baseIntegration,
+          type: types[0], // Use first type as primary
+          services: types.slice(1), // Other types as services
+          scope: Array.from(allScopes),
+          originalIds // Store original IDs for disconnect
+        };
+        
+        groupedIntegrations.push(combinedIntegration);
+      });
+      
+      setIntegrations(groupedIntegrations);
     } catch (err) {
       console.error('Failed to load integrations:', err);
       setError(err instanceof Error ? err.message : 'Failed to load integrations');
@@ -120,7 +170,15 @@ export default function Settings() {
 
   const handleDisconnect = async (integrationId: string) => {
     try {
-      await integrationService.disconnectIntegration(integrationId);
+      // Find the integration to check if it has originalIds (grouped Google integration)
+      const integration = integrations.find(i => i.id === integrationId);
+      const idsToDisconnect = (integration as any)?.originalIds || [integrationId];
+      
+      // Disconnect all related integrations
+      await Promise.all(idsToDisconnect.map((id: string) => 
+        integrationService.disconnectIntegration(id)
+      ));
+      
       setSuccess('Integration disconnected successfully');
       await loadIntegrations();
     } catch (err) {

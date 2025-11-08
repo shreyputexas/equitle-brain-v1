@@ -404,22 +404,50 @@ ${emailContent}`;
       }
 
       // Use existing Gmail service to fetch emails
+      // Fetch all inbox emails first
       const response = await GmailService.listMessages(gmailIntegration.accessToken, {
-        maxResults: 50, // Limit to recent emails
-        q: 'is:unread OR in:inbox' // Get unread or inbox emails
+        maxResults: 100, // Fetch more to ensure we get enough primary emails after filtering
+        labelIds: ['INBOX'] // Get inbox emails
       });
 
-      // Transform Gmail format to our format
-      const emails = response.messages.map((email: any) => ({
-        id: email.id,
-        source: 'gmail',
-        sender: email.payload?.headers?.find((h: any) => h.name === 'From')?.value || '',
-        recipient: email.payload?.headers?.find((h: any) => h.name === 'To')?.value || '',
-        subject: email.payload?.headers?.find((h: any) => h.name === 'Subject')?.value || '',
-        content: email.payload?.body?.data || '',
-        timestamp: new Date(parseInt(email.internalDate)),
-        threadId: email.threadId
-      }));
+      // Transform Gmail format to our format and filter out non-primary emails
+      // Gmail category labels: CATEGORY_PROMOTIONS, CATEGORY_SOCIAL, CATEGORY_UPDATES, CATEGORY_FORUMS
+      logger.info(`Filtering ${response.messages.length} emails for Primary inbox only`);
+
+      const emails = response.messages
+        .filter((email: any) => {
+          const labels = email.labelIds || [];
+          const subject = email.payload?.headers?.find((h: any) => h.name === 'Subject')?.value || '';
+
+          // Exclude emails with category labels (promotions, social, updates, forums)
+          const hasPromotions = labels.includes('CATEGORY_PROMOTIONS');
+          const hasSocial = labels.includes('CATEGORY_SOCIAL');
+          const hasUpdates = labels.includes('CATEGORY_UPDATES');
+          const hasForums = labels.includes('CATEGORY_FORUMS');
+
+          const isNonPrimary = hasPromotions || hasSocial || hasUpdates || hasForums;
+
+          // Log filtered emails
+          if (isNonPrimary) {
+            const category = hasPromotions ? 'PROMOTIONS' : hasSocial ? 'SOCIAL' : hasUpdates ? 'UPDATES' : 'FORUMS';
+            logger.info(`Filtering out ${category} email: ${subject}`);
+          }
+
+          // Only include if it doesn't have any category labels (i.e., it's in Primary)
+          return !isNonPrimary;
+        })
+        .slice(0, 50) // Limit to 50 after filtering
+        .map((email: any) => ({
+          id: email.id,
+          source: 'gmail',
+          sender: email.payload?.headers?.find((h: any) => h.name === 'From')?.value || '',
+          recipient: email.payload?.headers?.find((h: any) => h.name === 'To')?.value || '',
+          subject: email.payload?.headers?.find((h: any) => h.name === 'Subject')?.value || '',
+          content: email.payload?.body?.data || '',
+          timestamp: new Date(parseInt(email.internalDate)),
+          threadId: email.threadId,
+          labelIds: email.labelIds || [] // Include labels for debugging
+        }));
 
       logger.info(`Fetched ${emails.length} Gmail emails for user ${userId}`);
       return { emails, integrationId: gmailIntegration.id };

@@ -59,6 +59,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'profile': return 'Profile';
+      case 'gmail': return 'Gmail';
       case 'drive': return 'Drive';
       case 'onedrive': return 'OneDrive';
       case 'calendar': return 'Calendar';
@@ -120,7 +121,9 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                 {integration.provider === 'apollo' ? 'Apollo' : 
-                 integration.provider === 'microsoft' ? 'Microsoft' : 'Google'} {getTypeLabel(integration.type)}
+                 integration.provider === 'microsoft' ? 'Microsoft' : 'Google'}
+                {/* Only show type label if there are no additional services */}
+                {(!integration.services || integration.services.length === 0) && ` ${getTypeLabel(integration.type)}`}
                 {integration.isActive ? (
                   <ConnectedIcon sx={{ color: 'success.main', fontSize: 20 }} />
                 ) : (
@@ -138,18 +141,52 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({
           </IconButton>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          {getTypeIcon(integration.type)}
-          <Typography variant="body2">
-            {integration.type === 'profile' && 'Basic profile information'}
-            {integration.type === 'drive' && 'File storage and management'}
-            {integration.type === 'onedrive' && 'File storage and management'}
-            {integration.type === 'calendar' && 'Calendar events and scheduling'}
-            {integration.type === 'outlook' && 'Email management'}
-            {integration.type === 'teams' && 'Meeting management'}
-            {integration.type === 'apollo' && 'Contact search and data enrichment'}
-          </Typography>
-        </Box>
+        {/* Only show description if there are no multiple services */}
+        {(!integration.services || integration.services.length === 0) && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            {getTypeIcon(integration.type)}
+            <Typography variant="body2">
+              {integration.type === 'profile' && 'Basic profile information'}
+              {integration.type === 'gmail' && 'Email management'}
+              {integration.type === 'drive' && 'File storage and management'}
+              {integration.type === 'onedrive' && 'File storage and management'}
+              {integration.type === 'calendar' && 'Calendar events and scheduling'}
+              {integration.type === 'outlook' && 'Email management'}
+              {integration.type === 'teams' && 'Meeting management'}
+              {integration.type === 'apollo' && 'Contact search and data enrichment'}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Microsoft and Google Other Services */}
+        {integration.services && integration.services.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+              Services:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+              {/* Show primary type first */}
+              <Chip
+                label={getTypeLabel(integration.type)}
+                size="small"
+                variant="outlined"
+                icon={getTypeIcon(integration.type)}
+                sx={{ fontSize: '0.75rem' }}
+              />
+              {/* Then show other services */}
+              {integration.services.map((service: string, index: number) => (
+                <Chip
+                  key={index}
+                  label={getTypeLabel(service)}
+                  size="small"
+                  variant="outlined"
+                  icon={getTypeIcon(service)}
+                  sx={{ fontSize: '0.75rem' }}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
 
         {/* Microsoft Other Services */}
         {integration.provider === 'microsoft' && integration.services && integration.services.length > 0 && (

@@ -184,10 +184,30 @@ class GmailApiService {
       if (filters.labelIds) {
         filters.labelIds.forEach(labelId => params.append('labelIds', labelId));
       }
-      if (filters.maxResults) params.append('maxResults', filters.maxResults.toString());
+      // Always set maxResults, default to 100 if not provided
+      const maxResults = filters.maxResults || 100;
+      params.append('maxResults', maxResults.toString());
       if (filters.pageToken) params.append('pageToken', filters.pageToken);
+      // Add cache-busting parameter
+      params.append('_t', Date.now().toString());
 
-      const response = await axios.get<ThreadsResponse>(`/gmail/threads?${params.toString()}`);
+      const url = `/firebase-gmail/threads?${params.toString()}`;
+      console.log('🌐 Gmail API request URL:', url);
+      console.log('🌐 Gmail API request params:', { maxResults, labelIds: filters.labelIds, q: filters.q });
+      
+      const response = await axios.get<ThreadsResponse>(url, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      console.log('🌐 Gmail API response data:', {
+        threadsCount: response.data.threads?.length || 0,
+        resultSizeEstimate: response.data.resultSizeEstimate,
+        hasNextPageToken: !!response.data.nextPageToken
+      });
+      
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Gmail threads:', error);

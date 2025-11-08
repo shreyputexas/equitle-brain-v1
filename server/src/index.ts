@@ -47,6 +47,7 @@ import massVoicemailRoutes from './routes/massVoicemail';
 import linkedinOutreachRoutes from './routes/linkedinOutreach';
 import signupNotificationsRoutes from './routes/signupNotifications';
 // import gmailRoutes from './routes/gmail'; // Temporarily disabled due to Prisma dependency
+import firebaseGmailRoutes from './routes/firebaseGmail';
 
 import { errorHandler } from './middleware/errorHandler';
 // import { firebaseAuthMiddleware, AuthRequest } from './middleware/auth'; // Legacy
@@ -242,7 +243,8 @@ app.use('/api/integrations', (req, res, next) => {
       req.path === '/apollo/callback' ||
       req.path === '/apollo/test-connect' ||
       req.path === '/apollo/debug-config' ||
-      req.path === '/test') {
+      req.path === '/test' ||
+      req.path === '/microsoft/test') {
     console.log('Skipping auth for OAuth callback/test endpoint:', req.path);
     return next();
   }
@@ -358,6 +360,7 @@ app.use('/api/mass-voicemail', massVoicemailRoutes);
 app.use('/api/linkedin-outreach', linkedinOutreachRoutes);
 app.use('/api/signup-notifications', signupNotificationsRoutes);
 // app.use('/api/gmail', gmailRoutes);
+app.use('/api/firebase-gmail', firebaseAuthMiddleware, firebaseGmailRoutes);
 
 app.use(errorHandler);
 

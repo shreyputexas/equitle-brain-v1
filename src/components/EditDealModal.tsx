@@ -16,16 +16,22 @@ import {
   InputAdornment,
   Alert,
   CircularProgress,
-  IconButton
+  IconButton,
+  Divider,
+  Card,
+  CardContent
 } from '@mui/material';
 import {
   Close as CloseIcon,
   AttachMoney as MoneyIcon,
   Business as BusinessIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 import { Deal } from '../services/dealsApi';
 import { getApiUrl, getSocketUrl } from '../config/api';
+import EmailSelectionModal from './EmailSelectionModal';
+import dealsApi from '../services/dealsApi';
 
 interface EditDealModalProps {
   open: boolean;
@@ -75,6 +81,11 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
     description: ''
   });
 
+  // Email association state
+  const [emailSelectionModalOpen, setEmailSelectionModalOpen] = useState(false);
+  const [selectedEmailThreadIds, setSelectedEmailThreadIds] = useState<string[]>([]);
+  const [selectedEmailSubjects, setSelectedEmailSubjects] = useState<string[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -100,6 +111,29 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
       ...prev,
       [field]: event.target.value
     }));
+  };
+
+  // Email selection handlers
+  const handleOpenEmailSelection = () => {
+    setEmailSelectionModalOpen(true);
+  };
+
+  const handleEmailSelected = (threadIds: string[], subjects: string[]) => {
+    setSelectedEmailThreadIds(threadIds);
+    setSelectedEmailSubjects(subjects);
+  };
+
+  const handleRemoveEmail = (threadId?: string) => {
+    if (threadId) {
+      setSelectedEmailThreadIds(prev => prev.filter(id => id !== threadId));
+      setSelectedEmailSubjects((prev) => {
+        const index = selectedEmailThreadIds.indexOf(threadId);
+        return prev.filter((_, i) => i !== index);
+      });
+    } else {
+      setSelectedEmailThreadIds([]);
+      setSelectedEmailSubjects([]);
+    }
   };
 
   const handleSubmit = async () => {
@@ -151,6 +185,22 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Failed to update deal');
+      }
+
+      // Associate email threads with deal if any were selected
+      if (selectedEmailThreadIds.length > 0 && deal.id) {
+        for (let i = 0; i < selectedEmailThreadIds.length; i++) {
+          try {
+            await dealsApi.associateEmailThread(deal.id, {
+              threadId: selectedEmailThreadIds[i],
+              subject: selectedEmailSubjects[i] || '(No Subject)'
+            });
+            console.log(`Associated email thread ${selectedEmailThreadIds[i]} with deal`);
+          } catch (emailError: any) {
+            console.error(`Error associating email thread ${selectedEmailThreadIds[i]} with deal:`, emailError);
+            // Don't fail the entire operation if email association fails
+          }
+        }
       }
 
       onSuccess();
@@ -373,6 +423,81 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
               helperText="Optional deal description or notes"
             />
           </Grid>
+
+          {/* Email Association */}
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Divider sx={{ mb: 3 }} />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" sx={{
+                fontWeight: 600,
+                color: '#1E293B',
+                mb: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <EmailIcon sx={{ fontSize: 20 }} />
+                Email Association
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Associate an email thread with this deal to track communication
+              </Typography>
+
+              {selectedEmailThreadIds.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {selectedEmailThreadIds.map((threadId, index) => (
+                    <Card key={threadId} sx={{
+                      bgcolor: '#F0F9FF',
+                      border: '1px solid #BAE6FD',
+                      borderRadius: 2
+                    }}>
+                      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0C4A6E', mb: 0.5 }}>
+                              Email Thread {selectedEmailThreadIds.length > 1 ? `${index + 1}` : ''}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#075985' }}>
+                              {selectedEmailSubjects[index] || 'Email thread selected'}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveEmail(threadId)}
+                            sx={{ color: '#64748B' }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <Button
+                  variant="outlined"
+                  onClick={handleOpenEmailSelection}
+                  disabled={loading}
+                  startIcon={<EmailIcon />}
+                  sx={{
+                    borderColor: '#E2E8F0',
+                    color: '#64748B',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.5,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#9CA3AF',
+                      backgroundColor: '#F1F5F9',
+                    }
+                  }}
+                >
+                  Select Email Thread
+                </Button>
+              )}
+            </Box>
+          </Grid>
         </Grid>
       </DialogContent>
 
@@ -400,6 +525,15 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
           {loading ? 'Updating...' : 'Update Deal'}
         </Button>
       </DialogActions>
+
+      {/* Email Selection Modal */}
+      <EmailSelectionModal
+        open={emailSelectionModalOpen}
+        onClose={() => setEmailSelectionModalOpen(false)}
+        onSelect={handleEmailSelected}
+        selectedThreadIds={selectedEmailThreadIds}
+        multiSelect={true}
+      />
     </Dialog>
   );
 }

@@ -29,7 +29,7 @@ interface EmailAlertsProps {
   limit?: number;
 }
 
-const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
+const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 100 }) => {
   const [emails, setEmails] = useState<EmailAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +134,7 @@ const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6" fontWeight="bold">
-          Email Alerts
+          Email Alerts ({emails.length})
         </Typography>
         <Tooltip title="Refresh alerts">
           <IconButton size="small" onClick={loadEmails}>
@@ -143,7 +143,25 @@ const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
         </Tooltip>
       </Box>
 
-      <Stack spacing={2}>
+      <Box sx={{
+        maxHeight: '70vh',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        '&::-webkit-scrollbar': {
+          width: '8px',
+        },
+        '&::-webkit-scrollbar-track': {
+          backgroundColor: '#f1f1f1',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: '#888',
+          borderRadius: '4px',
+        },
+        '&::-webkit-scrollbar-thumb:hover': {
+          backgroundColor: '#555',
+        }
+      }}>
+        <Stack spacing={2}>
         {emails.map((email) => {
           const sentimentStyle = getSentimentColor(email.sentiment);
 
@@ -236,7 +254,8 @@ const EmailAlerts: React.FC<EmailAlertsProps> = ({ limit = 10 }) => {
             </Card>
           );
         })}
-      </Stack>
+        </Stack>
+      </Box>
     </Box>
   );
 };

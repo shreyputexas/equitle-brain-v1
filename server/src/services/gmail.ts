@@ -107,7 +107,9 @@ export class GmailService {
       const detailedMessages: GmailMessage[] = [];
 
       // Get detailed information for each message
-      for (const message of messages.slice(0, Math.min(10, messages.length))) {
+      // Fetch up to the requested maxResults (default 50)
+      const fetchLimit = Math.min(maxResults, messages.length);
+      for (const message of messages.slice(0, fetchLimit)) {
         try {
           const detailResponse = await gmail.users.messages.get({
             userId: 'me',
@@ -223,16 +225,27 @@ export class GmailService {
       const {
         q,
         labelIds,
-        maxResults = 20,
+        maxResults = 100,
         pageToken,
         includeSpamTrash = false
       } = options;
+
+      // Ensure maxResults is at least 100 and is a valid number
+      const requestedMax = Number(maxResults) || 100;
+      const maxResultsNum = Math.max(100, requestedMax);
+
+      logger.info('Gmail API listThreads call', { 
+        maxResults: maxResultsNum, 
+        labelIds, 
+        q,
+        hasPageToken: !!pageToken 
+      });
 
       const response = await gmail.users.threads.list({
         userId: 'me',
         q,
         labelIds,
-        maxResults,
+        maxResults: maxResultsNum,
         pageToken,
         includeSpamTrash
       });
@@ -240,19 +253,41 @@ export class GmailService {
       const threads = response.data.threads || [];
       const detailedThreads: GmailThread[] = [];
 
-      // Get detailed information for each thread
-      for (const thread of threads.slice(0, Math.min(5, threads.length))) {
-        try {
-          const detailResponse = await gmail.users.threads.get({
-            userId: 'me',
-            id: thread.id!,
-            format: 'full'
-          });
-          detailedThreads.push(detailResponse.data as GmailThread);
-        } catch (error) {
-          logger.warn(`Failed to get details for thread ${thread.id}:`, error);
-        }
+      logger.info('Gmail API threads.list response', { 
+        threadsReturned: threads.length, 
+        requestedMax: maxResultsNum 
+      });
+
+      // Get detailed information for each thread (up to maxResults)
+      const threadsToFetch = threads.slice(0, Math.min(maxResultsNum, threads.length));
+      
+      // Fetch thread details in batches to avoid overwhelming the API
+      const batchSize = 10;
+      for (let i = 0; i < threadsToFetch.length; i += batchSize) {
+        const batch = threadsToFetch.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (thread) => {
+          try {
+            const detailResponse = await gmail.users.threads.get({
+              userId: 'me',
+              id: thread.id!,
+              format: 'full'
+            });
+            return detailResponse.data as GmailThread;
+          } catch (error) {
+            logger.warn(`Failed to get details for thread ${thread.id}:`, error);
+            return null;
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        detailedThreads.push(...batchResults.filter((t): t is GmailThread => t !== null));
       }
+
+      logger.info('Gmail listThreads completed', { 
+        threadsRequested: maxResultsNum,
+        threadsFromAPI: threads.length,
+        detailedThreadsReturned: detailedThreads.length
+      });
 
       return {
         threads: detailedThreads,
@@ -260,8 +295,40 @@ export class GmailService {
         resultSizeEstimate: response.data.resultSizeEstimate || 0
       };
     } catch (error: any) {
-      logger.error('Gmail list threads error:', error);
-      throw new Error('Failed to fetch threads from Gmail');
+      logger.error('Gmail list threads error:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+
+      // Preserve the original error details for better error handling upstream
+      if (error.code === 401 || error.response?.status === 401) {
+        const authError: any = new Error('Gmail API authentication failed - token may be expired');
+        authError.code = 401;
+        authError.response = error.response;
+        throw authError;
+      }
+
+      if (error.code === 403 || error.response?.status === 403) {
+        const permError: any = new Error('Gmail API permission denied');
+        permError.code = 403;
+        permError.response = error.response;
+        throw permError;
+      }
+
+      if (error.code === 429 || error.response?.status === 429) {
+        const rateError: any = new Error('Gmail API rate limit exceeded');
+        rateError.code = 429;
+        rateError.response = error.response;
+        throw rateError;
+      }
+
+      // For other errors, preserve the code if available
+      const genericError: any = new Error('Failed to fetch threads from Gmail');
+      genericError.code = error.code;
+      genericError.response = error.response;
+      throw genericError;
     }
   }
 
