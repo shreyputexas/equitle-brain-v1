@@ -322,6 +322,31 @@ class DealsApiService {
       throw error;
     }
   }
+
+  /**
+   * Associate an email thread with a deal
+   */
+  async associateEmailThread(dealId: string, data: { threadId: string; subject?: string }): Promise<void> {
+    try {
+      await axios.post(
+        getApiUrl('firebase-communications'),
+        {
+          dealId,
+          threadId: data.threadId,
+          subject: data.subject || '(No Subject)',
+          type: 'email',
+          direction: 'inbound',
+          status: 'received'
+        },
+        {
+          headers: this.getAuthHeaders()
+        }
+      );
+    } catch (error) {
+      console.error(`Error associating email thread with deal ${dealId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const dealsApi = new DealsApiService();
