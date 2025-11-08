@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import dealsApi from '../services/dealsApi';
 import contactsApi from '../services/contactsApi';
+import EmailSelectionModal from './EmailSelectionModal';
 import {
   Close as CloseIcon,
   Business as BusinessIcon,
@@ -36,6 +37,7 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 
 interface NewDealModalProps {
@@ -110,6 +112,11 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
   const [availableContacts, setAvailableContacts] = useState<Contact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
+
+  // Email association state
+  const [emailSelectionModalOpen, setEmailSelectionModalOpen] = useState(false);
+  const [selectedEmailThreadIds, setSelectedEmailThreadIds] = useState<string[]>([]);
+  const [selectedEmailSubjects, setSelectedEmailSubjects] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -219,6 +226,36 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
     })));
   };
 
+  // Email selection handlers
+  const handleOpenEmailSelection = () => {
+    setEmailSelectionModalOpen(true);
+  };
+
+  const handleEmailSelected = (threadIds: string[], subjects: string[]) => {
+    setSelectedEmailThreadIds(threadIds);
+    setSelectedEmailSubjects(subjects);
+  };
+
+  const handleRemoveEmail = (threadId?: string) => {
+    if (threadId) {
+      // Remove specific thread
+      setSelectedEmailThreadIds(prev => prev.filter(id => id !== threadId));
+      setSelectedEmailSubjects((prev) => {
+        const index = selectedEmailThreadIds.indexOf(threadId);
+        return prev.filter((_, i) => i !== index);
+      });
+    } else {
+      // Remove all
+      setSelectedEmailThreadIds([]);
+      setSelectedEmailSubjects([]);
+    }
+  };
+
+  const handleRemoveAllEmails = () => {
+    setSelectedEmailThreadIds([]);
+    setSelectedEmailSubjects([]);
+  };
+
 
 
   const handleSubmit = async () => {
@@ -290,6 +327,24 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         }
       }
 
+      // Associate email threads with deal if any were selected
+      if (selectedEmailThreadIds.length > 0 && createdDeal?.id) {
+        for (let i = 0; i < selectedEmailThreadIds.length; i++) {
+          try {
+            // Create a communication record to link each email thread to the deal
+            await dealsApi.associateEmailThread(createdDeal.id, {
+              threadId: selectedEmailThreadIds[i],
+              subject: selectedEmailSubjects[i] || '(No Subject)'
+            });
+            console.log(`Associated email thread ${selectedEmailThreadIds[i]} with deal`);
+          } catch (emailError: any) {
+            console.error(`Error associating email thread ${selectedEmailThreadIds[i]} with deal:`, emailError);
+            // Don't fail the entire operation if email association fails
+            // Just log the error - continue with other threads
+          }
+        }
+      }
+
       // Reset form
       setFormData({
         company: '',
@@ -299,6 +354,8 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
         notes: ''
       });
       setSelectedContacts([]);
+      setSelectedEmailThreadIds([]);
+      setSelectedEmailSubjects([]);
 
       // Call onSuccess to refresh the deals list - wait for it to complete
       // This ensures the deals are fetched before the modal closes
@@ -606,8 +663,8 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
               rows={3}
               disabled={loading}
               InputLabelProps={{
-                sx: { 
-                  color: '#1E293B', 
+                sx: {
+                  color: '#1E293B',
                   fontWeight: 600,
                   fontSize: '0.9rem'
                 }
@@ -642,6 +699,81 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
                 },
               }}
             />
+          </Grid>
+
+          {/* Email Association */}
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Divider sx={{ mb: 3 }} />
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" sx={{
+                fontWeight: 600,
+                color: '#1E293B',
+                mb: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <EmailIcon sx={{ fontSize: 20 }} />
+                Email Association
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Associate an email thread with this deal to track communication
+              </Typography>
+
+              {selectedEmailThreadIds.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {selectedEmailThreadIds.map((threadId, index) => (
+                    <Card key={threadId} sx={{
+                      bgcolor: '#F0F9FF',
+                      border: '1px solid #BAE6FD',
+                      borderRadius: 2
+                    }}>
+                      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0C4A6E', mb: 0.5 }}>
+                              Email Thread {selectedEmailThreadIds.length > 1 ? `${index + 1}` : ''}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#075985' }}>
+                              {selectedEmailSubjects[index] || 'Email thread selected'}
+                            </Typography>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveEmail(threadId)}
+                            sx={{ color: '#64748B' }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              ) : (
+                <Button
+                  variant="outlined"
+                  onClick={handleOpenEmailSelection}
+                  disabled={loading}
+                  startIcon={<EmailIcon />}
+                  sx={{
+                    borderColor: '#E2E8F0',
+                    color: '#64748B',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1.5,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#9CA3AF',
+                      backgroundColor: '#F1F5F9',
+                    }
+                  }}
+                >
+                  Select Email Thread
+                </Button>
+              )}
+            </Box>
           </Grid>
 
           {/* Deal Contacts */}
@@ -794,7 +926,7 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
               boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
               transform: 'translateY(-2px)'
             },
-            '&:disabled': { 
+            '&:disabled': {
               background: '#9CA3AF',
               boxShadow: 'none',
               transform: 'none'
@@ -806,6 +938,15 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
           {loading ? 'Creating...' : 'Create Deal'}
         </Button>
       </DialogActions>
+
+      {/* Email Selection Modal */}
+      <EmailSelectionModal
+        open={emailSelectionModalOpen}
+        onClose={() => setEmailSelectionModalOpen(false)}
+        onSelect={handleEmailSelected}
+        selectedThreadIds={selectedEmailThreadIds}
+        multiSelect={true}
+      />
     </Dialog>
   );
 }
