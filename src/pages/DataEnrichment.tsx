@@ -674,13 +674,17 @@ export default function DataEnrichment() {
         }
       }
 
-      const response = await fetch('/api/data-enrichment/search-contacts', {
+      const response = await fetch(getApiUrl('data-enrichment/search-contacts'), {
         method: 'POST',
         headers,
         body: JSON.stringify(searchPayload)
       });
 
+      console.log('Search response status:', response.status);
+      console.log('Search response headers:', response.headers);
+
       const data = await response.json();
+      console.log('Search response data:', data);
       
       if (data.success) {
         const contacts = data.contacts || [];
@@ -690,7 +694,7 @@ export default function DataEnrichment() {
         // Automatically save discovered contacts to the database
         if (contacts.length > 0) {
           try {
-            const saveResponse = await fetch('/api/firebase/contacts/bulk-save', {
+            const saveResponse = await fetch(getApiUrl('firebase/contacts/bulk-save'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -725,7 +729,8 @@ export default function DataEnrichment() {
         setShowError(true);
       }
     } catch (error) {
-      setMessage('Failed to discover contacts. Please try again.');
+      console.error('Contact search error:', error);
+      setMessage(`Failed to discover contacts: ${error instanceof Error ? error.message : 'Please try again.'}`);
       setShowError(true);
     } finally {
       setIsDiscovering(false);
