@@ -217,6 +217,7 @@ export default function DataEnrichment() {
   const navigate = useNavigate();
   const [selectedProvider, setSelectedProvider] = useState<'apollo' | 'zoominfo' | 'grata'>('apollo');
   const [apolloIntegration, setApolloIntegration] = useState<Integration | null>(null);
+  const [apolloApiKey, setApolloApiKey] = useState('');
   const [zoominfoApiKey, setZoominfoApiKey] = useState('');
   const [grataApiKey, setGrataApiKey] = useState('');
   const [isCheckingIntegration, setIsCheckingIntegration] = useState(false);
@@ -235,11 +236,13 @@ export default function DataEnrichment() {
 
   // Load Apollo integration and API keys for other providers on component mount
   useEffect(() => {
+    const savedApolloKey = localStorage.getItem('apolloApiKey');
     const savedZoominfoKey = localStorage.getItem('zoominfoApiKey');
     const savedGrataKey = localStorage.getItem('grataApiKey');
     const savedSelectedProvider = localStorage.getItem('selectedProvider');
     const savedIsKeyValid = localStorage.getItem('isKeyValid');
 
+    if (savedApolloKey) setApolloApiKey(savedApolloKey);
     if (savedZoominfoKey) setZoominfoApiKey(savedZoominfoKey);
     if (savedGrataKey) setGrataApiKey(savedGrataKey);
     if (savedSelectedProvider && ['apollo', 'zoominfo', 'grata'].includes(savedSelectedProvider)) {
@@ -324,8 +327,8 @@ export default function DataEnrichment() {
   const getCurrentApiKey = () => {
     switch (selectedProvider) {
       case 'apollo':
-        // Apollo now uses OAuth, no API key needed
-        return '';
+        // Apollo supports both OAuth and API key - use API key if available, otherwise OAuth
+        return apolloApiKey;
       case 'zoominfo':
         return zoominfoApiKey;
       case 'grata':
@@ -335,14 +338,23 @@ export default function DataEnrichment() {
     }
   };
 
+  // Helper function to check if current provider is properly configured
+  const isProviderConfigured = () => {
+    if (selectedProvider === 'apollo') {
+      // Apollo is configured if either OAuth integration exists OR API key is provided
+      return !!apolloIntegration || !!apolloApiKey;
+    }
+    // Other providers require API key validation
+    return isKeyValid && getCurrentApiKey().length > 0;
+  };
+
   // Helper function to set API key based on selected provider
   const setCurrentApiKey = (key: string) => {
-    // Apollo no longer uses API keys - use OAuth integration
-    if (selectedProvider === 'apollo') {
-      return;
-    }
-    
     switch (selectedProvider) {
+      case 'apollo':
+        setApolloApiKey(key);
+        localStorage.setItem('apolloApiKey', key);
+        break;
       case 'zoominfo':
         setZoominfoApiKey(key);
         localStorage.setItem('zoominfoApiKey', key);
@@ -402,9 +414,10 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', orgSelectedFile);
-      // Only append API key for non-Apollo providers
-      if (selectedProvider !== 'apollo') {
-        formData.append('apiKey', getCurrentApiKey());
+      // Append API key for all providers (Apollo now supports API key as fallback)
+      const apiKey = getCurrentApiKey();
+      if (apiKey) {
+        formData.append('apiKey', apiKey);
       }
       formData.append('provider', selectedProvider);
 
@@ -506,9 +519,10 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', contactSelectedFile);
-      // Only append API key for non-Apollo providers
-      if (selectedProvider !== 'apollo') {
-        formData.append('apiKey', getCurrentApiKey());
+      // Append API key for all providers (Apollo now supports API key as fallback)
+      const apiKey = getCurrentApiKey();
+      if (apiKey) {
+        formData.append('apiKey', apiKey);
       }
       formData.append('provider', selectedProvider);
 
@@ -613,13 +627,20 @@ export default function DataEnrichment() {
       // No validation needed for investors - structured form ensures valid data
     }
 
-    // For Apollo, check if integration exists
-    if (selectedProvider === 'apollo' && !apolloIntegration) {
-      setMessage('Please connect your Apollo account from Settings first.');
+    // Debug: Log current Apollo state
+    console.log('Apollo Debug Info:', {
+      selectedProvider,
+      hasApolloIntegration: !!apolloIntegration,
+      hasApolloApiKey: !!apolloApiKey,
+      apolloApiKeyLength: apolloApiKey?.length || 0,
+      isProviderConfigured: isProviderConfigured()
+    });
+
+    // For Apollo, check if integration exists OR API key is provided
+    if (selectedProvider === 'apollo' && !apolloIntegration && !apolloApiKey) {
+      setMessage('Please either connect your Apollo account from Settings or provide your Apollo API key.');
       setShowError(true);
-      setTimeout(() => {
-        navigate('/settings');
-      }, 2000);
+      setShowApiKeyDialog(true);
       return;
     }
 
@@ -627,8 +648,9 @@ export default function DataEnrichment() {
     try {
       const searchPayload: any = {
         contactType: contactSearchType,
-        contactsToFind
-        // Apollo now uses OAuth - API key not needed
+        contactsToFind,
+        // Include Apollo API key if available, otherwise will use OAuth
+        apolloApiKey: apolloApiKey || undefined
       };
 
       // Add appropriate criteria based on contact type
@@ -831,12 +853,29 @@ export default function DataEnrichment() {
       const url = getApiUrl('data-enrichment/validate-key');
       console.log('Sending request to:', url);
 
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+      };
+
+      // Add auth token for server requests
+      const token = localStorage.getItem('token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log('Sending validation request:', {
+        url,
+        headers: { ...headers, Authorization: headers.Authorization ? '[TOKEN]' : 'MISSING' },
+        body: {
+          apiKey: currentApiKey ? '[API_KEY_PROVIDED]' : 'MISSING',
+          provider: selectedProvider
+        }
+      });
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
+        headers,
+        body: JSON.stringify({
           apiKey: currentApiKey,
           provider: selectedProvider
         })
@@ -850,7 +889,7 @@ export default function DataEnrichment() {
 
       const data = await response.json();
       console.log('Response data:', data);
-      
+
       if (data.success && data.valid) {
         setIsKeyValid(true);
         localStorage.setItem('isKeyValid', 'true');
@@ -882,17 +921,19 @@ export default function DataEnrichment() {
   };
 
   const handleRemoveConfiguration = () => {
-    // Clear all API keys from localStorage (Apollo now uses OAuth, not API keys)
+    // Clear all API keys from localStorage
+    localStorage.removeItem('apolloApiKey');
     localStorage.removeItem('zoominfoApiKey');
     localStorage.removeItem('grataApiKey');
     localStorage.removeItem('selectedProvider');
     localStorage.removeItem('isKeyValid');
-    
+
     // Reset state
+    setApolloApiKey('');
     setZoominfoApiKey('');
     setGrataApiKey('');
     setSelectedProvider('apollo');
-    
+
     // Close dialog
     setShowApiKeyDialog(false);
     
@@ -958,9 +999,10 @@ export default function DataEnrichment() {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      // Only append API key for non-Apollo providers
-      if (selectedProvider !== 'apollo') {
-        formData.append('apiKey', getCurrentApiKey());
+      // Append API key for all providers (Apollo now supports API key as fallback)
+      const apiKey = getCurrentApiKey();
+      if (apiKey) {
+        formData.append('apiKey', apiKey);
       }
       formData.append('provider', selectedProvider);
 
@@ -1147,12 +1189,12 @@ export default function DataEnrichment() {
               {/* Action Buttons */}
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
-                  variant={isKeyValid ? "contained" : "text"}
+                  variant={isProviderConfigured() ? "contained" : "text"}
                   size="large"
                   startIcon={<DataUsageIcon />}
                   onClick={() => setShowApiKeyDialog(true)}
                   sx={{
-                    ...(isKeyValid ? {
+                    ...(isProviderConfigured() ? {
                       // Configured state - red background with white text
                       background: '#dc2626',
                       color: 'white',
@@ -1196,7 +1238,7 @@ export default function DataEnrichment() {
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  {isKeyValid ? 'Data Provider Configured' : 'Configure Data Provider'}
+                  {isProviderConfigured() ? 'Data Provider Configured' : 'Configure Data Provider'}
                 </Button>
               </Box>
             </Box>
@@ -2918,9 +2960,27 @@ export default function DataEnrichment() {
             </Typography>
             {selectedProvider === 'apollo' && (
               <>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Apollo uses OAuth authentication. Connect your Apollo account from Settings instead of using an API key.
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  <strong>Option 1: OAuth (Recommended)</strong><br />
+                  Connect your Apollo account from Settings for secure OAuth authentication.
                 </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  <strong>Option 2: API Key</strong><br />
+                  1. Go to Apollo Settings → Integrations → API<br />
+                  2. Copy your API key<br />
+                  3. Paste it in the field below
+                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    setShowApiKeyDialog(false);
+                    navigate('/settings');
+                  }}
+                  sx={{ mb: 2, mr: 1 }}
+                >
+                  Go to Settings (OAuth)
+                </Button>
               </>
             )}
             {selectedProvider === 'zoominfo' && (
@@ -2950,6 +3010,36 @@ export default function DataEnrichment() {
               </>
             )}
           </Alert>
+
+          {/* API Key Input Field */}
+          <TextField
+            fullWidth
+            label={`${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API Key`}
+            placeholder={`Enter your ${selectedProvider.charAt(0).toUpperCase() + selectedProvider.slice(1)} API key`}
+            value={getCurrentApiKey()}
+            onChange={(e) => setCurrentApiKey(e.target.value)}
+            variant="outlined"
+            size="medium"
+            type="password"
+            sx={{
+              mt: 3,
+              '& .MuiOutlinedInput-root': {
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                backgroundColor: '#fafafa',
+                '&:hover': {
+                  backgroundColor: '#f5f5f5'
+                },
+                '&.Mui-focused': {
+                  backgroundColor: '#fff'
+                }
+              },
+              '& .MuiInputLabel-root': {
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 500
+              }
+            }}
+            helperText={selectedProvider === 'apollo' ? "API key is optional if you have OAuth connected" : "Required for data enrichment"}
+          />
         </DialogContent>
         <DialogActions sx={{ p: 4, pt: 2, gap: 2, justifyContent: 'space-between' }}>
           <Button 
@@ -2977,7 +3067,7 @@ export default function DataEnrichment() {
             >
               Cancel
             </Button>
-            {selectedProvider === 'apollo' ? (
+            {selectedProvider === 'apollo' && !getCurrentApiKey().trim() ? (
               <Button
                 variant="contained"
                 onClick={() => {
@@ -2994,7 +3084,7 @@ export default function DataEnrichment() {
                   px: 3
                 }}
               >
-                {apolloIntegration ? 'Manage Connection' : 'Connect Apollo'}
+                {apolloIntegration ? 'Manage Connection' : 'Go to Settings (OAuth)'}
               </Button>
             ) : (
               <Button
@@ -3010,7 +3100,7 @@ export default function DataEnrichment() {
                   px: 3
                 }}
               >
-                {isCheckingIntegration ? 'Validating...' : 'Validate & Save'}
+                {isCheckingIntegration ? 'Validating...' : (selectedProvider === 'apollo' ? 'Connect Apollo' : 'Validate & Save')}
               </Button>
             )}
           </Box>

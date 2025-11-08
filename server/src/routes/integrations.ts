@@ -1485,6 +1485,47 @@ router.post('/apollo/connect', auth, async (req, res) => {
   }
 });
 
+// Debug endpoint: Show Apollo configuration details
+// GET /api/integrations/apollo/debug-config
+// NO AUTH REQUIRED - for debugging purposes only
+router.get('/apollo/debug-config', async (req, res) => {
+  try {
+    const config = {
+      clientId: process.env.APOLLO_CLIENT_ID ? `${process.env.APOLLO_CLIENT_ID.substring(0, 8)}...` : 'NOT SET',
+      clientSecret: process.env.APOLLO_CLIENT_SECRET ? 'SET' : 'NOT SET',
+      redirectUri: process.env.APOLLO_REDIRECT_URI || 'NOT SET',
+      baseUrl: 'https://app.apollo.io',
+      authEndpoint: '/oauth/authorize',
+      tokenEndpoint: 'https://app.apollo.io/api/v1/oauth/token'
+    };
+
+    // Generate test URLs with and without state
+    const testUrlWithState = ApolloAuthService.getAuthUrl('test-user', []);
+    const testUrlWithoutState = ApolloAuthService.getAuthUrlWithoutState([]);
+
+    res.json({
+      success: true,
+      configuration: config,
+      testUrls: {
+        withState: testUrlWithState,
+        withoutState: testUrlWithoutState
+      },
+      recommendations: [
+        'Verify Client ID matches exactly in Apollo registration',
+        'Ensure Redirect URI matches exactly (no trailing slash)',
+        'Check if app status is "Approved" not just "Registered"',
+        'Try the URLs above to test if they work'
+      ]
+    });
+  } catch (error) {
+    logger.error('Error generating Apollo debug config:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate debug config'
+    });
+  }
+});
+
 // Test endpoint: Generate Apollo OAuth URL without state (for debugging)
 // GET /api/integrations/apollo/test-connect
 // NO AUTH REQUIRED - for testing purposes only
