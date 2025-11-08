@@ -269,19 +269,35 @@ Regards`,
   // Use real API for deals data
   const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
 
+  // Debug: Log raw API deals BEFORE transformation
+  console.log('Deals.tsx: apiDeals (raw from hook):', apiDeals);
+  console.log('Deals.tsx: apiDeals length:', apiDeals?.length);
+  console.log('Deals.tsx: apiDeals type:', typeof apiDeals);
+  console.log('Deals.tsx: apiDeals is array?', Array.isArray(apiDeals));
+
   // Transform API deals to include mock people data for now
-  const deals: DealWithContacts[] = apiDeals.map(deal => ({
+  // Guard against empty or undefined apiDeals
+  const dealsArray = Array.isArray(apiDeals) ? apiDeals : [];
+  console.log('Deals.tsx: dealsArray before transform:', dealsArray);
+  console.log('Deals.tsx: dealsArray length:', dealsArray.length);
+  
+  const deals: DealWithContacts[] = dealsArray.map(deal => ({
     ...deal,
     people: mockPeople // This will be replaced with real contact data later
   }));
+  
+  console.log('Deals.tsx: deals after transform:', deals);
+  console.log('Deals.tsx: deals length after transform:', deals.length);
 
   // Debug: Log deals data to see what we're working with
-  console.log('Deals loading:', loading);
-  console.log('Deals error:', error);
-  console.log('All deals:', deals);
-  console.log('Active deals:', deals.filter(d => d.status === 'active'));
-  console.log('Prospective deals:', deals.filter(d => d.status !== 'active' && d.status !== 'closed'));
-  console.log('Current activeTab:', activeTab);
+  console.log('Deals.tsx: loading:', loading);
+  console.log('Deals.tsx: error:', error);
+  console.log('Deals.tsx: total:', total);
+  console.log('Deals.tsx: deals (after transform):', deals);
+  console.log('Deals.tsx: deals length:', deals.length);
+  console.log('Deals.tsx: Active deals:', deals.filter(d => d.status === 'active'));
+  console.log('Deals.tsx: Prospective deals:', deals.filter(d => d.status !== 'active' && d.status !== 'closed'));
+  console.log('Deals.tsx: Current activeTab:', activeTab);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, dealId: string) => {
     setAnchorEl(event.currentTarget);
@@ -1107,7 +1123,7 @@ Regards`,
   };
 
   return (
-    <Box>
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', width: '100%' }}>
       {(viewMode as string) !== 'pipeline' && (
         <Box sx={{
           position: 'relative',
@@ -1497,14 +1513,42 @@ Regards`,
           </Box>
 
           <Box sx={{ position: 'relative' }}>
-            <DealPipeline
-              deals={filteredDeals}
-              loading={loading}
-              error={error}
-              onRefresh={refreshDeals}
-              onEditDeal={handleEditDeal}
-              onDeleteDeal={handleDeleteDeal}
-            />
+            {(() => {
+              try {
+                console.log('Deals.tsx: About to render DealPipeline with deals:', deals);
+                console.log('Deals.tsx: About to render DealPipeline with deals length:', deals?.length);
+                console.log('Deals.tsx: About to render DealPipeline with loading:', loading);
+                console.log('Deals.tsx: About to render DealPipeline with error:', error);
+              } catch (err) {
+                console.error('Error in Deals.tsx render:', err);
+              }
+              return null;
+            })()}
+            {(() => {
+              try {
+                return (
+                  <DealPipeline
+                    deals={deals || []}
+                    loading={loading}
+                    error={error}
+                    onRefresh={refreshDeals}
+                    onEditDeal={handleEditDeal}
+                    onDeleteDeal={handleDeleteDeal}
+                  />
+                );
+              } catch (err: any) {
+                console.error('Error rendering DealPipeline:', err);
+                return (
+                  <Alert severity="error" sx={{ m: 2 }}>
+                    Error rendering Deal Pipeline: {err?.message || 'Unknown error'}
+                    <br />
+                    <Button onClick={() => window.location.reload()} sx={{ mt: 1 }}>
+                      Reload Page
+                    </Button>
+                  </Alert>
+                );
+              }
+            })()}
           </Box>
 
         {/* LinkedIn Outreach Section */}

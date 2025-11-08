@@ -53,6 +53,8 @@ router.get('/', firebaseAuthMiddleware, async (req, res) => {
     const userId = req.userId!;
     const { search, sector, stage, status, limit = 50, offset = 0 } = req.query;
 
+    logger.info('Get deals request', { userId, search, sector, stage, status, limit, offset });
+
     const result = await DealsFirestoreService.getAllDeals(userId, {
       search: search as string,
       sector: sector as string,
@@ -61,6 +63,8 @@ router.get('/', firebaseAuthMiddleware, async (req, res) => {
       limit: Number(limit),
       offset: Number(offset),
     });
+
+    logger.info('Get deals result', { userId, dealsCount: result.deals?.length || 0, total: result.total });
 
     res.json({
       success: true,

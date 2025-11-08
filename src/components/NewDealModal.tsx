@@ -66,6 +66,17 @@ const stages = [
   { value: 'ioi-loi', label: 'IOI/LOI' }
 ];
 
+// Map frontend stage values to backend stage values
+const mapStageToBackend = (frontendStage: string): string => {
+  const stageMap: Record<string, string> = {
+    'all': 'prospect',
+    'response-received': 'prospect',
+    'initial-diligence': 'due-diligence',
+    'ioi-loi': 'term-sheet'
+  };
+  return stageMap[frontendStage] || 'prospect';
+};
+
 const sectors = [
   'Technology',
   'Healthcare',
@@ -217,34 +228,65 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       // Validate required fields
       if (!formData.company.trim()) {
         setError('Company name is required');
+        setLoading(false);
         return;
       }
       if (!formData.sector) {
         setError('Sector is required');
+        setLoading(false);
         return;
       }
       if (!formData.stage) {
         setError('Stage is required');
+        setLoading(false);
         return;
       }
 
+      // Map stage to backend format
+      const backendStage = mapStageToBackend(formData.stage);
+
+      // Prepare deal data for backend (without contacts)
+      // Note: priority defaults to 'medium' on backend, but we'll set it explicitly
       const dealData = {
         company: formData.company.trim(),
         sector: formData.sector,
-        stage: formData.stage,
+        stage: backendStage,
         status: formData.status,
-        ...(formData.notes.trim() && { notes: formData.notes.trim() }),
-        // Include new enhanced data
-        contacts: selectedContacts
+        priority: 'medium' as const, // Backend requires this field
+        ...(formData.notes.trim() && { description: formData.notes.trim() })
       };
+      
+      console.log('NewDealModal: Creating deal with data:', dealData);
 
-      // Use the dealsApi service
+      // Create the deal via API
+      let createdDeal;
       try {
-        await dealsApi.createDeal(dealData);
-      } catch (apiError) {
-        console.warn('API not available, creating deal locally:', apiError);
-        // For now, just show success message even if API fails
-        // In a real app, you might want to queue this for later sync
+        const response = await dealsApi.createDeal(dealData);
+        createdDeal = response.deal;
+        console.log('Deal created successfully:', createdDeal);
+      } catch (apiError: any) {
+        console.error('Error creating deal:', apiError);
+        const errorMessage = apiError?.response?.data?.message || 
+                           apiError?.message || 
+                           'Failed to create deal. Please try again.';
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
+
+      // Add contacts to the deal if any were selected
+      if (selectedContacts.length > 0 && createdDeal?.id) {
+        try {
+          // Add each contact to the deal
+          for (const contact of selectedContacts) {
+            await dealsApi.addContactToDeal(createdDeal.id, contact.id);
+          }
+          console.log(`Added ${selectedContacts.length} contacts to deal`);
+        } catch (contactError: any) {
+          console.error('Error adding contacts to deal:', contactError);
+          // Don't fail the entire operation if contacts fail to add
+          // Just log the error - the deal was created successfully
+        }
       }
 
       // Reset form
@@ -257,11 +299,16 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       });
       setSelectedContacts([]);
 
-      onSuccess();
+      // Call onSuccess to refresh the deals list - wait for it to complete
+      // This ensures the deals are fetched before the modal closes
+      if (onSuccess) {
+        await onSuccess();
+      }
+      
       onClose();
     } catch (err: any) {
-      console.error('Error creating deal:', err);
-      setError(err.message || 'Failed to create deal');
+      console.error('Unexpected error creating deal:', err);
+      setError(err.message || 'Failed to create deal. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -329,7 +376,10 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       <Box sx={{ 
         p: 4, 
         bgcolor: '#F8FAFC',
-        color: '#1E293B'
+        color: '#1E293B',
+        maxHeight: '60vh',
+        overflowY: 'auto',
+        overflowX: 'hidden'
       }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>

@@ -11,12 +11,34 @@ export const useDeals = (filters: SearchFilters = {}) => {
     try {
       setLoading(true);
       setError(null);
+      console.log('useDeals: Fetching deals with filters:', filters);
       const response = await dealsApi.getDeals(filters);
-      console.log('useDeals response:', response);
-      setDeals(response.deals);
-      setTotal(response.total);
+      console.log('useDeals: Full response received:', response);
+      console.log('useDeals: response.deals:', response.deals);
+      console.log('useDeals: response.deals length:', response.deals?.length);
+      console.log('useDeals: response.total:', response.total);
+      
+      if (!response || !response.deals) {
+        console.error('useDeals: Invalid response structure:', response);
+        throw new Error('Invalid response structure: missing deals array');
+      }
+      
+      // Ensure we have a valid array
+      const dealsArray = Array.isArray(response.deals) ? response.deals : [];
+      console.log('useDeals: Setting deals array:', dealsArray);
+      console.log('useDeals: Deals array length:', dealsArray.length);
+      console.log('useDeals: First deal:', dealsArray[0]);
+      
+      setDeals(dealsArray);
+      setTotal(response.total || dealsArray.length);
+      console.log('useDeals: Set deals state:', dealsArray.length, 'deals');
     } catch (err: any) {
-      console.error('Error fetching deals:', err);
+      console.error('useDeals: Error fetching deals:', err);
+      console.error('useDeals: Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       setError(err.message || 'Failed to fetch deals');
       setDeals([]);
       setTotal(0);
@@ -26,8 +48,15 @@ export const useDeals = (filters: SearchFilters = {}) => {
   };
 
   useEffect(() => {
+    console.log('useDeals: useEffect triggered, calling fetchDeals');
     fetchDeals();
   }, [JSON.stringify(filters)]); // Re-fetch when filters change
+  
+  // Also log when deals state changes
+  useEffect(() => {
+    console.log('useDeals: deals state changed:', deals);
+    console.log('useDeals: deals state length:', deals.length);
+  }, [deals]);
 
   const refreshDeals = () => {
     fetchDeals();
