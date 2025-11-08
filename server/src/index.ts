@@ -236,9 +236,12 @@ app.use('/api/reports', firebaseAuthMiddleware, reportRoutes);
 // Integration routes with conditional auth (callback route is public)
 app.use('/api/integrations', (req, res, next) => {
   console.log('Integration route hit:', req.path, req.method);
-  // Skip auth middleware for the OAuth callback routes
-  if (req.path === '/google/callback' || req.path === '/microsoft/callback' || req.path === '/apollo/callback') {
-    console.log('Skipping auth for OAuth callback');
+  // Skip auth middleware for the OAuth callback routes and test endpoints
+  if (req.path === '/google/callback' || 
+      req.path === '/microsoft/callback' || 
+      req.path === '/apollo/callback' ||
+      req.path === '/apollo/test-connect') {
+    console.log('Skipping auth for OAuth callback/test endpoint');
     return next();
   }
   console.log('Applying auth middleware');

@@ -1485,6 +1485,125 @@ router.post('/apollo/connect', auth, async (req, res) => {
   }
 });
 
+// Test endpoint: Generate Apollo OAuth URL without state (for debugging)
+// GET /api/integrations/apollo/test-connect
+// NO AUTH REQUIRED - for testing purposes only
+router.get('/apollo/test-connect', async (req, res) => {
+  try {
+    logger.info('Apollo OAuth test connect (without state)', { 
+      query: req.query,
+      headers: req.headers
+    });
+
+    // Generate URL without state parameter
+    const authUrl = ApolloAuthService.getAuthUrlWithoutState([]);
+    
+    logger.info('Generated Apollo auth URL (test mode - no state)', { 
+      authUrl: authUrl.substring(0, 150) + '...',
+      urlLength: authUrl.length
+    });
+
+    // Return HTML page with clickable link for easy testing
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Apollo OAuth Test - No State</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              max-width: 800px;
+              margin: 50px auto;
+              padding: 20px;
+              background: #f5f5f5;
+            }
+            .container {
+              background: white;
+              padding: 30px;
+              border-radius: 8px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            h1 { color: #333; }
+            .info {
+              background: #e3f2fd;
+              padding: 15px;
+              border-radius: 4px;
+              margin: 20px 0;
+            }
+            .url-box {
+              background: #f5f5f5;
+              padding: 15px;
+              border-radius: 4px;
+              word-break: break-all;
+              font-family: monospace;
+              font-size: 12px;
+              margin: 20px 0;
+            }
+            .button {
+              display: inline-block;
+              background: #6366f1;
+              color: white;
+              padding: 12px 24px;
+              text-decoration: none;
+              border-radius: 4px;
+              margin: 10px 0;
+              font-weight: 600;
+            }
+            .button:hover {
+              background: #4f46e5;
+            }
+            .warning {
+              background: #fff3cd;
+              padding: 15px;
+              border-radius: 4px;
+              margin: 20px 0;
+              border-left: 4px solid #ffc107;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>🔍 Apollo OAuth Test - Without State Parameter</h1>
+            
+            <div class="info">
+              <strong>Purpose:</strong> This URL was generated WITHOUT a state parameter to test if Apollo accepts the authorization request.
+              <br><br>
+              <strong>If this works:</strong> The issue is with state parameter encoding.
+              <br>
+              <strong>If this still 404s:</strong> The issue is something else (app registration, client ID, redirect URI, etc.)
+            </div>
+
+            <div class="warning">
+              <strong>⚠️ Note:</strong> This is a test endpoint. In production, you should always use state parameters for security.
+            </div>
+
+            <h2>Authorization URL:</h2>
+            <div class="url-box">${authUrl}</div>
+
+            <a href="${authUrl}" class="button" target="_blank">🚀 Test Apollo OAuth (Opens in New Tab)</a>
+
+            <h2>What to expect:</h2>
+            <ul>
+              <li><strong>If successful:</strong> Apollo will redirect to your callback URL with an authorization code</li>
+              <li><strong>If 404:</strong> Apollo is rejecting the request - check app registration status</li>
+              <li><strong>If error:</strong> Check the error message in the URL parameters</li>
+            </ul>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    logger.error('Error generating test Apollo OAuth URL:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate test Apollo OAuth URL'
+    });
+  }
+});
+
 // Handle Apollo OAuth callback (NO AUTH REQUIRED - this is the callback)
 router.get('/apollo/callback', async (req, res) => {
   try {
