@@ -201,7 +201,7 @@ export default function EditDealModal({ open, deal, onClose, onSuccess }: EditDe
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 0, px: 3 }}>
+      <DialogContent sx={{ pt: 0, px: 3, maxHeight: '60vh', overflowY: 'auto', overflowX: 'hidden' }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3, mt: 4 }} onClose={() => setError('')}>
             {error}

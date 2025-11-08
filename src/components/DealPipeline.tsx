@@ -54,6 +54,20 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+  closestCenter,
+  useDraggable,
+  useDroppable
+} from '@dnd-kit/core';
 import { Deal as ApiDeal } from '../services/dealsApi';
 import dealsApi from '../services/dealsApi';
 import integrationService from '../services/integrationService';
@@ -210,13 +224,25 @@ const sampleDeals: DealWithContacts[] = [
   }
 ];
 
-export default function DealPipeline({ 
-  deals, 
-  loading, 
-  error, 
-  onRefresh, 
-  onEditDeal, 
-  onDeleteDeal 
+// Add global CSS animation for pulse effect
+const pulseAnimation = `
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+`;
+
+export default function DealPipeline({
+  deals,
+  loading,
+  error,
+  onRefresh,
+  onEditDeal,
+  onDeleteDeal
 }: DealPipelineProps) {
   const navigate = useNavigate();
   const [expandedDeals, setExpandedDeals] = useState<Set<string>>(new Set());
@@ -227,23 +253,83 @@ export default function DealPipeline({
   const [companyModalOpen, setCompanyModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<DealWithContacts | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // Track deals that should appear only in "All" column (not in specific columns)
+  const [dealsInAllOnly, setDealsInAllOnly] = useState<Set<string>>(new Set());
+  // Track optimistic stage updates for instant UI feedback
+  const [optimisticStageUpdates, setOptimisticStageUpdates] = useState<Map<string, string>>(new Map());
   
   // Drag and drop state
-  const [draggedDeal, setDraggedDeal] = useState<DealWithContacts | null>(null);
-  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  
+  // Configure sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before starting drag
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
   
   // Email state management
   const [outlookEmails, setOutlookEmails] = useState<OutlookEmail[]>([]);
   const [emailsLoading, setEmailsLoading] = useState(false);
   const [emailsError, setEmailsError] = useState<string | null>(null);
 
+  // Debug: Log deals prop received by DealPipeline
+  console.log('DealPipeline: Component render - deals prop received:', deals);
+  console.log('DealPipeline: Component render - deals prop length:', deals?.length);
+  console.log('DealPipeline: Component render - loading:', loading);
+  console.log('DealPipeline: Component render - error:', error);
+  console.log('DealPipeline: Component render - deals prop type:', typeof deals);
+  console.log('DealPipeline: Component render - deals is array?', Array.isArray(deals));
+  console.log('DealPipeline: Component render - First deal sample:', deals?.[0]);
+
   // Transform API deals to include mock people data for now
-  const dealsWithContacts: DealWithContacts[] = deals.map(deal => ({
+  // Guard against empty or undefined deals array
+  const dealsArray = Array.isArray(deals) ? deals : [];
+  console.log('DealPipeline: Component render - dealsArray length:', dealsArray.length);
+  
+  // Apply optimistic stage updates to deals for instant UI feedback
+  const dealsWithContacts: DealWithContacts[] = dealsArray.map(deal => {
+    const optimisticStage = optimisticStageUpdates.get(deal.id);
+    return {
     ...deal,
+      stage: optimisticStage || deal.stage, // Use optimistic stage if available
     people: mockPeople // This will be replaced with real contact data later
-  }));
+    };
+  });
+  
+  console.log('DealPipeline: Component render - dealsWithContacts length:', dealsWithContacts.length);
+  console.log('DealPipeline: Component render - dealsWithContacts:', dealsWithContacts);
+
+  // Debug: Log when deals prop changes
+  useEffect(() => {
+    console.log('DealPipeline: useEffect - deals prop changed:', deals);
+    console.log('DealPipeline: useEffect - deals length:', deals?.length);
+    console.log('DealPipeline: useEffect - loading:', loading);
+    
+    // Clear optimistic updates when server confirms them
+    // If a deal's stage in props matches the optimistic stage, clear the optimistic update
+    if (!loading && deals && deals.length > 0) {
+      setOptimisticStageUpdates(prev => {
+        const newMap = new Map();
+        prev.forEach((optimisticStage, dealId) => {
+          const deal = deals.find(d => d.id === dealId);
+          // Keep optimistic update only if server stage doesn't match yet
+          // This means the server hasn't confirmed the update
+          if (deal && deal.stage !== optimisticStage) {
+            newMap.set(dealId, optimisticStage);
+          }
+          // If deal.stage === optimisticStage, the server has confirmed it, so remove from map
+        });
+        return newMap;
+      });
+    }
+  }, [deals, loading]);
 
   // Fetch Outlook emails on component mount
   useEffect(() => {
@@ -317,23 +403,78 @@ export default function DealPipeline({
     // Use only real Firebase deals
     const allDeals = dealsWithContacts;
 
-    if (stageValue === 'all') {
-      return allDeals.filter(deal => deal.status === 'active');
+    // Debug logging - log BEFORE any filtering
+    console.log('DealPipeline.getDealsForStage - Input dealsWithContacts:', allDeals);
+    console.log('DealPipeline.getDealsForStage - dealsWithContacts length:', allDeals.length);
+    console.log('DealPipeline.getDealsForStage - Stage value:', stageValue);
+    
+    if (allDeals.length === 0) {
+      console.warn('DealPipeline.getDealsForStage - WARNING: No deals received!');
+      console.log('DealPipeline.getDealsForStage - deals prop:', deals);
+      return [];
     }
-    // For now, we'll use the existing stage field to map to our new stages
-    // This is a simplified mapping - you may want to update your data model
-    return allDeals.filter(deal => {
+
+    // Log deal statuses to see what we're working with
+    const statusCounts = allDeals.reduce((acc, deal) => {
+      acc[deal.status || 'undefined'] = (acc[deal.status || 'undefined'] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('DealPipeline.getDealsForStage - Deal status counts:', statusCounts);
+    
+    // Log deal stages
+    const stageCounts = allDeals.reduce((acc, deal) => {
+      acc[deal.stage || 'undefined'] = (acc[deal.stage || 'undefined'] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('DealPipeline.getDealsForStage - Deal stage counts:', stageCounts);
+
+    // Filter to show deals that are not explicitly closed or lost
+    // This includes deals with status: 'active', 'paused', or undefined/missing status
+    const activeDeals = allDeals.filter(deal => {
+      const isShowable = !deal.status || deal.status === 'active' || deal.status === 'paused';
+      if (!isShowable) {
+        console.log(`DealPipeline.getDealsForStage - Filtered out deal (status: ${deal.status}):`, deal.company);
+      }
+      return isShowable;
+    });
+    console.log('DealPipeline.getDealsForStage - Active deals:', activeDeals);
+    console.log('DealPipeline.getDealsForStage - Active deals length:', activeDeals.length);
+
+    // Map backend stage values to frontend stage columns
+    // Backend stages: 'prospect', 'due-diligence', 'term-sheet', 'closing', 'closed'
+    // Frontend columns: 'all', 'response-received', 'initial-diligence', 'ioi-loi'
+
+    if (stageValue === 'all') {
+      // "All" column shows all active deals
+      return activeDeals;
+    }
+
+    const filtered = activeDeals.filter(deal => {
+      let matches = false;
+      // If deal has no stage, default to showing it in 'response-received' (prospect) column
+      const dealStage = deal.stage || 'prospect';
+
       switch (stageValue) {
         case 'response-received':
-          return deal.stage === 'prospect' || deal.stage === 'due-diligence';
+          matches = dealStage === 'prospect';
+          break;
         case 'initial-diligence':
-          return deal.stage === 'due-diligence' || deal.stage === 'term-sheet';
+          matches = dealStage === 'due-diligence';
+          break;
         case 'ioi-loi':
-          return deal.stage === 'term-sheet' || deal.stage === 'closing';
+          matches = dealStage === 'term-sheet' || dealStage === 'closing';
+          break;
         default:
-          return false;
+          matches = false;
       }
+      if (!matches) {
+        console.log(`DealPipeline.getDealsForStage - Deal ${deal.company} (stage: ${dealStage}) doesn't match ${stageValue}`);
+      }
+      return matches;
     });
+    console.log(`DealPipeline.getDealsForStage - Filtered deals for ${stageValue}:`, filtered);
+    console.log(`DealPipeline.getDealsForStage - Filtered deals length for ${stageValue}:`, filtered.length);
+    return filtered;
   };
 
   const getSentimentIcon = (sentiment: string) => {
@@ -349,63 +490,194 @@ export default function DealPipeline({
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (event: React.DragEvent, deal: DealWithContacts) => {
-    setDraggedDeal(deal);
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', deal.id);
+  // @dnd-kit drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    setActiveId(active.id as string);
   };
 
-  const handleDragEnd = () => {
-    setDraggedDeal(null);
-    setDragOverStage(null);
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverId(over?.id as string | null);
   };
 
-  const handleDragOver = (event: React.DragEvent, stageValue: string) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    setDragOverStage(stageValue);
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    setActiveId(null);
+    setOverId(null);
 
-  const handleDragLeave = () => {
-    setDragOverStage(null);
-  };
+    if (!over) {
+      return;
+    }
 
-  const handleDrop = async (event: React.DragEvent, targetStage: string) => {
-    event.preventDefault();
-    setDragOverStage(null);
+    const dealId = active.id as string;
+    const targetStage = over.id as string;
 
-    if (!draggedDeal) return;
+    // Find the deal being moved
+    const dealToMove = dealsWithContacts.find(d => d.id === dealId);
+    if (!dealToMove) {
+      console.error('Deal not found:', dealId);
+      return;
+    }
 
-    try {
-      // Map our pipeline stages to the API stage values
-      let newStage = draggedDeal.stage;
-      switch (targetStage) {
-        case 'response-received':
-          newStage = 'prospect';
-          break;
-        case 'initial-diligence':
-          newStage = 'due-diligence';
-          break;
-        case 'ioi-loi':
+    const currentBackendStage = dealToMove.stage || 'prospect';
+    const currentFrontendStage = mapBackendStageToFrontend(currentBackendStage);
+
+    // Handle dropping into "All" column
+    // Mark this deal to appear only in "All" column, not in specific columns
+    if (targetStage === 'all') {
+      console.log(`Deal "${dealToMove.company}" dropped into "All" column - marking to appear only in "All"`);
+      
+      // Add deal to the set of deals that should appear only in "All"
+      // This updates the UI immediately without any loading
+      setDealsInAllOnly(prev => {
+        const newSet = new Set(prev);
+        newSet.add(dealToMove.id);
+        return newSet;
+      });
+      
+      const stageName = stages.find(s => s.value === targetStage)?.label || targetStage;
+      setSnackbarMessage(`✓ ${dealToMove.company} moved to ${stageName}`);
+      setSnackbarOpen(true);
+      
+      // Update backend silently in the background without blocking UI
+      // No refresh needed - state update is already reflected in UI
+      dealsApi.updateDeal(dealToMove.id, { stage: currentBackendStage }).catch(err => {
+        console.error('Background update failed:', err);
+        // Optionally revert the state change on error
+      });
+      
+      return;
+    }
+
+    // Map our pipeline stages to the API stage values
+    let newStage: string;
+    switch (targetStage) {
+      case 'response-received':
+        newStage = 'prospect';
+        break;
+      case 'initial-diligence':
+        newStage = 'due-diligence';
+        break;
+      case 'ioi-loi':
+        // For 'ioi-loi', we need to check the current stage
+        // If it's already 'term-sheet' or 'closing', we might want to keep it
+        // But for consistency, let's set it to 'term-sheet' if it's 'closing'
+        if (currentBackendStage === 'closing') {
+        newStage = 'term-sheet';
+        } else {
           newStage = 'term-sheet';
-          break;
-        default:
-          return;
-      }
+        }
+        break;
+      default:
+        console.error('Unknown target stage:', targetStage);
+        return;
+    }
 
-      // Update the deal stage via API
-      await dealsApi.updateDeal(draggedDeal.id, { stage: newStage });
-      
-      setSnackbarMessage(`Deal moved to ${stages.find(s => s.value === targetStage)?.label}`);
+    // Don't update if the backend stage is already the target stage
+    // This prevents unnecessary API calls when the stage is already correct
+    if (currentBackendStage === newStage) {
+      console.log(`Deal "${dealToMove.company}" is already in stage "${newStage}", skipping update`);
+      return;
+    }
+
+    // Remove deal from "All only" set when moving to a specific column
+    setDealsInAllOnly(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(dealToMove.id);
+      return newSet;
+    });
+
+    // Optimistically update the stage immediately for instant UI feedback
+    setOptimisticStageUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.set(dealToMove.id, newStage);
+      return newMap;
+    });
+
+    // Allow updates even if frontend stage matches, as long as backend stage is different
+    // This handles cases like 'closing' -> 'ioi-loi' (which maps to 'term-sheet')
+    // Both 'closing' and 'term-sheet' map to 'ioi-loi' frontend column, but we want to allow the update
+
+    console.log(`Updating deal "${dealToMove.company}" (ID: ${dealToMove.id}) from stage "${currentBackendStage}" to "${newStage}"`);
+
+      const stageName = stages.find(s => s.value === targetStage)?.label || targetStage;
+      setSnackbarMessage(`✓ ${dealToMove.company} moved to ${stageName}`);
       setSnackbarOpen(true);
-      
-      // Refresh the deals list
-      onRefresh();
-    } catch (error) {
-      console.error('Error updating deal stage:', error);
-      setSnackbarMessage('Failed to move deal');
-      setSnackbarOpen(true);
+
+    // Update backend silently in the background without blocking UI
+    // No refresh needed - optimistic update is already reflected in UI
+    dealsApi.updateDeal(dealToMove.id, { stage: newStage })
+      .then(() => {
+        console.log('Deal updated successfully in background');
+        // Clear optimistic update since server has confirmed it
+        setOptimisticStageUpdates(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(dealToMove.id);
+          return newMap;
+        });
+        // Optionally do a silent refresh after a delay to sync with server
+        // But don't show loading state
+        setTimeout(() => {
+          onRefresh().catch(err => console.error('Silent refresh failed:', err));
+        }, 1000);
+      })
+      .catch((error: any) => {
+        console.error('Error updating deal stage in background:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          stack: error.stack
+        });
+        
+        // Revert the optimistic update on error
+        setOptimisticStageUpdates(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(dealToMove.id); // Remove optimistic update to revert to original stage
+          return newMap;
+        });
+        
+        setDealsInAllOnly(prev => {
+          const newSet = new Set(prev);
+          if (targetStage === 'all') {
+            newSet.delete(dealToMove.id);
+          }
+          return newSet;
+        });
+        
+        // Provide more specific error messages
+        let errorMessage = 'Unknown error';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.response?.status === 404) {
+          errorMessage = 'Deal not found';
+        } else if (error.response?.status === 400) {
+          errorMessage = 'Invalid request - please check the deal data';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error - please try again';
+        }
+        
+        setSnackbarMessage(`✗ Failed to move deal: ${errorMessage}`);
+        setSnackbarOpen(true);
+      });
+  };
+
+  // Helper function to map backend stage to frontend stage
+  const mapBackendStageToFrontend = (backendStage: string): string => {
+    switch (backendStage) {
+      case 'prospect':
+        return 'response-received';
+      case 'due-diligence':
+        return 'initial-diligence';
+      case 'term-sheet':
+      case 'closing':
+        return 'ioi-loi';
+      default:
+        return 'response-received';
     }
   };
 
@@ -472,32 +744,70 @@ export default function DealPipeline({
     }
   };
 
-  const DealCard = ({ deal }: { deal: DealWithContacts }) => {
+  // Draggable Deal Card Component
+  const DraggableDealCard = ({ deal }: { deal: DealWithContacts }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      isDragging,
+    } = useDraggable({
+      id: deal.id,
+      data: {
+        type: 'deal',
+        deal,
+      },
+    });
+
+    const style = transform
+      ? {
+          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        }
+      : undefined;
+
     const isExpanded = expandedDeals.has(deal.id);
 
     return (
       <Card
-        draggable
-        onDragStart={(e) => handleDragStart(e, deal)}
-        onDragEnd={handleDragEnd}
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
         sx={{
           mb: 2,
-          transition: 'all 0.3s ease',
-          cursor: 'grab',
+          cursor: isDragging ? 'grabbing' : 'grab',
           bgcolor: 'white',
           border: '1px solid #e5e7eb',
           borderRadius: 3,
-          opacity: draggedDeal?.id === deal.id ? 0.5 : 1,
+          opacity: isDragging ? 0.5 : 1,
+          transform: style?.transform || 'scale(1)',
+          transition: isDragging ? 'none' : 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: isDragging 
+            ? '0 12px 32px rgba(0,0,0,0.25)' 
+            : '0 2px 8px rgba(0,0,0,0.05)',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          position: 'relative',
           '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-            borderColor: '#10b981'
+            transform: isDragging 
+              ? style?.transform || 'scale(1)' 
+              : 'translateY(-4px) scale(1.01)',
+            boxShadow: isDragging 
+              ? '0 12px 32px rgba(0,0,0,0.25)' 
+              : '0 12px 32px rgba(0,0,0,0.12)',
+            borderColor: '#10b981',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           },
           '&:active': {
-            cursor: 'grabbing'
+            cursor: 'grabbing',
+          },
+        }}
+        onClick={(e) => {
+          // Prevent click when dragging
+          if (!isDragging) {
+            handleCompanyClick(deal);
           }
         }}
-        onClick={() => handleCompanyClick(deal)}
       >
         <CardContent sx={{ pb: 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -514,6 +824,9 @@ export default function DealPipeline({
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleDealExpansion(deal.id);
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
                   }}
                   sx={{ 
                     bgcolor: isExpanded ? '#000000' : 'transparent',
@@ -824,7 +1137,16 @@ export default function DealPipeline({
               <Avatar key={index}>{member?.split(' ').map(n => n[0]).join('') || 'N/A'}</Avatar>
             ))}
           </AvatarGroup>
-          <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleMenuOpen(e, deal.id); }}>
+          <IconButton 
+            size="small" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              handleMenuOpen(e, deal.id); 
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
+          >
             <MoreVertIcon fontSize="small" />
           </IconButton>
         </CardActions>
@@ -832,10 +1154,98 @@ export default function DealPipeline({
     );
   };
 
+  // Droppable Stage Component
+  const DroppableStage = ({ stage, children }: { stage: { value: string; label: string }; children: React.ReactNode }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: stage.value,
+      data: {
+        type: 'stage',
+        stage: stage.value,
+      },
+    });
+
+    return (
+      <Paper
+        ref={setNodeRef}
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          maxWidth: '25%',
+          p: 0,
+          borderRadius: '12px',
+          border: isOver ? '2px solid #10b981' : '1px solid #e5e7eb',
+          bgcolor: isOver ? '#f0fdf4' : '#ffffff',
+          boxShadow: isOver
+            ? '0 8px 24px rgba(16, 185, 129, 0.25)'
+            : '0 2px 8px rgba(0,0,0,0.05)',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: isOver ? 'scale(1.01)' : 'scale(1)',
+          overflow: 'visible',
+          position: 'relative',
+          zIndex: isOver ? 100 : 1,
+        }}
+      >
+        {children}
+      </Paper>
+    );
+  };
+
+  // Get active deal for drag overlay
+  const activeDeal = activeId ? dealsWithContacts.find(d => d.id === activeId) : null;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#f8f9fa' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Box sx={{ p: 4, bgcolor: '#f8f9fa', minHeight: '100vh' }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+        <Button onClick={onRefresh} variant="contained">
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
+  // Ensure sensors are properly initialized
+  // Sensors must be initialized before use in DndContext
+  if (!sensors) {
+    console.error('Sensors not initialized properly');
+    return (
+      <Box sx={{ p: 4, bgcolor: '#f8f9fa', minHeight: '100vh' }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Error initializing drag and drop sensors
+        </Alert>
+        <Button onClick={onRefresh} variant="contained">
+          Retry
+        </Button>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh' }}>
-      {/* Pipeline Header with Black/Grey Gradient */}
-      <Box sx={{ 
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh', position: 'relative', width: '100%' }}>
+        {/* Inject pulse animation */}
+        <style>{pulseAnimation}</style>
+
+        {/* Pipeline Header with Black/Grey Gradient */}
+        <Box sx={{ 
         background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
         borderRadius: '12px 12px 0 0',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
@@ -846,38 +1256,58 @@ export default function DealPipeline({
       }}>
         <Box sx={{ position: 'relative', zIndex: 2 }}>
           <Box sx={{ mb: 2 }}>
-            <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Typography 
                 variant="h4" 
                 sx={{ 
                   fontWeight: 400, 
                   color: 'white', 
                   fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  letterSpacing: '-0.02em',
-                  mb: 1
+                  letterSpacing: '-0.02em'
                 }}
               >
                 Deal Pipeline
               </Typography>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: 'rgba(255, 255, 255, 0.8)', 
+              <Chip
+                size="small"
+                label={`${dealsWithContacts.length} Deal${dealsWithContacts.length !== 1 ? 's' : ''}`}
+                sx={{
+                  bgcolor: '#f97316',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
                   fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 400,
-                  letterSpacing: '-0.01em'
+                  boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)',
+                  cursor: 'default',
+                  '&:hover': {
+                    bgcolor: '#f97316',
+                    color: 'white'
+                  },
+                  '& .MuiChip-label': {
+                    px: 1.5,
+                    py: 0.25
+                  }
                 }}
-              >
-                Track and manage your deal flow
-              </Typography>
+              />
             </Box>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.8)', 
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                fontWeight: 400,
+                letterSpacing: '-0.01em'
+              }}
+            >
+              Track and manage your deal flow
+            </Typography>
           </Box>
         </Box>
-      </Box>
+        </Box>
 
-      {/* Search Bar */}
-      <Box sx={{ mb: 3, px: 3 }}>
-        <TextField
+        {/* Search Bar */}
+        <Box sx={{ mb: 3, px: 3 }}>
+          <TextField
           placeholder="Search deals..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -908,13 +1338,13 @@ export default function DealPipeline({
               </InputAdornment>
             )
           }}
-        />
-      </Box>
+          />
+        </Box>
 
-      {/* Conditional Views */}
-      {viewMode === 'pipeline' ? (
-        /* Pipeline Columns View */
-        <Box sx={{ 
+        {/* Conditional Views */}
+        {viewMode === 'pipeline' ? (
+          /* Pipeline Columns View */
+          <Box sx={{ 
           display: 'flex', 
           gap: 1.5, 
           pb: 2, 
@@ -924,34 +1354,55 @@ export default function DealPipeline({
           overflowX: 'hidden',
           bgcolor: '#f8f9fa'
         }}>
-          {stages.map((stage) => {
-            const stageDeals = getDealsForStage(stage.value).filter(deal => 
+          {(() => {
+            // First, process all stages to determine which deals belong to specific columns
+            // This prevents duplicates - deals will appear in their specific column, not in "All"
+            const dealsInSpecificColumns = new Set<string>();
+            
+            // Process non-"All" stages first to track which deals are in specific columns
+            // Exclude deals that are marked to appear only in "All"
+            stages.forEach(stage => {
+              if (stage.value !== 'all') {
+                const rawStageDeals = getDealsForStage(stage.value);
+                rawStageDeals.forEach(deal => {
+                  if (deal.id && !dealsInAllOnly.has(deal.id)) {
+                    dealsInSpecificColumns.add(deal.id);
+                  }
+                });
+              }
+            });
+            
+            // Now render all stages
+            return stages.map((stage) => {
+            const rawStageDeals = getDealsForStage(stage.value);
+            console.log(`DealPipeline.render: Stage "${stage.value}" - rawStageDeals:`, rawStageDeals);
+            console.log(`DealPipeline.render: Stage "${stage.value}" - rawStageDeals length:`, rawStageDeals.length);
+            
+              // Filter deals based on whether they're in specific columns
+              let filteredDeals = rawStageDeals;
+              if (stage.value === 'all') {
+                // For "All" column, show deals that aren't in specific columns OR are marked to appear only in "All"
+                filteredDeals = rawStageDeals.filter(deal => {
+                  return !dealsInSpecificColumns.has(deal.id) || dealsInAllOnly.has(deal.id);
+                });
+              } else {
+                // For specific columns, exclude deals that are marked to appear only in "All"
+                filteredDeals = rawStageDeals.filter(deal => {
+                  return !dealsInAllOnly.has(deal.id);
+                });
+              }
+              
+              const stageDeals = filteredDeals.filter(deal => 
               searchTerm === '' || deal.company.toLowerCase().includes(searchTerm.toLowerCase())
             );
+              
+            console.log(`DealPipeline.render: Stage "${stage.value}" - stageDeals after search filter:`, stageDeals);
+            console.log(`DealPipeline.render: Stage "${stage.value}" - stageDeals length after filter:`, stageDeals.length);
+            
             const totalValue = stageDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
             
             return (
-              <Paper
-                key={stage.value}
-                onDragOver={(e) => handleDragOver(e, stage.value)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, stage.value)}
-                sx={{
-                  flex: 1,
-                  minWidth: 0,
-                  maxWidth: '25%',
-                  p: 0,
-                  borderRadius: '12px',
-                  border: '1px solid #e5e7eb',
-                  bgcolor: dragOverStage === stage.value ? '#f0fdf4' : '#ffffff',
-                  boxShadow: dragOverStage === stage.value 
-                    ? '0 4px 12px rgba(16, 185, 129, 0.2)' 
-                    : '0 2px 8px rgba(0,0,0,0.05)',
-                  transition: 'all 0.2s ease',
-                  cursor: dragOverStage === stage.value ? 'pointer' : 'default',
-                  overflow: 'hidden'
-                }}
-              >
+              <DroppableStage key={stage.value} stage={stage}>
                 {/* Stage Header */}
                 <Box sx={{
                   background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
@@ -1002,7 +1453,19 @@ export default function DealPipeline({
                 </Box>
 
                 {/* Stage Deals */}
-                <Box sx={{ minHeight: 400, p: 1.5 }}>
+                <Box 
+                  sx={{
+                    minHeight: 400,
+                    p: 1.5,
+                    position: 'relative',
+                    zIndex: 2
+                  }}
+                >
+                  {(() => {
+                    console.log(`DealPipeline.render: Rendering stage "${stage.value}" with ${stageDeals.length} deals`);
+                    console.log(`DealPipeline.render: stageDeals array:`, stageDeals);
+                    return null;
+                  })()}
                   {stageDeals.length === 0 ? (
                     stage.value === 'all' && outlookEmails.length > 0 ? (
                       <Box>
@@ -1054,143 +1517,157 @@ export default function DealPipeline({
                       </Box>
                     )
                   ) : (
-                    stageDeals.map((deal) => (
-                      <DealCard key={deal.id} deal={deal} />
-                    ))
+                    (() => {
+                      console.log(`DealPipeline.render: About to map ${stageDeals.length} deals for stage "${stage.value}"`);
+                      console.log(`DealPipeline.render: Deals to map:`, stageDeals);
+                      return stageDeals.map((deal, index) => {
+                        console.log(`DealPipeline.render: Mapping deal ${index + 1}/${stageDeals.length}:`, deal.company, deal.id);
+                        if (!deal.id) {
+                          console.error(`DealPipeline.render: Deal missing id!`, deal);
+                          return null;
+                        }
+                        if (!deal.company) {
+                          console.error(`DealPipeline.render: Deal missing company!`, deal);
+                          return null;
+                        }
+                        return <DraggableDealCard key={deal.id} deal={deal} />;
+                      });
+                    })()
                   )}
                 </Box>
-              </Paper>
+              </DroppableStage>
             );
-          })}
-        </Box>
-      ) : (
-        /* Tabs View */
-        <Box>
-          <Tabs value={0} sx={{ mb: 3, borderBottom: '1px solid #e0e0e0' }}>
-            <Tab label="All Deals" />
-            <Tab label="Response Received" />
-            <Tab label="Initial Diligence" />
-            <Tab label="IOI/LOI" />
-          </Tabs>
-          
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
-            {sampleDeals.filter(deal => 
-              searchTerm === '' || deal.company.toLowerCase().includes(searchTerm.toLowerCase())
-            ).map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
-            ))}
+            });
+          })()}
           </Box>
-        </Box>
-      )}
-
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={() => { navigate(`/deals/${selectedDealId}`); handleMenuClose(); }}>
-          <ListItemIcon>
-            <VisibilityIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>View Details</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => {
-          const deal = deals.find(d => d.id === selectedDealId);
-          if (deal) onEditDeal(deal);
-          handleMenuClose();
-        }}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit Deal</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon>
-            <PersonIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Add Contact</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon>
-            <AttachFileIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Add Activity</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon>
-            <TrendingUpIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Generate Report</ListItemText>
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleDeleteDeal} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete Deal</ListItemText>
-        </MenuItem>
-      </Menu>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={deleteConfirmOpen}
-        onClose={handleCancelDelete}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete this deal? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDelete}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Company Details Modal */}
-      <Dialog
-        open={companyModalOpen}
-        onClose={() => setCompanyModalOpen(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            maxHeight: '80vh'
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          bgcolor: '#000000',
-          color: 'white',
-          py: 2
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-              {selectedCompany?.company?.charAt(0)}
-            </Avatar>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {selectedCompany?.company}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                {selectedCompany?.sector} • ${((selectedCompany?.value || 0) / 1000000).toFixed(1)}M
-              </Typography>
+        ) : (
+          /* Tabs View */
+          <Box>
+            <Tabs value={0} sx={{ mb: 3, borderBottom: '1px solid #e0e0e0' }}>
+              <Tab label="All Deals" />
+              <Tab label="Response Received" />
+              <Tab label="Initial Diligence" />
+              <Tab label="IOI/LOI" />
+            </Tabs>
+            
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
+              {sampleDeals.filter(deal => 
+                searchTerm === '' || deal.company.toLowerCase().includes(searchTerm.toLowerCase())
+              ).map((deal) => (
+                <DraggableDealCard key={deal.id} deal={deal} />
+              ))}
             </Box>
           </Box>
-          <IconButton onClick={() => setCompanyModalOpen(false)} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
+        )}
+
+        {/* Context Menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => { navigate(`/deals/${selectedDealId}`); handleMenuClose(); }}>
+            <ListItemIcon>
+              <VisibilityIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>View Details</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={() => {
+            const deal = deals.find(d => d.id === selectedDealId);
+            if (deal) onEditDeal(deal);
+            handleMenuClose();
+          }}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit Deal</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleMenuClose}>
+            <ListItemIcon>
+              <PersonIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Add Contact</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleMenuClose}>
+            <ListItemIcon>
+              <AttachFileIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Add Activity</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={handleMenuClose}>
+            <ListItemIcon>
+              <TrendingUpIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Generate Report</ListItemText>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleDeleteDeal} sx={{ color: 'error.main' }}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Delete Deal</ListItemText>
+          </MenuItem>
+        </Menu>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteConfirmOpen}
+          onClose={handleCancelDelete}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to delete this deal? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelDelete}>Cancel</Button>
+            <Button onClick={handleConfirmDelete} color="error" variant="contained">
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Company Details Modal */}
+        <Dialog
+          open={companyModalOpen}
+          onClose={() => setCompanyModalOpen(false)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              maxHeight: '80vh'
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            bgcolor: '#000000',
+            color: 'white',
+            py: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
+                {selectedCompany?.company?.charAt(0)}
+              </Avatar>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  {selectedCompany?.company}
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  {selectedCompany?.sector} • ${((selectedCompany?.value || 0) / 1000000).toFixed(1)}M
+                </Typography>
+              </Box>
+            </Box>
+            <IconButton onClick={() => setCompanyModalOpen(false)} sx={{ color: 'white' }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
 
         <DialogContent sx={{ p: 0 }}>
           {selectedCompany && (
@@ -1237,23 +1714,162 @@ export default function DealPipeline({
             </Box>
           )}
         </DialogContent>
-      </Dialog>
+        </Dialog>
 
-      {/* Snackbar for drag and drop feedback */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity="success" 
-          sx={{ width: '100%' }}
+        {/* Snackbar for drag and drop feedback */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={3000}
+          onClose={() => setSnackbarOpen(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{
+            '& .MuiSnackbar-root': {
+              bottom: '24px !important'
+            }
+          }}
         >
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={snackbarMessage.startsWith('✗') ? 'error' : 'success'}
+            variant="filled"
+            sx={{
+              width: '100%',
+              minWidth: '300px',
+              fontSize: '0.95rem',
+              fontWeight: 500,
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+              borderRadius: 2,
+              '& .MuiAlert-icon': {
+                fontSize: '24px'
+              },
+              '& .MuiAlert-message': {
+                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                display: 'flex',
+                alignItems: 'center'
+              }
+            }}
+          >
           {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+          </Alert>
+        </Snackbar>
+
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeDeal ? (
+            <Card
+              sx={{
+                width: 300,
+                bgcolor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: 3,
+                boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+                transform: 'rotate(2deg) scale(1.02)',
+              }}
+            >
+              <CardContent sx={{ pb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar sx={{ bgcolor: '#000000' }}>
+                      {activeDeal.company.charAt(0)}
+                    </Avatar>
+                    {getSentimentIcon(activeDeal.sentiment || 'neutral')}
+                  </Box>
+                </Box>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    mb: 1, 
+                    color: '#1f2937',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em'
+                  }}
+                >
+                {activeDeal.company}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 2, 
+                  color: '#6b7280',
+                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 500
+                }}
+              >
+                {activeDeal.sector}
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: '#10b981',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em'
+                    }}
+                  >
+                  ${((activeDeal.value || 0) / 1000000).toFixed(1)}M
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: '#6b7280',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500
+                  }}
+                >
+                  Deal Value
+                  </Typography>
+                </Box>
+                <Box sx={{ mb: 2 }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500
+                    }}
+                  >
+                  Lead Partner
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: '#1f2937',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500
+                  }}
+                >
+                  {activeDeal.leadPartner}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: '#6b7280',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500
+                  }}
+                >
+                  Next Step
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: '#1f2937',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500
+                  }}
+                >
+                  {activeDeal.nextStep}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          ) : null}
+        </DragOverlay>
+      </Box>
+    </DndContext>
   );
 }

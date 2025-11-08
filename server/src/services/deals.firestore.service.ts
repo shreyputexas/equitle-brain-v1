@@ -69,10 +69,19 @@ export class DealsFirestoreService {
       }
 
       const snapshot = await query.limit(limit).get();
-      const deals = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const deals = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Convert Firestore Timestamps to JavaScript Dates
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+          lastActivity: data.lastActivity?.toDate ? data.lastActivity.toDate() : data.lastActivity,
+          targetClose: data.targetClose?.toDate ? data.targetClose.toDate() : data.targetClose,
+          actualClose: data.actualClose?.toDate ? data.actualClose.toDate() : data.actualClose,
+        };
+      });
 
       // Apply search filter (Firestore doesn't support full-text search natively)
       let filteredDeals = deals;
@@ -133,7 +142,17 @@ export class DealsFirestoreService {
         throw new Error('Deal not found');
       }
 
-      const dealData = { id: dealDoc.id, ...dealDoc.data() };
+      const rawDealData = dealDoc.data();
+      // Convert Firestore Timestamps to JavaScript Dates
+      const dealData = {
+        id: dealDoc.id,
+        ...rawDealData,
+        createdAt: rawDealData.createdAt?.toDate ? rawDealData.createdAt.toDate() : rawDealData.createdAt,
+        updatedAt: rawDealData.updatedAt?.toDate ? rawDealData.updatedAt.toDate() : rawDealData.updatedAt,
+        lastActivity: rawDealData.lastActivity?.toDate ? rawDealData.lastActivity.toDate() : rawDealData.lastActivity,
+        targetClose: rawDealData.targetClose?.toDate ? rawDealData.targetClose.toDate() : rawDealData.targetClose,
+        actualClose: rawDealData.actualClose?.toDate ? rawDealData.actualClose.toDate() : rawDealData.actualClose,
+      };
 
       // Get related data
       const [contactsSnapshot, activitiesSnapshot, communicationsSnapshot, documentsSnapshot] = await Promise.all([
@@ -183,17 +202,26 @@ export class DealsFirestoreService {
 
       logger.info('Deal created', { userId, dealId: docRef.id, company: dealData.company });
 
-      return {
-        deal: {
-          id: docRef.id,
-          ...createdDeal.data(),
-          _count: {
-            contacts: 0,
-            activities: 0,
-            communications: 0,
-            documents: 0,
-          }
+      const createdDealData = createdDeal.data();
+      // Convert Firestore Timestamps to JavaScript Dates
+      const convertedDeal = {
+        id: docRef.id,
+        ...createdDealData,
+        createdAt: createdDealData.createdAt?.toDate ? createdDealData.createdAt.toDate() : createdDealData.createdAt,
+        updatedAt: createdDealData.updatedAt?.toDate ? createdDealData.updatedAt.toDate() : createdDealData.updatedAt,
+        lastActivity: createdDealData.lastActivity?.toDate ? createdDealData.lastActivity.toDate() : createdDealData.lastActivity,
+        targetClose: createdDealData.targetClose?.toDate ? createdDealData.targetClose.toDate() : createdDealData.targetClose,
+        actualClose: createdDealData.actualClose?.toDate ? createdDealData.actualClose.toDate() : createdDealData.actualClose,
+        _count: {
+          contacts: 0,
+          activities: 0,
+          communications: 0,
+          documents: 0,
         }
+      };
+
+      return {
+        deal: convertedDeal
       };
     } catch (error: any) {
       logger.error('Error creating deal:', error);
