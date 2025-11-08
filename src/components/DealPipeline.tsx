@@ -257,6 +257,8 @@ export default function DealPipeline({
   const [dealsInAllOnly, setDealsInAllOnly] = useState<Set<string>>(new Set());
   // Track optimistic stage updates for instant UI feedback
   const [optimisticStageUpdates, setOptimisticStageUpdates] = useState<Map<string, string>>(new Map());
+  // Track pending drag operations to prevent race conditions
+  const pendingDragsRef = React.useRef<Set<string>>(new Set());
   
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -294,12 +296,18 @@ export default function DealPipeline({
   console.log('DealPipeline: Component render - dealsArray length:', dealsArray.length);
   
   // Apply optimistic stage updates to deals for instant UI feedback
+  // CRITICAL: Optimistic updates ALWAYS take precedence over props to prevent snap-back
   const dealsWithContacts: DealWithContacts[] = dealsArray.map(deal => {
     const optimisticStage = optimisticStageUpdates.get(deal.id);
+    // Always use optimistic stage if it exists - this prevents snap-back when props refresh
+    const finalStage = optimisticStage || deal.stage;
+    if (optimisticStage && optimisticStage !== deal.stage) {
+      console.log(`Applying optimistic update: Deal ${deal.id} (${deal.company}) stage: ${deal.stage} -> ${optimisticStage}`);
+    }
     return {
-    ...deal,
-      stage: optimisticStage || deal.stage, // Use optimistic stage if available
-    people: mockPeople // This will be replaced with real contact data later
+      ...deal,
+      stage: finalStage, // Optimistic stage always wins - prevents snap-back
+      people: mockPeople // This will be replaced with real contact data later
     };
   });
   
@@ -312,19 +320,30 @@ export default function DealPipeline({
     console.log('DealPipeline: useEffect - deals length:', deals?.length);
     console.log('DealPipeline: useEffect - loading:', loading);
     
-    // Clear optimistic updates when server confirms them
-    // If a deal's stage in props matches the optimistic stage, clear the optimistic update
+    // Only clear optimistic updates when server CONFIRMS them
+    // This means the server stage must match the optimistic stage
+    // We do NOT clear just because deals prop changed - that would cause snap-back
     if (!loading && deals && deals.length > 0) {
       setOptimisticStageUpdates(prev => {
         const newMap = new Map();
         prev.forEach((optimisticStage, dealId) => {
           const deal = deals.find(d => d.id === dealId);
-          // Keep optimistic update only if server stage doesn't match yet
-          // This means the server hasn't confirmed the update
-          if (deal && deal.stage !== optimisticStage) {
+          if (deal) {
+            // Only clear optimistic update if server stage MATCHES optimistic stage
+            // This means server has confirmed the update
+            if (deal.stage === optimisticStage) {
+              console.log(`Server confirmed: Deal ${dealId} stage is now ${optimisticStage}, clearing optimistic update`);
+              // Don't add to newMap - this clears the optimistic update
+            } else {
+              // Server stage doesn't match yet - keep optimistic update
+              // This prevents snap-back when deals prop refreshes with old stage
+              console.log(`Keeping optimistic update: Deal ${dealId} server stage (${deal.stage}) != optimistic (${optimisticStage})`);
+              newMap.set(dealId, optimisticStage);
+            }
+          } else {
+            // Deal not found in props, keep optimistic update
             newMap.set(dealId, optimisticStage);
           }
-          // If deal.stage === optimisticStage, the server has confirmed it, so remove from map
         });
         return newMap;
       });
@@ -514,12 +533,21 @@ export default function DealPipeline({
     const dealId = active.id as string;
     const targetStage = over.id as string;
 
+    // Prevent multiple simultaneous drags of the same deal
+    if (pendingDragsRef.current.has(dealId)) {
+      console.log(`Deal ${dealId} is already being moved, ignoring duplicate drag`);
+      return;
+    }
+
     // Find the deal being moved
     const dealToMove = dealsWithContacts.find(d => d.id === dealId);
     if (!dealToMove) {
       console.error('Deal not found:', dealId);
       return;
     }
+
+    // Mark this drag as pending
+    pendingDragsRef.current.add(dealId);
 
     const currentBackendStage = dealToMove.stage || 'prospect';
     const currentFrontendStage = mapBackendStageToFrontend(currentBackendStage);
@@ -541,12 +569,11 @@ export default function DealPipeline({
       setSnackbarMessage(`✓ ${dealToMove.company} moved to ${stageName}`);
       setSnackbarOpen(true);
       
-      // Update backend silently in the background without blocking UI
-      // No refresh needed - state update is already reflected in UI
-      dealsApi.updateDeal(dealToMove.id, { stage: currentBackendStage }).catch(err => {
-        console.error('Background update failed:', err);
-        // Optionally revert the state change on error
-      });
+      // No backend update needed for "All" - it's just a view filter
+      // The deal's stage remains unchanged, it just appears in "All" column
+      
+      // Remove from pending drags
+      pendingDragsRef.current.delete(dealToMove.id);
       
       return;
     }
@@ -590,9 +617,14 @@ export default function DealPipeline({
     });
 
     // Optimistically update the stage immediately for instant UI feedback
+    // This must happen BEFORE any other state updates to ensure UI updates correctly
+    // CRITICAL: This update persists until server confirms, preventing snap-back
     setOptimisticStageUpdates(prev => {
       const newMap = new Map(prev);
       newMap.set(dealToMove.id, newStage);
+      console.log(`Optimistic update: Deal ${dealToMove.id} (${dealToMove.company}) stage set to ${newStage}`);
+      console.log(`Optimistic updates map:`, Array.from(newMap.entries()));
+      // Force a re-render to ensure the UI updates immediately
       return newMap;
     });
 
@@ -611,17 +643,13 @@ export default function DealPipeline({
     dealsApi.updateDeal(dealToMove.id, { stage: newStage })
       .then(() => {
         console.log('Deal updated successfully in background');
-        // Clear optimistic update since server has confirmed it
-        setOptimisticStageUpdates(prev => {
-          const newMap = new Map(prev);
-          newMap.delete(dealToMove.id);
-          return newMap;
-        });
-        // Optionally do a silent refresh after a delay to sync with server
-        // But don't show loading state
-        setTimeout(() => {
-          onRefresh().catch(err => console.error('Silent refresh failed:', err));
-        }, 1000);
+        // Don't clear optimistic update immediately - let the useEffect handle it
+        // when the deals prop refreshes with the new stage from server
+        // This prevents race conditions and ensures smooth transitions
+        // Remove from pending drags
+        pendingDragsRef.current.delete(dealToMove.id);
+        // No refresh needed - optimistic updates handle UI, server sync happens naturally
+        // The optimistic update will be cleared automatically when deals prop updates with confirmed stage
       })
       .catch((error: any) => {
         console.error('Error updating deal stage in background:', error);
@@ -632,10 +660,11 @@ export default function DealPipeline({
           stack: error.stack
         });
         
-        // Revert the optimistic update on error
+        // Revert the optimistic update on error - this is the only time we should clear it
         setOptimisticStageUpdates(prev => {
           const newMap = new Map(prev);
           newMap.delete(dealToMove.id); // Remove optimistic update to revert to original stage
+          console.log(`Reverting optimistic update for deal ${dealToMove.id} due to error`);
           return newMap;
         });
         
@@ -663,6 +692,8 @@ export default function DealPipeline({
         
         setSnackbarMessage(`✗ Failed to move deal: ${errorMessage}`);
         setSnackbarOpen(true);
+        // Remove from pending drags on error
+        pendingDragsRef.current.delete(dealToMove.id);
       });
   };
 
@@ -705,6 +736,18 @@ export default function DealPipeline({
     if (selectedDealId) {
       try {
         await dealsApi.deleteDeal(selectedDealId);
+        // Remove from optimistic updates if present
+        setOptimisticStageUpdates(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(selectedDealId);
+          return newMap;
+        });
+        setDealsInAllOnly(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedDealId);
+          return newSet;
+        });
+        // Refresh to remove deleted deal
         onRefresh();
         setDeleteConfirmOpen(false);
       } catch (error) {
@@ -779,24 +822,29 @@ export default function DealPipeline({
           bgcolor: 'white',
           border: '1px solid #e5e7eb',
           borderRadius: 3,
-          opacity: isDragging ? 0.5 : 1,
+          opacity: isDragging ? 0.6 : 1,
           transform: style?.transform || 'scale(1)',
-          transition: isDragging ? 'none' : 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          // Smooth transitions when not dragging - Google Docs style
+          transition: isDragging 
+            ? 'none' 
+            : 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: isDragging 
-            ? '0 12px 32px rgba(0,0,0,0.25)' 
+            ? '0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' 
             : '0 2px 8px rgba(0,0,0,0.05)',
           userSelect: 'none',
           WebkitUserSelect: 'none',
           position: 'relative',
+          willChange: isDragging ? 'transform' : 'auto',
+          // Smooth hover effect
           '&:hover': {
             transform: isDragging 
               ? style?.transform || 'scale(1)' 
-              : 'translateY(-4px) scale(1.01)',
+              : 'translateY(-2px) scale(1.005)',
             boxShadow: isDragging 
-              ? '0 12px 32px rgba(0,0,0,0.25)' 
-              : '0 12px 32px rgba(0,0,0,0.12)',
+              ? '0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' 
+              : '0 8px 16px rgba(0,0,0,0.1)',
             borderColor: '#10b981',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
           },
           '&:active': {
             cursor: 'grabbing',
@@ -1178,11 +1226,12 @@ export default function DealPipeline({
           boxShadow: isOver
             ? '0 8px 24px rgba(16, 185, 129, 0.25)'
             : '0 2px 8px rgba(0,0,0,0.05)',
-          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          transform: isOver ? 'scale(1.01)' : 'scale(1)',
+          transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: isOver ? 'scale(1.005)' : 'scale(1)',
           overflow: 'visible',
           position: 'relative',
           zIndex: isOver ? 100 : 1,
+          willChange: isOver ? 'transform, box-shadow' : 'auto',
         }}
       >
         {children}
@@ -1458,7 +1507,11 @@ export default function DealPipeline({
                     minHeight: 400,
                     p: 1.5,
                     position: 'relative',
-                    zIndex: 2
+                    zIndex: 2,
+                    // Smooth transitions for cards appearing/disappearing
+                    '& > *': {
+                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }
                   }}
                 >
                   {(() => {
@@ -1753,8 +1806,13 @@ export default function DealPipeline({
           </Alert>
         </Snackbar>
 
-        {/* Drag Overlay */}
-        <DragOverlay>
+        {/* Drag Overlay - Google Docs style smooth animation */}
+        <DragOverlay
+          dropAnimation={{
+            duration: 200,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
           {activeDeal ? (
             <Card
               sx={{
@@ -1762,8 +1820,10 @@ export default function DealPipeline({
                 bgcolor: 'white',
                 border: '1px solid #e5e7eb',
                 borderRadius: 3,
-                boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
-                transform: 'rotate(2deg) scale(1.02)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)',
+                transform: 'rotate(1deg) scale(1.03)',
+                opacity: 0.95,
+                transition: 'all 0.1s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               <CardContent sx={{ pb: 1 }}>
