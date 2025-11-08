@@ -46,6 +46,7 @@ import {
   Switch
 } from '@mui/material';
 import { getApiUrl, getSocketUrl } from '../config/api';
+import axios from '../lib/axios';
 import {
   CloudUpload as CloudUploadIcon,
   Search as SearchIcon,
@@ -694,22 +695,15 @@ export default function DataEnrichment() {
         // Automatically save discovered contacts to the database
         if (contacts.length > 0) {
           try {
-            const saveResponse = await fetch(getApiUrl('firebase/contacts/bulk-save'), {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
-              },
-              body: JSON.stringify({
-                contacts: contacts,
-                contactType: contactSearchType // 'people', 'broker', or 'investor'
-              })
+            const saveResponse = await axios.post('/api/firebase/contacts/bulk-save', {
+              contacts: contacts,
+              contactType: contactSearchType // 'people', 'broker', or 'investor'
             });
-            
-            const saveData = await saveResponse.json();
+
+            const saveData = saveResponse.data;
             console.log('Bulk save response:', saveData);
-            
-            if (saveResponse.ok && saveData.success) {
+
+            if (saveResponse.status === 200 && saveData.success) {
               setMessage(`✅ Found and saved ${saveData.saved} contacts to your Contacts page!`);
             } else {
               console.error('Failed to save contacts:', saveData);
