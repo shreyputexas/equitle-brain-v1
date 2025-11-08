@@ -261,44 +261,6 @@ class IntegrationService {
     }
   }
 
-  async connectMicrosoft(types: string[]): Promise<{ authUrl: string }> {
-    try {
-      const response = await axios.post(
-        getApiUrl('integrations/microsoft/connect'),
-        { types },
-        { headers: await this.getAuthHeaders() }
-      );
-      // Handle both response formats
-      const data = response.data as any;
-      if (data.success && data.data) {
-        return data.data;
-      }
-      return data;
-    } catch (error) {
-      console.error('Error connecting to Microsoft:', error);
-      throw error;
-    }
-  }
-
-  async connectApollo(scopes?: string[]): Promise<{ authUrl: string }> {
-    try {
-      const response = await axios.post(
-        getApiUrl('integrations/apollo/connect'),
-        { scopes },
-        { headers: await this.getAuthHeaders() }
-      );
-      // Handle both response formats
-      const data = response.data as any;
-      if (data.success && data.data) {
-        return data.data;
-      }
-      return data;
-    } catch (error) {
-      console.error('Error connecting to Apollo:', error);
-      throw error;
-    }
-  }
-
   async disconnectIntegration(integrationId: string): Promise<void> {
     try {
       await axios.delete(getApiUrl(`integrations/${integrationId}`), {

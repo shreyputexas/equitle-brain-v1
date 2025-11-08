@@ -101,7 +101,10 @@ const Contacts: React.FC = () => {
     title: '',
     company: '',
     type: 'deal' as ContactType,
-    tags: [] as string[]
+    tags: [] as string[],
+    city: '',
+    state: '',
+    website: ''
   });
 
   useEffect(() => {

@@ -549,7 +549,7 @@ export default function DealPipeline({
     }
 
     const dealId = active.id as string;
-    const targetStage = over.id as string;
+    const targetStage = over.id as 'all' | 'response-received' | 'initial-diligence' | 'ioi-loi';
 
     // Prevent multiple simultaneous drags of the same deal
     if (pendingDragsRef.current.has(dealId)) {
@@ -688,9 +688,8 @@ export default function DealPipeline({
         
         setDealsInAllOnly(prev => {
           const newSet = new Set(prev);
-          if (targetStage === 'all') {
-            newSet.delete(dealToMove.id);
-          }
+          // Remove from "All only" set on error (targetStage can't be 'all' here since we return early)
+          newSet.delete(dealToMove.id);
           return newSet;
         });
         
