@@ -57,7 +57,7 @@ router.delete('/all', firebaseAuthMiddleware, async (req, res) => {
 router.get('/', firebaseAuthMiddleware, async (req, res) => {
   try {
     const userId = (req as any).user?.uid;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 100;
 
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });

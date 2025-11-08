@@ -185,20 +185,41 @@ class IntegrationService {
 
   async connectGoogle(types: string[]): Promise<{ authUrl: string }> {
     try {
+      console.log('Initiating Google OAuth connection with types:', types);
+
+      const headers = await this.getAuthHeaders();
+      console.log('Auth headers prepared, making request to:', getApiUrl('integrations/google/connect'));
+
       const response = await axios.post(
         getApiUrl('integrations/google/connect'),
         { types },
-        { headers: await this.getAuthHeaders() }
+        { headers }
       );
+
+      console.log('Google OAuth response received:', response.data);
+
       // Handle both response formats
       const data = response.data as any;
       if (data.success && data.data) {
         return data.data;
       }
       return data;
-    } catch (error) {
-      console.error('Error connecting to Google:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Error connecting to Google:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+
+      throw new Error('Failed to initiate Google connection. Please ensure the backend server is running.');
     }
   }
 

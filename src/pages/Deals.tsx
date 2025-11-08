@@ -1158,28 +1158,31 @@ Regards`,
             right: 0,
             bottom: 0,
             background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.02) 0%, rgba(234, 88, 12, 0.05) 100%)',
+            zIndex: 1,
             '&::before': {
               content: '""',
               position: 'absolute',
-              top: -50,
-              right: -50,
-              width: 100,
-              height: 100,
+              top: 20,
+              right: 20,
+              width: 120,
+              height: 120,
               background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
               borderRadius: '50%',
-              opacity: 0.1
+              opacity: 0.15,
+              zIndex: 1
             },
             '&::after': {
               content: '""',
               position: 'absolute',
-              bottom: -30,
-              left: -30,
-              width: 60,
-              height: 60,
+              bottom: 20,
+              left: 20,
+              width: 80,
+              height: 80,
               background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
               borderRadius: 2,
-              opacity: 0.1,
-              transform: 'rotate(15deg)'
+              opacity: 0.15,
+              transform: 'rotate(15deg)',
+              zIndex: 1
             }
           }} />
 
@@ -1390,28 +1393,31 @@ Regards`,
               right: 0,
               bottom: 0,
               background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.02) 0%, rgba(234, 88, 12, 0.05) 100%)',
+              zIndex: 1,
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 100,
-                height: 100,
+                top: 20,
+                right: 20,
+                width: 120,
+                height: 120,
                 background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
                 borderRadius: '50%',
-                opacity: 0.1
+                opacity: 0.15,
+                zIndex: 1
               },
               '&::after': {
                 content: '""',
                 position: 'absolute',
-                bottom: -30,
-                left: -30,
-                width: 60,
-                height: 60,
+                bottom: 20,
+                left: 20,
+                width: 80,
+                height: 80,
                 background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
                 borderRadius: 2,
-                opacity: 0.1,
-                transform: 'rotate(15deg)'
+                opacity: 0.15,
+                transform: 'rotate(15deg)',
+                zIndex: 1
               }
             }} />
 

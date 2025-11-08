@@ -31,7 +31,7 @@ class EmailsApiService {
     return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   }
 
-  async getEmails(limit: number = 20): Promise<EmailAlert[]> {
+  async getEmails(limit: number = 100): Promise<EmailAlert[]> {
     try {
       console.log('Making API call to /firebase-emails with limit:', limit);
       const response = await axios.get<{ data: EmailAlert[] }>(`/firebase-emails?limit=${limit}`, {

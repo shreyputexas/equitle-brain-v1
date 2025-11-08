@@ -93,12 +93,21 @@ const GoogleConnectDialog: React.FC<GoogleConnectDialogProps> = ({
       setLoading(true);
       setError(null);
 
-      const { authUrl } = await integrationService.connectGoogle(selectedTypes);
-      
+      // Get the auth URL from the backend
+      const response = await integrationService.connectGoogle(selectedTypes);
+
+      // Check if we got a valid auth URL
+      if (!response || !response.authUrl) {
+        throw new Error('Failed to get authorization URL from server');
+      }
+
+      console.log('Redirecting to Google OAuth:', response.authUrl);
+
       // Redirect the current window to Google OAuth
-      window.location.href = authUrl;
+      window.location.href = response.authUrl;
 
     } catch (err) {
+      console.error('Google OAuth connection error:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect to Google');
       setLoading(false);
     }

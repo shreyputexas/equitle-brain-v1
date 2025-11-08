@@ -322,6 +322,20 @@ class DealsApiService {
       throw error;
     }
   }
+
+  /**
+   * Associate an email thread with a deal
+   */
+  async associateEmailThread(dealId: string, emailData: { threadId: string; subject: string }): Promise<void> {
+    try {
+      await axios.post(getApiUrl(`firebase-deals/${dealId}/email-thread`), emailData, {
+        headers: this.getAuthHeaders()
+      });
+    } catch (error) {
+      console.error(`Error associating email thread to deal ${dealId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const dealsApi = new DealsApiService();

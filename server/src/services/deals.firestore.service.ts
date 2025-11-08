@@ -496,4 +496,55 @@ export class DealsFirestoreService {
       throw new Error('Failed to retrieve deals statistics');
     }
   }
+
+  // Associate email thread with deal
+  static async associateEmailThread(userId: string, dealId: string, threadId: string, subject: string) {
+    try {
+      // Verify deal exists
+      const dealRef = FirestoreHelpers.getUserDocInCollection(userId, 'deals', dealId);
+      const dealDoc = await dealRef.get();
+
+      if (!dealDoc.exists) {
+        throw new Error('Deal not found');
+      }
+
+      const dealData = dealDoc.data();
+
+      // Create a communication record to link the email thread to the deal
+      const communicationData = {
+        dealId,
+        type: 'email',
+        subject,
+        threadId,
+        direction: 'inbound',
+        status: 'associated',
+        isRead: false,
+        createdAt: FirestoreHelpers.serverTimestamp(),
+        updatedAt: FirestoreHelpers.serverTimestamp(),
+      };
+
+      const communicationRef = await FirestoreHelpers.getUserCollection(userId, 'communications').add(communicationData);
+
+      logger.info('Email thread associated with deal', {
+        userId,
+        dealId,
+        threadId,
+        subject,
+        dealCompany: dealData?.company,
+        communicationId: communicationRef.id
+      });
+
+      return {
+        message: 'Email thread associated with deal successfully',
+        communicationId: communicationRef.id
+      };
+    } catch (error: any) {
+      logger.error('Error associating email thread with deal:', error);
+      logger.error('Error stack:', error.stack);
+      if (error.message === 'Deal not found') {
+        throw error;
+      }
+      throw new Error('Failed to associate email thread with deal');
+    }
+  }
 }
