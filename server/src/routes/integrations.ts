@@ -1443,12 +1443,26 @@ router.post('/apollo/connect', auth, async (req, res) => {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
-    logger.info('Apollo OAuth connect request', { userId, requestedScopes: scopes });
+    logger.info('Apollo OAuth connect request', { 
+      userId, 
+      requestedScopes: scopes,
+      hasUserId: !!userId
+    });
 
     const requestedScopes = scopes && Array.isArray(scopes) ? scopes : [];
-    const authUrl = ApolloAuthService.getAuthUrl(userId, requestedScopes);
     
-    logger.info('Generated Apollo auth URL', { authUrl });
+    // Check if this is a test request without state (for debugging)
+    const testWithoutState = req.query.testWithoutState === 'true';
+    const authUrl = testWithoutState 
+      ? ApolloAuthService.getAuthUrlWithoutState(requestedScopes)
+      : ApolloAuthService.getAuthUrl(userId, requestedScopes);
+    
+    logger.info('Generated Apollo auth URL', { 
+      authUrl: authUrl.substring(0, 100) + '...', // Log first 100 chars only
+      testWithoutState,
+      hasState: !testWithoutState,
+      urlLength: authUrl.length
+    });
 
     res.json({
       success: true,
