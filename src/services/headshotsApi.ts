@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 
 export interface HeadshotUploadResponse {
   success: boolean;
@@ -10,6 +10,14 @@ export interface HeadshotUploadResponse {
 class HeadshotsApi {
   private baseURL = '/api/headshots';
 
+  private getAuthToken() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    return token;
+  }
+
   async uploadHeadshot(searcherId: string, file: File): Promise<HeadshotUploadResponse> {
     try {
       const formData = new FormData();
@@ -18,7 +26,7 @@ class HeadshotsApi {
       const response = await axios.post<HeadshotUploadResponse>(`${this.baseURL}/upload/${searcherId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': 'Bearer mock-token'
+          'Authorization': `Bearer ${this.getAuthToken()}`
         }
       });
 
@@ -33,7 +41,7 @@ class HeadshotsApi {
     try {
       const response = await axios.delete<HeadshotUploadResponse>(`${this.baseURL}/${searcherId}`, {
         headers: {
-          'Authorization': 'Bearer mock-token'
+          'Authorization': `Bearer ${this.getAuthToken()}`
         }
       });
 

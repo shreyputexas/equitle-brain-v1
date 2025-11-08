@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 
 export interface CreateContactData {
   name: string;
@@ -50,8 +50,7 @@ class ContactsApiService {
   private baseURL = '/api';
 
   constructor() {
-    // Remove baseURL setting to avoid duplication with Vite proxy
-    axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
+    // Auth headers are now set per-request, not globally
   }
 
   /**

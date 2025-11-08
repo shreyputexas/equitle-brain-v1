@@ -6,10 +6,10 @@ import logger from '../utils/logger';
 
 const router = express.Router();
 
-// DEBUG: Test endpoint to check searcher profiles without auth
-router.get('/debug', async (req, res) => {
+// DEBUG: Test endpoint to check searcher profiles
+router.get('/debug', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
     
     // Get REAL searcher profiles from database
     const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
@@ -44,9 +44,9 @@ router.get('/debug', async (req, res) => {
 });
 
 // DEBUG: Update searcher profiles with test headshot URLs
-router.post('/debug/update-headshots', async (req, res) => {
+router.post('/debug/update-headshots', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
     const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
     
     console.log('=== UPDATING SEARCHER PROFILES WITH HEADSHOTS ===');
@@ -80,9 +80,9 @@ router.post('/debug/update-headshots', async (req, res) => {
 });
 
 // DEBUG: Test image URLs
-router.get('/debug/test-images', async (req, res) => {
+router.get('/debug/test-images', firebaseAuthMiddleware, async (req, res) => {
   try {
-    const userId = 'dev-user-123';
+    const userId = req.userId!;
     const searcherProfiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
     
     console.log('=== TESTING IMAGE URLS ===');

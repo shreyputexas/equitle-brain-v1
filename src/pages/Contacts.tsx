@@ -48,7 +48,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import axios from 'axios';
+import axios from '../lib/axios';
 
 type ContactType = 'all' | 'deal' | 'investor' | 'broker';
 
@@ -62,6 +62,7 @@ interface Contact {
   linkedin_url: string;
   title: string;
   company: string;
+  website?: string;
   type: ContactType; // deal, investor, broker
   organization_id?: string;
   city?: string;
@@ -100,9 +101,8 @@ const Contacts: React.FC = () => {
     linkedin_url: '',
     title: '',
     company: '',
+    website: '',
     type: 'deal' as ContactType,
-    city: '',
-    state: '',
     tags: [] as string[]
   });
 
@@ -121,9 +121,7 @@ const Contacts: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<any>('/api/firebase/contacts', {
-        headers: { Authorization: 'Bearer mock-token' }
-      });
+      const response = await axios.get<any>('/api/firebase/contacts');
       // Map contacts and determine type from tags
       const contactsList = response.data?.data?.contacts || response.data?.data || [];
       const contactsWithTypes = contactsList.map((contact: any) => {
@@ -166,6 +164,7 @@ const Contacts: React.FC = () => {
         linkedinUrl: newContact.linkedin_url,
         title: newContact.title,
         company: newContact.company,
+        website: newContact.website,
         tags: [newContact.type, ...newContact.tags],
         status: 'warm'
       };
@@ -181,10 +180,8 @@ const Contacts: React.FC = () => {
       }
       
       console.log('Sending contact data:', contactData);
-      
-      const response = await axios.post<any>('/api/firebase/contacts', contactData, {
-        headers: { Authorization: 'Bearer mock-token' }
-      });
+
+      const response = await axios.post<any>('/api/firebase/contacts', contactData);
       
       console.log('API Response:', response.data);
       
@@ -212,9 +209,8 @@ const Contacts: React.FC = () => {
           linkedin_url: '',
           title: '',
           company: '',
+          website: '',
           type: 'deal',
-          city: '',
-          state: '',
           tags: []
         });
       } else {
@@ -248,11 +244,7 @@ const Contacts: React.FC = () => {
       const updateData: any = {};
       updateData[editingField.field] = editingValue;
 
-      await axios.put<any>(`/api/firebase/contacts/${editingField.contactId}`, updateData, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
-        }
-      });
+      await axios.put<any>(`/api/firebase/contacts/${editingField.contactId}`, updateData);
 
       // Update the local state
       setContacts(contacts.map(contact => 
@@ -372,8 +364,6 @@ const Contacts: React.FC = () => {
             };
           }),
           contactType: 'people' // Default fallback
-        }, {
-          headers: { Authorization: 'Bearer mock-token' }
         });
         
         if (response.data.success) {
@@ -403,11 +393,7 @@ const Contacts: React.FC = () => {
     try {
       // Delete each selected contact
       const deletePromises = selectedRows.map((contactId: string | number) =>
-        axios.delete<any>(`/api/firebase/contacts/${contactId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token') || 'mock-token'}`
-          }
-        })
+        axios.delete<any>(`/api/firebase/contacts/${contactId}`)
       );
 
       await Promise.all(deletePromises);
@@ -427,7 +413,7 @@ const Contacts: React.FC = () => {
   const handleExportCSV = () => {
     const filteredContacts = getFilteredContacts();
 
-    const headers = ['Name', 'Email', 'Phone', 'LinkedIn', 'Title', 'Company', 'Type', 'Location', 'Tags', 'Status'];
+    const headers = ['Name', 'Email', 'Phone', 'LinkedIn', 'Title', 'Company', 'Website', 'Type', 'Location', 'Status'];
     const csvContent = [
       headers.join(','),
       ...filteredContacts.map(contact => [
@@ -437,9 +423,9 @@ const Contacts: React.FC = () => {
         `"${contact.linkedin_url || 'N/A'}"`,
         `"${contact.title || 'N/A'}"`,
         `"${contact.company || 'N/A'}"`,
+        `"${contact.website || 'N/A'}"`,
         `"${contact.type || 'deal'}"`,
         `"${[contact.city, contact.state, contact.country].filter(Boolean).join(', ')}"`,
-        `"${contact.tags?.join('; ') || 'N/A'}"`,
         `"${contact.status || 'active'}"`
       ].join(','))
     ].join('\n');
@@ -791,6 +777,35 @@ const Contacts: React.FC = () => {
       },
     },
     {
+      field: 'website',
+      headerName: 'Website',
+      width: 200,
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => {
+        if (params.row.website) {
+          return (
+            <EditableCell
+              contactId={params.row.id}
+              field="website"
+              value={params.row.website}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
+            />
+          );
+        }
+        return (
+          <EditableCell
+            contactId={params.row.id}
+            field="website"
+            value=""
+            onSave={handleSaveEdit}
+            onCancel={handleCancelEdit}
+          />
+        );
+      },
+    },
+    {
       field: 'location',
       headerName: 'Location',
       width: 180,
@@ -807,37 +822,6 @@ const Contacts: React.FC = () => {
             onSave={handleSaveEdit}
             onCancel={handleCancelEdit}
           />
-        );
-      },
-    },
-    {
-      field: 'tags',
-      headerName: 'Tags',
-      width: 200,
-      flex: 0.5,
-      minWidth: 160,
-      renderCell: (params) => {
-        const tags = params.row.tags || [];
-        if (tags.length === 0) return <Typography variant="body2" color="text.secondary">-</Typography>;
-        
-        return (
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {tags.slice(0, 2).map((tag: string, index: number) => (
-              <Chip 
-                key={index}
-                label={tag}
-                size="small"
-                sx={{ height: 20, fontSize: '0.6875rem' }}
-              />
-            ))}
-            {tags.length > 2 && (
-              <Chip 
-                label={`+${tags.length - 2}`}
-                size="small"
-                sx={{ height: 20, fontSize: '0.6875rem' }}
-              />
-            )}
-          </Box>
         );
       },
     },
@@ -1621,7 +1605,17 @@ const Contacts: React.FC = () => {
                 onChange={(e) => setNewContact({ ...newContact, company: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Website"
+                value={newContact.website}
+                onChange={(e) => setNewContact({ ...newContact, website: e.target.value })}
+                placeholder="https://example.com"
+                type="url"
+              />
+            </Grid>
+            <Grid item xs={12}>
               <FormControl fullWidth>
                 <InputLabel>Contact Type *</InputLabel>
                 <Select
@@ -1634,22 +1628,6 @@ const Contacts: React.FC = () => {
                   <MenuItem value="broker">Broker</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="City"
-                value={newContact.city}
-                onChange={(e) => setNewContact({ ...newContact, city: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="State"
-                value={newContact.state}
-                onChange={(e) => setNewContact({ ...newContact, state: e.target.value })}
-              />
             </Grid>
           </Grid>
         </DialogContent>

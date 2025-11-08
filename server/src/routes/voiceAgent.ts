@@ -116,8 +116,8 @@ router.post('/create-call', async (req, res) => {
       callingCompany
     } = req.body;
 
-    // For development: always use dev user (no auth required)
-    const userId = 'dev-user-123';
+    // For development: use test user (no auth required for this endpoint)
+    const userId = 'test-user-123';
 
     console.log('Voice call request received:', {
       phoneNumber,
@@ -495,8 +495,8 @@ router.get('/test-enhanced/:callId', async (req, res) => {
  */
 router.get('/analytics/dashboard', async (req, res) => {
   try {
-    // For testing without auth - use mock user
-    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id || 'dev-user-123';
+    // For testing without auth - use test user as fallback
+    const userId = (req as any).userId || (req as any).user?.uid || (req as any).user?.id || 'test-user-123';
     const { startDate, endDate } = req.query;
 
     console.log('🎯 ANALYTICS DASHBOARD ROUTE HIT');

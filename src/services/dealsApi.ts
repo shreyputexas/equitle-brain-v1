@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 import { getApiUrl } from '../config/api';
 
 // Types
@@ -140,10 +140,9 @@ class DealsApiService {
     const token = this.getAuthToken();
     if (!token) {
       console.warn('dealsApi: No auth token available');
+      throw new Error('Authentication required. Please log in.');
     }
-    // For development, use mock token if no real token exists
-    const authToken = token || 'mock-token';
-    return { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' };
+    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   }
 
   /**

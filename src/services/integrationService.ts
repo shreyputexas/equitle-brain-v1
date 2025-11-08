@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 import { auth } from '../lib/firebase';
 import { getApiUrl } from '../config/api';
 

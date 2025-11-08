@@ -21,6 +21,7 @@ export interface Contact {
   isKeyContact: boolean;
   source?: string; // 'google', 'manual', 'imported', etc.
   metadata?: Record<string, any>;
+  website?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

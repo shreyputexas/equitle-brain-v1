@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 
 export interface SendEmailData {
   to: string | string[];
@@ -83,7 +83,7 @@ class GmailApiService {
 
   constructor() {
     axios.defaults.baseURL = this.baseURL;
-    axios.defaults.headers.common['Authorization'] = 'Bearer mock-token';
+    // Auth headers are now set per-request, not globally
   }
 
   /**

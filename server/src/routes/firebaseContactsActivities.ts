@@ -26,6 +26,7 @@ const createContactSchema = Joi.object({
   isKeyContact: Joi.boolean().default(false),
   source: Joi.string().optional(),
   metadata: Joi.object().optional(),
+  website: Joi.string().optional().allow('', null),
 });
 
 const updateContactSchema = Joi.object({
@@ -46,6 +47,7 @@ const updateContactSchema = Joi.object({
   isKeyContact: Joi.boolean().optional(),
   source: Joi.string().optional(),
   metadata: Joi.object().optional(),
+  website: Joi.string().optional().allow('', null),
 });
 
 // Validation schemas for activities
@@ -307,6 +309,7 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
             linkedinUrl: enrichedContact.linkedin_url || existingContact.linkedinUrl,
             title: enrichedContact.title || existingContact.title,
             company: enrichedContact.company || existingContact.company,
+            website: enrichedContact.website || existingContact.website,
             notes: enrichedContact.notes || existingContact.notes,
             tags: [...new Set([...(existingContact.tags || []), finalContactType, ...(enrichedContact.tags || [])])],
           });
@@ -331,6 +334,7 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
           if (enrichedContact.linkedin_url) contactData.linkedinUrl = enrichedContact.linkedin_url;
           if (enrichedContact.title) contactData.title = enrichedContact.title;
           if (enrichedContact.company) contactData.company = enrichedContact.company;
+          if (enrichedContact.website) contactData.website = enrichedContact.website;
           if (enrichedContact.notes) contactData.notes = enrichedContact.notes;
           
           logger.info(`Creating contact with data:`, contactData);

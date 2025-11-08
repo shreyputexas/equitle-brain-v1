@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../lib/axios';
 
 export interface EmailAlert {
   id: string;
@@ -25,9 +25,10 @@ class EmailsApiService {
 
   private getAuthHeaders() {
     const token = this.getAuthToken();
-    // For development, use mock token if no real token exists
-    const authToken = token || 'mock-token';
-    return { Authorization: `Bearer ${authToken}`, 'Content-Type': 'application/json' };
+    if (!token) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   }
 
   async getEmails(limit: number = 20): Promise<EmailAlert[]> {

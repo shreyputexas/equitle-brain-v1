@@ -1,5 +1,5 @@
 import integrationService from './integrationService';
-import axios from 'axios';
+import axios from '../lib/axios';
 
 export interface EmailCategory {
   category: 'deal' | 'investor' | 'broker' | 'general';
