@@ -323,6 +323,19 @@ export class DealsFirestoreService {
         throw new Error('Contact not found');
       }
 
+      const contactData = contactDoc.data();
+
+      // Make this idempotent - if contact is already associated with this deal, just return success
+      if (contactData?.dealId === dealId) {
+        logger.info('Contact already associated with deal', {
+          userId,
+          dealId,
+          contactId,
+          contactName: contactData?.name
+        });
+        return { message: 'Contact already associated with deal' };
+      }
+
       // Update contact to associate with deal
       await contactRef.update({
         dealId,
@@ -330,7 +343,6 @@ export class DealsFirestoreService {
       });
 
       const dealData = dealDoc.data();
-      const contactData = contactDoc.data();
 
       logger.info('Contact added to deal', {
         userId,
@@ -343,10 +355,70 @@ export class DealsFirestoreService {
       return { message: 'Contact added to deal successfully' };
     } catch (error: any) {
       logger.error('Error adding contact to deal:', error);
+      logger.error('Error stack:', error.stack);
       if (error.message === 'Deal not found' || error.message === 'Contact not found') {
         throw error;
       }
       throw new Error('Failed to add contact to deal');
+    }
+  }
+
+  // Remove contact from deal
+  static async removeContactFromDeal(userId: string, dealId: string, contactId: string) {
+    try {
+      // Verify deal exists
+      const dealRef = FirestoreHelpers.getUserDocInCollection(userId, 'deals', dealId);
+      const dealDoc = await dealRef.get();
+
+      if (!dealDoc.exists) {
+        throw new Error('Deal not found');
+      }
+
+      // Verify contact exists
+      const contactRef = FirestoreHelpers.getUserDocInCollection(userId, 'contacts', contactId);
+      const contactDoc = await contactRef.get();
+
+      if (!contactDoc.exists) {
+        throw new Error('Contact not found');
+      }
+
+      const contactData = contactDoc.data();
+      const dealData = dealDoc.data();
+
+      // Make this idempotent - if contact is not associated with this deal (or has no dealId), just return success
+      if (!contactData?.dealId || contactData?.dealId !== dealId) {
+        logger.info('Contact not associated with deal (already removed or never added)', {
+          userId,
+          dealId,
+          contactId,
+          contactDealId: contactData?.dealId,
+          contactName: contactData?.name
+        });
+        return { message: 'Contact not associated with deal' };
+      }
+
+      // Remove contact from deal by clearing dealId
+      await contactRef.update({
+        dealId: FirestoreHelpers.deleteField(),
+        updatedAt: FirestoreHelpers.serverTimestamp(),
+      });
+
+      logger.info('Contact removed from deal', {
+        userId,
+        dealId,
+        contactId,
+        dealCompany: dealData?.company,
+        contactName: contactData?.name
+      });
+
+      return { message: 'Contact removed from deal successfully' };
+    } catch (error: any) {
+      logger.error('Error removing contact from deal:', error);
+      logger.error('Error stack:', error.stack);
+      if (error.message === 'Deal not found' || error.message === 'Contact not found') {
+        throw error;
+      }
+      throw new Error('Failed to remove contact from deal');
     }
   }
 

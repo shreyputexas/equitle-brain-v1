@@ -3,6 +3,7 @@ import {
   Box,
   Paper,
   Typography,
+  Collapse,
   Card,
   CardContent,
   CardActions,
@@ -19,12 +20,12 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
   TextField,
   InputAdornment,
+  Select,
+  FormControl,
+  InputLabel,
+  MenuItem,
   Tabs,
   Tab,
   Alert,
@@ -34,7 +35,6 @@ import {
 import {
   TrendingUp as TrendingUpIcon,
   Edit as EditIcon,
-  MoreVert as MoreVertIcon,
   Person as PersonIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
@@ -48,12 +48,12 @@ import {
   ExpandLess as ExpandLessIcon,
   Add as AddIcon,
   Search as SearchIcon,
+  Check as CheckIcon,
   SentimentVerySatisfied as SentimentGoodIcon,
   SentimentDissatisfied as SentimentBadIcon,
   SentimentNeutral as SentimentNeutralIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
@@ -70,6 +70,7 @@ import {
 } from '@dnd-kit/core';
 import { Deal as ApiDeal } from '../services/dealsApi';
 import dealsApi from '../services/dealsApi';
+import contactsApi from '../services/contactsApi';
 import integrationService from '../services/integrationService';
 import emailCategorizationService from '../services/emailCategorizationService';
 import OutlookEmailCard from './OutlookEmailCard';
@@ -244,9 +245,23 @@ export default function DealPipeline({
   onEditDeal,
   onDeleteDeal
 }: DealPipelineProps) {
-  const navigate = useNavigate();
   const [expandedDeals, setExpandedDeals] = useState<Set<string>>(new Set());
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [editingDealId, setEditingDealId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<{
+    company: string;
+    sector: string;
+    value: string;
+    leadPartner: string;
+    nextStep: string;
+  } | null>(null);
+  const [selectContactsOpen, setSelectContactsOpen] = useState(false);
+  const [availableContacts, setAvailableContacts] = useState<any[]>([]);
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [originalContactIds, setOriginalContactIds] = useState<string[]>([]); // Track original selection
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [savingDeal, setSavingDeal] = useState(false);
+  // Track updated contacts for deals to show immediately after adding
+  const [updatedDealContacts, setUpdatedDealContacts] = useState<Map<string, Person[]>>(new Map());
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'pipeline' | 'tabs'>('pipeline');
@@ -304,10 +319,12 @@ export default function DealPipeline({
     if (optimisticStage && optimisticStage !== deal.stage) {
       console.log(`Applying optimistic update: Deal ${deal.id} (${deal.company}) stage: ${deal.stage} -> ${optimisticStage}`);
     }
+    // Use updated contacts if available, otherwise use mockPeople
+    const people = updatedDealContacts.get(deal.id) || mockPeople;
     return {
       ...deal,
       stage: finalStage, // Optimistic stage always wins - prevents snap-back
-      people: mockPeople // This will be replaced with real contact data later
+      people: people
     };
   });
   
@@ -717,19 +734,395 @@ export default function DealPipeline({
     setCompanyModalOpen(true);
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, dealId: string) => {
-    setAnchorEl(event.currentTarget);
+  const handleEditDeal = async (e: React.MouseEvent<HTMLButtonElement>, dealId: string) => {
+    e.stopPropagation();
+    const deal = dealsWithContacts.find(d => d.id === dealId);
+    if (!deal) return;
+    
+    setEditingDealId(dealId);
+    
+    // Fetch contacts for this deal if not already loaded
+    if (!updatedDealContacts.has(dealId)) {
+      try {
+        const contactsResponse = await contactsApi.getContacts({ dealId });
+        const fetchedPeople = contactsResponse.contacts.map((contact: any) => ({
+          id: contact.id,
+          name: contact.name,
+          role: contact.title || contact.role || 'To be updated',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          relationshipScore: contact.relationshipScore || 0,
+          lastContact: contact.lastContact ? new Date(contact.lastContact) : new Date(),
+          status: (contact.status === 'hot' || contact.status === 'warm' || contact.status === 'cold') 
+            ? contact.status 
+            : 'cold' as 'hot' | 'warm' | 'cold',
+          summary: contact.notes || contact.summary || 'No interaction history available. Connect to view relationship details.',
+          citations: {
+            emails: 0,
+            calls: 0,
+            meetings: 0,
+            documents: 0
+          }
+        }));
+        
+        setUpdatedDealContacts(prev => {
+          const newMap = new Map(prev);
+          newMap.set(dealId, fetchedPeople);
+          return newMap;
+        });
+      } catch (error) {
+        console.error('Error fetching contacts for deal:', error);
+      }
+    }
+    
+    // Get the current deal with updated contacts
+    const currentPeople = updatedDealContacts.get(dealId) || deal.people || [];
+    
+    // Determine the lead partner/contact to pre-select
+    // First check if leadPartner is set, otherwise use the first contact from people array
+    let defaultLeadPartner = deal.leadPartner || '';
+    if (!defaultLeadPartner && currentPeople.length > 0) {
+      // Use the first contact's name as the default
+      defaultLeadPartner = currentPeople[0].name;
+    }
+    
+    setEditFormData({
+      company: deal.company || '',
+      sector: deal.sector || '',
+      value: deal.value ? String(deal.value / 1000000) : '',
+      leadPartner: defaultLeadPartner,
+      nextStep: deal.nextStep || ''
+    });
+  };
+
+  const handleCloseEdit = () => {
+    setEditingDealId(null);
+    setEditFormData(null);
+    setSelectContactsOpen(false);
+    setSelectedContactIds([]);
+    setSavingDeal(false); // Reset saving state
+  };
+
+  const handleOpenSelectContacts = async () => {
+    if (!editingDealId) return;
+    const dealToEdit = dealsWithContacts.find(d => d.id === editingDealId);
+    if (!dealToEdit) return;
+
+    setSelectContactsOpen(true);
+    setContactsLoading(true);
+    try {
+      // Fetch all available contacts
+      const response = await contactsApi.getContacts({ limit: 1000 });
+      setAvailableContacts(response.contacts || []);
+
+      // Fetch the latest contacts for THIS specific deal
+      // Use updatedDealContacts if available, otherwise fetch fresh from backend
+      let currentDealContacts = updatedDealContacts.get(editingDealId);
+
+      if (!currentDealContacts) {
+        // Fetch fresh contacts for this deal
+        const dealContactsResponse = await contactsApi.getContacts({ dealId: editingDealId });
+        currentDealContacts = dealContactsResponse.contacts.map((contact: any) => ({
+          id: contact.id,
+          name: contact.name,
+          role: contact.title || contact.role || 'To be updated',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          relationshipScore: contact.relationshipScore || 0,
+          lastContact: contact.lastContact ? new Date(contact.lastContact) : new Date(),
+          status: (contact.status === 'hot' || contact.status === 'warm' || contact.status === 'cold')
+            ? contact.status
+            : 'cold' as 'hot' | 'warm' | 'cold',
+          summary: contact.notes || contact.summary || 'No interaction history available.',
+          citations: {
+            emails: 0,
+            calls: 0,
+            meetings: 0,
+            documents: 0
+          }
+        }));
+
+        // Update the cache
+        setUpdatedDealContacts(prev => {
+          const newMap = new Map(prev);
+          newMap.set(editingDealId, currentDealContacts);
+          return newMap;
+        });
+      }
+
+      // Pre-select contacts that are already associated with this deal
+      // Use the FRESH contact data, not stale dealToEdit.people
+      const existingContactIds = currentDealContacts?.map(p => p.id) || [];
+      console.log('handleOpenSelectContacts - Existing contact IDs from backend:', existingContactIds);
+      setSelectedContactIds(existingContactIds);
+      setOriginalContactIds(existingContactIds); // Save original selection
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
+  const handleCloseSelectContacts = () => {
+    setSelectContactsOpen(false);
+    setSelectedContactIds([]);
+    setOriginalContactIds([]); // Clear original selection
+    // Reset the leadPartner if it was set to '__select_more__'
+    if (editFormData && editFormData.leadPartner === '__select_more__') {
+      setEditFormData({
+        ...editFormData,
+        leadPartner: ''
+      });
+    }
+  };
+
+  const handleToggleContact = (contactId: string) => {
+    setSelectedContactIds(prev => 
+      prev.includes(contactId) 
+        ? prev.filter(id => id !== contactId)
+        : [...prev, contactId]
+    );
+  };
+
+  const handleAddContactsToDeal = async () => {
+    if (!editingDealId) return;
+
+    try {
+      setContactsLoading(true);
+
+      // Determine which contacts to add and which to remove
+      const contactsToAdd = selectedContactIds.filter(id => !originalContactIds.includes(id));
+      const contactsToRemove = originalContactIds.filter(id => !selectedContactIds.includes(id));
+
+      // Optimistically update the UI immediately with selected contacts
+      // This provides instant feedback while API calls are in progress
+      const currentPeople = updatedDealContacts.get(editingDealId) || [];
+      const availableContactsMap = new Map(availableContacts.map(c => [c.id, c]));
+      
+      // Build optimistic people list
+      const optimisticPeople = selectedContactIds
+        .map(contactId => {
+          // Check if contact already exists in current people
+          const existing = currentPeople.find(p => p.id === contactId);
+          if (existing) return existing;
+          
+          // Otherwise, create from available contacts
+          const contact = availableContactsMap.get(contactId);
+          if (contact) {
+            return {
+              id: contact.id,
+              name: contact.name,
+              role: contact.title || contact.role || 'To be updated',
+              email: contact.email || '',
+              phone: contact.phone || '',
+              relationshipScore: contact.relationshipScore || 0,
+              lastContact: contact.lastContact ? new Date(contact.lastContact) : new Date(),
+              status: (contact.status === 'hot' || contact.status === 'warm' || contact.status === 'cold')
+                ? contact.status
+                : 'cold' as 'hot' | 'warm' | 'cold',
+              summary: contact.notes || contact.summary || 'No interaction history available. Connect to view relationship details.',
+              citations: {
+                emails: 0,
+                calls: 0,
+                meetings: 0,
+                documents: 0
+              }
+            };
+          }
+          return null;
+        })
+        .filter((p): p is Person => p !== null);
+
+      // Apply optimistic update immediately
+      setUpdatedDealContacts(prev => {
+        const newMap = new Map(prev);
+        newMap.set(editingDealId, optimisticPeople);
+        return newMap;
+      });
+
+      let addedCount = 0;
+      let removedCount = 0;
+      let failCount = 0;
+
+      // Add newly selected contacts
+      for (const contactId of contactsToAdd) {
+        try {
+          await dealsApi.addContactToDeal(editingDealId, contactId);
+          addedCount++;
+        } catch (error: any) {
+          console.error(`Error adding contact ${contactId} to deal:`, error);
+          failCount++;
+        }
+      }
+
+      // Remove deselected contacts
+      for (const contactId of contactsToRemove) {
+        try {
+          await dealsApi.removeContactFromDeal(editingDealId, contactId);
+          removedCount++;
+        } catch (error: any) {
+          console.error(`Error removing contact ${contactId} from deal:`, error);
+          failCount++;
+        }
+      }
+
+      // Fetch the final updated contacts to ensure consistency
+      const updatedContacts = await contactsApi.getContacts({ dealId: editingDealId });
+
+      // Update with final data from backend
+      const finalPeople = updatedContacts.contacts.map((contact: any) => ({
+        id: contact.id,
+        name: contact.name,
+        role: contact.title || contact.role || 'To be updated',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        relationshipScore: contact.relationshipScore || 0,
+        lastContact: contact.lastContact ? new Date(contact.lastContact) : new Date(),
+        status: (contact.status === 'hot' || contact.status === 'warm' || contact.status === 'cold')
+          ? contact.status
+          : 'cold' as 'hot' | 'warm' | 'cold',
+        summary: contact.notes || contact.summary || 'No interaction history available. Connect to view relationship details.',
+        citations: {
+          emails: 0,
+          calls: 0,
+          meetings: 0,
+          documents: 0
+        }
+      }));
+
+      // Update with final data
+      setUpdatedDealContacts(prev => {
+        const newMap = new Map(prev);
+        newMap.set(editingDealId, finalPeople);
+        return newMap;
+      });
+
+      // Show success message
+      let message = '';
+      if (addedCount > 0 && removedCount > 0) {
+        message = `${addedCount} contact(s) added, ${removedCount} removed`;
+      } else if (addedCount > 0) {
+        message = `${addedCount} contact(s) added`;
+      } else if (removedCount > 0) {
+        message = `${removedCount} contact(s) removed`;
+      } else {
+        message = 'No changes made';
+      }
+      if (failCount > 0) {
+        message += `, ${failCount} failed`;
+      }
+      setSnackbarMessage(message);
+      setSnackbarOpen(true);
+
+      // Close the modal using the helper which also resets form state
+      handleCloseSelectContacts();
+
+      // Don't call onRefresh() here - the local state update is sufficient
+      // This prevents UI flickering and keeps the edit card smooth
+    } catch (error: any) {
+      console.error('Error syncing contacts to deal:', error);
+      setSnackbarMessage(`Error syncing contacts: ${error.message || 'Unknown error'}`);
+      setSnackbarOpen(true);
+      
+      // Revert optimistic update on error by fetching fresh data
+      try {
+        const revertedContacts = await contactsApi.getContacts({ dealId: editingDealId });
+        const revertedPeople = revertedContacts.contacts.map((contact: any) => ({
+          id: contact.id,
+          name: contact.name,
+          role: contact.title || contact.role || 'To be updated',
+          email: contact.email || '',
+          phone: contact.phone || '',
+          relationshipScore: contact.relationshipScore || 0,
+          lastContact: contact.lastContact ? new Date(contact.lastContact) : new Date(),
+          status: (contact.status === 'hot' || contact.status === 'warm' || contact.status === 'cold')
+            ? contact.status
+            : 'cold' as 'hot' | 'warm' | 'cold',
+          summary: contact.notes || contact.summary || 'No interaction history available. Connect to view relationship details.',
+          citations: {
+            emails: 0,
+            calls: 0,
+            meetings: 0,
+            documents: 0
+          }
+        }));
+        setUpdatedDealContacts(prev => {
+          const newMap = new Map(prev);
+          newMap.set(editingDealId, revertedPeople);
+          return newMap;
+        });
+      } catch (revertError) {
+        console.error('Error reverting contacts:', revertError);
+      }
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDealId || !editFormData) return;
+    const deal = deals.find(d => d.id === editingDealId);
+    if (!deal) return;
+
+    try {
+      setSavingDeal(true);
+      // Parse value - handle empty string or invalid numbers
+      const valueInMillions = editFormData.value ? parseFloat(editFormData.value) : 0;
+
+      // Clean the data before sending
+      // Remove empty strings and special values like '__select_more__'
+      const updatedDeal: any = {};
+
+      if (editFormData.company && editFormData.company.trim()) {
+        updatedDeal.company = editFormData.company.trim();
+      }
+
+      if (editFormData.sector && editFormData.sector.trim()) {
+        updatedDeal.sector = editFormData.sector.trim();
+      }
+
+      if (editFormData.value && !isNaN(valueInMillions)) {
+        updatedDeal.value = valueInMillions * 1000000;
+      }
+
+      // Only include leadPartner if it's a valid value (not empty or '__select_more__')
+      if (editFormData.leadPartner &&
+          editFormData.leadPartner.trim() &&
+          editFormData.leadPartner !== '__select_more__') {
+        updatedDeal.leadPartner = editFormData.leadPartner.trim();
+      }
+
+      if (editFormData.nextStep && editFormData.nextStep.trim()) {
+        updatedDeal.nextStep = editFormData.nextStep.trim();
+      }
+
+      console.log('Saving deal with data:', updatedDeal);
+
+      // Update deal directly via API
+      await dealsApi.updateDeal(editingDealId, updatedDeal);
+
+      // Close edit modal immediately for smooth UX
+      handleCloseEdit();
+
+      // Refresh deals list in the background after closing
+      // This prevents UI flickering while the card is closing
+      setTimeout(() => {
+        onRefresh();
+      }, 100);
+    } catch (error: any) {
+      console.error('Error saving deal:', error);
+      console.error('Error response:', error.response?.data);
+      setSavingDeal(false);
+      // Show error message with more details
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      setSnackbarMessage(`Error saving deal: ${errorMessage}`);
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleDeleteDeal = (dealId: string) => {
     setSelectedDealId(dealId);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedDealId(null);
-  };
-
-  const handleDeleteDeal = () => {
     setDeleteConfirmOpen(true);
-    handleMenuClose();
   };
 
   const handleConfirmDelete = async () => {
@@ -817,11 +1210,13 @@ export default function DealPipeline({
         {...listeners}
         {...attributes}
         sx={{
-          mb: 2,
+          mb: 1.5,
+          width: '100%',
+          maxWidth: '100%',
           cursor: isDragging ? 'grabbing' : 'grab',
           bgcolor: 'white',
           border: '1px solid #e5e7eb',
-          borderRadius: 3,
+          borderRadius: 1, // More rectangular
           opacity: isDragging ? 0.6 : 1,
           transform: style?.transform || 'scale(1)',
           // Smooth transitions when not dragging - Google Docs style
@@ -830,20 +1225,21 @@ export default function DealPipeline({
             : 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
           boxShadow: isDragging 
             ? '0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' 
-            : '0 2px 8px rgba(0,0,0,0.05)',
+            : '0 1px 3px rgba(0,0,0,0.08)',
           userSelect: 'none',
           WebkitUserSelect: 'none',
           position: 'relative',
           willChange: isDragging ? 'transform' : 'auto',
-          // Smooth hover effect
+          overflow: 'hidden',
+          // Professional hover effect
           '&:hover': {
             transform: isDragging 
               ? style?.transform || 'scale(1)' 
-              : 'translateY(-2px) scale(1.005)',
+              : 'translateY(-1px)',
             boxShadow: isDragging 
               ? '0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1)' 
-              : '0 8px 16px rgba(0,0,0,0.1)',
-            borderColor: '#10b981',
+              : '0 4px 12px rgba(0,0,0,0.12)',
+            borderColor: '#d1d5db',
             transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
           },
           '&:active': {
@@ -853,20 +1249,58 @@ export default function DealPipeline({
         onClick={(e) => {
           // Prevent click when dragging
           if (!isDragging) {
-            handleCompanyClick(deal);
+            // Toggle expansion instead of opening modal
+            setExpandedDeals(prev => {
+              const newSet = new Set(prev);
+              if (newSet.has(deal.id)) {
+                newSet.delete(deal.id);
+              } else {
+                newSet.add(deal.id);
+              }
+              return newSet;
+            });
           }
         }}
       >
-        <CardContent sx={{ pb: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Avatar sx={{ bgcolor: '#000000' }}>
-                {deal.company.charAt(0)}
-              </Avatar>
-              {getSentimentIcon(deal.sentiment || 'neutral')}
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Tooltip title={isExpanded ? "Hide contacts" : "Show contacts"}>
+        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+          {/* Minimal collapsed view - just company name, sector, and expand button */}
+          {!isExpanded && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: '#111827',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em',
+                    fontSize: '0.9375rem',
+                    lineHeight: 1.4,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    mb: 0.25
+                  }}
+                >
+                  {deal.company}
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: '#6b7280',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 400,
+                    fontSize: '0.75rem',
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {deal.sector}
+                </Typography>
+              </Box>
+              <Tooltip title={isExpanded ? "Hide details" : "Show details"}>
                 <IconButton
                   size="small"
                   onClick={(e) => {
@@ -877,327 +1311,448 @@ export default function DealPipeline({
                     e.stopPropagation();
                   }}
                   sx={{ 
-                    bgcolor: isExpanded ? '#000000' : 'transparent',
-                    color: isExpanded ? 'white' : 'text.secondary',
+                    bgcolor: 'transparent',
+                    color: '#6b7280',
+                    flexShrink: 0,
+                    width: 32,
+                    height: 32,
                     '&:hover': {
-                      bgcolor: isExpanded ? '#333333' : 'action.hover'
+                      bgcolor: '#f3f4f6',
+                      color: '#111827'
                     }
                   }}
                 >
-                  {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  <ExpandMoreIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
-          </Box>
-          
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontWeight: 600, 
-              mb: 1, 
-              color: '#1f2937',
-              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              letterSpacing: '-0.01em'
-            }}
-          >
-            {deal.company}
-          </Typography>
-          
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              mb: 2, 
-              color: '#6b7280',
-              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-              fontWeight: 500
-            }}
-          >
-            {deal.sector}
-          </Typography>
-          
-          <Box sx={{ mb: 2 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 700, 
-                color: '#10b981',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                letterSpacing: '-0.01em'
-              }}
-            >
-              ${((deal.value || 0) / 1000000).toFixed(1)}M
-            </Typography>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#6b7280',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              Deal Value
-            </Typography>
-          </Box>
-          
-          <Box sx={{ mb: 2 }}>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#6b7280',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              Lead Partner
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: '#1f2937',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              {deal.leadPartner}
-            </Typography>
-          </Box>
-          
-          <Box>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#6b7280',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              Next Step
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: '#1f2937',
-                fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500
-              }}
-            >
-              {deal.nextStep}
-            </Typography>
-          </Box>
-
-          {/* Contact Count Indicator */}
-          {!isExpanded && deal.people.length > 0 && (
-            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PersonIcon fontSize="small" sx={{ color: '#6b7280' }} />
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  color: '#6b7280',
-                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  fontWeight: 500
-                }}
-              >
-                {deal.people.length} contact{deal.people.length !== 1 ? 's' : ''} - Click expand to view details
-              </Typography>
-            </Box>
           )}
 
-          {/* Expanded People Section */}
-          {isExpanded && (
-            <Box sx={{ 
-              mt: 3, 
-              p: 2, 
-              bgcolor: '#f5f5f5', 
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: '#e0e0e0'
-            }}>
-              <Typography variant="subtitle1" sx={{ 
-                fontWeight: 600, 
-                mb: 2, 
-                display: 'flex', 
-                alignItems: 'center',
-                color: 'primary.contrastText'
-              }}>
-                <PersonIcon sx={{ mr: 1, fontSize: 20 }} />
-                Key Contacts ({deal.people.length})
-              </Typography>
-              
-              {deal.people.map((person) => (
-                <Box
-                  key={person.id}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    borderRadius: 2,
-                    bgcolor: 'background.paper',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      transform: 'translateY(-1px)'
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        {person.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {person.role}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                      <Chip
-                        label={person.status}
-                        size="small"
-                        sx={{
-                          bgcolor: `${getStatusColor(person.status)}20`,
-                          color: getStatusColor(person.status),
-                          border: `1px solid ${getStatusColor(person.status)}`
-                        }}
-                      />
-                    </Box>
+          {/* Expanded view with all details - smooth animation */}
+          <Collapse in={isExpanded} timeout={300}>
+            <Box sx={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+              {/* Header with company info */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, width: '100%', pb: 2, borderBottom: '1px solid #e5e7eb' }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 600, 
+                        color: '#111827',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        letterSpacing: '-0.01em',
+                        fontSize: '1rem',
+                        lineHeight: 1.3
+                      }}
+                    >
+                      {deal.company}
+                    </Typography>
+                    {getSentimentIcon(deal.sentiment || 'neutral')}
                   </Box>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '0.8125rem'
+                    }}
+                  >
+                    {deal.sector}
+                  </Typography>
+                </Box>
+                <Tooltip title="Hide details">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleDealExpansion(deal.id);
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                    }}
+                    sx={{ 
+                      bgcolor: '#f3f4f6',
+                      color: '#6b7280',
+                      flexShrink: 0,
+                      width: 28,
+                      height: 28,
+                      '&:hover': {
+                        bgcolor: '#e5e7eb',
+                        color: '#111827'
+                      }
+                    }}
+                  >
+                    <ExpandLessIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
 
-                  {/* Relationship Score */}
-                  <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                        Relationship Score
-                      </Typography>
-                      <Chip
-                        label={`${person.relationshipScore}/100`}
-                        size="small"
-                        sx={{
-                          bgcolor: `${getRelationshipScoreColor(person.relationshipScore)}20`,
-                          color: getRelationshipScoreColor(person.relationshipScore),
-                          border: `1px solid ${getRelationshipScoreColor(person.relationshipScore)}`,
-                          fontWeight: 600
-                        }}
-                      />
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={person.relationshipScore}
+              {/* Deal Details Grid */}
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: 1.5, 
+                mb: 2,
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <Box>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      fontSize: '0.6875rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'block',
+                      mb: 0.5
+                    }}
+                  >
+                    Deal Value
+                  </Typography>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: '#000000',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      letterSpacing: '-0.01em',
+                      fontSize: '0.9375rem'
+                    }}
+                  >
+                    ${((deal.value || 0) / 1000000).toFixed(1)}M
+                  </Typography>
+                </Box>
+                
+                <Box>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      fontSize: '0.6875rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'block',
+                      mb: 0.5
+                    }}
+                  >
+                    Lead Partner
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#111827',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      fontSize: '0.8125rem'
+                    }}
+                  >
+                    {deal.leadPartner || 'Unassigned'}
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Next Step */}
+              {deal.nextStep && (
+                <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #e5e7eb' }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      fontSize: '0.6875rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'block',
+                      mb: 0.5
+                    }}
+                  >
+                    Next Step
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#111827',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 400,
+                      fontSize: '0.8125rem',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    {deal.nextStep}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Expanded People Section */}
+              {deal.people && deal.people.length > 0 && (
+                <Box sx={{ 
+                  mt: 0, 
+                  pt: 2, 
+                  width: '100%',
+                  maxWidth: '100%',
+                  boxSizing: 'border-box'
+                }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      mb: 1.5, 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      color: '#111827',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontSize: '0.6875rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}
+                  >
+                    <PersonIcon sx={{ mr: 0.75, fontSize: 14 }} />
+                    Key Contacts ({deal.people.length})
+                  </Typography>
+              
+                  {deal.people.map((person) => (
+                    <Box
+                      key={person.id}
                       sx={{
-                        height: 6,
-                        borderRadius: 3,
-                        bgcolor: 'rgba(255,255,255,0.1)',
-                        '& .MuiLinearProgress-bar': {
-                          borderRadius: 3,
-                          bgcolor: getRelationshipScoreColor(person.relationshipScore)
+                        p: 1.5,
+                        mb: 1,
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 1,
+                        bgcolor: '#fafafa',
+                        transition: 'all 0.2s ease',
+                        overflow: 'hidden',
+                        wordBreak: 'break-word',
+                        width: '100%',
+                        maxWidth: '100%',
+                        boxSizing: 'border-box',
+                        '&:hover': {
+                          borderColor: '#d1d5db',
+                          bgcolor: '#ffffff'
                         }
                       }}
-                    />
-                  </Box>
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, gap: 1 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 600,
+                              color: '#111827',
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                              mb: 0.25,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.8125rem'
+                            }}
+                          >
+                            {person.name}
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: '#6b7280',
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'block',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            {person.role}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={person.status}
+                          size="small"
+                          sx={{
+                            bgcolor: '#f5f5f5',
+                            color: '#000000',
+                            border: '1px solid #e0e0e0',
+                            fontSize: '0.6875rem',
+                            height: 18,
+                            fontWeight: 500
+                          }}
+                        />
+                      </Box>
 
-                  {/* Contact Info */}
-                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <EmailIcon fontSize="small" color="action" />
-                      <Typography variant="caption">{person.email}</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <PhoneIcon fontSize="small" color="action" />
-                      <Typography variant="caption">{person.phone}</Typography>
-                    </Box>
-                  </Box>
+                      {/* Contact Info */}
+                      {(person.email || person.phone) && (
+                        <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                          {person.email && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
+                              <EmailIcon fontSize="small" sx={{ color: '#6b7280', fontSize: 12, flexShrink: 0 }} />
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: '#6b7280',
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 0,
+                                  fontSize: '0.6875rem'
+                                }}
+                              >
+                                {person.email}
+                              </Typography>
+                            </Box>
+                          )}
+                          {person.phone && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, flex: '1 1 auto', maxWidth: '100%' }}>
+                              <PhoneIcon fontSize="small" sx={{ color: '#6b7280', fontSize: 12, flexShrink: 0 }} />
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: '#6b7280',
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 0,
+                                  fontSize: '0.6875rem'
+                                }}
+                              >
+                                {person.phone}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      )}
 
-                  {/* Summary */}
-                  <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
-                      Relationship Summary:
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontStyle: 'italic', lineHeight: 1.5 }}>
-                      {person.summary}
-                    </Typography>
-                  </Box>
-
-                  {/* Citations */}
-                  <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
-                      Interaction History:
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Chip
-                        icon={<EmailIcon />}
-                        label={`${person.citations.emails} emails`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          bgcolor: '#f5f5f5', 
-                          color: '#000000',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: '#e0e0e0' }
-                        }}
-                      />
-                      <Chip
-                        icon={<PhoneIcon />}
-                        label={`${person.citations.calls} calls`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          bgcolor: '#f5f5f5', 
-                          color: '#000000',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: '#e0e0e0' }
-                        }}
-                      />
-                      <Chip
-                        icon={<PersonIcon />}
-                        label={`${person.citations.meetings} meetings`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          bgcolor: '#f5f5f5', 
-                          color: '#000000',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: '#e0e0e0' }
-                        }}
-                      />
-                      <Chip
-                        icon={<AttachFileIcon />}
-                        label={`${person.citations.documents} docs`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                          bgcolor: 'info.light', 
-                          color: 'info.contrastText',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'info.main' }
-                        }}
-                      />
+                      {/* Citations */}
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {person.citations.emails > 0 && (
+                          <Chip
+                            icon={<EmailIcon sx={{ fontSize: 12 }} />}
+                            label={`${person.citations.emails} emails`}
+                            size="small"
+                            sx={{ 
+                              bgcolor: '#f5f5f5', 
+                              color: '#000000',
+                              border: '1px solid #e0e0e0',
+                              fontSize: '0.6875rem',
+                              height: 20,
+                              fontWeight: 500,
+                              '&:hover': { bgcolor: '#e0e0e0' }
+                            }}
+                          />
+                        )}
+                        {person.citations.calls > 0 && (
+                          <Chip
+                            icon={<PhoneIcon sx={{ fontSize: 12 }} />}
+                            label={`${person.citations.calls} calls`}
+                            size="small"
+                            sx={{ 
+                              bgcolor: '#f5f5f5', 
+                              color: '#000000',
+                              border: '1px solid #e0e0e0',
+                              fontSize: '0.6875rem',
+                              height: 20,
+                              fontWeight: 500,
+                              '&:hover': { bgcolor: '#e0e0e0' }
+                            }}
+                          />
+                        )}
+                        {person.citations.meetings > 0 && (
+                          <Chip
+                            icon={<PersonIcon sx={{ fontSize: 12 }} />}
+                            label={`${person.citations.meetings} meetings`}
+                            size="small"
+                            sx={{ 
+                              bgcolor: '#f5f5f5', 
+                              color: '#000000',
+                              border: '1px solid #e0e0e0',
+                              fontSize: '0.6875rem',
+                              height: 20,
+                              fontWeight: 500,
+                              '&:hover': { bgcolor: '#e0e0e0' }
+                            }}
+                          />
+                        )}
+                        {person.citations.documents > 0 && (
+                          <Chip
+                            icon={<AttachFileIcon sx={{ fontSize: 12 }} />}
+                            label={`${person.citations.documents} docs`}
+                            size="small"
+                            sx={{ 
+                              bgcolor: '#f5f5f5', 
+                              color: '#000000',
+                              border: '1px solid #e0e0e0',
+                              fontSize: '0.6875rem',
+                              height: 20,
+                              fontWeight: 500,
+                              '&:hover': { bgcolor: '#e0e0e0' }
+                            }}
+                          />
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
+                  ))}
                 </Box>
-              ))}
+              )}
+
+              {/* Team Members */}
+              {deal.team && deal.team.length > 0 && (
+                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e5e7eb', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: '#6b7280',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      fontWeight: 500,
+                      fontSize: '0.6875rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      display: 'block',
+                      mb: 1
+                    }}
+                  >
+                    Team Members
+                  </Typography>
+                  <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 28, height: 28, fontSize: '0.75rem', border: '2px solid white', bgcolor: '#000000' } }}>
+                    {deal.team.map((member, index) => (
+                      <Avatar key={index} sx={{ bgcolor: '#000000', fontWeight: 600 }}>
+                        {member?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A'}
+                      </Avatar>
+                    ))}
+                  </AvatarGroup>
+                </Box>
+              )}
             </Box>
-          )}
+          </Collapse>
         </CardContent>
         
-        <CardActions sx={{ px: 2, pb: 2 }}>
-          <AvatarGroup max={3} sx={{ flexGrow: 1, '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 10 } }}>
-            {deal.team?.map((member, index) => (
-              <Avatar key={index}>{member?.split(' ').map(n => n[0]).join('') || 'N/A'}</Avatar>
-            ))}
-          </AvatarGroup>
-          <IconButton 
-            size="small" 
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              handleMenuOpen(e, deal.id); 
-            }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-            }}
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
-        </CardActions>
+        {/* Actions - edit button only in expanded view with smooth animation */}
+        <Collapse in={isExpanded} timeout={300}>
+          <CardActions sx={{ px: 2, py: 1.5, justifyContent: 'flex-end', minHeight: 'auto', borderTop: '1px solid #e5e7eb' }}>
+            <IconButton 
+              size="small" 
+              onClick={(e) => handleEditDeal(e, deal.id)}
+              sx={{
+                width: 32,
+                height: 32,
+                color: '#6b7280',
+                '&:hover': {
+                  bgcolor: '#f3f4f6',
+                  color: '#111827'
+                }
+              }}
+            >
+              <AddIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </CardActions>
+        </Collapse>
       </Card>
     );
   };
@@ -1613,54 +2168,439 @@ export default function DealPipeline({
           </Box>
         )}
 
-        {/* Context Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={() => { navigate(`/deals/${selectedDealId}`); handleMenuClose(); }}>
-            <ListItemIcon>
-              <VisibilityIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>View Details</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => {
-            const deal = deals.find(d => d.id === selectedDealId);
-            if (deal) onEditDeal(deal);
-            handleMenuClose();
-          }}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit Deal</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose}>
-            <ListItemIcon>
-              <PersonIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Add Contact</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose}>
-            <ListItemIcon>
-              <AttachFileIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Add Activity</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={handleMenuClose}>
-            <ListItemIcon>
-              <TrendingUpIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Generate Report</ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={handleDeleteDeal} sx={{ color: 'error.main' }}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Delete Deal</ListItemText>
-          </MenuItem>
-        </Menu>
+        {/* Edit Deal Card */}
+        {editingDealId && (() => {
+          const dealToEdit = dealsWithContacts.find(d => d.id === editingDealId);
+          if (!dealToEdit) return null;
+          
+          return (
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: 'rgba(0, 0, 0, 0.5)',
+                zIndex: 1300,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 2
+              }}
+              onClick={handleCloseEdit}
+            >
+              <Card
+                onClick={(e) => e.stopPropagation()}
+                sx={{
+                  width: '100%',
+                  maxWidth: 600,
+                  maxHeight: '90vh',
+                  overflow: 'auto',
+                  bgcolor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 1,
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+                }}
+              >
+                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                  {/* Header */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, pb: 2, borderBottom: '1px solid #e5e7eb' }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          color: '#111827',
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          letterSpacing: '-0.01em',
+                          fontSize: '1rem',
+                          lineHeight: 1.3,
+                          mb: 0.5
+                        }}
+                      >
+                        Edit Deal
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#6b7280',
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                          fontWeight: 400,
+                          fontSize: '0.8125rem'
+                        }}
+                      >
+                        {dealToEdit.company}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={handleCloseEdit}
+                      sx={{ 
+                        bgcolor: '#f3f4f6',
+                        color: '#6b7280',
+                        flexShrink: 0,
+                        width: 28,
+                        height: 28,
+                        '&:hover': {
+                          bgcolor: '#e5e7eb',
+                          color: '#111827'
+                        }
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+
+                  {/* Edit Form */}
+                  {editFormData && (
+                    <>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+                        <TextField
+                          label="Company"
+                          value={editFormData.company}
+                          onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                          fullWidth
+                          size="small"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }
+                          }}
+                        />
+                        <TextField
+                          label="Sector"
+                          value={editFormData.sector}
+                          onChange={(e) => setEditFormData({ ...editFormData, sector: e.target.value })}
+                          fullWidth
+                          size="small"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }
+                          }}
+                        />
+                        <TextField
+                          label="Deal Value (M)"
+                          value={editFormData.value}
+                          onChange={(e) => {
+                            // Allow free typing - accept any input, user can type numbers and decimals freely
+                            setEditFormData({ ...editFormData, value: e.target.value });
+                          }}
+                          fullWidth
+                          size="small"
+                          type="text"
+                          InputProps={{
+                            startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                            endAdornment: <InputAdornment position="end">M</InputAdornment>
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }
+                          }}
+                        />
+                        <FormControl fullWidth size="small">
+                          <InputLabel 
+                            sx={{
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }}
+                          >
+                            Lead Contacts
+                          </InputLabel>
+                          <Select
+                            value={editFormData.leadPartner === '__select_more__' ? '' : (editFormData.leadPartner || '')}
+                            onChange={(e) => {
+                              if (e.target.value === '__select_more__') {
+                                // Update form data to track that we're in "select more" mode
+                                setEditFormData({ ...editFormData, leadPartner: '__select_more__' });
+                                // Open the select contacts modal
+                                handleOpenSelectContacts();
+                              } else {
+                                setEditFormData({ ...editFormData, leadPartner: e.target.value });
+                              }
+                            }}
+                            label="Lead Contacts"
+                            sx={{
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }}
+                          >
+                            <MenuItem value="">
+                              <em>None</em>
+                            </MenuItem>
+                            {dealToEdit.people && dealToEdit.people.length > 0 ? (
+                              dealToEdit.people.map((person) => (
+                                <MenuItem key={person.id} value={person.name}>
+                                  {person.name} {person.email ? `(${person.email})` : ''}
+                                </MenuItem>
+                              ))
+                            ) : (
+                              <MenuItem value="" disabled>
+                                No contacts available
+                              </MenuItem>
+                            )}
+                            <Divider />
+                            <MenuItem value="__select_more__" sx={{ color: '#000000', fontWeight: 500 }}>
+                              + Select More Contacts
+                            </MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: '#6b7280',
+                            fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            fontWeight: 500,
+                            fontSize: '0.6875rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            display: 'block',
+                            mb: 0.5
+                          }}
+                        >
+                          Next Step
+                        </Typography>
+                        <TextField
+                          value={editFormData.nextStep}
+                          onChange={(e) => setEditFormData({ ...editFormData, nextStep: e.target.value })}
+                          fullWidth
+                          size="small"
+                          multiline
+                          rows={2}
+                          placeholder="Enter next step..."
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }
+                          }}
+                        />
+                      </Box>
+                    </>
+                  )}
+
+                  {/* Actions */}
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 2, borderTop: '1px solid #e5e7eb' }}>
+                    <Button
+                      onClick={handleCloseEdit}
+                      sx={{
+                        color: '#6b7280',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        '&:hover': {
+                          bgcolor: '#f3f4f6'
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveEdit}
+                      disabled={savingDeal}
+                      sx={{
+                        bgcolor: '#000000',
+                        color: 'white',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        '&:hover': {
+                          bgcolor: '#111827'
+                        },
+                        '&:disabled': {
+                          bgcolor: '#9ca3af',
+                          color: 'white'
+                        },
+                        position: 'relative',
+                        minWidth: 120
+                      }}
+                    >
+                      {savingDeal ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CircularProgress size={14} sx={{ color: 'white' }} />
+                          <span>Saving...</span>
+                        </Box>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          );
+        })()}
+
+        {/* Select Contacts Modal */}
+        {editingDealId && (() => {
+          const dealToEdit = dealsWithContacts.find(d => d.id === editingDealId);
+          if (!dealToEdit) return null;
+          
+          return (
+            <Dialog
+              open={selectContactsOpen}
+              onClose={handleCloseSelectContacts}
+              maxWidth="sm"
+              fullWidth
+              PaperProps={{
+                sx: {
+                  borderRadius: 1,
+                  maxHeight: '80vh'
+                }
+              }}
+            >
+              <DialogTitle sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                pb: 2,
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                  }}
+                >
+                  Select Contacts
+                </Typography>
+                <IconButton onClick={handleCloseSelectContacts} size="small">
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent sx={{ p: 2 }}>
+                {contactsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <Box>
+                    {availableContacts.length === 0 ? (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#6b7280',
+                          textAlign: 'center',
+                          py: 4,
+                          fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        }}
+                      >
+                        No contacts available
+                      </Typography>
+                    ) : (
+                      <Box sx={{ maxHeight: '50vh', overflowY: 'auto' }}>
+                        {availableContacts.map((contact) => (
+                          <Box
+                            key={contact.id}
+                            onClick={() => handleToggleContact(contact.id)}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              p: 1.5,
+                              mb: 1,
+                              border: '1px solid #e5e7eb',
+                              borderRadius: 1,
+                              bgcolor: selectedContactIds.includes(contact.id) ? '#f3f4f6' : 'white',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                borderColor: '#d1d5db',
+                                bgcolor: selectedContactIds.includes(contact.id) ? '#e5e7eb' : '#fafafa'
+                              }
+                            }}
+                          >
+                            <Box sx={{ 
+                              width: 20, 
+                              height: 20, 
+                              border: '2px solid #9ca3af',
+                              borderRadius: '4px',
+                              mr: 1.5,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: selectedContactIds.includes(contact.id) ? '#000000' : 'transparent',
+                              borderColor: selectedContactIds.includes(contact.id) ? '#000000' : '#9ca3af'
+                            }}>
+                              {selectedContactIds.includes(contact.id) && (
+                                <CheckIcon sx={{ fontSize: 14, color: 'white' }} />
+                              )}
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  fontWeight: 500,
+                                  color: '#111827',
+                                  fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  mb: 0.25
+                                }}
+                              >
+                                {contact.name}
+                              </Typography>
+                              {contact.email && (
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    color: '#6b7280',
+                                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                  }}
+                                >
+                                  {contact.email}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </DialogContent>
+              <DialogActions sx={{ px: 2, py: 1.5, borderTop: '1px solid #e5e7eb' }}>
+                <Button
+                  onClick={handleCloseSelectContacts}
+                  sx={{
+                    color: '#6b7280',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    '&:hover': {
+                      bgcolor: '#f3f4f6'
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleAddContactsToDeal}
+                  disabled={contactsLoading || selectedContactIds.length === 0}
+                  sx={{
+                    bgcolor: '#000000',
+                    color: 'white',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    '&:hover': {
+                      bgcolor: '#111827'
+                    },
+                    '&:disabled': {
+                      bgcolor: '#9ca3af',
+                      color: 'white'
+                    },
+                    position: 'relative',
+                    minWidth: 140
+                  }}
+                >
+                  {contactsLoading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={14} sx={{ color: 'white' }} />
+                      <span>Updating...</span>
+                    </Box>
+                  ) : (
+                    `Add ${selectedContactIds.length > 0 ? `${selectedContactIds.length} ` : ''}Contact${selectedContactIds.length !== 1 ? 's' : ''}`
+                  )}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          );
+        })()}
 
         {/* Delete Confirmation Dialog */}
         <Dialog
@@ -1704,18 +2644,13 @@ export default function DealPipeline({
             color: 'white',
             py: 2
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-                {selectedCompany?.company?.charAt(0)}
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  {selectedCompany?.company}
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  {selectedCompany?.sector} • ${((selectedCompany?.value || 0) / 1000000).toFixed(1)}M
-                </Typography>
-              </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {selectedCompany?.company}
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                {selectedCompany?.sector} • ${((selectedCompany?.value || 0) / 1000000).toFixed(1)}M
+              </Typography>
             </Box>
             <IconButton onClick={() => setCompanyModalOpen(false)} sx={{ color: 'white' }}>
               <CloseIcon />
@@ -1829,9 +2764,6 @@ export default function DealPipeline({
               <CardContent sx={{ pb: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar sx={{ bgcolor: '#000000' }}>
-                      {activeDeal.company.charAt(0)}
-                    </Avatar>
                     {getSentimentIcon(activeDeal.sentiment || 'neutral')}
                   </Box>
                 </Box>

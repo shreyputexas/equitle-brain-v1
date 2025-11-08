@@ -80,6 +80,7 @@ import NewDealModal from '../components/NewDealModal';
 import EditDealModal from '../components/EditDealModal';
 import DealPipeline from '../components/DealPipeline';
 import { emailProcessingApi } from '../services/emailProcessingApi';
+import { useAuth } from '../contexts/AuthContext';
 
 type ViewMode = 'grid' | 'list' | 'pipeline';
 
@@ -152,6 +153,7 @@ const stageColors: Record<string, string> = {
 
 export default function Deals() {
   const navigate = useNavigate();
+  const { loading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('pipeline');
@@ -266,8 +268,8 @@ Regards`,
     }
   ]);
 
-  // Use real API for deals data
-  const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals();
+  // Use real API for deals data - only fetch when auth is ready
+  const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals({}, !authLoading);
 
   // Debug: Log raw API deals BEFORE transformation
   console.log('Deals.tsx: apiDeals (raw from hook):', apiDeals);
@@ -780,9 +782,24 @@ Regards`,
   const activeDealCount = deals.filter(d => d.status === 'active').length;
   const prospectiveDealCount = deals.filter(d => d.status !== 'active' && d.status !== 'closed').length;
 
+  // Show loading spinner while auth is initializing OR deals are loading
+  if (authLoading || (loading && apiDeals.length === 0)) {
+    return (
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        bgcolor: 'background.default'
+      }}>
+        <CircularProgress size={48} />
+      </Box>
+    );
+  }
+
   const DealCard = ({ deal }: { deal: DealWithContacts }) => {
     const isExpanded = expandedDeals.has(deal.id);
-    
+
     return (
       <Card
         sx={{

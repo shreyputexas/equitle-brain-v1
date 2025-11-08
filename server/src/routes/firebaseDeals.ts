@@ -195,9 +195,17 @@ router.put('/:id', firebaseAuthMiddleware, async (req, res) => {
     const userId = req.userId!;
     const { id } = req.params;
 
+    logger.info('Update deal request', { userId, dealId: id, body: req.body });
+
     // Validate input
     const { error, value } = updateDealSchema.validate(req.body);
     if (error) {
+      logger.error('Validation error:', {
+        userId,
+        dealId: id,
+        body: req.body,
+        validationErrors: error.details.map(d => d.message)
+      });
       return res.status(400).json({
         success: false,
         message: 'Validation error',
@@ -286,6 +294,37 @@ router.post('/:id/contacts', firebaseAuthMiddleware, async (req, res) => {
     logger.error('Add contact to deal error:', error);
 
     if (error.message === 'Deal not found' || error.message === 'Contact not found') {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
+// @route   DELETE /api/firebase-deals/:id/contacts/:contactId
+// @desc    Remove contact from deal
+// @access  Private
+router.delete('/:id/contacts/:contactId', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { id: dealId, contactId } = req.params;
+
+    const result = await DealsFirestoreService.removeContactFromDeal(userId, dealId, contactId);
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Remove contact from deal error:', error);
+
+    if (error.message === 'Deal not found' || error.message === 'Contact not found' || error.message === 'Contact is not associated with this deal') {
       return res.status(404).json({
         success: false,
         message: error.message

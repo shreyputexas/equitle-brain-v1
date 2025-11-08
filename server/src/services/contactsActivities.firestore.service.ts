@@ -89,15 +89,21 @@ export class ContactsActivitiesFirestoreService {
     try {
       const { dealId, search, status, limit = 50, offset = 0 } = options;
 
-      let query = FirestoreHelpers.getUserCollection(userId, 'contacts')
-        .orderBy('updatedAt', 'desc');
+      // Start with base collection
+      let query: any = FirestoreHelpers.getUserCollection(userId, 'contacts');
 
-      // Apply filters
+      // Apply filters first
       if (dealId) {
         query = query.where('dealId', '==', dealId);
       }
       if (status) {
         query = query.where('status', '==', status);
+      }
+
+      // Only add orderBy if no dealId filter (to avoid requiring composite index)
+      // When dealId is provided, we'll sort client-side
+      if (!dealId) {
+        query = query.orderBy('updatedAt', 'desc');
       }
 
       // Apply pagination
@@ -110,10 +116,19 @@ export class ContactsActivitiesFirestoreService {
       }
 
       const snapshot = await query.limit(limit).get();
-      const contacts = snapshot.docs.map(doc => ({
+      let contacts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      // Sort client-side if we filtered by dealId
+      if (dealId) {
+        contacts.sort((a: any, b: any) => {
+          const aTime = a.updatedAt?.toDate?.() || a.updatedAt || new Date(0);
+          const bTime = b.updatedAt?.toDate?.() || b.updatedAt || new Date(0);
+          return bTime - aTime;
+        });
+      }
 
       // Apply search filter (client-side)
       let filteredContacts = contacts;
