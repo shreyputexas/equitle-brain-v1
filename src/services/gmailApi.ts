@@ -188,12 +188,19 @@ class GmailApiService {
       const maxResults = filters.maxResults || 100;
       params.append('maxResults', maxResults.toString());
       if (filters.pageToken) params.append('pageToken', filters.pageToken);
+      // Add cache-busting parameter
+      params.append('_t', Date.now().toString());
 
       const url = `/firebase-gmail/threads?${params.toString()}`;
       console.log('🌐 Gmail API request URL:', url);
       console.log('🌐 Gmail API request params:', { maxResults, labelIds: filters.labelIds, q: filters.q });
       
-      const response = await axios.get<ThreadsResponse>(url);
+      const response = await axios.get<ThreadsResponse>(url, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       console.log('🌐 Gmail API response data:', {
         threadsCount: response.data.threads?.length || 0,

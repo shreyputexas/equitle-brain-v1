@@ -122,28 +122,48 @@ export default function EmailSelectionModal({
       }
 
       // Transform threads to display format
-      const displayThreads: EmailThreadDisplay[] = response.threads.map((thread: GmailThread) => {
-        const latestMessage = thread.messages[thread.messages.length - 1];
-        const headers = latestMessage?.payload?.headers || [];
+      console.log('🔄 Starting transformation of', response.threads.length, 'threads...');
+      const displayThreads: EmailThreadDisplay[] = response.threads.map((thread: GmailThread, idx: number) => {
+        try {
+          const latestMessage = thread.messages[thread.messages.length - 1];
+          const headers = latestMessage?.payload?.headers || [];
 
-        const getHeader = (name: string) => {
-          const header = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
-          return header?.value || '';
-        };
+          const getHeader = (name: string) => {
+            const header = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
+            return header?.value || '';
+          };
 
-        const subject = getHeader('Subject') || '(No Subject)';
-        const from = getHeader('From') || 'Unknown';
-        const date = getHeader('Date') || '';
+          const subject = getHeader('Subject') || '(No Subject)';
+          const from = getHeader('From') || 'Unknown';
+          const date = getHeader('Date') || '';
 
-        return {
-          id: thread.id,
-          subject,
-          from,
-          date,
-          snippet: latestMessage?.snippet || '',
-          messageId: latestMessage?.id
-        };
+          const transformed = {
+            id: thread.id,
+            subject,
+            from,
+            date,
+            snippet: latestMessage?.snippet || '',
+            messageId: latestMessage?.id
+          };
+          
+          if (idx < 3) {
+            console.log(`   Thread ${idx + 1}:`, subject.substring(0, 50));
+          }
+          
+          return transformed;
+        } catch (error) {
+          console.error(`❌ Error transforming thread ${idx}:`, error);
+          return {
+            id: thread.id || `error-${idx}`,
+            subject: '(Error loading)',
+            from: 'Unknown',
+            date: '',
+            snippet: '',
+            messageId: undefined
+          };
+        }
       });
+      console.log('🔄 Transformation complete');
 
       console.log(`✅ TRANSFORMED ${displayThreads.length} EMAIL THREADS FOR DISPLAY`);
       console.log('✅ Setting threads state with', displayThreads.length, 'threads');
@@ -534,30 +554,34 @@ export default function EmailSelectionModal({
               </Typography>
             </Box>
           ) : (
-            <List sx={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              bgcolor: 'white',
-              borderRadius: 2,
-              border: '1px solid #E2E8F0',
-              minHeight: 0,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#F1F5F9',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#CBD5E1',
-                borderRadius: '4px',
-                '&:hover': {
-                  background: '#94A3B8',
+            <>
+              {(() => {
+                console.log('🎨 RENDERING', threads.length, 'threads in the UI');
+                return null;
+              })()}
+              <List sx={{
+                flex: 1,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                bgcolor: 'white',
+                borderRadius: 2,
+                border: '1px solid #E2E8F0',
+                minHeight: 0,
+                '&::-webkit-scrollbar': {
+                  width: '8px',
                 },
-              },
-            }}>
-            {console.log('🎨 RENDERING', threads.length, 'threads in the UI')}
-            {threads.map((thread, index) => (
+                '&::-webkit-scrollbar-track': {
+                  background: '#F1F5F9',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#CBD5E1',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: '#94A3B8',
+                  },
+                },
+              }}>
+              {threads.map((thread, index) => (
               <React.Fragment key={thread.id}>
                 {index > 0 && <Divider />}
                 <ListItem disablePadding>
@@ -695,8 +719,9 @@ export default function EmailSelectionModal({
                   </Box>
                 </ListItem>
               </React.Fragment>
-            ))}
-            </List>
+              ))}
+              </List>
+            </>
           )}
         </Box>
       </DialogContent>
