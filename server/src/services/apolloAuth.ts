@@ -57,8 +57,10 @@ export class ApolloAuthService {
    * Generate Apollo OAuth authorization URL
    * According to Apollo OAuth 2.0 documentation:
    * https://app.apollo.io/oauth/authorize?client_id=...&redirect_uri=...&response_type=code&scope=...&state=...
+   * 
+   * State parameter encoding: Using base64 URL-safe encoding to avoid issues with special characters
    */
-  static getAuthUrl(userId: string, requestedScopes: string[] = []): string {
+  static getAuthUrl(userId: string, requestedScopes: string[] = [], includeState: boolean = true): string {
     if (!this.CLIENT_ID || this.CLIENT_ID === 'APOLLO_CLIENT_ID_PLACEHOLDER') {
       throw new Error('Apollo Client ID not configured. Please set APOLLO_CLIENT_ID in your .env file.');
     }
@@ -66,10 +68,6 @@ export class ApolloAuthService {
     if (!this.CLIENT_SECRET || this.CLIENT_SECRET === 'APOLLO_CLIENT_SECRET_PLACEHOLDER') {
       logger.warn('Apollo Client Secret not configured. OAuth flow will fail.');
     }
-
-    // Generate secure state parameter with user ID and timestamp
-    const timestamp = Date.now();
-    const state = `${userId}:${timestamp}`;
 
     // Get scopes (space-separated)
     const scopes = this.getScopes(requestedScopes);
@@ -80,24 +78,65 @@ export class ApolloAuthService {
       client_id: this.CLIENT_ID,
       redirect_uri: this.REDIRECT_URI,
       response_type: 'code',
-      scope: scopes, // URLSearchParams will automatically URL-encode spaces as %20
-      state: state
+      scope: scopes // URLSearchParams will automatically URL-encode spaces as %20
     });
+
+    // Generate state parameter with base64 URL-safe encoding
+    // Format: base64({userId: "...", timestamp: ...})
+    let state: string | undefined;
+    if (includeState && userId) {
+      const timestamp = Date.now();
+      const stateData = {
+        userId: userId,
+        timestamp: timestamp
+      };
+      // Use base64 URL-safe encoding (replaces + with -, / with _, removes padding =)
+      const stateJson = JSON.stringify(stateData);
+      const stateBase64 = Buffer.from(stateJson).toString('base64');
+      // Make URL-safe: replace + with -, / with _, remove padding =
+      state = stateBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    // Add state parameter if provided
+    if (state) {
+      params.append('state', state);
+    }
 
     // Apollo OAuth authorization endpoint
     // Note: This endpoint will return 404 if the app is not registered in Apollo
     // Register your app at: Apollo Settings → Integrations → API → OAuth registration
     const authUrl = `${this.BASE_URL}/oauth/authorize?${params.toString()}`;
 
-    logger.info('Generated Apollo OAuth URL', {
+    // Log detailed information about the authorization URL
+    const logData: any = {
       userId,
       scopes: requestedScopes,
-      timestamp,
+      scopeString: scopes,
+      hasState: !!state,
+      stateFormat: state ? 'base64-json' : 'none',
       redirectUri: this.REDIRECT_URI,
-      authUrl: authUrl.replace(this.CLIENT_ID, 'CLIENT_ID_HIDDEN') // Log without exposing client ID
-    });
+      includeState: includeState,
+      clientIdPrefix: this.CLIENT_ID.substring(0, 8) + '...',
+      authUrlLength: authUrl.length
+    };
+
+    // Log the URL with sensitive data hidden
+    const safeAuthUrl = authUrl
+      .replace(this.CLIENT_ID, 'CLIENT_ID_HIDDEN')
+      .replace(state || '', 'STATE_HIDDEN');
+    logData.authUrl = safeAuthUrl;
+
+    logger.info('Generated Apollo OAuth URL', logData);
 
     return authUrl;
+  }
+
+  /**
+   * Generate Apollo OAuth authorization URL without state parameter (for testing)
+   * This can help diagnose if state parameter is causing issues
+   */
+  static getAuthUrlWithoutState(requestedScopes: string[] = []): string {
+    return this.getAuthUrl('', requestedScopes, false);
   }
 
   /**
@@ -135,15 +174,31 @@ export class ApolloAuthService {
         codeLength: code.length,
         redirectUri: finalRedirectUri,
         usingProvidedRedirectUri: !!redirectUri,
-        clientIdPrefix: this.CLIENT_ID.substring(0, 8) + '...'
+        clientIdPrefix: this.CLIENT_ID.substring(0, 8) + '...',
+        tokenUrl: tokenUrl
       });
 
       // Send POST request with form data
-      const response = await axios.post(tokenUrl, formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
+      let response;
+      try {
+        response = await axios.post(tokenUrl, formData, {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        });
+      } catch (error: any) {
+        // Enhanced error logging for Apollo token exchange
+        logger.error('Apollo token exchange request failed', {
+          error: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          responseData: error.response?.data,
+          requestUrl: tokenUrl,
+          hasCode: !!code,
+          redirectUri: finalRedirectUri
+        });
+        throw error;
+      }
 
       const tokens = response.data as ApolloTokenResponse;
 
@@ -331,27 +386,72 @@ export class ApolloAuthService {
 
   /**
    * Validate state parameter for CSRF protection
+   * Supports both formats:
+   * 1. Legacy: userId:timestamp (for backward compatibility)
+   * 2. New: base64-encoded JSON {userId: "...", timestamp: ...}
    */
   static validateState(state: string, maxAgeMinutes: number = 10): { userId: string; isValid: boolean } {
     try {
-      if (!state || !state.includes(':')) {
+      if (!state) {
         return { userId: '', isValid: false };
       }
 
-      const [userId, timestampStr] = state.split(':');
-      const timestamp = parseInt(timestampStr);
+      // Try to decode as base64 JSON first (new format)
+      try {
+        // Restore URL-safe base64 to standard base64
+        const base64 = state.replace(/-/g, '+').replace(/_/g, '/');
+        // Add padding if needed
+        const paddedBase64 = base64 + '='.repeat((4 - base64.length % 4) % 4);
+        const decoded = Buffer.from(paddedBase64, 'base64').toString('utf-8');
+        const stateData = JSON.parse(decoded);
 
-      if (!userId || isNaN(timestamp)) {
-        return { userId: '', isValid: false };
+        if (stateData.userId && stateData.timestamp) {
+          const timestamp = parseInt(stateData.timestamp);
+          if (!isNaN(timestamp)) {
+            const age = Date.now() - timestamp;
+            const maxAge = maxAgeMinutes * 60 * 1000;
+
+            logger.info('Validated state parameter (base64-json format)', {
+              userId: stateData.userId,
+              age,
+              isValid: age <= maxAge
+            });
+
+            return {
+              userId: stateData.userId,
+              isValid: age <= maxAge
+            };
+          }
+        }
+      } catch (base64Error) {
+        // Not base64 JSON, try legacy format
+        logger.debug('State is not base64-json format, trying legacy format');
       }
 
-      const age = Date.now() - timestamp;
-      const maxAge = maxAgeMinutes * 60 * 1000;
+      // Legacy format: userId:timestamp
+      if (state.includes(':')) {
+        const [userId, timestampStr] = state.split(':');
+        const timestamp = parseInt(timestampStr);
 
-      return {
-        userId,
-        isValid: age <= maxAge
-      };
+        if (userId && !isNaN(timestamp)) {
+          const age = Date.now() - timestamp;
+          const maxAge = maxAgeMinutes * 60 * 1000;
+
+          logger.info('Validated state parameter (legacy format)', {
+            userId,
+            age,
+            isValid: age <= maxAge
+          });
+
+          return {
+            userId,
+            isValid: age <= maxAge
+          };
+        }
+      }
+
+      logger.warn('State parameter format not recognized', { state });
+      return { userId: '', isValid: false };
     } catch (error) {
       logger.error('Failed to validate state parameter', {
         error: error instanceof Error ? error.message : 'Unknown error',
