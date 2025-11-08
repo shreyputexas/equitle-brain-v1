@@ -1498,10 +1498,23 @@ router.get('/apollo/test-connect', async (req, res) => {
     // Generate URL without state parameter
     const authUrl = ApolloAuthService.getAuthUrlWithoutState([]);
     
+    // Get configuration details for debugging
+    const config = {
+      clientId: process.env.APOLLO_CLIENT_ID ? `${process.env.APOLLO_CLIENT_ID.substring(0, 8)}...` : 'NOT SET',
+      redirectUri: process.env.APOLLO_REDIRECT_URI || 'NOT SET',
+      baseUrl: 'https://app.apollo.io',
+      endpoint: '/oauth/authorize'
+    };
+    
     logger.info('Generated Apollo auth URL (test mode - no state)', { 
-      authUrl: authUrl.substring(0, 150) + '...',
-      urlLength: authUrl.length
+      authUrl: authUrl.substring(0, 200),
+      urlLength: authUrl.length,
+      config
     });
+
+    // Parse URL to show individual parameters
+    const urlObj = new URL(authUrl);
+    const params = Object.fromEntries(urlObj.searchParams.entries());
 
     // Return HTML page with clickable link for easy testing
     res.send(`
@@ -1577,17 +1590,45 @@ router.get('/apollo/test-connect', async (req, res) => {
               <strong>⚠️ Note:</strong> This is a test endpoint. In production, you should always use state parameters for security.
             </div>
 
+            <h2>Configuration:</h2>
+            <div class="url-box">
+              <strong>Client ID:</strong> ${config.clientId}<br>
+              <strong>Redirect URI:</strong> ${config.redirectUri}<br>
+              <strong>Base URL:</strong> ${config.baseUrl}<br>
+              <strong>Endpoint:</strong> ${config.endpoint}
+            </div>
+
             <h2>Authorization URL:</h2>
             <div class="url-box">${authUrl}</div>
+
+            <h2>URL Parameters:</h2>
+            <div class="url-box">
+              ${Object.entries(params).map(([key, value]) => `<strong>${key}:</strong> ${value}<br>`).join('')}
+            </div>
 
             <a href="${authUrl}" class="button" target="_blank">🚀 Test Apollo OAuth (Opens in New Tab)</a>
 
             <h2>What to expect:</h2>
             <ul>
               <li><strong>If successful:</strong> Apollo will redirect to your callback URL with an authorization code</li>
-              <li><strong>If 404:</strong> Apollo is rejecting the request - check app registration status</li>
+              <li><strong>If 404:</strong> Apollo is rejecting the request - this means:
+                <ul>
+                  <li>App is not registered/approved in Apollo</li>
+                  <li>Client ID doesn't match registered app</li>
+                  <li>Redirect URI doesn't match registered redirect URI</li>
+                  <li>App needs approval from Apollo team</li>
+                </ul>
+              </li>
               <li><strong>If error:</strong> Check the error message in the URL parameters</li>
             </ul>
+
+            <div class="warning">
+              <strong>🔍 Debugging Steps:</strong><br>
+              1. Compare the Client ID above with what's in Apollo Settings → Integrations → API → OAuth registration<br>
+              2. Verify the Redirect URI matches exactly (including https://, no trailing slash)<br>
+              3. Check if your app status is "Approved" in Apollo (not just "Registered")<br>
+              4. The playground works because it might use a different validation path
+            </div>
           </div>
         </body>
       </html>
