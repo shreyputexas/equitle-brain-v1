@@ -44,6 +44,19 @@ class EmailsApiService {
       throw error;
     }
   }
+
+  async getEmailsByDealId(dealId: string, limit: number = 100): Promise<EmailAlert[]> {
+    try {
+      console.log('Fetching emails for deal:', dealId);
+      const allEmails = await this.getEmails(limit * 2); // Fetch more to ensure we get enough after filtering
+      const dealEmails = allEmails.filter(email => email.associatedDealId === dealId);
+      console.log(`Found ${dealEmails.length} emails associated with deal ${dealId}`);
+      return dealEmails.slice(0, limit); // Return up to the limit
+    } catch (error) {
+      console.error('Error fetching emails by deal ID:', error);
+      throw error;
+    }
+  }
 }
 
 export const emailsApi = new EmailsApiService();

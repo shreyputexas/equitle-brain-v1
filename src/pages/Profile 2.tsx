@@ -56,7 +56,8 @@ import {
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
   Language as LanguageIcon,
-  Upload as UploadIcon
+  Upload as UploadIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { searcherProfilesApi, SearcherProfile, Education, Experience } from '../services/searcherProfilesApi';

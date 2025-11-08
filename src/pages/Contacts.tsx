@@ -121,9 +121,12 @@ const Contacts: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      console.log('Fetching contacts from /api/firebase/contacts...');
       const response = await axios.get<any>('/api/firebase/contacts');
+      console.log('Contacts response:', response);
       // Map contacts and determine type from tags
       const contactsList = response.data?.data?.contacts || response.data?.data || [];
+      console.log('Contacts list:', contactsList);
       const contactsWithTypes = contactsList.map((contact: any) => {
         // Determine contact type from tags
         let contactType: ContactType = 'deal';
@@ -147,6 +150,9 @@ const Contacts: React.FC = () => {
       setContacts(contactsWithTypes);
     } catch (err: any) {
       console.error('Error fetching contacts:', err);
+      console.error('Error response:', err.response);
+      console.error('Error status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to load contacts';
       setError(errorMessage);
     } finally {

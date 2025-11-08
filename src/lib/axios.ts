@@ -9,12 +9,16 @@ axiosInstance.interceptors.request.use(
   async (config: any) => {
     try {
       const currentUser = auth.currentUser;
+      console.log('Current user in axios interceptor:', currentUser?.email || 'Not logged in');
       if (currentUser) {
         // Force token refresh if it's close to expiring
         const idToken = await currentUser.getIdToken(true);
+        console.log('Got Firebase token:', idToken ? `${idToken.substring(0, 20)}...` : 'null');
         if (config.headers) {
           config.headers.Authorization = `Bearer ${idToken}`;
         }
+      } else {
+        console.warn('No current user - request will be unauthenticated');
       }
     } catch (error) {
       console.error('Failed to get auth token:', error);

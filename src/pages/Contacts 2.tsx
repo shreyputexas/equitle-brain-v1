@@ -67,6 +67,7 @@ interface Contact {
   city?: string;
   state?: string;
   country?: string;
+  website?: string;
   headline?: string;
   photo_url?: string;
   tags?: string[];
@@ -101,10 +102,10 @@ const Contacts: React.FC = () => {
     title: '',
     company: '',
     type: 'deal' as ContactType,
-    tags: [] as string[],
     city: '',
     state: '',
-    website: ''
+    website: '',
+    tags: [] as string[]
   });
 
   useEffect(() => {

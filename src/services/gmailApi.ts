@@ -82,7 +82,7 @@ class GmailApiService {
   private baseURL = '/api';
 
   constructor() {
-    axios.defaults.baseURL = this.baseURL;
+    // Don't set axios.defaults.baseURL globally - it affects ALL axios requests
     // Auth headers are now set per-request, not globally
   }
 
@@ -91,7 +91,7 @@ class GmailApiService {
    */
   async sendEmail(emailData: SendEmailData): Promise<SendEmailResponse> {
     try {
-      const response = await axios.post<SendEmailResponse>('/gmail/send', emailData);
+      const response = await axios.post<SendEmailResponse>(`${this.baseURL}/gmail/send`, emailData);
       return response.data;
     } catch (error: any) {
       console.error('Error sending email:', error);
@@ -115,7 +115,7 @@ class GmailApiService {
     contactId?: string;
   }): Promise<SendEmailResponse> {
     try {
-      const response = await axios.post<SendEmailResponse>(`/gmail/reply/${messageId}`, replyData);
+      const response = await axios.post<SendEmailResponse>(`${this.baseURL}/gmail/reply/${messageId}`, replyData);
       return response.data;
     } catch (error: any) {
       console.error('Error replying to email:', error);
@@ -142,7 +142,7 @@ class GmailApiService {
       if (filters.maxResults) params.append('maxResults', filters.maxResults.toString());
       if (filters.pageToken) params.append('pageToken', filters.pageToken);
 
-      const response = await axios.get<MessagesResponse>(`/gmail/messages?${params.toString()}`);
+      const response = await axios.get<MessagesResponse>(`${this.baseURL}/gmail/messages?${params.toString()}`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Gmail messages:', error);
@@ -160,7 +160,7 @@ class GmailApiService {
    */
   async getMessage(messageId: string): Promise<{ message: GmailMessage }> {
     try {
-      const response = await axios.get<{ message: GmailMessage }>(`/gmail/messages/${messageId}`);
+      const response = await axios.get<{ message: GmailMessage }>(`${this.baseURL}/gmail/messages/${messageId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Error fetching Gmail message ${messageId}:`, error);
@@ -191,10 +191,10 @@ class GmailApiService {
       // Add cache-busting parameter
       params.append('_t', Date.now().toString());
 
-      const url = `/firebase-gmail/threads?${params.toString()}`;
+      const url = `${this.baseURL}/firebase-gmail/threads?${params.toString()}`;
       console.log('🌐 Gmail API request URL:', url);
       console.log('🌐 Gmail API request params:', { maxResults, labelIds: filters.labelIds, q: filters.q });
-      
+
       const response = await axios.get<ThreadsResponse>(url, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -225,7 +225,7 @@ class GmailApiService {
    */
   async getLabels(): Promise<LabelsResponse> {
     try {
-      const response = await axios.get<LabelsResponse>('/gmail/labels');
+      const response = await axios.get<LabelsResponse>(`${this.baseURL}/gmail/labels`);
       return response.data;
     } catch (error: any) {
       console.error('Error fetching Gmail labels:', error);
@@ -243,7 +243,7 @@ class GmailApiService {
    */
   async markAsRead(messageId: string): Promise<void> {
     try {
-      await axios.post(`/gmail/messages/${messageId}/read`);
+      await axios.post(`${this.baseURL}/gmail/messages/${messageId}/read`);
     } catch (error: any) {
       console.error(`Error marking message ${messageId} as read:`, error);
 
@@ -260,7 +260,7 @@ class GmailApiService {
    */
   async deleteMessage(messageId: string): Promise<void> {
     try {
-      await axios.delete(`/gmail/messages/${messageId}`);
+      await axios.delete(`${this.baseURL}/gmail/messages/${messageId}`);
     } catch (error: any) {
       console.error(`Error deleting message ${messageId}:`, error);
 

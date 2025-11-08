@@ -60,6 +60,7 @@ server/secrets/serviceAccountKey.json
 
 # Environment files
 .env
+.env 2
 .env.local
 .env.development
 .env.production
