@@ -650,7 +650,7 @@ export default function DataEnrichment() {
         contactType: contactSearchType,
         contactsToFind,
         // Include Apollo API key if available, otherwise will use OAuth
-        apolloApiKey: apolloApiKey || undefined
+        apiKey: apolloApiKey || undefined
       };
 
       // Add appropriate criteria based on contact type

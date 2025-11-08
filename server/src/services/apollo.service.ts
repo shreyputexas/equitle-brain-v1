@@ -81,7 +81,8 @@ export class ApolloService {
         logger.warn('Apollo access token not provided. OAuth authentication required.');
       }
     } else {
-      this.apiKey = apiKeyOrToken || process.env.APOLLO_API_KEY || '';
+      // Clean the API key of any whitespace
+      this.apiKey = (apiKeyOrToken || process.env.APOLLO_API_KEY || '').trim();
       if (!this.apiKey) {
         logger.warn('Apollo API key not found. Set APOLLO_API_KEY environment variable.');
       }
@@ -591,26 +592,58 @@ export class ApolloService {
           logger.error('Apollo access token is not provided');
           return false;
         }
-
         logger.info('Validating Apollo access token');
       } else {
         if (!this.apiKey) {
           logger.error('Apollo API key is not provided');
           return false;
         }
-
-        logger.info('Validating Apollo API key');
+        logger.info('Validating Apollo API key', {
+          keyLength: this.apiKey.length,
+          keyPrefix: this.apiKey.substring(0, 8) + '...'
+        });
       }
 
-      // Make a minimal test request
-      const response = await axios.post<any>(
-        `${this.baseUrl}/mixed_people/search`,
-        { per_page: 1 },
-        {
-          headers: this.getAuthHeaders(),
-          timeout: 10000
-        }
-      );
+      const authHeaders = this.getAuthHeaders();
+      logger.info('Making validation request to Apollo', {
+        url: `${this.baseUrl}/mixed_people/search`,
+        headers: { ...authHeaders, 'X-Api-Key': authHeaders['X-Api-Key'] ? '[API_KEY]' : undefined },
+        useOAuth: this.useOAuth
+      });
+
+      // Try multiple validation endpoints
+      let response;
+      try {
+        // First try with organizations search (simpler endpoint)
+        response = await axios.post<any>(
+          `${this.baseUrl}/organizations/search`,
+          { per_page: 1 },
+          {
+            headers: authHeaders,
+            timeout: 15000
+          }
+        );
+      } catch (firstError: any) {
+        logger.info('Organizations search failed, trying mixed_people/search', {
+          status: firstError.response?.status,
+          error: firstError.message
+        });
+
+        // Fallback to original endpoint
+        response = await axios.post<any>(
+          `${this.baseUrl}/mixed_people/search`,
+          { per_page: 1 },
+          {
+            headers: authHeaders,
+            timeout: 15000
+          }
+        );
+      }
+
+      logger.info('Apollo validation response received', {
+        status: response.status,
+        dataLength: JSON.stringify(response.data).length
+      });
 
       // If we get a 200 response, the key/token is valid
       if (response.status === 200) {
@@ -618,13 +651,30 @@ export class ApolloService {
         return true;
       }
 
-      logger.warn(this.useOAuth ? 'Apollo access token validation failed - unexpected response' : 'Apollo API key validation failed - unexpected response');
+      logger.warn(this.useOAuth ? 'Apollo access token validation failed - unexpected response' : 'Apollo API key validation failed - unexpected response', {
+        status: response.status,
+        statusText: response.statusText
+      });
       return false;
     } catch (error: any) {
-      logger.error(this.useOAuth ? 'Apollo access token validation failed' : 'Apollo API key validation failed', {
-        error: error.message,
-        status: error.response?.status
-      });
+      const responseData = error.response?.data;
+
+      // Check for specific Apollo error messages
+      if (responseData?.message?.includes('payment')) {
+        logger.error('Apollo API key validation failed - Payment issue', {
+          error: error.message,
+          status: error.response?.status,
+          apolloMessage: responseData.message
+        });
+      } else {
+        logger.error(this.useOAuth ? 'Apollo access token validation failed' : 'Apollo API key validation failed', {
+          error: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          responseData: responseData
+        });
+      }
+
       return false;
     }
   }

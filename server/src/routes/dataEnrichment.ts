@@ -150,7 +150,22 @@ router.post('/validate-key', auth, async (req, res) => {
         }
       } catch (error: any) {
         logger.warn('Apollo validation error', { userId, usingApiKey: !!apiKey, error: error.message });
-        const message = apiKey ? 'Invalid Apollo API key' : error.message;
+
+        let message;
+        if (apiKey) {
+          // Check for specific Apollo error messages
+          const responseData = error.response?.data;
+          if (responseData?.message?.includes('payment')) {
+            message = 'Apollo API key is valid but there is a payment issue with your Apollo account. Please check your billing settings.';
+          } else if (error.response?.status === 401 || error.response?.status === 403) {
+            message = 'Apollo API key is invalid or lacks required permissions.';
+          } else {
+            message = 'Apollo API key validation failed. Please check your key and account status.';
+          }
+        } else {
+          message = error.message;
+        }
+
         return res.json({
           success: true,
           valid: false,
