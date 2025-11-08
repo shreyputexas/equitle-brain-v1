@@ -242,12 +242,13 @@ app.use('/api/integrations', (req, res, next) => {
       req.path === '/microsoft/callback' ||
       req.path === '/apollo/callback' ||
       req.path === '/apollo/test-connect' ||
+      req.path === '/apollo/debug-config' ||
       req.path === '/test' ||
       req.path === '/microsoft/test') {
-    console.log('Skipping auth for OAuth callback/test endpoint');
+    console.log('Skipping auth for OAuth callback/test endpoint:', req.path);
     return next();
   }
-  console.log('Applying auth middleware');
+  console.log('Applying auth middleware for path:', req.path);
   return firebaseAuthMiddleware(req, res, next);
 }, integrationRoutes);
 
@@ -271,6 +272,47 @@ app.post('/webhook', async (req, res) => {
   } catch (error) {
     logger.error('Error processing webhook:', error);
     res.status(500).json({ success: false, error: 'Failed to process webhook' });
+  }
+});
+
+// Apollo debug configuration endpoint (no auth required)
+app.get('/api/apollo-debug', async (req, res) => {
+  try {
+    const { ApolloAuthService } = await import('./services/apolloAuth');
+
+    const config = {
+      clientId: process.env.APOLLO_CLIENT_ID ? `${process.env.APOLLO_CLIENT_ID.substring(0, 8)}...` : 'NOT SET',
+      clientSecret: process.env.APOLLO_CLIENT_SECRET ? 'SET' : 'NOT SET',
+      redirectUri: process.env.APOLLO_REDIRECT_URI || 'NOT SET',
+      baseUrl: 'https://app.apollo.io',
+      authEndpoint: '/oauth/authorize',
+      tokenEndpoint: 'https://app.apollo.io/api/v1/oauth/token'
+    };
+
+    // Generate test URLs with and without state
+    const testUrlWithState = ApolloAuthService.getAuthUrl('test-user', []);
+    const testUrlWithoutState = ApolloAuthService.getAuthUrlWithoutState([]);
+
+    res.json({
+      success: true,
+      configuration: config,
+      testUrls: {
+        withState: testUrlWithState,
+        withoutState: testUrlWithoutState
+      },
+      recommendations: [
+        'Verify Client ID matches exactly in Apollo registration',
+        'Ensure Redirect URI matches exactly (no trailing slash)',
+        'Check if app status is "Approved" not just "Registered"',
+        'Try the URLs above to test if they work'
+      ]
+    });
+  } catch (error) {
+    console.error('Error generating Apollo debug config:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate debug config'
+    });
   }
 });
 

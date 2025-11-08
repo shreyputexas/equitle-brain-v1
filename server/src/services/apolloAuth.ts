@@ -21,8 +21,8 @@ export interface ApolloUserProfile {
 export class ApolloAuthService {
   private static readonly CLIENT_ID = process.env.APOLLO_CLIENT_ID || 'APOLLO_CLIENT_ID_PLACEHOLDER';
   private static readonly CLIENT_SECRET = process.env.APOLLO_CLIENT_SECRET || 'APOLLO_CLIENT_SECRET_PLACEHOLDER';
-  // Handle multiple redirect URIs (Apollo allows multiple in registration, but we use only the first one)
-  private static readonly REDIRECT_URI = (process.env.APOLLO_REDIRECT_URI || 'https://neat-berries-dress.loca.lt/api/integrations/apollo/callback').split(',')[0].trim();
+  // Use production redirect URI - no fallback to localhost
+  private static readonly REDIRECT_URI = process.env.APOLLO_REDIRECT_URI || 'https://equitle-api.onrender.com/api/integrations/apollo/callback';
   private static readonly BASE_URL = 'https://app.apollo.io';
   private static readonly API_BASE_URL = 'https://app.apollo.io/api/v1';
 
