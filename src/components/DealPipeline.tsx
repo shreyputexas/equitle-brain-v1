@@ -308,25 +308,55 @@ export default function DealPipeline({
   // Transform API deals to include mock people data for now
   // Guard against empty or undefined deals array
   const dealsArray = Array.isArray(deals) ? deals : [];
-  console.log('DealPipeline: Component render - dealsArray length:', dealsArray.length);
-  
+  console.log('🔍 DealPipeline: dealsArray from props:', dealsArray.length, 'deals');
+  console.log('🔍 DealPipeline: All deals:', dealsArray.map(d => ({ id: d.id, company: d.company, stage: d.stage, status: d.status })));
+
+  // Filter out invalid deals AND closed/lost deals before processing
+  // This matches the filtering logic in getDealsForStage
+  const validDeals = dealsArray.filter(deal => {
+    // Must have id and company
+    if (!deal.id || !deal.company) return false;
+
+    // Filter out closed and lost deals (same logic as getDealsForStage)
+    const isShowable = !deal.status || deal.status === 'active' || deal.status === 'paused';
+    return isShowable;
+  });
+
+  const filteredOutDeals = dealsArray.filter(deal => {
+    if (!deal.id || !deal.company) return true;
+    const isShowable = !deal.status || deal.status === 'active' || deal.status === 'paused';
+    return !isShowable;
+  });
+
+  if (filteredOutDeals.length > 0) {
+    console.log('🚫 Filtered out deals (closed/lost or invalid):', filteredOutDeals.map(d => ({
+      company: d.company,
+      status: d.status,
+      hasId: !!d.id,
+      hasCompany: !!d.company
+    })));
+  }
+
+  console.log('✅ Valid & active deals after filtering:', validDeals.length, 'deals');
+
   // Apply optimistic stage updates to deals for instant UI feedback
   // CRITICAL: Optimistic updates ALWAYS take precedence over props to prevent snap-back
-  const dealsWithContacts: DealWithContacts[] = dealsArray.map(deal => {
-    const optimisticStage = optimisticStageUpdates.get(deal.id);
-    // Always use optimistic stage if it exists - this prevents snap-back when props refresh
-    const finalStage = optimisticStage || deal.stage;
-    if (optimisticStage && optimisticStage !== deal.stage) {
-      console.log(`Applying optimistic update: Deal ${deal.id} (${deal.company}) stage: ${deal.stage} -> ${optimisticStage}`);
-    }
-    // Use updated contacts if available, otherwise use mockPeople
-    const people = updatedDealContacts.get(deal.id) || mockPeople;
-    return {
-      ...deal,
-      stage: finalStage, // Optimistic stage always wins - prevents snap-back
-      people: people
-    };
-  });
+  const dealsWithContacts: DealWithContacts[] = validDeals
+    .map(deal => {
+      const optimisticStage = optimisticStageUpdates.get(deal.id);
+      // Always use optimistic stage if it exists - this prevents snap-back when props refresh
+      const finalStage = optimisticStage || deal.stage;
+      if (optimisticStage && optimisticStage !== deal.stage) {
+        console.log(`Applying optimistic update: Deal ${deal.id} (${deal.company}) stage: ${deal.stage} -> ${optimisticStage}`);
+      }
+      // Use updated contacts if available, otherwise use mockPeople
+      const people = updatedDealContacts.get(deal.id) || mockPeople;
+      return {
+        ...deal,
+        stage: finalStage, // Optimistic stage always wins - prevents snap-back
+        people: people
+      };
+    });
   
   console.log('DealPipeline: Component render - dealsWithContacts length:', dealsWithContacts.length);
   console.log('DealPipeline: Component render - dealsWithContacts:', dealsWithContacts);
@@ -1861,17 +1891,22 @@ export default function DealPipeline({
         <Box sx={{ position: 'relative', zIndex: 2 }}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 400, 
-                  color: 'white', 
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 400,
+                  color: 'white',
                   fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   letterSpacing: '-0.02em'
                 }}
               >
                 Deal Pipeline
               </Typography>
+              {(() => {
+                console.log('🏷️ Top-level chip count - dealsWithContacts.length:', dealsWithContacts.length);
+                console.log('🏷️ Top-level chip - deals:', dealsWithContacts.map(d => ({ company: d.company, stage: d.stage })));
+                return null;
+              })()}
               <Chip
                 size="small"
                 label={`${dealsWithContacts.length} Deal${dealsWithContacts.length !== 1 ? 's' : ''}`}
@@ -1996,9 +2031,11 @@ export default function DealPipeline({
                 });
               }
               
-              const stageDeals = filteredDeals.filter(deal => 
-              searchTerm === '' || deal.company.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+              const stageDeals = filteredDeals
+              .filter(deal => deal.id && deal.company) // Filter out deals missing id or company
+              .filter(deal =>
+                searchTerm === '' || deal.company.toLowerCase().includes(searchTerm.toLowerCase())
+              );
               
             console.log(`DealPipeline.render: Stage "${stage.value}" - stageDeals after search filter:`, stageDeals);
             console.log(`DealPipeline.render: Stage "${stage.value}" - stageDeals length after filter:`, stageDeals.length);
