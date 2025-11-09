@@ -7,8 +7,6 @@ import {
   Card,
   CardContent,
   CardActions,
-  Avatar,
-  AvatarGroup,
   Chip,
   IconButton,
   Tooltip,
@@ -74,6 +72,7 @@ import contactsApi from '../services/contactsApi';
 import integrationService from '../services/integrationService';
 import emailCategorizationService from '../services/emailCategorizationService';
 import OutlookEmailCard from './OutlookEmailCard';
+import communicationsApi, { Communication } from '../services/communicationsApi';
 
 interface Person {
   id: string;
@@ -275,6 +274,10 @@ export default function DealPipeline({
   // Track pending drag operations to prevent race conditions
   const pendingDragsRef = React.useRef<Set<string>>(new Set());
   
+  // Communications state for Key Interactions
+  const [dealCommunications, setDealCommunications] = useState<Record<string, Communication[]>>({});
+  const hasFetchedCommunicationsRef = React.useRef(false); // Simple one-time fetch flag
+  
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -296,20 +299,9 @@ export default function DealPipeline({
   const [emailsLoading, setEmailsLoading] = useState(false);
   const [emailsError, setEmailsError] = useState<string | null>(null);
 
-  // Debug: Log deals prop received by DealPipeline
-  console.log('DealPipeline: Component render - deals prop received:', deals);
-  console.log('DealPipeline: Component render - deals prop length:', deals?.length);
-  console.log('DealPipeline: Component render - loading:', loading);
-  console.log('DealPipeline: Component render - error:', error);
-  console.log('DealPipeline: Component render - deals prop type:', typeof deals);
-  console.log('DealPipeline: Component render - deals is array?', Array.isArray(deals));
-  console.log('DealPipeline: Component render - First deal sample:', deals?.[0]);
-
   // Transform API deals to include mock people data for now
   // Guard against empty or undefined deals array
   const dealsArray = Array.isArray(deals) ? deals : [];
-  console.log('🔍 DealPipeline: dealsArray from props:', dealsArray.length, 'deals');
-  console.log('🔍 DealPipeline: All deals:', dealsArray.map(d => ({ id: d.id, company: d.company, stage: d.stage, status: d.status })));
 
   // Filter out invalid deals AND closed/lost deals before processing
   // This matches the filtering logic in getDealsForStage
@@ -327,17 +319,6 @@ export default function DealPipeline({
     const isShowable = !deal.status || deal.status === 'active' || deal.status === 'paused';
     return !isShowable;
   });
-
-  if (filteredOutDeals.length > 0) {
-    console.log('🚫 Filtered out deals (closed/lost or invalid):', filteredOutDeals.map(d => ({
-      company: d.company,
-      status: d.status,
-      hasId: !!d.id,
-      hasCompany: !!d.company
-    })));
-  }
-
-  console.log('✅ Valid & active deals after filtering:', validDeals.length, 'deals');
 
   // Apply optimistic stage updates to deals for instant UI feedback
   // CRITICAL: Optimistic updates ALWAYS take precedence over props to prevent snap-back
@@ -358,14 +339,23 @@ export default function DealPipeline({
       };
     });
   
-  console.log('DealPipeline: Component render - dealsWithContacts length:', dealsWithContacts.length);
-  console.log('DealPipeline: Component render - dealsWithContacts:', dealsWithContacts);
-
-  // Debug: Log when deals prop changes
+  // Use communications from deals prop (already included from API)
   useEffect(() => {
-    console.log('DealPipeline: useEffect - deals prop changed:', deals);
-    console.log('DealPipeline: useEffect - deals length:', deals?.length);
-    console.log('DealPipeline: useEffect - loading:', loading);
+    if (dealsWithContacts.length > 0 && !hasFetchedCommunicationsRef.current) {
+      hasFetchedCommunicationsRef.current = true;
+
+      // Populate dealCommunications from the deals prop
+      const commsMap: Record<string, Communication[]> = {};
+      deals.forEach(deal => {
+        // Cast to any to access communications property
+        const dealWithComms = deal as any;
+        commsMap[deal.id] = dealWithComms.communications || [];
+      });
+      setDealCommunications(commsMap);
+    }
+  }, [dealsWithContacts.length, deals]);
+
+  useEffect(() => {
     
     // Only clear optimistic updates when server CONFIRMS them
     // This means the server stage must match the optimistic stage
@@ -379,12 +369,10 @@ export default function DealPipeline({
             // Only clear optimistic update if server stage MATCHES optimistic stage
             // This means server has confirmed the update
             if (deal.stage === optimisticStage) {
-              console.log(`Server confirmed: Deal ${dealId} stage is now ${optimisticStage}, clearing optimistic update`);
               // Don't add to newMap - this clears the optimistic update
             } else {
               // Server stage doesn't match yet - keep optimistic update
               // This prevents snap-back when deals prop refreshes with old stage
-              console.log(`Keeping optimistic update: Deal ${dealId} server stage (${deal.stage}) != optimistic (${optimisticStage})`);
               newMap.set(dealId, optimisticStage);
             }
           } else {
@@ -429,12 +417,10 @@ export default function DealPipeline({
 
   const handleEmailReply = (email: OutlookEmail) => {
     // TODO: Implement email reply functionality
-    console.log('Reply to email:', email);
   };
 
   const handleEmailForward = (email: OutlookEmail) => {
     // TODO: Implement email forward functionality
-    console.log('Forward email:', email);
   };
 
   const handleEmailMarkAsRead = async (emailId: string) => {
@@ -452,59 +438,30 @@ export default function DealPipeline({
 
   const handleEmailStar = (emailId: string) => {
     // TODO: Implement email starring functionality
-    console.log('Star email:', emailId);
   };
 
   const handleEmailDelete = (emailId: string) => {
     // TODO: Implement email deletion functionality
-    console.log('Delete email:', emailId);
   };
 
   const handleCreateDealFromEmail = (email: OutlookEmail) => {
     // TODO: Implement create deal from email functionality
-    console.log('Create deal from email:', email);
   };
 
   const getDealsForStage = (stageValue: string) => {
     // Use only real Firebase deals
     const allDeals = dealsWithContacts;
 
-    // Debug logging - log BEFORE any filtering
-    console.log('DealPipeline.getDealsForStage - Input dealsWithContacts:', allDeals);
-    console.log('DealPipeline.getDealsForStage - dealsWithContacts length:', allDeals.length);
-    console.log('DealPipeline.getDealsForStage - Stage value:', stageValue);
-    
     if (allDeals.length === 0) {
-      console.warn('DealPipeline.getDealsForStage - WARNING: No deals received!');
-      console.log('DealPipeline.getDealsForStage - deals prop:', deals);
       return [];
     }
-
-    // Log deal statuses to see what we're working with
-    const statusCounts = allDeals.reduce((acc, deal) => {
-      acc[deal.status || 'undefined'] = (acc[deal.status || 'undefined'] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    console.log('DealPipeline.getDealsForStage - Deal status counts:', statusCounts);
-    
-    // Log deal stages
-    const stageCounts = allDeals.reduce((acc, deal) => {
-      acc[deal.stage || 'undefined'] = (acc[deal.stage || 'undefined'] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    console.log('DealPipeline.getDealsForStage - Deal stage counts:', stageCounts);
 
     // Filter to show deals that are not explicitly closed or lost
     // This includes deals with status: 'active', 'paused', or undefined/missing status
     const activeDeals = allDeals.filter(deal => {
       const isShowable = !deal.status || deal.status === 'active' || deal.status === 'paused';
-      if (!isShowable) {
-        console.log(`DealPipeline.getDealsForStage - Filtered out deal (status: ${deal.status}):`, deal.company);
-      }
       return isShowable;
     });
-    console.log('DealPipeline.getDealsForStage - Active deals:', activeDeals);
-    console.log('DealPipeline.getDealsForStage - Active deals length:', activeDeals.length);
 
     // Map backend stage values to frontend stage columns
     // Backend stages: 'prospect', 'due-diligence', 'term-sheet', 'closing', 'closed'
@@ -533,13 +490,8 @@ export default function DealPipeline({
         default:
           matches = false;
       }
-      if (!matches) {
-        console.log(`DealPipeline.getDealsForStage - Deal ${deal.company} (stage: ${dealStage}) doesn't match ${stageValue}`);
-      }
       return matches;
     });
-    console.log(`DealPipeline.getDealsForStage - Filtered deals for ${stageValue}:`, filtered);
-    console.log(`DealPipeline.getDealsForStage - Filtered deals length for ${stageValue}:`, filtered.length);
     return filtered;
   };
 
@@ -582,7 +534,6 @@ export default function DealPipeline({
 
     // Prevent multiple simultaneous drags of the same deal
     if (pendingDragsRef.current.has(dealId)) {
-      console.log(`Deal ${dealId} is already being moved, ignoring duplicate drag`);
       return;
     }
 
@@ -602,8 +553,6 @@ export default function DealPipeline({
     // Handle dropping into "All" column
     // Mark this deal to appear only in "All" column, not in specific columns
     if (targetStage === 'all') {
-      console.log(`Deal "${dealToMove.company}" dropped into "All" column - marking to appear only in "All"`);
-      
       // Add deal to the set of deals that should appear only in "All"
       // This updates the UI immediately without any loading
       setDealsInAllOnly(prev => {
@@ -652,7 +601,6 @@ export default function DealPipeline({
     // Don't update if the backend stage is already the target stage
     // This prevents unnecessary API calls when the stage is already correct
     if (currentBackendStage === newStage) {
-      console.log(`Deal "${dealToMove.company}" is already in stage "${newStage}", skipping update`);
       return;
     }
 
@@ -669,8 +617,6 @@ export default function DealPipeline({
     setOptimisticStageUpdates(prev => {
       const newMap = new Map(prev);
       newMap.set(dealToMove.id, newStage);
-      console.log(`Optimistic update: Deal ${dealToMove.id} (${dealToMove.company}) stage set to ${newStage}`);
-      console.log(`Optimistic updates map:`, Array.from(newMap.entries()));
       // Force a re-render to ensure the UI updates immediately
       return newMap;
     });
@@ -678,8 +624,6 @@ export default function DealPipeline({
     // Allow updates even if frontend stage matches, as long as backend stage is different
     // This handles cases like 'closing' -> 'ioi-loi' (which maps to 'term-sheet')
     // Both 'closing' and 'term-sheet' map to 'ioi-loi' frontend column, but we want to allow the update
-
-    console.log(`Updating deal "${dealToMove.company}" (ID: ${dealToMove.id}) from stage "${currentBackendStage}" to "${newStage}"`);
 
       const stageName = stages.find(s => s.value === targetStage)?.label || targetStage;
       setSnackbarMessage(`✓ ${dealToMove.company} moved to ${stageName}`);
@@ -689,7 +633,6 @@ export default function DealPipeline({
     // No refresh needed - optimistic update is already reflected in UI
     dealsApi.updateDeal(dealToMove.id, { stage: newStage })
       .then(() => {
-        console.log('Deal updated successfully in background');
         // Don't clear optimistic update immediately - let the useEffect handle it
         // when the deals prop refreshes with the new stage from server
         // This prevents race conditions and ensures smooth transitions
@@ -711,7 +654,6 @@ export default function DealPipeline({
         setOptimisticStageUpdates(prev => {
           const newMap = new Map(prev);
           newMap.delete(dealToMove.id); // Remove optimistic update to revert to original stage
-          console.log(`Reverting optimistic update for deal ${dealToMove.id} due to error`);
           return newMap;
         });
         
@@ -885,7 +827,6 @@ export default function DealPipeline({
       // Pre-select contacts that are already associated with this deal
       // Use the FRESH contact data, not stale dealToEdit.people
       const existingContactIds = currentDealContacts?.map(p => p.id) || [];
-      console.log('handleOpenSelectContacts - Existing contact IDs from backend:', existingContactIds);
       setSelectedContactIds(existingContactIds);
       setOriginalContactIds(existingContactIds); // Save original selection
     } catch (error) {
@@ -1128,8 +1069,6 @@ export default function DealPipeline({
         updatedDeal.nextStep = editFormData.nextStep.trim();
       }
 
-      console.log('Saving deal with data:', updatedDeal);
-
       // Update deal directly via API
       await dealsApi.updateDeal(editingDealId, updatedDeal);
 
@@ -1264,6 +1203,9 @@ export default function DealPipeline({
       : undefined;
 
     const isExpanded = expandedDeals.has(deal.id);
+
+    // Just read the communications that were already fetched
+    const communications = dealCommunications[deal.id] || [];
 
     return (
       <Card
@@ -1763,6 +1705,95 @@ export default function DealPipeline({
                 </Box>
               )}
 
+              {/* Key Interactions Section */}
+              <Box sx={{
+                mt: 2,
+                pt: 2,
+                borderTop: '1px solid #e5e7eb',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 600,
+                    mb: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: '#111827',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontSize: '0.6875rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  <EmailIcon sx={{ mr: 0.75, fontSize: 14 }} />
+                  Key Interactions ({communications.length})
+                </Typography>
+
+                {communications.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: '#6b7280', fontSize: '0.875rem', py: 0.5 }}>
+                    No emails
+                  </Typography>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {communications.map((comm) => (
+                      <Box
+                        key={comm.id || comm.threadId || Math.random()}
+                        sx={{
+                          p: 1.5,
+                          border: '1px solid #e5e7eb',
+                          borderRadius: 1,
+                          bgcolor: '#f9fafb',
+                          '&:hover': {
+                            bgcolor: '#f3f4f6',
+                            borderColor: '#d1d5db'
+                          }
+                        }}
+                      >
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.8125rem' }}>
+                          {comm.subject || '(No Subject)'}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          {comm.fromEmail && (
+                            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                              <strong>From:</strong> {comm.fromEmail}
+                            </Typography>
+                          )}
+                          {comm.toEmails && comm.toEmails.length > 0 && (
+                            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                              <strong>To:</strong> {comm.toEmails.join(', ')}
+                            </Typography>
+                          )}
+                          {(comm.sentAt || comm.receivedAt || comm.createdAt) && (
+                            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                              <strong>Date:</strong> {comm.sentAt
+                                ? new Date(comm.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : comm.receivedAt
+                                ? new Date(comm.receivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : comm.createdAt
+                                ? new Date(comm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : ''
+                              }
+                            </Typography>
+                          )}
+                        </Box>
+
+                        {comm.content && (
+                          <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #e5e7eb' }}>
+                            <Typography variant="caption" sx={{ color: '#374151', fontSize: '0.6875rem', display: 'block', lineHeight: 1.4 }}>
+                              {comm.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+
               {/* Team Members */}
               {deal.team && deal.team.length > 0 && (
                 <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e5e7eb', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
@@ -1781,13 +1812,12 @@ export default function DealPipeline({
                   >
                     Team Members
                   </Typography>
-                  <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 28, height: 28, fontSize: '0.75rem', border: '2px solid white', bgcolor: '#000000' } }}>
-                    {deal.team.map((member, index) => (
-                      <Avatar key={index} sx={{ bgcolor: '#000000', fontWeight: 600 }}>
-                        {member?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A'}
-                      </Avatar>
-                    ))}
-                  </AvatarGroup>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      {deal.leadPartner || 'No lead partner'}
+                      {deal.team && deal.team.length > 0 && ` + ${deal.team.length} member${deal.team.length !== 1 ? 's' : ''}`}
+                    </Typography>
+                  </Box>
                 </Box>
               )}
             </Box>
@@ -1933,11 +1963,6 @@ export default function DealPipeline({
               >
                 Deal Pipeline
               </Typography>
-              {(() => {
-                console.log('🏷️ Top-level chip count - dealsWithContacts.length:', dealsWithContacts.length);
-                console.log('🏷️ Top-level chip - deals:', dealsWithContacts.map(d => ({ company: d.company, stage: d.stage })));
-                return null;
-              })()}
               <Chip
                 size="small"
                 label={`${dealsWithContacts.length} Deal${dealsWithContacts.length !== 1 ? 's' : ''}`}
@@ -2045,9 +2070,7 @@ export default function DealPipeline({
             // Now render all stages
             return stages.map((stage) => {
             const rawStageDeals = getDealsForStage(stage.value);
-            console.log(`DealPipeline.render: Stage "${stage.value}" - rawStageDeals:`, rawStageDeals);
-            console.log(`DealPipeline.render: Stage "${stage.value}" - rawStageDeals length:`, rawStageDeals.length);
-            
+
               // Filter deals based on whether they're in specific columns
               let filteredDeals = rawStageDeals;
               if (stage.value === 'all') {
@@ -2067,10 +2090,7 @@ export default function DealPipeline({
               .filter(deal =>
                 searchTerm === '' || deal.company.toLowerCase().includes(searchTerm.toLowerCase())
               );
-              
-            console.log(`DealPipeline.render: Stage "${stage.value}" - stageDeals after search filter:`, stageDeals);
-            console.log(`DealPipeline.render: Stage "${stage.value}" - stageDeals length after filter:`, stageDeals.length);
-            
+
             const totalValue = stageDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
             
             return (
@@ -2137,11 +2157,6 @@ export default function DealPipeline({
                     }
                   }}
                 >
-                  {(() => {
-                    console.log(`DealPipeline.render: Rendering stage "${stage.value}" with ${stageDeals.length} deals`);
-                    console.log(`DealPipeline.render: stageDeals array:`, stageDeals);
-                    return null;
-                  })()}
                   {stageDeals.length === 0 ? (
                     stage.value === 'all' && outlookEmails.length > 0 ? (
                       <Box>
@@ -2193,11 +2208,7 @@ export default function DealPipeline({
                       </Box>
                     )
                   ) : (
-                    (() => {
-                      console.log(`DealPipeline.render: About to map ${stageDeals.length} deals for stage "${stage.value}"`);
-                      console.log(`DealPipeline.render: Deals to map:`, stageDeals);
-                      return stageDeals.map((deal, index) => {
-                        console.log(`DealPipeline.render: Mapping deal ${index + 1}/${stageDeals.length}:`, deal.company, deal.id);
+                    stageDeals.map((deal) => {
                         if (!deal.id) {
                           console.error(`DealPipeline.render: Deal missing id!`, deal);
                           return null;
@@ -2207,8 +2218,7 @@ export default function DealPipeline({
                           return null;
                         }
                         return <DraggableDealCard key={deal.id} deal={deal} />;
-                      });
-                    })()
+                      })
                   )}
                 </Box>
               </DroppableStage>

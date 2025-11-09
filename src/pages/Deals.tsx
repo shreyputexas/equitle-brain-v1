@@ -13,8 +13,6 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Avatar,
-  AvatarGroup,
   Tooltip,
   LinearProgress,
   Grid,
@@ -180,9 +178,7 @@ export default function Deals() {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [dealCommunications, setDealCommunications] = useState<Record<string, Communication[]>>({});
-  const [loadingCommunications, setLoadingCommunications] = useState<Record<string, boolean>>({});
-  const [dealAssociatedEmails, setDealAssociatedEmails] = useState<Record<string, EmailAlert[]>>({});
-  const [loadingAssociatedEmails, setLoadingAssociatedEmails] = useState<Record<string, boolean>>({});
+  const hasFetchedCommunicationsRef = React.useRef(false); // Simple one-time fetch flag
   const [automatedOutreachItems, setAutomatedOutreachItems] = useState([
     {
       id: '1',
@@ -274,38 +270,51 @@ Regards`,
     }
   ]);
 
-  // Use real API for deals data - only fetch when auth is ready
-  const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals({}, !authLoading);
+  // Use real API for deals data - only fetch when auth is ready, include contacts and communications
+  const { deals: apiDeals, loading, error, total, refreshDeals } = useDeals({ include: 'contacts,communications' }, !authLoading);
 
-  // Debug: Log raw API deals BEFORE transformation
-  console.log('Deals.tsx: apiDeals (raw from hook):', apiDeals);
-  console.log('Deals.tsx: apiDeals length:', apiDeals?.length);
-  console.log('Deals.tsx: apiDeals type:', typeof apiDeals);
-  console.log('Deals.tsx: apiDeals is array?', Array.isArray(apiDeals));
-
-  // Transform API deals to include mock people data for now
-  // Guard against empty or undefined apiDeals
   const dealsArray = Array.isArray(apiDeals) ? apiDeals : [];
-  console.log('Deals.tsx: dealsArray before transform:', dealsArray);
-  console.log('Deals.tsx: dealsArray length:', dealsArray.length);
-  
-  const deals: DealWithContacts[] = dealsArray.map(deal => ({
-    ...deal,
-    people: mockPeople // This will be replaced with real contact data later
-  }));
-  
-  console.log('Deals.tsx: deals after transform:', deals);
-  console.log('Deals.tsx: deals length after transform:', deals.length);
 
-  // Debug: Log deals data to see what we're working with
-  console.log('Deals.tsx: loading:', loading);
-  console.log('Deals.tsx: error:', error);
-  console.log('Deals.tsx: total:', total);
-  console.log('Deals.tsx: deals (after transform):', deals);
-  console.log('Deals.tsx: deals length:', deals.length);
-  console.log('Deals.tsx: Active deals:', deals.filter(d => d.status === 'active'));
-  console.log('Deals.tsx: Prospective deals:', deals.filter(d => d.status !== 'active' && d.status !== 'closed'));
-  console.log('Deals.tsx: Current activeTab:', activeTab);
+  const deals: DealWithContacts[] = dealsArray.map(deal => {
+    // Map API contacts to Person format
+    const people: Person[] = (deal.contacts || []).map(contact => ({
+      id: contact.id,
+      name: contact.name,
+      role: contact.title || contact.role || '',
+      email: contact.email || '',
+      phone: contact.phone || '',
+      relationshipScore: contact.relationshipScore || 0,
+      lastContact: new Date(),
+      status: contact.status as 'hot' | 'warm' | 'cold',
+      summary: contact.notes || '',
+      citations: {
+        emails: 0,
+        calls: 0,
+        meetings: 0,
+        documents: 0
+      }
+    }));
+
+    return {
+      ...deal,
+      people: people.length > 0 ? people : mockPeople // Use real contacts or fallback to mock
+    };
+  });
+
+  // Use communications from API response instead of fetching separately
+  useEffect(() => {
+    if (!loading && deals.length > 0 && !hasFetchedCommunicationsRef.current) {
+      hasFetchedCommunicationsRef.current = true;
+
+      // Populate dealCommunications from the deals API response
+      const commsMap: Record<string, any[]> = {};
+      deals.forEach(deal => {
+        const apiDeal = apiDeals?.find(d => d.id === deal.id);
+        commsMap[deal.id] = (apiDeal?.communications || []) as any;
+      });
+      setDealCommunications(commsMap as any);
+    }
+  }, [loading, deals.length, apiDeals]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, dealId: string) => {
     setAnchorEl(event.currentTarget);
@@ -447,18 +456,13 @@ Regards`,
       headerName: 'Company',
       width: 200,
       renderCell: (params: GridRenderCellParams) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Avatar sx={{ width: 32, height: 32, mr: 2, bgcolor: '#000000' }}>
-            {params.value.charAt(0)}
-          </Avatar>
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {params.value}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.people.length} contact{params.row.people.length !== 1 ? 's' : ''}
-            </Typography>
-          </Box>
+        <Box>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {params.value}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {params.row.people.length} contact{params.row.people.length !== 1 ? 's' : ''}
+          </Typography>
         </Box>
       )
     },
@@ -540,9 +544,6 @@ Regards`,
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {params.row.people?.slice(0, 2).map((person: Person) => (
             <Box key={person.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Avatar sx={{ width: 24, height: 24, fontSize: 10 }}>
-                {person.name?.split(' ').map((n: string) => n[0]).join('') || 'N/A'}
-              </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
                   {person.name}
@@ -588,19 +589,7 @@ Regards`,
       renderCell: (params: GridRenderCellParams) => {
         const dealId = params.row.id;
         const interactions = dealCommunications[dealId] || [];
-        const isLoading = loadingCommunications[dealId];
-        
-        if (isLoading) {
-          return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={16} />
-              <Typography variant="caption" color="text.secondary">
-                Loading...
-              </Typography>
-            </Box>
-          );
-        }
-        
+
         if (interactions.length === 0) {
           return (
             <Typography variant="caption" color="text.secondary">
@@ -661,12 +650,16 @@ Regards`,
       headerName: 'Team',
       width: 150,
       renderCell: (params: GridRenderCellParams) => (
-        <AvatarGroup max={3} sx={{ '& .MuiAvatar-root': { width: 28, height: 28, fontSize: 12 } }}>
-          <Avatar>{params.row.leadPartner?.split(' ').map((n: string) => n[0]).join('') || 'N/A'}</Avatar>
-          {params.value?.map((member: string, index: number) => (
-            <Avatar key={index}>{member.split(' ').map((n: string) => n[0]).join('')}</Avatar>
-          )) || []}
-        </AvatarGroup>
+        <Box>
+          <Typography variant="caption" sx={{ display: 'block' }}>
+            {params.row.leadPartner || 'N/A'}
+          </Typography>
+          {params.value && params.value.length > 0 && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              +{params.value.length} member{params.value.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
+        </Box>
       )
     },
     {
@@ -854,39 +847,11 @@ Regards`,
     return true;
   });
 
-  // Debug: Log filtered deals after they're calculated
-  console.log('Filtered deals:', filteredDeals);
-
   // Calculate summary statistics from real data
   const totalPipelineValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
   const avgProbability = deals.length > 0 ? Math.round(deals.reduce((sum, deal) => sum + (deal.probability || 0), 0) / deals.length) : 0;
   const activeDealCount = deals.filter(d => d.status === 'active').length;
   const prospectiveDealCount = deals.filter(d => d.status !== 'active' && d.status !== 'closed').length;
-
-  // Fetch communications for all deals when grid view is active
-  useEffect(() => {
-    if (viewMode === 'list' && deals.length > 0) {
-      deals.forEach(deal => {
-        if (!loadingCommunications[deal.id] && !dealCommunications[deal.id]) {
-          setLoadingCommunications(prev => ({ ...prev, [deal.id]: true }));
-          communicationsApi.getCommunications({ dealId: deal.id, limit: 5 })
-            .then((response) => {
-              const emailComms = (response.communications || []).filter(c => 
-                c.type === 'email' || c.threadId || c.subject
-              );
-              setDealCommunications(prev => ({ ...prev, [deal.id]: emailComms }));
-            })
-            .catch((error) => {
-              console.error(`Error fetching communications for deal ${deal.id}:`, error);
-              setDealCommunications(prev => ({ ...prev, [deal.id]: [] }));
-            })
-            .finally(() => {
-              setLoadingCommunications(prev => ({ ...prev, [deal.id]: false }));
-            });
-        }
-      });
-    }
-  }, [viewMode, deals.length]);
 
   // Show loading spinner while auth is initializing OR deals are loading
   if (authLoading || (loading && apiDeals.length === 0)) {
@@ -905,88 +870,9 @@ Regards`,
 
   const DealCard = ({ deal }: { deal: DealWithContacts }) => {
     const isExpanded = expandedDeals.has(deal.id);
-    
-    // Fetch communications when expanded
-    useEffect(() => {
-      if (isExpanded) {
-        // Always fetch when expanded, even if we have cached data (to refresh)
-        if (!loadingCommunications[deal.id]) {
-          setLoadingCommunications(prev => ({ ...prev, [deal.id]: true }));
-          console.log('🔍 Fetching communications for deal:', deal.id);
-          communicationsApi.getCommunications({ dealId: deal.id, limit: 50 })
-            .then((response) => {
-              console.log('✅ Communications response:', response);
-              console.log('✅ Communications array:', response.communications);
-              // Filter for email type communications or any with threadId
-              const emailComms = (response.communications || []).filter(c => 
-                c.type === 'email' || c.threadId || c.subject
-              );
-              console.log('✅ Filtered email communications:', emailComms);
-              console.log('✅ Setting communications for deal:', deal.id, emailComms);
-              setDealCommunications(prev => ({ ...prev, [deal.id]: emailComms }));
-            })
-            .catch((error) => {
-              console.error('❌ Error fetching communications:', error);
-              console.error('❌ Error details:', error.response?.data || error.message);
-              setDealCommunications(prev => ({ ...prev, [deal.id]: [] }));
-            })
-            .finally(() => {
-              setLoadingCommunications(prev => ({ ...prev, [deal.id]: false }));
-            });
-        }
-      }
-    }, [isExpanded, deal.id]);
-
-    // Fetch associated emails immediately when card renders (always fetch to show in collapsed view)
-    useEffect(() => {
-      // Always fetch emails when component mounts or deal.id changes
-      if (!loadingAssociatedEmails[deal.id] && !dealAssociatedEmails[deal.id]) {
-        setLoadingAssociatedEmails(prev => ({ ...prev, [deal.id]: true }));
-        console.log('🔍 Fetching associated emails for deal:', deal.id);
-        emailsApi.getEmailsByDealId(deal.id, 10) // Fetch initial batch
-          .then((emails) => {
-            console.log('✅ Associated emails response:', emails);
-            setDealAssociatedEmails(prev => ({ ...prev, [deal.id]: emails }));
-          })
-          .catch((error) => {
-            console.error('❌ Error fetching associated emails:', error);
-            setDealAssociatedEmails(prev => ({ ...prev, [deal.id]: [] }));
-          })
-          .finally(() => {
-            setLoadingAssociatedEmails(prev => ({ ...prev, [deal.id]: false }));
-          });
-      }
-    }, [deal.id]); // Only depend on deal.id
-
-    // Fetch more emails when expanded
-    useEffect(() => {
-      if (isExpanded && dealAssociatedEmails[deal.id] && dealAssociatedEmails[deal.id].length < 20 && !loadingAssociatedEmails[deal.id]) {
-        setLoadingAssociatedEmails(prev => ({ ...prev, [deal.id]: true }));
-        emailsApi.getEmailsByDealId(deal.id, 50)
-          .then((emails) => {
-            setDealAssociatedEmails(prev => ({ ...prev, [deal.id]: emails }));
-          })
-          .catch((error) => {
-            console.error('❌ Error fetching more associated emails:', error);
-          })
-          .finally(() => {
-            setLoadingAssociatedEmails(prev => ({ ...prev, [deal.id]: false }));
-          });
-      }
-    }, [isExpanded, deal.id]);
-    
     const communications = dealCommunications[deal.id] || [];
-    const isLoadingComms = loadingCommunications[deal.id];
-    const associatedEmails = dealAssociatedEmails[deal.id] || [];
-    const isLoadingEmails = loadingAssociatedEmails[deal.id];
-    
-    // Debug log
-    console.log('DealCard render:', {
-      dealId: deal.id,
-      isExpanded,
-      communicationsCount: communications.length,
-      isLoadingComms
-    });
+    const associatedEmails: any[] = [];
+    const isLoadingEmails = false;
 
     return (
       <Card
@@ -1001,9 +887,6 @@ Regards`,
       >
         <CardContent sx={{ overflow: 'visible', pb: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Avatar sx={{ bgcolor: '#000000' }}>
-              {deal.company.charAt(0)}
-            </Avatar>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <Chip
                 label={stages.find(s => s.value === deal.stage)?.label || deal.stage}
@@ -1344,6 +1227,134 @@ Regards`,
               ))}
               </Box>
               
+              {/* Key Interactions Section */}
+              <Box sx={{ 
+                mt: 0, 
+                p: 2, 
+                bgcolor: '#f5f5f5', 
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: '#e0e0e0',
+                mb: 3
+              }}>
+                <Typography variant="subtitle1" sx={{ 
+                  fontWeight: 600, 
+                  mb: 2, 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  color: 'primary.contrastText'
+                }}>
+                  <EmailIcon sx={{ mr: 1, fontSize: 20 }} />
+                  Key Interactions ({communications.length})
+                </Typography>
+
+                {communications.length === 0 ? (
+                  <Box sx={{ textAlign: 'left', py: 2, border: '1px dashed #cccccc', borderRadius: 1, p: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ color: '#666666', fontWeight: 500 }}>
+                      No associated email threads yet.
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ color: '#999999', display: 'block', mt: 1 }}>
+                      Use the Edit Deal modal to associate email threads with this deal.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {communications.map((comm) => (
+                      <Box
+                        key={comm.id || comm.threadId || Math.random()}
+                        sx={{
+                          p: 2,
+                          mb: 2,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            transform: 'translateY(-1px)'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              {comm.subject || '(No Subject)'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {comm.type === 'email' ? 'Email Thread' : comm.type}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={comm.direction === 'inbound' ? 'Inbound' : comm.direction === 'outbound' ? 'Outbound' : 'Email'}
+                            size="small"
+                            sx={{
+                              bgcolor: '#f5f5f5',
+                              color: '#000000',
+                              border: '1px solid #000000',
+                              fontSize: '0.7rem',
+                              fontWeight: 600
+                            }}
+                          />
+                        </Box>
+
+                        {/* Email Details */}
+                        <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                          {comm.fromEmail && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <EmailIcon fontSize="small" color="action" />
+                              <Typography variant="caption">From: {comm.fromEmail}</Typography>
+                            </Box>
+                          )}
+                          {comm.toEmails && comm.toEmails.length > 0 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <EmailIcon fontSize="small" color="action" />
+                              <Typography variant="caption">To: {comm.toEmails.join(', ')}</Typography>
+                            </Box>
+                          )}
+                          {(comm.sentAt || comm.receivedAt || comm.createdAt) && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <CalendarIcon fontSize="small" color="action" />
+                              <Typography variant="caption">
+                                {comm.sentAt 
+                                  ? new Date(comm.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : comm.receivedAt
+                                  ? new Date(comm.receivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : comm.createdAt
+                                  ? new Date(comm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : ''
+                                }
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+
+                        {/* Content Preview */}
+                        {comm.content && (
+                          <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.default', borderRadius: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+                              Preview:
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              fontStyle: 'italic', 
+                              lineHeight: 1.5,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}>
+                              {comm.content.replace(/<[^>]*>/g, '').substring(0, 200)}
+                              {comm.content.length > 200 ? '...' : ''}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+              
               {/* Associated Emails Section */}
               <Box sx={{ 
                 mt: 0, 
@@ -1498,15 +1509,8 @@ Regards`,
                   <EmailIcon sx={{ mr: 1, fontSize: 20, color: '#000000' }} />
                   Associated Gmail Threads ({communications.length})
                 </Typography>
-                
-                {isLoadingComms ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                    <CircularProgress size={24} />
-                    <Typography variant="body2" sx={{ ml: 2, color: '#666666' }}>
-                      Loading email threads...
-                    </Typography>
-                  </Box>
-                ) : communications.length === 0 ? (
+
+                {communications.length === 0 ? (
                   <Box sx={{ textAlign: 'left', py: 2, border: '1px dashed #cccccc', borderRadius: 1, p: 2 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ color: '#666666', fontWeight: 500 }}>
                       No associated Gmail threads yet.
@@ -1517,9 +1521,7 @@ Regards`,
                   </Box>
                 ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {communications.map((comm) => {
-                    console.log('Rendering communication:', comm);
-                    return (
+                  {communications.map((comm) => (
                       <Box
                         key={comm.id || comm.threadId || Math.random()}
                         sx={{
@@ -1624,8 +1626,7 @@ Regards`,
                           </Typography>
                         )}
                       </Box>
-                    );
-                  })}
+                    ))}
                 </Box>
               )}
               </Box>
@@ -1634,11 +1635,12 @@ Regards`,
         </CardContent>
         
         <CardActions sx={{ px: 2, pb: 2 }}>
-          <AvatarGroup max={3} sx={{ flexGrow: 1, '& .MuiAvatar-root': { width: 24, height: 24, fontSize: 10 } }}>
-            {deal.team?.map((member, index) => (
-              <Avatar key={index}>{member?.split(' ').map(n => n[0]).join('') || 'N/A'}</Avatar>
-            ))}
-          </AvatarGroup>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              {deal.leadPartner || 'No lead partner'}
+              {deal.team && deal.team.length > 0 && ` + ${deal.team.length} member${deal.team.length !== 1 ? 's' : ''}`}
+            </Typography>
+          </Box>
           {deal.status !== 'active' && (
             <Tooltip title="Move to Active">
               <IconButton
@@ -1832,69 +1834,49 @@ Regards`,
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
-                  <MoneyIcon fontSize="small" />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
-                    ${(totalPipelineValue / 1000000).toFixed(1)}M
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Total Pipeline Value
-                  </Typography>
-                </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
+                  ${(totalPipelineValue / 1000000).toFixed(1)}M
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Total Pipeline Value
+                </Typography>
               </Box>
             </Paper>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
-                  <TrendingUpIcon fontSize="small" />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
-                    {avgProbability}%
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Avg. Probability
-                  </Typography>
-                </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
+                  {avgProbability}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Avg. Probability
+                </Typography>
               </Box>
             </Paper>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
-                  <ScheduleIcon fontSize="small" />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
-                    45 days
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Avg. Deal Cycle
-                  </Typography>
-                </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
+                  45 days
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Avg. Deal Cycle
+                </Typography>
               </Box>
             </Paper>
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Paper sx={{ p: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar sx={{ bgcolor: 'primary.main', mr: 1.5, width: 32, height: 32 }}>
-                  <BusinessIcon fontSize="small" />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
-                    {activeDealCount}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    Active Deals
-                  </Typography>
-                </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem', color: 'text.primary' }}>
+                  {activeDealCount}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  Active Deals
+                </Typography>
               </Box>
             </Paper>
           </Grid>
@@ -2063,17 +2045,6 @@ Regards`,
           </Box>
 
           <Box sx={{ position: 'relative' }}>
-            {(() => {
-              try {
-                console.log('Deals.tsx: About to render DealPipeline with deals:', deals);
-                console.log('Deals.tsx: About to render DealPipeline with deals length:', deals?.length);
-                console.log('Deals.tsx: About to render DealPipeline with loading:', loading);
-                console.log('Deals.tsx: About to render DealPipeline with error:', error);
-              } catch (err) {
-                console.error('Error in Deals.tsx render:', err);
-              }
-              return null;
-            })()}
             {(() => {
               try {
                 return (
@@ -2296,10 +2267,7 @@ Regards`,
           color: 'white',
           py: 2
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}>
-              {selectedPerson?.name?.split(' ').map(n => n[0]).join('') || 'N/A'}
-            </Avatar>
+          <Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {selectedPerson?.name}

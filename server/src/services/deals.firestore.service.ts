@@ -94,7 +94,7 @@ export class DealsFirestoreService {
         );
       }
 
-      // Get contact counts for each deal
+      // Get contact counts and communications for each deal
       const dealsWithCounts = await Promise.all(
         filteredDeals.map(async (deal) => {
           const contactsSnapshot = await FirestoreHelpers.getUserCollection(userId, 'contacts')
@@ -113,8 +113,24 @@ export class DealsFirestoreService {
             .where('dealId', '==', deal.id)
             .get();
 
+          // Map communications to an array with all data and sort by createdAt descending
+          const communications = communicationsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              sentAt: data.sentAt?.toDate ? data.sentAt.toDate() : data.sentAt,
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+            };
+          }).sort((a, b) => {
+            const aTime = a.createdAt?.getTime?.() || 0;
+            const bTime = b.createdAt?.getTime?.() || 0;
+            return bTime - aTime; // Descending order (newest first)
+          });
+
           return {
             ...deal,
+            communications, // Include the full communications array
             _count: {
               contacts: contactsSnapshot.size,
               activities: activitiesSnapshot.size,

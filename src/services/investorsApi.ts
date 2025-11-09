@@ -78,23 +78,10 @@ interface ApiResponse<T> {
 }
 
 class InvestorsApiService {
-  private static getAuthToken() {
-    return localStorage.getItem('token');
-  }
-
-  private static getAuthHeaders() {
-    const token = this.getAuthToken();
-    if (!token) {
-      throw new Error('Authentication required. Please log in.');
-    }
-    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  }
-
   static async getInvestors(): Promise<Investor[]> {
     try {
-      const response = await axios.get<{ success: boolean; data: Investor[] | { investors: Investor[] }; investors?: Investor[] }>(getApiUrl('firebase-investors'), {
-        headers: this.getAuthHeaders()
-      });
+      // Auth headers automatically added by axios interceptor
+      const response = await axios.get<{ success: boolean; data: Investor[] | { investors: Investor[] }; investors?: Investor[] }>(getApiUrl('firebase-investors'));
 
       console.log('API Response:', response.data);
 
@@ -122,7 +109,7 @@ class InvestorsApiService {
   static async createInvestor(investorData: CreateInvestorRequest): Promise<Investor> {
     try {
       const response = await axios.post<{ success: boolean; data: Investor; message: string }>(getApiUrl('firebase-investors'), investorData, {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       // Backend returns { success: true, data: {} }
       return response.data.data;
@@ -135,7 +122,7 @@ class InvestorsApiService {
   static async getInvestor(id: string): Promise<Investor> {
     try {
       const response = await axios.get<ApiResponse<Investor>>(getApiUrl(`firebase-investors/${id}`), {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       // Backend returns { investor: {} } directly
       return response.data.investor!;
@@ -148,7 +135,7 @@ class InvestorsApiService {
   static async updateInvestor(id: string, investorData: Partial<CreateInvestorRequest>): Promise<Investor> {
     try {
       const response = await axios.put<ApiResponse<Investor>>(getApiUrl(`firebase-investors/${id}`), investorData, {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       // Backend returns { investor: {} } directly
       return response.data.investor!;
@@ -161,7 +148,7 @@ class InvestorsApiService {
   static async deleteInvestor(id: string): Promise<void> {
     try {
       await axios.delete(getApiUrl(`firebase-investors/${id}`), {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
     } catch (error) {
       console.error('Error deleting investor:', error);

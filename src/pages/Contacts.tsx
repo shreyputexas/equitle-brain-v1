@@ -7,7 +7,6 @@ import {
   InputAdornment,
   IconButton,
   Chip,
-  Avatar,
   Tooltip,
   Button,
   Alert,
@@ -604,20 +603,6 @@ const Contacts: React.FC = () => {
           height: '100%',
           py: 1
         }}>
-          <Avatar
-            src={params.row.photo_url}
-            alt={params.row.name}
-            sx={{
-              width: 36,
-              height: 36,
-              bgcolor: '#000000',
-              color: '#ffffff',
-              fontSize: '0.875rem',
-              flexShrink: 0
-            }}
-          >
-            {params.row.first_name?.[0]}{params.row.last_name?.[0]}
-          </Avatar>
           <Box sx={{
             flex: 1,
             display: 'flex',
@@ -1150,9 +1135,6 @@ const Contacts: React.FC = () => {
                     {stats.total}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
-                  <GroupIcon />
-                </Avatar>
               </Box>
             </CardContent>
           </Card>
@@ -1190,9 +1172,6 @@ const Contacts: React.FC = () => {
                     {stats.deals}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
-                  <BusinessCenterIcon />
-                </Avatar>
               </Box>
             </CardContent>
           </Card>
@@ -1225,9 +1204,6 @@ const Contacts: React.FC = () => {
                     {stats.investors}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
-                  <AccountBalanceIcon />
-                </Avatar>
               </Box>
             </CardContent>
           </Card>
@@ -1260,9 +1236,6 @@ const Contacts: React.FC = () => {
                     {stats.brokers}
                   </Typography>
                 </Box>
-                <Avatar sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', width: 40, height: 40 }}>
-                  <TrendingUpIcon />
-                </Avatar>
               </Box>
             </CardContent>
           </Card>

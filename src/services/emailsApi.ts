@@ -19,24 +19,11 @@ export interface EmailAlert {
 }
 
 class EmailsApiService {
-  private getAuthToken() {
-    return localStorage.getItem('token');
-  }
-
-  private getAuthHeaders() {
-    const token = this.getAuthToken();
-    if (!token) {
-      throw new Error('Authentication required. Please log in.');
-    }
-    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  }
-
   async getEmails(limit: number = 100): Promise<EmailAlert[]> {
     try {
       console.log('Making API call to /firebase-emails with limit:', limit);
-      const response = await axios.get<{ data: EmailAlert[] }>(`/firebase-emails?limit=${limit}`, {
-        headers: this.getAuthHeaders()
-      });
+      // Auth headers are automatically added by axios interceptor
+      const response = await axios.get<{ data: EmailAlert[] }>(`/firebase-emails?limit=${limit}`);
       console.log('API response:', response.data);
       return response.data.data || [];
     } catch (error) {

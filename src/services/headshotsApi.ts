@@ -10,23 +10,16 @@ export interface HeadshotUploadResponse {
 class HeadshotsApi {
   private baseURL = '/api/headshots';
 
-  private getAuthToken() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('Authentication required. Please log in.');
-    }
-    return token;
-  }
 
   async uploadHeadshot(searcherId: string, file: File): Promise<HeadshotUploadResponse> {
     try {
       const formData = new FormData();
       formData.append('headshot', file);
 
+      // Auth headers are automatically added by axios interceptor
       const response = await axios.post<HeadshotUploadResponse>(`${this.baseURL}/upload/${searcherId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${this.getAuthToken()}`
+          'Content-Type': 'multipart/form-data'
         }
       });
 
@@ -39,11 +32,8 @@ class HeadshotsApi {
 
   async deleteHeadshot(searcherId: string): Promise<HeadshotUploadResponse> {
     try {
-      const response = await axios.delete<HeadshotUploadResponse>(`${this.baseURL}/${searcherId}`, {
-        headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`
-        }
-      });
+      // Auth headers are automatically added by axios interceptor
+      const response = await axios.delete<HeadshotUploadResponse>(`${this.baseURL}/${searcherId}`);
 
       return response.data;
     } catch (error: any) {

@@ -57,23 +57,10 @@ interface ApiResponse<T> {
 }
 
 class FundsApiService {
-  private static getAuthToken() {
-    return localStorage.getItem('token');
-  }
-
-  private static getAuthHeaders() {
-    const token = this.getAuthToken();
-    if (!token) {
-      throw new Error('Authentication required. Please log in.');
-    }
-    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  }
-
   static async getFunds(): Promise<Fund[]> {
     try {
-      const response = await axios.get<ApiResponse<Fund>>(`/firebase-funds`, {
-        headers: this.getAuthHeaders()
-      });
+      // Auth headers automatically added by axios interceptor
+      const response = await axios.get<ApiResponse<Fund>>(`/firebase-funds`);
       // Firebase API returns { success: true, data: { funds: [] } }
       // but frontend expects { funds: [] }
       return response.data.data?.funds || response.data.funds || [];
@@ -86,7 +73,7 @@ class FundsApiService {
   static async createFund(fundData: CreateFundRequest): Promise<Fund> {
     try {
       const response = await axios.post<ApiResponse<Fund>>(`/firebase-funds`, fundData, {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       // Firebase API returns { success: true, data: { fund: {} } }
       // but frontend expects { fund: {} }
@@ -100,7 +87,7 @@ class FundsApiService {
   static async getFund(id: string): Promise<Fund> {
     try {
       const response = await axios.get<ApiResponse<Fund>>(`/firebase-funds/${id}`, {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       // Firebase API returns { success: true, data: { fund: {} } }
       // but frontend expects { fund: {} }
@@ -114,7 +101,7 @@ class FundsApiService {
   static async updateFund(id: string, fundData: Partial<CreateFundRequest>): Promise<Fund> {
     try {
       const response = await axios.put<ApiResponse<Fund>>(`/firebase-funds/${id}`, fundData, {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       // Firebase API returns { success: true, data: { fund: {} } }
       // but frontend expects { fund: {} }
@@ -128,9 +115,8 @@ class FundsApiService {
   static async deleteFund(id: string): Promise<void> {
     try {
       console.log('FundsApiService.deleteFund called with id:', id);
-      console.log('Using headers:', this.getAuthHeaders());
       const response = await axios.delete(`/firebase-funds/${id}`, {
-        headers: this.getAuthHeaders()
+        // Auth headers automatically added by axios interceptor
       });
       console.log('Delete response:', response);
     } catch (error) {
