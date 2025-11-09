@@ -22,6 +22,7 @@ export interface GmailMessage {
   internalDate: string;
   sizeEstimate: number;
   payload?: {
+    mimeType?: string;
     headers: Array<{
       name: string;
       value: string;
@@ -160,10 +161,28 @@ class GmailApiService {
    */
   async getMessage(messageId: string): Promise<{ message: GmailMessage }> {
     try {
-      const response = await axios.get<{ message: GmailMessage }>(`${this.baseURL}/gmail/messages/${messageId}`);
+      const response = await axios.get<{ message: GmailMessage }>(`${this.baseURL}/firebase-gmail/messages/${messageId}`);
       return response.data;
     } catch (error: any) {
       console.error(`Error fetching Gmail message ${messageId}:`, error);
+
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('Gmail integration required')) {
+        throw new Error('Gmail integration required. Please connect your Gmail account in settings.');
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific Gmail thread by ID
+   */
+  async getThread(threadId: string): Promise<{ thread: GmailThread }> {
+    try {
+      const response = await axios.get<{ thread: GmailThread }>(`${this.baseURL}/firebase-gmail/threads/${threadId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error(`Error fetching Gmail thread ${threadId}:`, error);
 
       if (error.response?.status === 400 && error.response?.data?.message?.includes('Gmail integration required')) {
         throw new Error('Gmail integration required. Please connect your Gmail account in settings.');

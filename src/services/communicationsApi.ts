@@ -8,6 +8,7 @@ export interface Communication {
   type: string; // 'email', 'sms', 'call', 'meeting'
   subject?: string;
   content?: string;
+  snippet?: string; // Gmail snippet/preview text
   htmlContent?: string;
   fromEmail?: string;
   toEmails?: string[];

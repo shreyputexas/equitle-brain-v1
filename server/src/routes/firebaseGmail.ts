@@ -248,6 +248,39 @@ router.get('/messages/:messageId', firebaseAuthMiddleware, async (req, res) => {
   }
 });
 
+// @route   GET /api/firebase-gmail/threads/:threadId
+// @desc    Get specific Gmail thread
+// @access  Private
+router.get('/threads/:threadId', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { threadId } = req.params;
+
+    const accessToken = await getUserGmailToken(userId);
+
+    // Use the Gmail API to get the thread
+    const { google } = await import('googleapis');
+    const auth = (await import('../services/googleAuth')).default.createAuthenticatedClient(accessToken);
+    const gmail = google.gmail({ version: 'v1', auth });
+
+    const response = await gmail.users.threads.get({
+      userId: 'me',
+      id: threadId,
+      format: 'full'
+    });
+
+    res.json({ thread: response.data });
+  } catch (error: any) {
+    logger.error('Get Gmail thread error:', error);
+
+    if (error.message.includes('Gmail integration not found')) {
+      return res.status(400).json({ message: 'Gmail integration required. Please connect your Gmail account in settings.' });
+    }
+
+    res.status(500).json({ message: 'Failed to fetch Gmail thread' });
+  }
+});
+
 // @route   GET /api/firebase-gmail/labels
 // @desc    Get Gmail labels
 // @access  Private

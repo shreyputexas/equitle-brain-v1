@@ -174,7 +174,7 @@ export class DealsFirestoreService {
       const [contactsSnapshot, activitiesSnapshot, communicationsSnapshot, documentsSnapshot] = await Promise.all([
         FirestoreHelpers.getUserCollection(userId, 'contacts').where('dealId', '==', dealId).get(),
         FirestoreHelpers.getUserCollection(userId, 'activities').where('dealId', '==', dealId).orderBy('date', 'desc').get(),
-        FirestoreHelpers.getUserCollection(userId, 'communications').where('dealId', '==', dealId).orderBy('sentAt', 'desc').get(),
+        FirestoreHelpers.getUserCollection(userId, 'communications').where('dealId', '==', dealId).orderBy('createdAt', 'desc').get(),
         FirestoreHelpers.getUserCollection(userId, 'documents').where('dealId', '==', dealId).orderBy('createdAt', 'desc').get(),
       ]);
 
@@ -526,8 +526,80 @@ export class DealsFirestoreService {
 
       const dealData = dealDoc.data();
 
+      // Try to fetch thread details from Gmail to get messageId and snippet
+      let messageId: string | undefined;
+      let snippet: string | undefined;
+      let fromEmail: string | undefined;
+      let toEmails: string[] | undefined;
+
+      try {
+        // Get Gmail access token
+        const { db } = await import('../lib/firebase');
+        const integrationsSnapshot = await db.collection('integrations')
+          .where('userId', '==', userId)
+          .where('provider', '==', 'google')
+          .where('type', '==', 'gmail')
+          .where('isActive', '==', true)
+          .limit(1)
+          .get();
+
+        if (!integrationsSnapshot.empty) {
+          const integrationData = integrationsSnapshot.docs[0].data();
+          const accessToken = integrationData.accessToken;
+
+          if (accessToken) {
+            // Fetch thread details using GmailService
+            const { GmailService } = await import('./gmail');
+            const auth = (await import('./googleAuth')).default.createAuthenticatedClient(accessToken);
+            const { google } = await import('googleapis');
+            const gmail = google.gmail({ version: 'v1', auth });
+
+            const threadResponse = await gmail.users.threads.get({
+              userId: 'me',
+              id: threadId,
+              format: 'metadata',
+              metadataHeaders: ['From', 'To', 'Subject']
+            });
+
+            if (threadResponse.data.messages && threadResponse.data.messages.length > 0) {
+              const latestMessage = threadResponse.data.messages[threadResponse.data.messages.length - 1];
+              messageId = latestMessage.id;
+              snippet = latestMessage.snippet;
+
+              // Extract from/to from headers
+              const headers = latestMessage.payload?.headers || [];
+              const fromHeader = headers.find(h => h.name?.toLowerCase() === 'from');
+              const toHeader = headers.find(h => h.name?.toLowerCase() === 'to');
+
+              if (fromHeader?.value) {
+                fromEmail = fromHeader.value;
+              }
+              if (toHeader?.value) {
+                toEmails = toHeader.value.split(',').map(e => e.trim());
+              }
+
+              logger.info('Fetched Gmail thread details', {
+                userId,
+                threadId,
+                messageId,
+                snippetLength: snippet?.length || 0,
+                hasFromEmail: !!fromEmail,
+                toEmailsCount: toEmails?.length || 0
+              });
+            }
+          }
+        }
+      } catch (gmailError: any) {
+        // Log but don't fail the association if Gmail fetch fails
+        logger.warn('Failed to fetch Gmail thread details, continuing without messageId/snippet', {
+          userId,
+          threadId,
+          error: gmailError.message
+        });
+      }
+
       // Create a communication record to link the email thread to the deal
-      const communicationData = {
+      const communicationData: any = {
         dealId,
         type: 'email',
         subject,
@@ -539,6 +611,20 @@ export class DealsFirestoreService {
         updatedAt: FirestoreHelpers.serverTimestamp(),
       };
 
+      // Add optional fields if we fetched them
+      if (messageId) {
+        communicationData.messageId = messageId;
+      }
+      if (snippet) {
+        communicationData.snippet = snippet;
+      }
+      if (fromEmail) {
+        communicationData.fromEmail = fromEmail;
+      }
+      if (toEmails && toEmails.length > 0) {
+        communicationData.toEmails = toEmails;
+      }
+
       const communicationRef = await FirestoreHelpers.getUserCollection(userId, 'communications').add(communicationData);
 
       logger.info('Email thread associated with deal', {
@@ -547,7 +633,9 @@ export class DealsFirestoreService {
         threadId,
         subject,
         dealCompany: dealData?.company,
-        communicationId: communicationRef.id
+        communicationId: communicationRef.id,
+        hasMessageId: !!messageId,
+        hasSnippet: !!snippet
       });
 
       return {

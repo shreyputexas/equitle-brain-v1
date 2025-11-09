@@ -238,9 +238,99 @@ export default function EmailSelectionModal({
     return fromString;
   };
 
+  // Helper function to decode base64 email content
+  const base64Decode = (str: string): string => {
+    try {
+      // Browser-compatible base64 decoding
+      // Gmail uses URL-safe base64, so we need to handle padding
+      let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      // Add padding if needed
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      return atob(base64);
+    } catch (e) {
+      console.error('Error decoding base64:', e);
+      return '';
+    }
+  };
+
+  // Helper function to recursively extract body content from email payload
+  const extractBodyContent = (payload: any): string => {
+    let content = '';
+
+    console.log('📧 Extracting body from payload:', {
+      hasBody: !!payload.body,
+      bodySize: payload.body?.size,
+      hasBodyData: !!payload.body?.data,
+      hasParts: !!payload.parts,
+      partsCount: payload.parts?.length,
+      mimeType: payload.mimeType
+    });
+
+    // First try to get content from direct body
+    if (payload.body?.data) {
+      try {
+        const decoded = base64Decode(payload.body.data);
+        console.log('📧 Decoded body data, length:', decoded.length);
+        content += decoded;
+      } catch (e) {
+        console.error('❌ Error decoding body:', e);
+      }
+    }
+
+    // Then check parts
+    if (payload.parts && Array.isArray(payload.parts)) {
+      console.log('📧 Processing', payload.parts.length, 'parts');
+      for (let i = 0; i < payload.parts.length; i++) {
+        const part = payload.parts[i];
+        console.log(`📧 Part ${i}:`, {
+          mimeType: part.mimeType,
+          hasBody: !!part.body,
+          hasBodyData: !!part.body?.data,
+          bodySize: part.body?.size,
+          hasParts: !!part.parts
+        });
+
+        // Prefer text/plain content
+        if (part.mimeType === 'text/plain' && part.body?.data) {
+          try {
+            const decoded = base64Decode(part.body.data);
+            console.log('📧 Decoded text/plain part, length:', decoded.length);
+            content += decoded;
+          } catch (e) {
+            console.error('❌ Error decoding text/plain part:', e);
+          }
+        }
+        // Use text/html as fallback if no plain text found yet
+        else if (part.mimeType === 'text/html' && part.body?.data && !content) {
+          try {
+            const htmlContent = base64Decode(part.body.data);
+            console.log('📧 Decoded text/html part, length:', htmlContent.length);
+            // Strip HTML tags for plain display
+            content = stripHtml(htmlContent);
+          } catch (e) {
+            console.error('❌ Error decoding text/html part:', e);
+          }
+        }
+        // Recursively check multipart sections
+        else if (part.mimeType?.startsWith('multipart/') && part.parts) {
+          console.log('📧 Recursing into multipart section');
+          const nestedContent = extractBodyContent(part);
+          if (nestedContent) {
+            content += nestedContent;
+          }
+        }
+      }
+    }
+
+    console.log('📧 Total content extracted, length:', content.length);
+    return content;
+  };
+
   const handleToggleExpand = async (threadId: string, messageId?: string) => {
     const isExpanded = expandedThreads.has(threadId);
-    
+
     if (isExpanded) {
       // Collapse
       setExpandedThreads(prev => {
@@ -251,76 +341,71 @@ export default function EmailSelectionModal({
     } else {
       // Expand - fetch full content if not already loaded
       setExpandedThreads(prev => new Set(prev).add(threadId));
-      
-      if (messageId && !threads.find(t => t.id === threadId)?.fullContent) {
+
+      const currentThread = threads.find(t => t.id === threadId);
+
+      if (messageId && !currentThread?.fullContent) {
         setLoadingContent(prev => new Set(prev).add(threadId));
         try {
+          console.log('📧 ===== FETCHING EMAIL CONTENT =====');
+          console.log('📧 Message ID:', messageId);
+          console.log('📧 Thread ID:', threadId);
+
           const response = await gmailApi.getMessage(messageId);
           const message = response.message;
-          
-          // Extract body content from payload
-          let fullContent = '';
-          const base64Decode = (str: string): string => {
-            try {
-              // Browser-compatible base64 decoding
-              // Gmail uses URL-safe base64, so we need to handle padding
-              let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-              // Add padding if needed
-              while (base64.length % 4) {
-                base64 += '=';
-              }
-              return atob(base64);
-            } catch (e) {
-              console.error('Error decoding base64:', e);
-              return '';
-            }
-          };
-          
-          const extractBody = (payload: any): void => {
-            if (payload.body?.data) {
-              try {
-                fullContent += base64Decode(payload.body.data);
-              } catch (e) {
-                console.error('Error decoding body:', e);
-              }
-            }
-            if (payload.parts) {
-              payload.parts.forEach((part: any) => {
-                if (part.mimeType === 'text/plain' && part.body?.data) {
-                  try {
-                    fullContent += base64Decode(part.body.data);
-                  } catch (e) {
-                    console.error('Error decoding part:', e);
-                  }
-                } else if (part.mimeType === 'text/html' && part.body?.data && !fullContent) {
-                  try {
-                    // Fallback to HTML if no plain text
-                    const htmlContent = base64Decode(part.body.data);
-                    // Strip HTML tags for plain display
-                    fullContent = stripHtml(htmlContent);
-                  } catch (e) {
-                    console.error('Error decoding HTML part:', e);
-                  }
-                } else if (part.parts) {
-                  extractBody(part);
-                }
-              });
-            }
-          };
-          
+
+          console.log('📧 ===== RAW API RESPONSE =====');
+          console.log('📧 Full response:', JSON.stringify(response, null, 2));
+          console.log('📧 Message object:', message);
+          console.log('📧 Message ID:', message.id);
+          console.log('📧 Thread ID:', message.threadId);
+          console.log('📧 Snippet:', message.snippet);
+          console.log('📧 Has payload:', !!message.payload);
+
           if (message.payload) {
-            extractBody(message.payload);
+            console.log('📧 ===== PAYLOAD STRUCTURE =====');
+            console.log('📧 Payload mimeType:', message.payload.mimeType);
+            console.log('📧 Payload has body:', !!message.payload.body);
+            console.log('📧 Payload body:', message.payload.body);
+            console.log('📧 Payload has parts:', !!message.payload.parts);
+            console.log('📧 Payload parts count:', message.payload.parts?.length);
+            console.log('📧 Full payload:', JSON.stringify(message.payload, null, 2));
           }
-          
+
+          let fullContent = '';
+
+          if (message.payload) {
+            fullContent = extractBodyContent(message.payload);
+          }
+
+          // If we still don't have content, use snippet as fallback
+          if (!fullContent || fullContent.trim().length === 0) {
+            console.warn('⚠️ ===== NO CONTENT EXTRACTED =====');
+            console.warn('⚠️ Extracted content length:', fullContent.length);
+            console.warn('⚠️ Extracted content:', fullContent);
+            console.warn('⚠️ Using snippet as fallback');
+            console.warn('⚠️ Snippet:', message.snippet);
+            fullContent = message.snippet || 'No content available';
+          }
+
+          console.log('✅ ===== FINAL RESULT =====');
+          console.log('✅ Final content length:', fullContent.length);
+          console.log('✅ Final content preview:', fullContent.substring(0, 200));
+
           // Update thread with full content
-          setThreads(prev => prev.map(t => 
-            t.id === threadId ? { ...t, fullContent: fullContent || t.snippet } : t
+          setThreads(prev => prev.map(t =>
+            t.id === threadId ? { ...t, fullContent } : t
           ));
-        } catch (err) {
-          console.error('Error fetching full email content:', err);
+        } catch (err: any) {
+          console.error('❌ ===== ERROR FETCHING EMAIL =====');
+          console.error('❌ Error object:', err);
+          console.error('❌ Error message:', err.message);
+          console.error('❌ Error response:', err.response);
+          console.error('❌ Full error:', JSON.stringify(err, null, 2));
+
           // Fallback to snippet if fetch fails
-          setThreads(prev => prev.map(t => 
-            t.id === threadId ? { ...t, fullContent: t.snippet } : t
+          setThreads(prev => prev.map(t =>
+            t.id === threadId ? { ...t, fullContent: t.snippet || 'Failed to load email content' } : t
           ));
         } finally {
           setLoadingContent(prev => {

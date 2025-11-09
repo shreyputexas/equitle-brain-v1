@@ -73,6 +73,7 @@ import integrationService from '../services/integrationService';
 import emailCategorizationService from '../services/emailCategorizationService';
 import OutlookEmailCard from './OutlookEmailCard';
 import communicationsApi, { Communication } from '../services/communicationsApi';
+import gmailApi, { GmailMessage } from '../services/gmailApi';
 
 interface Person {
   id: string;
@@ -276,7 +277,11 @@ export default function DealPipeline({
   
   // Communications state for Key Interactions
   const [dealCommunications, setDealCommunications] = useState<Record<string, Communication[]>>({});
-  const hasFetchedCommunicationsRef = React.useRef(false); // Simple one-time fetch flag
+  // Email thread modal state
+  const [openEmailThreadModal, setOpenEmailThreadModal] = useState(false);
+  const [selectedEmailThread, setSelectedEmailThread] = useState<Communication | null>(null);
+  const [emailFullContent, setEmailFullContent] = useState<Record<string, string>>({});
+  const [loadingEmailContent, setLoadingEmailContent] = useState<Set<string>>(new Set());
   
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -340,10 +345,9 @@ export default function DealPipeline({
     });
   
   // Use communications from deals prop (already included from API)
+  // Update communications whenever deals change
   useEffect(() => {
-    if (dealsWithContacts.length > 0 && !hasFetchedCommunicationsRef.current) {
-      hasFetchedCommunicationsRef.current = true;
-
+    if (dealsWithContacts.length > 0) {
       // Populate dealCommunications from the deals prop
       const commsMap: Record<string, Communication[]> = {};
       deals.forEach(deal => {
@@ -352,8 +356,18 @@ export default function DealPipeline({
         commsMap[deal.id] = dealWithComms.communications || [];
       });
       setDealCommunications(commsMap);
+
+      console.log('📧 [DealPipeline] Updated communications map:', {
+        dealsCount: deals.length,
+        commsMapKeys: Object.keys(commsMap),
+        commsPerDeal: Object.entries(commsMap).map(([dealId, comms]) => ({
+          dealId,
+          commsCount: comms.length,
+          comms: comms.map(c => ({ id: c.id, subject: c.subject, hasMessageId: !!c.messageId, hasSnippet: !!c.snippet }))
+        }))
+      });
     }
-  }, [dealsWithContacts.length, deals]);
+  }, [deals]);
 
   useEffect(() => {
     
@@ -1180,6 +1194,451 @@ export default function DealPipeline({
     }
   };
 
+  // Helper function to decode base64 email content
+  const base64DecodeEmail = (str: string): string => {
+    try {
+      // Browser-compatible base64 decoding
+      // Gmail uses URL-safe base64, so we need to handle padding
+      let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      // Add padding if needed
+      while (base64.length % 4) {
+        base64 += '=';
+      }
+      return atob(base64);
+    } catch (e) {
+      console.error('Error decoding base64:', e);
+      return '';
+    }
+  };
+
+  const stripHtmlFromEmail = (html: string): string => {
+    try {
+      let text = html;
+
+      // Remove DOCTYPE, HTML comments, and CDATA sections
+      text = text.replace(/<!DOCTYPE[^>]*>/gi, '');
+      text = text.replace(/<!--[\s\S]*?-->/g, '');
+      text = text.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
+
+      // Remove script tags and their content
+      text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+      // Remove style tags and their content
+      text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+      // Remove head tag and its content
+      text = text.replace(/<head\b[^<]*(?:(?!<\/head>)<[^<]*)*<\/head>/gi, '');
+
+      // Add spacing before closing anchor tags (links often run together)
+      text = text.replace(/<\/a>/gi, '</a> ');
+
+      // Convert common block elements to newlines for readability
+      // Add double newlines for major sections
+      text = text.replace(/<\/(p|div|h[1-6]|table|section|article|ul|ol)[^>]*>/gi, '\n\n');
+      text = text.replace(/<(br|hr)[^>]*>/gi, '\n');
+      text = text.replace(/<\/tr>/gi, '\n');
+      // Add space or newline for table cells and list items
+      text = text.replace(/<\/(td|th)>/gi, ' ');
+      text = text.replace(/<\/(li)>/gi, '\n');
+
+      // Remove all remaining HTML tags
+      text = text.replace(/<[^>]+>/g, '');
+
+      // Decode HTML entities multiple times to handle nested encoding
+      const tmp = document.createElement('DIV');
+      tmp.innerHTML = text;
+      text = tmp.textContent || tmp.innerText || text;
+
+      // Second pass for any remaining entities
+      tmp.innerHTML = text;
+      text = tmp.textContent || tmp.innerText || text;
+
+      // Replace common HTML entity artifacts
+      text = text.replace(/&nbsp;/g, ' ');
+      text = text.replace(/&#160;/g, ' ');
+      text = text.replace(/&amp;/g, '&');
+      text = text.replace(/&lt;/g, '<');
+      text = text.replace(/&gt;/g, '>');
+      text = text.replace(/&quot;/g, '"');
+      text = text.replace(/&#39;/g, "'");
+
+      // Remove non-breaking spaces and replace with regular spaces
+      text = text.replace(/\u00A0/g, ' ');
+      text = text.replace(/\u00C2/g, ''); // Common encoding artifact
+
+      // Remove zero-width characters and other control characters except newlines
+      text = text.replace(/[\u200B-\u200D\uFEFF]/g, '');
+      text = text.replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g, '');
+
+      // Remove the weird "â ï»¿ Í" type characters (UTF-8 mojibake)
+      text = text.replace(/[â€žâ€™â€œâ€�Ã�Â�ï»¿Íí]/g, '');
+
+      // Remove excessive spaces and tabs on each line
+      text = text.replace(/[ \t]+/g, ' ');
+
+      // Clean up each line but preserve structure
+      text = text
+        .split('\n')
+        .map(line => line.trim())
+        .join('\n')
+        .trim();
+
+      // Remove excessive newlines (more than 2 consecutive)
+      text = text.replace(/\n{3,}/g, '\n\n');
+
+      // Remove lines that are just whitespace
+      text = text
+        .split('\n')
+        .filter(line => line.length > 0)
+        .join('\n');
+
+      // Try to add spacing around common concatenated patterns
+      // Add space before capital letters that follow lowercase (likely concatenated words)
+      text = text.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+      return text || 'No readable content found';
+    } catch (e) {
+      console.error('Error stripping HTML:', e);
+      return html;
+    }
+  };
+
+  // Helper function to recursively extract body content from email payload
+  const extractBodyContentFromPayload = (payload: any): string => {
+    let content = '';
+
+    console.log('📧 [DealPipeline] Extracting body from payload:', {
+      hasBody: !!payload.body,
+      bodySize: payload.body?.size,
+      hasBodyData: !!payload.body?.data,
+      hasParts: !!payload.parts,
+      partsCount: payload.parts?.length,
+      mimeType: payload.mimeType
+    });
+
+    // First try to get content from direct body
+    if (payload.body?.data) {
+      try {
+        const decoded = base64DecodeEmail(payload.body.data);
+        console.log('📧 [DealPipeline] Decoded body data, length:', decoded.length);
+        content += decoded;
+      } catch (e) {
+        console.error('❌ [DealPipeline] Error decoding body:', e);
+      }
+    }
+
+    // Then check parts
+    if (payload.parts && Array.isArray(payload.parts)) {
+      console.log('📧 [DealPipeline] Processing', payload.parts.length, 'parts');
+      for (let i = 0; i < payload.parts.length; i++) {
+        const part = payload.parts[i];
+        console.log(`📧 [DealPipeline] Part ${i}:`, {
+          mimeType: part.mimeType,
+          hasBody: !!part.body,
+          hasBodyData: !!part.body?.data,
+          bodySize: part.body?.size,
+          hasParts: !!part.parts
+        });
+
+        // Prefer text/plain content
+        if (part.mimeType === 'text/plain' && part.body?.data) {
+          try {
+            const decoded = base64DecodeEmail(part.body.data);
+            console.log('📧 [DealPipeline] Decoded text/plain part, length:', decoded.length);
+            content += decoded;
+          } catch (e) {
+            console.error('❌ [DealPipeline] Error decoding text/plain part:', e);
+          }
+        }
+        // Use text/html as fallback if no plain text found yet
+        else if (part.mimeType === 'text/html' && part.body?.data && !content) {
+          try {
+            const htmlContent = base64DecodeEmail(part.body.data);
+            console.log('📧 [DealPipeline] Decoded text/html part, length:', htmlContent.length);
+            // Strip HTML tags for plain display
+            content = stripHtmlFromEmail(htmlContent);
+          } catch (e) {
+            console.error('❌ [DealPipeline] Error decoding text/html part:', e);
+          }
+        }
+        // Recursively check multipart sections
+        else if (part.mimeType?.startsWith('multipart/') && part.parts) {
+          console.log('📧 [DealPipeline] Recursing into multipart section');
+          const nestedContent = extractBodyContentFromPayload(part);
+          if (nestedContent) {
+            content += nestedContent;
+          }
+        }
+      }
+    }
+
+    console.log('📧 [DealPipeline] Total content extracted, length:', content.length);
+    return content;
+  };
+
+  // Handler to open email thread modal
+  const handleOpenEmailThread = async (comm: Communication) => {
+    const commId = comm.id || comm.threadId || comm.messageId || '';
+    if (!commId) return;
+
+    console.log('📧 [DealPipeline] ===== OPENING EMAIL THREAD =====');
+    console.log('📧 [DealPipeline] Communication object:', comm);
+    console.log('📧 [DealPipeline] Available data:', {
+      commId,
+      threadId: comm.threadId,
+      messageId: comm.messageId,
+      content: comm.content,
+      snippet: comm.snippet,
+      htmlContent: comm.htmlContent,
+      subject: comm.subject,
+      fromEmail: comm.fromEmail,
+      toEmails: comm.toEmails
+    });
+
+    setSelectedEmailThread(comm);
+    setOpenEmailThreadModal(true);
+
+    // If we already have the content in cache, don't fetch again
+    if (emailFullContent[commId]) {
+      console.log('📧 [DealPipeline] Using cached content for:', commId);
+      return;
+    }
+
+    // If we already have content or snippet in the communication object, use it
+    if (comm.content || comm.snippet) {
+      console.log('📧 [DealPipeline] Using content/snippet from communication object');
+      let content = comm.content || comm.snippet || 'No content available';
+
+      // Strip HTML if the content contains HTML tags
+      if (content.includes('<') && content.includes('>')) {
+        console.log('📧 [DealPipeline] Stripping HTML from stored content');
+        content = stripHtmlFromEmail(content);
+      }
+
+      setEmailFullContent(prev => ({
+        ...prev,
+        [commId]: content
+      }));
+      return;
+    }
+
+    // Try to fetch content - either by messageId or threadId
+    if (comm.messageId || comm.threadId) {
+      setLoadingEmailContent(prev => new Set(prev).add(commId));
+      try {
+        let fullContent = '';
+
+        if (comm.messageId) {
+          // Fetch using messageId - if part of thread, fetch full thread
+          console.log('📧 [DealPipeline] ===== FETCHING BY MESSAGE ID =====');
+          console.log('📧 [DealPipeline] Message ID:', comm.messageId);
+          console.log('📧 [DealPipeline] Thread ID:', comm.threadId);
+
+          // If we have a threadId, fetch the full thread for context
+          if (comm.threadId) {
+            try {
+              const response = await gmailApi.getThread(comm.threadId);
+              const thread = response.thread;
+
+              if (thread.messages && thread.messages.length > 1) {
+                // Multiple messages - format as thread
+                console.log(`📧 [DealPipeline] Found thread with ${thread.messages.length} messages`);
+
+                const formattedMessages: string[] = [];
+
+                for (let i = 0; i < thread.messages.length; i++) {
+                  const message = thread.messages[i];
+                  const headers = message.payload?.headers || [];
+
+                  // Extract headers
+                  const fromHeader = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || 'Unknown';
+                  const dateHeader = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || '';
+                  const subjectHeader = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '';
+
+                  // Extract message content
+                  let messageContent = '';
+                  if (message.payload) {
+                    messageContent = extractBodyContentFromPayload(message.payload);
+                  }
+
+                  // Fallback to snippet if no content extracted
+                  if (!messageContent || messageContent.trim().length === 0) {
+                    messageContent = message.snippet || '';
+                    // Strip HTML from snippet if present
+                    if (messageContent.includes('<') && messageContent.includes('>')) {
+                      messageContent = stripHtmlFromEmail(messageContent);
+                    }
+                  }
+
+                  // Format this message with separator
+                  const separator = i > 0 ? '\n\n' + '─'.repeat(60) + '\n\n' : '';
+                  const messageHeader = `From: ${fromHeader}${dateHeader ? '\nDate: ' + new Date(dateHeader).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                  }) : ''}${i === 0 && subjectHeader ? '\nSubject: ' + subjectHeader : ''}\n\n`;
+
+                  formattedMessages.push(separator + messageHeader + messageContent);
+                }
+
+                fullContent = formattedMessages.join('');
+              } else if (thread.messages && thread.messages.length === 1) {
+                // Single message - extract content normally
+                console.log('📧 [DealPipeline] Single message in thread');
+                const message = thread.messages[0];
+                if (message.payload) {
+                  fullContent = extractBodyContentFromPayload(message.payload);
+                }
+                if (!fullContent || fullContent.trim().length === 0) {
+                  fullContent = message.snippet || '';
+                }
+              }
+            } catch (err) {
+              console.warn('⚠️ [DealPipeline] Failed to fetch thread, falling back to single message:', err);
+              // Fall back to fetching just the message
+              const response = await gmailApi.getMessage(comm.messageId);
+              const message = response.message;
+
+              if (message.payload) {
+                fullContent = extractBodyContentFromPayload(message.payload);
+              }
+
+              if (!fullContent || fullContent.trim().length === 0) {
+                fullContent = message.snippet || '';
+              }
+            }
+          } else {
+            // No threadId, just fetch the single message
+            const response = await gmailApi.getMessage(comm.messageId);
+            const message = response.message;
+
+            console.log('📧 [DealPipeline] Message snippet:', message.snippet);
+
+            if (message.payload) {
+              fullContent = extractBodyContentFromPayload(message.payload);
+            }
+
+            if (!fullContent || fullContent.trim().length === 0) {
+              fullContent = message.snippet || '';
+            }
+          }
+        } else if (comm.threadId) {
+          // Fallback: Fetch using threadId and format full thread
+          console.log('📧 [DealPipeline] ===== FETCHING BY THREAD ID =====');
+          console.log('📧 [DealPipeline] Thread ID:', comm.threadId);
+
+          const response = await gmailApi.getThread(comm.threadId);
+          const thread = response.thread;
+
+          console.log('📧 [DealPipeline] Thread response:', thread);
+
+          if (thread.messages && thread.messages.length > 0) {
+            console.log(`📧 [DealPipeline] Processing ${thread.messages.length} messages in thread`);
+
+            // Format all messages in the thread
+            const formattedMessages: string[] = [];
+
+            for (let i = 0; i < thread.messages.length; i++) {
+              const message = thread.messages[i];
+              const headers = message.payload?.headers || [];
+
+              // Extract headers
+              const fromHeader = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || 'Unknown';
+              const dateHeader = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || '';
+              const subjectHeader = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '';
+
+              // Extract message content
+              let messageContent = '';
+              if (message.payload) {
+                messageContent = extractBodyContentFromPayload(message.payload);
+              }
+
+              // Fallback to snippet if no content extracted
+              if (!messageContent || messageContent.trim().length === 0) {
+                messageContent = message.snippet || '';
+                // Strip HTML from snippet if present
+                if (messageContent.includes('<') && messageContent.includes('>')) {
+                  messageContent = stripHtmlFromEmail(messageContent);
+                }
+              }
+
+              // Format this message with separator
+              const separator = i > 0 ? '\n\n' + '─'.repeat(60) + '\n\n' : '';
+              const messageHeader = `From: ${fromHeader}${dateHeader ? '\nDate: ' + new Date(dateHeader).toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              }) : ''}${i === 0 && subjectHeader ? '\nSubject: ' + subjectHeader : ''}\n\n`;
+
+              formattedMessages.push(separator + messageHeader + messageContent);
+            }
+
+            fullContent = formattedMessages.join('');
+          } else {
+            console.warn('⚠️ [DealPipeline] No messages in thread:', comm.threadId);
+          }
+        }
+
+        // Final fallback
+        if (!fullContent || fullContent.trim().length === 0) {
+          console.warn('⚠️ [DealPipeline] No content extracted, using fallback');
+          fullContent = 'No content available';
+        }
+
+        // Final HTML stripping pass to ensure consistency
+        // This catches any HTML that might have come from snippets or other sources
+        if (fullContent && fullContent !== 'No content available' && fullContent.includes('<') && fullContent.includes('>')) {
+          console.log('📧 [DealPipeline] Final HTML stripping pass');
+          fullContent = stripHtmlFromEmail(fullContent);
+        }
+
+        console.log('✅ [DealPipeline] Final content length:', fullContent.length);
+        console.log('✅ [DealPipeline] Final content preview:', fullContent.substring(0, 200));
+
+        // Update full content cache
+        setEmailFullContent(prev => ({
+          ...prev,
+          [commId]: fullContent
+        }));
+      } catch (err: any) {
+        console.error('❌ [DealPipeline] ===== ERROR FETCHING EMAIL =====');
+        console.error('❌ [DealPipeline] Error object:', err);
+        console.error('❌ [DealPipeline] Error message:', err.message);
+        console.error('❌ [DealPipeline] Error response:', err.response);
+
+        // Fallback to existing content if fetch fails
+        setEmailFullContent(prev => ({
+          ...prev,
+          [commId]: 'Failed to load email content'
+        }));
+      } finally {
+        setLoadingEmailContent(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(commId);
+          return newSet;
+        });
+      }
+    } else {
+      // No messageId or threadId, can't fetch content
+      console.warn('⚠️ [DealPipeline] No messageId or threadId available');
+      setEmailFullContent(prev => ({
+        ...prev,
+        [commId]: 'No content available - missing email identifiers'
+      }));
+    }
+  };
+
+  const handleCloseEmailThread = () => {
+    setOpenEmailThreadModal(false);
+    setSelectedEmailThread(null);
+  };
+
   // Draggable Deal Card Component
   const DraggableDealCard = ({ deal }: { deal: DealWithContacts }) => {
     const {
@@ -1738,58 +2197,66 @@ export default function DealPipeline({
                   </Typography>
                 ) : (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {communications.map((comm) => (
-                      <Box
-                        key={comm.id || comm.threadId || Math.random()}
-                        sx={{
-                          p: 1.5,
-                          border: '1px solid #e5e7eb',
-                          borderRadius: 1,
-                          bgcolor: '#f9fafb',
-                          '&:hover': {
-                            bgcolor: '#f3f4f6',
-                            borderColor: '#d1d5db'
-                          }
-                        }}
-                      >
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.8125rem' }}>
-                          {comm.subject || '(No Subject)'}
-                        </Typography>
+                    {communications.map((comm) => {
+                      const commId = comm.id || comm.threadId || comm.messageId || '';
 
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          {comm.fromEmail && (
-                            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
-                              <strong>From:</strong> {comm.fromEmail}
-                            </Typography>
-                          )}
-                          {comm.toEmails && comm.toEmails.length > 0 && (
-                            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
-                              <strong>To:</strong> {comm.toEmails.join(', ')}
-                            </Typography>
-                          )}
-                          {(comm.sentAt || comm.receivedAt || comm.createdAt) && (
-                            <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
-                              <strong>Date:</strong> {comm.sentAt
-                                ? new Date(comm.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                : comm.receivedAt
-                                ? new Date(comm.receivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                : comm.createdAt
-                                ? new Date(comm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                : ''
-                              }
-                            </Typography>
+                      return (
+                        <Box
+                          key={commId || Math.random()}
+                          onClick={() => handleOpenEmailThread(comm)}
+                          sx={{
+                            p: 1.5,
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 1,
+                            bgcolor: '#f9fafb',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: '#f3f4f6',
+                              borderColor: '#d1d5db',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }
+                          }}
+                        >
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.8125rem' }}>
+                            {comm.subject || '(No Subject)'}
+                          </Typography>
+
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {comm.fromEmail && (
+                              <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                                <strong>From:</strong> {comm.fromEmail}
+                              </Typography>
+                            )}
+                            {comm.toEmails && comm.toEmails.length > 0 && (
+                              <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                                <strong>To:</strong> {comm.toEmails.join(', ')}
+                              </Typography>
+                            )}
+                            {(comm.sentAt || comm.receivedAt || comm.createdAt) && (
+                              <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.6875rem' }}>
+                                <strong>Date:</strong> {comm.sentAt
+                                  ? new Date(comm.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : comm.receivedAt
+                                  ? new Date(comm.receivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : comm.createdAt
+                                  ? new Date(comm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                  : ''
+                                }
+                              </Typography>
+                            )}
+                          </Box>
+
+                          {comm.content && (
+                            <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #e5e7eb' }}>
+                              <Typography variant="caption" sx={{ color: '#374151', fontSize: '0.6875rem', display: 'block', lineHeight: 1.4 }}>
+                                {comm.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
+                              </Typography>
+                            </Box>
                           )}
                         </Box>
-
-                        {comm.content && (
-                          <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid #e5e7eb' }}>
-                            <Typography variant="caption" sx={{ color: '#374151', fontSize: '0.6875rem', display: 'block', lineHeight: 1.4 }}>
-                              {comm.content.replace(/<[^>]*>/g, '').substring(0, 150)}...
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    ))}
+                      );
+                    })}
                   </Box>
                 )}
               </Box>
@@ -2954,6 +3421,215 @@ export default function DealPipeline({
             </Card>
           ) : null}
         </DragOverlay>
+
+        {/* Email Thread Modal */}
+        <Dialog
+          open={openEmailThreadModal}
+          onClose={handleCloseEmailThread}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column'
+            }
+          }}
+        >
+          <DialogTitle
+            sx={{
+              borderBottom: '1px solid #e5e7eb',
+              pb: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <EmailIcon sx={{ color: '#6b7280', fontSize: 24 }} />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Email Details
+              </Typography>
+            </Box>
+            <IconButton
+              onClick={handleCloseEmailThread}
+              sx={{
+                color: '#6b7280',
+                '&:hover': {
+                  bgcolor: '#f3f4f6'
+                }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent
+            sx={{
+              flex: 1,
+              overflow: 'auto',
+              p: 0,
+              bgcolor: '#ffffff'
+            }}
+          >
+            {selectedEmailThread && (() => {
+              const commId = selectedEmailThread.id || selectedEmailThread.threadId || selectedEmailThread.messageId || '';
+              const isLoading = loadingEmailContent.has(commId);
+              let fullContent = emailFullContent[commId];
+
+              if (isLoading) {
+                return (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 6 }}>
+                    <CircularProgress size={40} />
+                    <Typography variant="body2" sx={{ mt: 2, color: '#6b7280' }}>
+                      Loading email content...
+                    </Typography>
+                  </Box>
+                );
+              }
+
+              // Use fullContent if available, otherwise fall back to comm fields
+              let displayContent = fullContent || selectedEmailThread.content || selectedEmailThread.snippet || 'No content available';
+
+              // Final safety check: strip HTML if it's still present (catches any edge cases)
+              if (displayContent && displayContent !== 'No content available' && displayContent.includes('<') && displayContent.includes('>')) {
+                console.log('📧 [DealPipeline Modal] Stripping HTML from display content');
+                displayContent = stripHtmlFromEmail(displayContent);
+              }
+
+              return (
+                <Box
+                  sx={{
+                    bgcolor: '#ffffff',
+                    borderRadius: 1,
+                    border: '1px solid #e5e7eb',
+                    m: 3
+                  }}
+                >
+                  {/* Email metadata section */}
+                  <Box
+                    sx={{
+                      p: 2.5,
+                      bgcolor: '#f9fafb',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}
+                  >
+                    {selectedEmailThread.fromEmail && (
+                      <Box sx={{ mb: 1.5 }}>
+                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                          From:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#1f2937', mt: 0.5 }}>
+                          {selectedEmailThread.fromEmail}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {selectedEmailThread.toEmails && selectedEmailThread.toEmails.length > 0 && (
+                      <Box sx={{ mb: 1.5 }}>
+                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                          To:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#1f2937', mt: 0.5 }}>
+                          {selectedEmailThread.toEmails.join(', ')}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {selectedEmailThread.subject && (
+                      <Box sx={{ mb: 1.5 }}>
+                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                          Subject:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#1f2937', mt: 0.5, fontWeight: 500 }}>
+                          {selectedEmailThread.subject}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {(selectedEmailThread.sentAt || selectedEmailThread.receivedAt || selectedEmailThread.createdAt) && (
+                      <Box>
+                        <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                          Date:
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#1f2937', mt: 0.5 }}>
+                          {selectedEmailThread.sentAt
+                            ? new Date(selectedEmailThread.sentAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              })
+                            : selectedEmailThread.receivedAt
+                            ? new Date(selectedEmailThread.receivedAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              })
+                            : selectedEmailThread.createdAt
+                            ? new Date(selectedEmailThread.createdAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                              })
+                            : ''
+                          }
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Email body section */}
+                  <Box sx={{ p: 3 }}>
+                    <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.75rem', mb: 1.5, display: 'block' }}>
+                      Message:
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      component="pre"
+                      sx={{
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        color: '#1f2937',
+                        lineHeight: 1.8,
+                        fontSize: '0.9375rem',
+                        fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        margin: 0,
+                        padding: 0
+                      }}
+                    >
+                      {displayContent}
+                    </Typography>
+                  </Box>
+                </Box>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions sx={{ borderTop: '1px solid #e5e7eb', p: 2 }}>
+            <Button
+              onClick={handleCloseEmailThread}
+              variant="outlined"
+              sx={{
+                borderColor: '#d1d5db',
+                color: '#374151',
+                '&:hover': {
+                  borderColor: '#9ca3af',
+                  bgcolor: '#f9fafb'
+                }
+              }}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </DndContext>
   );
