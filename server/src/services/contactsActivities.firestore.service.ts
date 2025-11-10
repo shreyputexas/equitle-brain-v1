@@ -8,6 +8,7 @@ export interface Contact {
   name: string;
   email?: string;
   phone?: string;
+  phoneNumberStatus?: 'fetching' | 'available' | 'unavailable'; // Status of phone number retrieval
   company?: string;
   title?: string;
   role?: string;

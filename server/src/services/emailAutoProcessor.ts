@@ -99,7 +99,12 @@ export class EmailAutoProcessor {
     isRelevant: boolean;
     extractedData: any;
   }> {
-    // Try AI analysis first
+    // DISABLED: AI analysis (uses too many OpenAI API calls)
+    // Using keyword-based analysis only to save costs
+    logger.info('Using keyword-based analysis for email', { subject: email.subject });
+    return this.analyzeWithKeywords(email);
+
+    /* DISABLED AI ANALYSIS - Uncomment to re-enable:
     try {
       logger.info('Attempting AI analysis for email', { subject: email.subject });
       const aiResult = await this.analyzeWithAI(email);
@@ -109,6 +114,7 @@ export class EmailAutoProcessor {
       logger.warn('AI analysis failed, falling back to keyword matching', { error: error instanceof Error ? error.message : 'Unknown error' });
       return this.analyzeWithKeywords(email);
     }
+    */
   }
 
   // AI-powered analysis using OpenAI

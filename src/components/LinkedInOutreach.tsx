@@ -59,6 +59,7 @@ interface Contact {
   linkedin_url: string;
   title: string;
   company: string;
+  website?: string;
   type: 'deal' | 'investor' | 'broker';
   city?: string;
   state?: string;
@@ -133,6 +134,10 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expanded, setExpanded] = useState(true);
 
+  // Edit state for messages
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+  const [schedulingMessageId, setSchedulingMessageId] = useState<number | null>(null);
+
   // Fetch contacts on component mount
   useEffect(() => {
     fetchContacts();
@@ -149,7 +154,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
         // Determine contact type from tags
         let contactType: 'deal' | 'investor' | 'broker' = 'deal';
         const tags = contact.tags || [];
-        
+
         if (tags.includes('investor') || tags.includes('investors')) {
           contactType = 'investor';
         } else if (tags.includes('broker') || tags.includes('brokers')) {
@@ -160,6 +165,10 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
 
         return {
           ...contact,
+          // Map backend camelCase to frontend snake_case
+          linkedin_url: contact.linkedinUrl || contact.linkedin_url || '',
+          first_name: contact.firstName || contact.first_name || '',
+          last_name: contact.lastName || contact.last_name || '',
           type: contactType,
           status: contact.status || 'active',
           tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
@@ -181,39 +190,43 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
 
   const handleContactSelection = (selectedContacts: Contact[]) => {
     setSelectedContacts(selectedContacts);
-    
+
+    console.log('=== SELECTED CONTACTS DEBUG ===');
     console.log('Selected contacts:', selectedContacts);
-    
-    // Auto-populate only the contact name and URLs for icon functionality
+    console.log('Number of contacts:', selectedContacts.length);
+
+    // Auto-populate contact name, URLs for icon functionality, and website URL
     const updatedProfiles = bulkProfiles.map((profile, index) => {
       if (index < selectedContacts.length) {
         const contact = selectedContacts[index];
-        
+
         console.log(`Contact ${index + 1}:`, {
           name: contact.name,
           linkedin_url: contact.linkedin_url,
-          email: contact.email
+          email: contact.email,
+          website: contact.website,
+          hasLinkedIn: !!contact.linkedin_url
         });
-        
+
         return {
           ...profile,
           contactName: contact.name,
           contactEmail: contact.email || '',
           linkedinUrl: contact.linkedin_url || '',
-          // Leave rawLinkedInText and websiteUrl empty for user to fill
+          // Auto-fill website URL from contact data
           rawLinkedInText: '',
-          websiteUrl: ''
+          websiteUrl: contact.website || ''
         };
       }
       return profile;
     });
-    
+
     console.log('Updated profiles:', updatedProfiles);
     setBulkProfiles(updatedProfiles);
     setContactSelectionOpen(false);
   };
 
-  const handleProfileInputChange = (profileId: number, field: 'rawLinkedInText' | 'websiteUrl' | 'contactName') => (
+  const handleProfileInputChange = (profileId: number, field: 'rawLinkedInText' | 'websiteUrl' | 'contactName' | 'contactEmail') => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     setBulkProfiles(prev => prev.map(profile => 
@@ -352,6 +365,62 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
     'Interest in Acquisition',
     'Interest in Entrepreneurial Journey'
   ];
+
+  // Handle message editing
+  const handleMessageEdit = (profileId: number, field: 'subject' | 'body', value: string) => {
+    setBulkProfiles(prev => prev.map(p => {
+      if (p.id === profileId && p.generatedMessage) {
+        return {
+          ...p,
+          generatedMessage: {
+            ...p.generatedMessage,
+            message: {
+              ...p.generatedMessage.message,
+              [field]: value
+            }
+          }
+        };
+      }
+      return p;
+    }));
+  };
+
+  // Handle approve & schedule - create email draft
+  const handleApproveAndSchedule = async (profile: BulkLinkedInProfile) => {
+    if (!profile.generatedMessage || !profile.contactEmail) {
+      alert('Missing email or message content');
+      return;
+    }
+
+    setSchedulingMessageId(profile.id);
+
+    try {
+      const response = await axios.post('/api/email-drafts/create', {
+        to: profile.contactEmail,
+        subject: profile.generatedMessage.message.subject,
+        body: profile.generatedMessage.message.body,
+        contactName: profile.contactName
+      });
+
+      if (response.data.success) {
+        alert(`Draft created successfully in ${response.data.data.provider}!`);
+
+        // Mark as scheduled
+        setBulkProfiles(prev => prev.map(p =>
+          p.id === profile.id
+            ? { ...p, status: 'success' as const }
+            : p
+        ));
+      } else {
+        alert('Failed to create draft: ' + (response.data.error || 'Unknown error'));
+      }
+    } catch (error: any) {
+      console.error('Error creating draft:', error);
+      alert('Error creating draft: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setSchedulingMessageId(null);
+    }
+  };
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -659,6 +728,24 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                       }
                     }}
                   />
+                  <TextField
+                    fullWidth
+                    placeholder="Contact Email"
+                    value={profile.contactEmail}
+                    onChange={handleProfileInputChange(profile.id, 'contactEmail')}
+                    variant="outlined"
+                    size="small"
+                    type="email"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '0.75rem',
+                        height: '28px'
+                      },
+                      '& .MuiInputBase-input': {
+                        padding: '4px 8px'
+                      }
+                    }}
+                  />
                   {profile.contactName && (
                     <Box sx={{ 
                       display: 'flex', 
@@ -668,10 +755,13 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                     }}>
                       {(() => {
                         const selectedContact = selectedContacts.find(c => c.name === profile.contactName);
+                        console.log('=== BUTTON RENDER DEBUG ===');
                         console.log('Profile contact name:', profile.contactName);
                         console.log('Selected contacts:', selectedContacts);
                         console.log('Found contact:', selectedContact);
                         if (selectedContact) {
+                          console.log('Contact LinkedIn URL:', selectedContact.linkedin_url);
+                          console.log('Has LinkedIn URL:', !!selectedContact.linkedin_url);
                           return (
                             <>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -689,49 +779,62 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                                 }}>
                                   {selectedContact.type}
                                 </Typography>
-                                {/* Always show LinkedIn button - enabled if has URL, disabled if not */}
-                                <Tooltip title={selectedContact.linkedin_url ? `Open ${selectedContact.name}'s LinkedIn profile` : `${selectedContact.name} doesn't have a LinkedIn profile`}>
-                                  <IconButton
-                                    size="small"
-                                    disabled={!selectedContact.linkedin_url}
-                                    onClick={() => {
-                                      if (selectedContact.linkedin_url) {
+                                {/* LinkedIn button - opens profile in new tab */}
+                                {selectedContact.linkedin_url ? (
+                                  <Tooltip title={`Open ${selectedContact.name}'s LinkedIn profile`}>
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
                                         console.log('Opening LinkedIn:', selectedContact.linkedin_url);
-                                        // Open LinkedIn profile in new tab
-                                        window.open(selectedContact.linkedin_url, '_blank');
-                                        
-                                        // Auto-fill website URL if LinkedIn URL exists
-                                        if (selectedContact.linkedin_url && !profile.websiteUrl) {
-                                          setBulkProfiles(prev => prev.map(p => 
-                                            p.id === profile.id 
-                                              ? { ...p, websiteUrl: selectedContact.linkedin_url }
-                                              : p
-                                          ));
+                                        window.open(selectedContact.linkedin_url, '_blank', 'noopener,noreferrer');
+                                      }}
+                                      sx={{
+                                        width: 24,
+                                        height: 24,
+                                        p: 0.5,
+                                        border: '1px solid #0077B5',
+                                        borderRadius: 1,
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                          bgcolor: 'rgba(0, 119, 181, 0.1)',
+                                          borderColor: '#005885'
                                         }
-                                      }
-                                    }}
-                                    sx={{
-                                      width: 18,
-                                      height: 18,
-                                      p: 0.25,
-                                      border: selectedContact.linkedin_url ? '1px solid #0077B5' : '1px solid #D1D5DB',
-                                      borderRadius: 1,
-                                      '&:hover': selectedContact.linkedin_url ? {
-                                        bgcolor: 'rgba(0, 119, 181, 0.1)',
-                                        borderColor: '#005885'
-                                      } : {},
-                                      '&:disabled': {
-                                        borderColor: '#D1D5DB',
-                                        bgcolor: '#F9FAFB'
-                                      }
-                                    }}
-                                  >
-                                    <LinkedInIcon sx={{ 
-                                      fontSize: 14, 
-                                      color: selectedContact.linkedin_url ? '#0077B5' : '#9CA3AF'
-                                    }} />
-                                  </IconButton>
-                                </Tooltip>
+                                      }}
+                                    >
+                                      <LinkedInIcon sx={{
+                                        fontSize: 16,
+                                        color: '#0077B5'
+                                      }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip title={`${selectedContact.name} doesn't have a LinkedIn profile`}>
+                                    <span>
+                                      <IconButton
+                                        size="small"
+                                        disabled
+                                        sx={{
+                                          width: 24,
+                                          height: 24,
+                                          p: 0.5,
+                                          border: '1px solid #D1D5DB',
+                                          borderRadius: 1,
+                                          '&.Mui-disabled': {
+                                            borderColor: '#D1D5DB',
+                                            bgcolor: '#F9FAFB'
+                                          }
+                                        }}
+                                      >
+                                        <LinkedInIcon sx={{
+                                          fontSize: 16,
+                                          color: '#9CA3AF'
+                                        }} />
+                                      </IconButton>
+                                    </span>
+                                  </Tooltip>
+                                )}
                               </Box>
                               {selectedContact.title && (
                                 <Typography variant="caption" sx={{ fontSize: '0.625rem', fontWeight: 600, color: '#333333' }}>
@@ -996,24 +1099,65 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                             {profile.websiteUrl && ' and company research'}
                           </Typography>
                           
-                          {/* Generated Message Display */}
-                          <Box sx={{ 
-                            p: 1.5, 
-                            bgcolor: '#FFFFFF', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
-                            borderColor: 'divider',
-                            mb: 1
-                          }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                              Subject: {profile.generatedMessage?.message.subject}
-                            </Typography>
-                            <Typography variant="body2" sx={{ lineHeight: 1.5, fontSize: '0.8125rem', whiteSpace: 'pre-line', mb: 1 }}>
-                              {profile.generatedMessage?.message.body}
-                            </Typography>
+                          {/* Generated Message Display - Editable */}
+                          <Box sx={{
+                            p: 1.5,
+                            bgcolor: '#FFFFFF',
+                            borderRadius: 1,
+                            border: '1px solid',
+                            borderColor: editingMessageId === profile.id ? 'primary.main' : 'divider',
+                            mb: 1,
+                            cursor: 'pointer',
+                            '&:hover': {
+                              borderColor: 'primary.light'
+                            }
+                          }}
+                          onClick={() => setEditingMessageId(profile.id)}
+                          >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                Subject:
+                              </Typography>
+                              <TextField
+                                fullWidth
+                                value={profile.generatedMessage?.message.subject || ''}
+                                onChange={(e) => handleMessageEdit(profile.id, 'subject', e.target.value)}
+                                variant="standard"
+                                size="small"
+                                onClick={(e) => e.stopPropagation()}
+                                sx={{
+                                  '& .MuiInput-root': {
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600
+                                  }
+                                }}
+                              />
+                            </Box>
+                            <TextField
+                              fullWidth
+                              multiline
+                              rows={8}
+                              value={profile.generatedMessage?.message.body || ''}
+                              onChange={(e) => handleMessageEdit(profile.id, 'body', e.target.value)}
+                              variant="outlined"
+                              size="small"
+                              onClick={(e) => e.stopPropagation()}
+                              sx={{
+                                mb: 1,
+                                '& .MuiOutlinedInput-root': {
+                                  fontSize: '0.8125rem',
+                                  lineHeight: 1.5
+                                }
+                              }}
+                            />
                             <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                               Approach: {profile.generatedMessage?.message.approach}
                             </Typography>
+                            {editingMessageId === profile.id && (
+                              <Typography variant="caption" color="primary.main" sx={{ display: 'block', mt: 1 }}>
+                                ✏️ Click outside or on action buttons when done editing
+                              </Typography>
+                            )}
                           </Box>
                         </Box>
 
@@ -1065,25 +1209,39 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                               <CloseIcon sx={{ fontSize: '1rem' }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Approve & Schedule">
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                // You could add scheduling functionality here
-                                console.log('Schedule message for profile', profile.id);
-                              }}
-                              sx={{ 
-                                color: 'white',
-                                bgcolor: 'success.main',
-                                width: 32,
-                                height: 32,
-                                '&:hover': {
-                                  bgcolor: 'success.dark'
-                                }
-                              }}
-                            >
-                              <Box sx={{ fontSize: '1.2rem', fontWeight: 'bold' }}>✓</Box>
-                            </IconButton>
+                          <Tooltip title={
+                            !profile.contactEmail
+                              ? "Add contact email to enable scheduling"
+                              : schedulingMessageId === profile.id
+                                ? "Creating draft..."
+                                : "Approve & Schedule as Draft"
+                          }>
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleApproveAndSchedule(profile)}
+                                disabled={schedulingMessageId === profile.id || !profile.contactEmail}
+                                sx={{
+                                  color: 'white',
+                                  bgcolor: 'success.main',
+                                  width: 32,
+                                  height: 32,
+                                  '&:hover': {
+                                    bgcolor: 'success.dark'
+                                  },
+                                  '&:disabled': {
+                                    bgcolor: '#9ca3af',
+                                    color: 'white'
+                                  }
+                                }}
+                              >
+                                {schedulingMessageId === profile.id ? (
+                                  <CircularProgress size={16} sx={{ color: 'white' }} />
+                                ) : (
+                                  <Box sx={{ fontSize: '1.2rem', fontWeight: 'bold' }}>✓</Box>
+                                )}
+                              </IconButton>
+                            </span>
                           </Tooltip>
                         </Box>
                       </Box>

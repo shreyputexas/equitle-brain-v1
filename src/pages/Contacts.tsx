@@ -47,6 +47,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import InfoIcon from '@mui/icons-material/Info';
 import axios from '../lib/axios';
 
 type ContactType = 'all' | 'deal' | 'investor' | 'broker';
@@ -58,6 +59,7 @@ interface Contact {
   last_name: string;
   email: string;
   phone: string;
+  phoneNumberStatus?: 'fetching' | 'available' | 'unavailable';
   linkedin_url: string;
   title: string;
   company: string;
@@ -130,7 +132,7 @@ const Contacts: React.FC = () => {
         // Determine contact type from tags
         let contactType: ContactType = 'deal';
         const tags = contact.tags || [];
-        
+
         if (tags.includes('investor') || tags.includes('investors')) {
           contactType = 'investor';
         } else if (tags.includes('broker') || tags.includes('brokers')) {
@@ -141,12 +143,16 @@ const Contacts: React.FC = () => {
 
         return {
           ...contact,
+          linkedin_url: contact.linkedinUrl || contact.linkedin_url, // Map backend camelCase to frontend snake_case
           type: contactType,
           status: contact.status || 'active',
           tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
         };
       });
       setContacts(contactsWithTypes);
+
+      // Auto-trigger phone enrichment for contacts without phones
+      triggerPhoneEnrichment(contactsWithTypes);
     } catch (err: any) {
       console.error('Error fetching contacts:', err);
       console.error('Error response:', err.response);
@@ -156,6 +162,35 @@ const Contacts: React.FC = () => {
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerPhoneEnrichment = async (contactsList: Contact[]) => {
+    try {
+      // Find contacts without phone numbers and not already fetching
+      const contactsWithoutPhones = contactsList.filter(
+        (contact) => !contact.phone && contact.phoneNumberStatus !== 'fetching'
+      );
+
+      if (contactsWithoutPhones.length === 0) {
+        console.log('No contacts need phone enrichment');
+        return;
+      }
+
+      const contactIds = contactsWithoutPhones.map((c) => c.id);
+      console.log(`Triggering phone enrichment for ${contactIds.length} contacts...`);
+
+      // Call the backend endpoint to trigger enrichment (don't wait for response)
+      axios
+        .post('/api/firebase/contacts/enrich-phone-numbers', { contactIds })
+        .then((response) => {
+          console.log('Phone enrichment triggered:', response.data);
+        })
+        .catch((error) => {
+          console.error('Failed to trigger phone enrichment:', error);
+        });
+    } catch (error) {
+      console.error('Error triggering phone enrichment:', error);
     }
   };
 
@@ -396,20 +431,33 @@ const Contacts: React.FC = () => {
     setDeleteDialogOpen(false);
 
     try {
-      // Delete each selected contact
-      const deletePromises = selectedRows.map((contactId: string | number) =>
-        axios.delete<any>(`/api/firebase/contacts/${contactId}`)
-      );
+      console.log('Deleting contacts:', selectedRows);
 
-      await Promise.all(deletePromises);
+      // Use bulk delete endpoint
+      const response = await axios.post<any>('/api/firebase/contacts/bulk-delete', {
+        contactIds: selectedRows
+      });
 
-      // Update local state to remove deleted contacts
-      setContacts(contacts.filter(contact => !selectedRows.includes(contact.id)));
-      setSelectedRows([]);
-      setError(null);
+      console.log('Delete response:', response.data);
+
+      if (response.data.success) {
+        // Update local state to remove deleted contacts
+        setContacts(contacts.filter(contact => !selectedRows.includes(contact.id)));
+        setSelectedRows([]);
+        setError(null);
+
+        // Show success message if some failed
+        if (response.data.failed > 0) {
+          setError(`Deleted ${response.data.deleted} contact(s). ${response.data.failed} failed.`);
+        }
+      } else {
+        throw new Error(response.data.error || 'Failed to delete contacts');
+      }
     } catch (err: any) {
       console.error('Error deleting contacts:', err);
-      setError(err.response?.data?.message || 'Failed to delete contacts');
+      console.error('Error details:', err.response?.data);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to delete contacts';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -640,19 +688,29 @@ const Contacts: React.FC = () => {
       headerName: 'Type',
       width: 130,
       minWidth: 120,
-      renderCell: (params) => (
-        <Chip
-          label={getTypeLabel(params.row.type || 'deal')}
-          size="small"
-          sx={{
-            bgcolor: getTypeColor(params.row.type || 'deal') + '20',
-            color: getTypeColor(params.row.type || 'deal'),
-            fontWeight: 600,
-            borderColor: getTypeColor(params.row.type || 'deal'),
-            border: '1px solid'
-          }}
-        />
-      ),
+      renderCell: (params) => {
+        const type = params.row.type || 'deal';
+        const typeColor = getTypeColor(type);
+        return (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              fontWeight: 500,
+              letterSpacing: '-0.01em',
+              color: typeColor,
+              bgcolor: typeColor + '20',
+              border: `1px solid ${typeColor}`,
+              px: 1,
+              py: 0.25,
+              borderRadius: 1,
+              display: 'inline-block'
+            }}
+          >
+            {getTypeLabel(type)}
+          </Typography>
+        );
+      },
     },
     {
       field: 'email',
@@ -694,6 +752,22 @@ const Contacts: React.FC = () => {
       minWidth: 140,
       renderCell: (params) => {
         const phone = params.row.phone;
+        const phoneStatus = params.row.phoneNumberStatus;
+
+        // Show info icon with tooltip if status is 'fetching'
+        if (phoneStatus === 'fetching' && !phone) {
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Tooltip title="Fetching: may take a few minutes" arrow>
+                <InfoIcon sx={{ fontSize: 18, color: '#6366f1', cursor: 'help' }} />
+              </Tooltip>
+              <Typography variant="body2" sx={{ color: '#6366f1', fontSize: '0.8125rem', fontStyle: 'italic' }}>
+                Searching...
+              </Typography>
+            </Box>
+          );
+        }
+
         if (phone) {
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1149,21 +1223,16 @@ const Contacts: React.FC = () => {
             <CardContent sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <Box>
-                  <Chip
-                    label="Type: Deal"
-                    size="small"
-                    sx={{
-                      height: 20,
-                      fontSize: '0.65rem',
-                      mb: 1,
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                      fontWeight: 500,
-                      letterSpacing: '-0.01em'
-                    }}
-                  />
+                  <Typography variant="caption" sx={{ 
+                    display: 'block', 
+                    mb: 0.5,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 500,
+                    letterSpacing: '-0.01em',
+                    color: '#ffffff'
+                  }}>
+                    Deal
+                  </Typography>
                   <Typography variant="h5" sx={{ 
                     fontWeight: 700, 
                     fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -1349,7 +1418,7 @@ const Contacts: React.FC = () => {
             )}
             {selectedType !== 'all' && (
               <Chip
-                label={`Type: ${getTypeLabel(selectedType)}`}
+                label={getTypeLabel(selectedType)}
                 size="small"
                 onDelete={() => setSelectedType('all')}
                 sx={{

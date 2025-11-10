@@ -302,7 +302,7 @@ const CallInspectionModal: React.FC<CallInspectionModalProps> = ({ open, onClose
                 />
               )}
               <Chip
-                label={`Type: ${callData.callType}`}
+                label={callData.callType}
                 variant="outlined"
               />
               {callData.sentimentScore && (

@@ -241,7 +241,9 @@ router.delete('/contacts/:id', firebaseAuthMiddleware, async (req, res) => {
     const userId = req.userId!;
     const { id } = req.params;
 
+    logger.info(`Deleting contact ${id} for user ${userId}`);
     const result = await ContactsActivitiesFirestoreService.deleteContact(userId, id);
+    logger.info(`Successfully deleted contact ${id}`);
 
     res.json({
       success: true,
@@ -259,7 +261,63 @@ router.delete('/contacts/:id', firebaseAuthMiddleware, async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// @route   POST /api/firebase/contacts/bulk-delete
+// @desc    Bulk delete contacts
+// @access  Private
+router.post('/contacts/bulk-delete', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { contactIds } = req.body;
+
+    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'contactIds array is required'
+      });
+    }
+
+    logger.info(`Bulk deleting ${contactIds.length} contacts for user ${userId}`, { contactIds });
+
+    const results = {
+      deleted: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
+
+    // Delete each contact
+    for (const contactId of contactIds) {
+      try {
+        await ContactsActivitiesFirestoreService.deleteContact(userId, contactId);
+        results.deleted++;
+        logger.info(`Deleted contact ${contactId}`);
+      } catch (error: any) {
+        results.failed++;
+        const errorMsg = `Failed to delete contact ${contactId}: ${error.message}`;
+        results.errors.push(errorMsg);
+        logger.error(errorMsg, error);
+      }
+    }
+
+    logger.info(`Bulk delete complete: ${results.deleted} deleted, ${results.failed} failed`);
+
+    res.json({
+      success: true,
+      message: `Successfully deleted ${results.deleted} contact(s)${results.failed > 0 ? `, ${results.failed} failed` : ''}`,
+      deleted: results.deleted,
+      failed: results.failed,
+      errors: results.errors.length > 0 ? results.errors : undefined
+    });
+  } catch (error: any) {
+    logger.error('Bulk delete contacts error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete contacts: ' + error.message
     });
   }
 });
@@ -325,12 +383,25 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
           };
           
           // Only add fields that have values (not undefined)
-          if (enrichedContact.email && 
-              enrichedContact.email !== 'email_not_unlocked' && 
+          if (enrichedContact.email &&
+              enrichedContact.email !== 'email_not_unlocked' &&
               !enrichedContact.email.includes('email_not_unlocked')) {
             contactData.email = enrichedContact.email;
           }
-          if (enrichedContact.phone) contactData.phone = enrichedContact.phone;
+
+          // Handle phone number and its status
+          if (enrichedContact.phone) {
+            contactData.phone = enrichedContact.phone;
+            contactData.phoneNumberStatus = 'available';
+          } else {
+            // If this contact was enriched (has email/linkedin/company) but no phone,
+            // mark phone as fetching since Apollo may deliver it via webhook
+            const wasEnriched = enrichedContact.email || enrichedContact.linkedin_url || enrichedContact.company;
+            if (wasEnriched) {
+              contactData.phoneNumberStatus = 'fetching';
+            }
+          }
+
           if (enrichedContact.linkedin_url) contactData.linkedinUrl = enrichedContact.linkedin_url;
           if (enrichedContact.title) contactData.title = enrichedContact.title;
           if (enrichedContact.company) contactData.company = enrichedContact.company;
@@ -360,6 +431,138 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
   } catch (error: any) {
     logger.error('Bulk save contacts error:', error);
     res.status(500).json({ success: false, error: 'Failed to save contacts: ' + error.message });
+  }
+});
+
+// @route   POST /api/firebase/contacts/enrich-phone-numbers
+// @desc    Trigger phone number enrichment for contacts without phones
+// @access  Private
+router.post('/contacts/enrich-phone-numbers', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { contactIds } = req.body;
+
+    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'contactIds array is required'
+      });
+    }
+
+    logger.info(`Enriching phone numbers for ${contactIds.length} contacts`);
+
+    const { getApolloServiceForUser } = require('../services/integrationService');
+    const { OptimizedEnrichmentService } = require('../services/optimizedEnrichment.service');
+
+    // Get Apollo service for this user
+    const apolloService = await getApolloServiceForUser(userId);
+    if (!apolloService) {
+      return res.status(400).json({
+        success: false,
+        error: 'Apollo API not configured. Please configure Apollo integration first.'
+      });
+    }
+
+    let enrichedCount = 0;
+    const errors: string[] = [];
+
+    // Process each contact
+    for (const contactId of contactIds) {
+      try {
+        // Get contact details
+        const contactResult = await ContactsActivitiesFirestoreService.getContactById(userId, contactId);
+        const contactData = contactResult.contact as any;
+
+        if (!contactData) {
+          errors.push(`Contact ${contactId} not found`);
+          continue;
+        }
+
+        // Skip if already has phone
+        if (contactData.phone) {
+          continue;
+        }
+
+        // Set status to fetching
+        await ContactsActivitiesFirestoreService.updateContact(userId, contactId, {
+          phoneNumberStatus: 'fetching'
+        });
+
+        // Trigger enrichment
+        const enrichmentParams: any = {};
+        if (contactData.email) enrichmentParams.email = contactData.email;
+        if (contactData.name) {
+          const nameParts = contactData.name.split(' ');
+          enrichmentParams.first_name = nameParts[0];
+          enrichmentParams.last_name = nameParts.slice(1).join(' ');
+        }
+        if (contactData.company) enrichmentParams.organization_name = contactData.company;
+
+        // Call enrichment service and update contact with results
+        OptimizedEnrichmentService.enrichPerson(
+          apolloService,
+          enrichmentParams,
+          {
+            userId,
+            contactId,
+            waitForWebhook: false
+          }
+        ).then(async (enrichmentResult: any) => {
+          // Update contact with enriched data
+          const updateData: any = {};
+
+          // Update LinkedIn URL if found
+          if (enrichmentResult.person?.linkedin_url) {
+            updateData.linkedinUrl = enrichmentResult.person.linkedin_url;
+            logger.info(`Found LinkedIn URL for contact ${contactId}: ${enrichmentResult.person.linkedin_url}`);
+          }
+
+          // Update phone if available immediately
+          if (enrichmentResult.phone) {
+            updateData.phone = enrichmentResult.phone;
+            updateData.phoneNumberStatus = 'available';
+            logger.info(`Found phone for contact ${contactId}: ${enrichmentResult.phone}`);
+          } else if (!enrichmentResult.webhookPending) {
+            // No phone found and no webhook pending
+            updateData.phoneNumberStatus = 'unavailable';
+          }
+
+          // Update other fields if available
+          if (enrichmentResult.person?.title && !contactData.title) {
+            updateData.title = enrichmentResult.person.title;
+          }
+          if (enrichmentResult.person?.organization?.name && !contactData.company) {
+            updateData.company = enrichmentResult.person.organization.name;
+          }
+
+          // Apply updates if we have any
+          if (Object.keys(updateData).length > 0) {
+            await ContactsActivitiesFirestoreService.updateContact(userId, contactId, updateData);
+            logger.info(`Updated contact ${contactId} with enriched data`, { updateData });
+          }
+        }).catch((error: any) => {
+          logger.error(`Background enrichment failed for contact ${contactId}:`, error);
+        });
+
+        enrichedCount++;
+      } catch (contactError: any) {
+        logger.error(`Error processing contact ${contactId}:`, contactError);
+        errors.push(`Contact ${contactId}: ${contactError.message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Triggered phone number enrichment for ${enrichedCount} contacts`,
+      enrichedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error: any) {
+    logger.error('Enrich phone numbers error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to enrich phone numbers: ' + error.message
+    });
   }
 });
 

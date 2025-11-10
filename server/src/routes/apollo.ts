@@ -453,22 +453,38 @@ router.post('/webhook/phone-numbers', async (req, res) => {
           const enrichmentRequest = OptimizedEnrichmentService.getEnrichmentRequest(personId);
           
           if (enrichmentRequest && enrichmentRequest.contactId) {
-            // Update Firestore contact with phone numbers
+            // Update Firestore contact with phone numbers and LinkedIn URL
             try {
               const { ContactsActivitiesFirestoreService } = require('../services/contactsActivities.firestore.service');
               const bestPhone = person.phone_numbers[0]?.sanitized_number || person.phone_numbers[0]?.sanitizedNumber;
-              
+
+              const updateData: any = {};
+
               if (bestPhone) {
+                updateData.phone = bestPhone;
+                updateData.phoneNumberStatus = 'available';
+              }
+
+              // Also update LinkedIn URL if available
+              if (person.linkedin_url) {
+                updateData.linkedinUrl = person.linkedin_url;
+                logger.info('✅ [WEBHOOK] Found LinkedIn URL in webhook', {
+                  contactId: enrichmentRequest.contactId,
+                  linkedinUrl: person.linkedin_url
+                });
+              }
+
+              if (Object.keys(updateData).length > 0) {
                 await ContactsActivitiesFirestoreService.updateContact(
                   enrichmentRequest.userId,
                   enrichmentRequest.contactId,
-                  { phone: bestPhone }
+                  updateData
                 );
-                
-                logger.info('✅ [WEBHOOK] Updated Firestore contact with phone number', {
+
+                logger.info('✅ [WEBHOOK] Updated Firestore contact with enriched data', {
                   contactId: enrichmentRequest.contactId,
                   personId,
-                  phone: bestPhone
+                  updates: updateData
                 });
               }
             } catch (updateError: any) {

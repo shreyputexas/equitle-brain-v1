@@ -59,9 +59,47 @@ import logger from './utils/logger';
 
 import { EmailSyncService } from './services/emailSync';
 import emailProccesingRoutes from './routes/emailProcessing';
+import emailDraftsRoutes from './routes/emailDrafts';
+
+// Global error handlers to prevent server crashes
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught Exception - Server will continue running:', {
+    error: error.message,
+    stack: error.stack,
+    name: error.name
+  });
+  // Don't exit - log and continue
+});
+
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  logger.error('Unhandled Promise Rejection - Server will continue running:', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined
+  });
+  // Don't exit - log and continue
+});
 
 const app = express();
 const server = createServer(app);
+
+// Graceful shutdown handlers (must be after server creation)
+const gracefulShutdown = (signal: string) => {
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 const io = new Server(server, {
   cors: {
     origin: [
@@ -213,6 +251,7 @@ app.use('/api/firebase-investors', firebaseInvestorRoutes);
 // New Firebase funds routes
 app.use('/api/firebase-funds', firebaseFundsRoutes);
 app.use('/api/email-processing', emailProccesingRoutes);
+app.use('/api/email-drafts', emailDraftsRoutes);
 
 // Legacy Prisma LP groups routes (will be deprecated)
 // app.use('/api/lp-groups', firebaseAuthMiddleware, lpGroupsRoutes); // Temporarily disabled due to Prisma dependency
@@ -472,6 +511,27 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof PORT === 'string' ? 'Pipe ' + PORT : 'Port ' + PORT;
+
+  switch (error.code) {
+    case 'EACCES':
+      logger.error(`${bind} requires elevated privileges`);
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      logger.error(`${bind} is already in use`);
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -480,12 +540,19 @@ server.listen(PORT, '0.0.0.0', () => {
   (async () => {
     try {
       await connectFirebase();
+      logger.info('Firebase connected successfully');
     } catch (error: any) {
-      console.error('Firebase connection failed but server will continue:', error?.message || error);
+      logger.error('Firebase connection failed but server will continue:', {
+        error: error?.message || error,
+        stack: error?.stack
+      });
     }
   })();
 
-  // Start email sync (also non-blocking)
+  // DISABLED: Automatic email sync (uses too many API calls)
+  // Users can manually create deals instead
+  // To re-enable, uncomment the code below:
+  /*
   (async () => {
     try {
       await EmailSyncService.startEmailSync();
@@ -493,6 +560,7 @@ server.listen(PORT, '0.0.0.0', () => {
       console.error('Email sync failed to start but server will continue:', error?.message || error);
     }
   })();
+  */
 });
 
 export { io };
