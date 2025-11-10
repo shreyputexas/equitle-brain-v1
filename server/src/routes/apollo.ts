@@ -8,6 +8,7 @@ try {
   console.warn('xlsx not found - Excel file processing features will be disabled');
 }
 import { ApolloService } from '../services/apollo.service';
+import { ApolloWebhookService } from '../services/apolloWebhook.service';
 import logger from '../utils/logger';
 
 const router = express.Router();
@@ -372,6 +373,207 @@ router.get('/organization/:domain', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to lookup organization'
+    });
+  }
+});
+
+/**
+ * POST /api/apollo/webhook/phone-numbers
+ * Webhook endpoint to receive phone numbers from Apollo
+ * This endpoint is called by Apollo when phone numbers are revealed via reveal_phone_number parameter
+ * NOTE: This endpoint should NOT require authentication as Apollo calls it directly
+ */
+router.post('/webhook/phone-numbers', async (req, res) => {
+  try {
+    logger.info('Apollo webhook received for phone numbers', {
+      body: req.body,
+      headers: req.headers
+    });
+
+    // Apollo webhook payload structure (based on Apollo docs):
+    // {
+    //   "status": "success",
+    //   "people": [
+    //     {
+    //       "id": "person_id",
+    //       "phone_numbers": [...]
+    //     }
+    //   ]
+    // }
+    
+    const { people, status } = req.body;
+
+    // Handle Apollo's actual webhook structure
+    if (people && Array.isArray(people) && people.length > 0) {
+      let totalPhonesStored = 0;
+      
+      // Process each person in the webhook payload
+      for (const person of people) {
+        const personId = person.id;
+        const phoneNumbers = person.phone_numbers || [];
+        
+        if (phoneNumbers.length > 0 && personId) {
+          const personName = person.name || 
+            (person.first_name && person.last_name ? `${person.first_name} ${person.last_name}` : undefined);
+          
+          // Store phone numbers using person ID as identifier
+          ApolloWebhookService.storePhoneNumbers(
+            personId,
+            phoneNumbers,
+            personId,
+            personName
+          );
+          
+          totalPhonesStored += phoneNumbers.length;
+          
+          console.log('✅ [WEBHOOK] Stored phone numbers for person:', {
+            personId,
+            personName,
+            phoneCount: phoneNumbers.length,
+            phones: phoneNumbers.map(p => ({
+              sanitized: p.sanitized_number || p.sanitizedNumber,
+              raw: p.raw_number || p.rawNumber,
+              type: p.type_cd || p.type
+            }))
+          });
+          
+          logger.info('Phone numbers stored from webhook for person', {
+            personId,
+            personName,
+            phoneCount: phoneNumbers.length
+          });
+        }
+      }
+      
+      // Update Firestore contacts if enrichment requests exist
+      for (const person of people) {
+        const personId = person.id;
+        if (personId && person.phone_numbers && person.phone_numbers.length > 0) {
+          const { OptimizedEnrichmentService } = require('../services/optimizedEnrichment.service');
+          const enrichmentRequest = OptimizedEnrichmentService.getEnrichmentRequest(personId);
+          
+          if (enrichmentRequest && enrichmentRequest.contactId) {
+            // Update Firestore contact with phone numbers
+            try {
+              const { ContactsActivitiesFirestoreService } = require('../services/contactsActivities.firestore.service');
+              const bestPhone = person.phone_numbers[0]?.sanitized_number || person.phone_numbers[0]?.sanitizedNumber;
+              
+              if (bestPhone) {
+                await ContactsActivitiesFirestoreService.updateContact(
+                  enrichmentRequest.userId,
+                  enrichmentRequest.contactId,
+                  { phone: bestPhone }
+                );
+                
+                logger.info('✅ [WEBHOOK] Updated Firestore contact with phone number', {
+                  contactId: enrichmentRequest.contactId,
+                  personId,
+                  phone: bestPhone
+                });
+              }
+            } catch (updateError: any) {
+              logger.error('Failed to update Firestore contact from webhook', {
+                error: updateError.message,
+                contactId: enrichmentRequest.contactId,
+                personId
+              });
+            }
+          }
+          
+          // Mark enrichment as completed
+          if (enrichmentRequest) {
+            OptimizedEnrichmentService.markEnrichmentCompleted(personId);
+          }
+        }
+      }
+
+      // Return success response
+      res.json({
+        success: true,
+        message: 'Phone numbers received and stored',
+        people_processed: people.length,
+        total_phone_numbers: totalPhonesStored
+      });
+      
+    } else {
+      // Fallback: Try to handle legacy format or direct phone_numbers at root
+      const { person_id, person, phone_numbers, enrichment_request_id } = req.body;
+      
+      if (phone_numbers && Array.isArray(phone_numbers)) {
+        const identifier = person_id || enrichment_request_id || `webhook_${Date.now()}`;
+        const personName = person?.name || (person?.first_name && person?.last_name 
+          ? `${person.first_name} ${person.last_name}` 
+          : undefined);
+        
+        ApolloWebhookService.storePhoneNumbers(
+          identifier,
+          phone_numbers,
+          person_id,
+          personName
+        );
+        
+        console.log('✅ [WEBHOOK] Received phone numbers (legacy format):', {
+          identifier,
+          personId: person_id,
+          personName,
+          phoneCount: phone_numbers.length
+        });
+        
+        res.json({
+          success: true,
+          message: 'Phone numbers received and stored (legacy format)',
+          phone_count: phone_numbers.length
+        });
+      } else {
+        logger.warn('Apollo webhook missing expected structure', { 
+          body: req.body,
+          hasPeople: !!people,
+          hasPhoneNumbers: !!phone_numbers
+        });
+        // Still return 200 to prevent Apollo from retrying invalid payloads
+        res.json({
+          success: false,
+          error: 'Invalid webhook payload structure',
+          received: Object.keys(req.body)
+        });
+      }
+    }
+
+  } catch (error: any) {
+    logger.error('Error processing Apollo webhook', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to process webhook'
+    });
+  }
+});
+
+/**
+ * GET /api/apollo/webhook/phone-numbers/:identifier
+ * Get phone numbers for a person (for testing/debugging)
+ */
+router.get('/webhook/phone-numbers/:identifier', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const phoneNumbers = ApolloWebhookService.getPhoneNumbers(identifier);
+
+    if (phoneNumbers) {
+      res.json({
+        success: true,
+        identifier,
+        phone_numbers: phoneNumbers
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: 'Phone numbers not found for this identifier'
+      });
+    }
+  } catch (error: any) {
+    logger.error('Error retrieving phone numbers', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to retrieve phone numbers'
     });
   }
 });

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import integrationService, { Integration } from '../services/integrationService';
+import { thesisApi, InvestmentThesis } from '../services/thesisApi';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
@@ -66,7 +67,11 @@ import {
   FileDownload as FileDownloadIcon,
   DataUsage as DataUsageIcon,
   Info as InfoIcon,
-  GetApp as GetAppIcon
+  GetApp as GetAppIcon,
+  Save as SaveIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 
 interface EnrichedContact {
@@ -105,12 +110,12 @@ interface ScrapingResults {
 }
 
 interface ThesisCriteria {
-  industries: string;
-  location: string;
-  companySizeRange: string;
-  fundingStage: string;
-  technologies: string;
-  jobDepartments: string;
+  jobTitles: string;  // person_titles[] - Most important Apollo parameter
+  location: string;  // organization_locations[]
+  companySizeRange: string;  // organization_num_employees_ranges[]
+  technologies: string;  // technologies[]
+  fundingStage: string;  // funding_stage_list[]
+  keywords: string;  // q_keywords - Everything else from thesis goes here
 }
 
 interface DiscoveredContact {
@@ -131,6 +136,7 @@ interface DiscoveredContact {
   apollo_confidence: number;
   email_status: string;
   email_unlocked: boolean;
+  website?: string;
 }
 
 interface EnrichedOrganization {
@@ -211,6 +217,23 @@ interface ContactResults {
     failed: number;
     successRate: number;
   };
+}
+
+interface DiscoveryResults {
+  success: boolean;
+  contacts: DiscoveredContact[];
+  summary: {
+    requested: number;
+    found: number;
+    apolloResults: number;
+    fulfillmentRate: number;
+    qualityRate: number;
+    searchTier?: string;
+    searchTierDescription?: string;
+    averageRelevanceScore?: number;
+  };
+  thesisCriteria?: any;
+  searchParams?: any;
 }
 
 export default function DataEnrichment() {
@@ -296,19 +319,19 @@ export default function DataEnrichment() {
       }
     }
     return {
-      industries: '',
+      jobTitles: '',
       location: '',
       companySizeRange: '',
-      fundingStage: '',
       technologies: '',
-      jobDepartments: ''
+      fundingStage: '',
+      keywords: ''
     };
   });
   const [discoveredContacts, setDiscoveredContacts] = useState<DiscoveredContact[]>([]);
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [discoveryResults, setDiscoveryResults] = useState<any>(null);
+  const [discoveryResults, setDiscoveryResults] = useState<DiscoveryResults | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [contactsToFind, setContactsToFind] = useState<number>(10);
+  const [contactsToFind, setContactsToFind] = useState<string>('10');
 
   // Organization enrichment state
   const [orgSelectedFile, setOrgSelectedFile] = useState<File | null>(null);
@@ -387,6 +410,276 @@ export default function DataEnrichment() {
     checkSize: '',
     keywords: ''
   });
+
+  // Investment thesis state for contact search
+  const [investmentTheses, setInvestmentTheses] = useState<InvestmentThesis[]>([]);
+  const [selectedThesisId, setSelectedThesisId] = useState<string>('');
+  const [isSavingThesis, setIsSavingThesis] = useState<boolean>(false);
+  const [saveThesisDialogOpen, setSaveThesisDialogOpen] = useState<boolean>(false);
+  const [newThesisName, setNewThesisName] = useState<string>('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
+
+  // Load investment theses on mount
+  useEffect(() => {
+    loadInvestmentTheses();
+  }, []);
+
+  // Load investment theses from My Thesis page
+  const loadInvestmentTheses = async () => {
+    try {
+      const theses = await thesisApi.getTheses();
+      setInvestmentTheses(theses);
+    } catch (error) {
+      console.error('Failed to load investment theses:', error);
+    }
+  };
+
+  // Map investment thesis criteria to contact search fields
+  const mapThesisToContactSearch = (thesis: InvestmentThesis) => {
+    const mappedCriteria: any = {
+      jobTitles: '',
+      location: '',
+      companySizeRange: '',
+      technologies: '',
+      fundingStage: '',
+      keywords: '',
+      revenue: '',
+      industries: ''
+    };
+
+    const keywordParts: string[] = [];
+    let hasJobTitleCriteria = false;
+
+    // Helper to determine if a field is searchable (text-based) vs numeric/structural
+    const isSearchableField = (field: string, value: string) => {
+      const numericOnlyFields = ['revenue', 'funding amount', 'valuation', 'employees', 'age', 'year', 'count'];
+      const fieldLower = field.toLowerCase();
+
+      // If it's a numeric-only field AND the value is purely numeric, it's not searchable
+      if (numericOnlyFields.some(nf => fieldLower.includes(nf))) {
+        // Check if value is purely numeric (with optional currency symbols, commas, etc.)
+        if (/^[$€£¥]?\s*[\d,]+(\.\d+)?\s*[MBK]?$/.test(value.trim())) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    // Helper to extract searchable terms from a value
+    const extractSearchableTerms = (value: string, field: string) => {
+      // Remove common stop words and extract meaningful terms
+      const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with'];
+      const terms = value.split(/[\s,]+/)
+        .map(t => t.trim())
+        .map(t => t.replace(/[%$€£¥,]/g, '')) // Remove currency and percentage symbols
+        .filter(t => {
+          // Filter out stop words
+          if (stopWords.includes(t.toLowerCase())) return false;
+          // Filter out purely numeric values
+          if (/^[\d.,]+$/.test(t)) return false;
+          // Filter out single characters
+          if (t.length < 2) return false;
+          // Keep terms with at least some letters
+          return /[a-zA-Z]/.test(t);
+        });
+      return terms.join(' ');
+    };
+
+    thesis.criteria.forEach(criterion => {
+      const field = criterion.field.toLowerCase();
+      const value = criterion.value.toString();
+      const category = criterion.category;
+
+      // Map to Apollo-supported fields
+      if (field.includes('title') || field.includes('position') || field.includes('role')) {
+        mappedCriteria.jobTitles = value;
+        hasJobTitleCriteria = true;
+      } else if (field.includes('location') || field.includes('geographic') || category === 'Geographic') {
+        mappedCriteria.location = value;
+      } else if (field.includes('employee') || field.includes('company size') || field.includes('size')) {
+        mappedCriteria.companySizeRange = value;
+      } else if (field.includes('tech') || category === 'Technology') {
+        mappedCriteria.technologies = value;
+      } else if (field.includes('stage') || field.includes('funding')) {
+        mappedCriteria.fundingStage = value;
+      } else if (field.includes('industry') || field.includes('sector') || field.includes('vertical')) {
+        // Industry goes into keywords as searchable terms
+        keywordParts.push(extractSearchableTerms(value, field));
+      } else if (field.includes('business model') || field.includes('model')) {
+        // Business model is highly searchable
+        keywordParts.push(value);
+      } else if (field.includes('product') || field.includes('service')) {
+        // Product/service is searchable
+        keywordParts.push(extractSearchableTerms(value, field));
+      } else if (isSearchableField(field, value)) {
+        // Only add to keywords if it's actually searchable
+        keywordParts.push(extractSearchableTerms(value, field));
+      }
+      // Skip numeric-only fields from keywords
+    });
+
+    // Make job titles optional - only use default if explicitly no criteria provided
+    if (!hasJobTitleCriteria && thesis.criteria.length === 0) {
+      mappedCriteria.jobTitles = 'CEO, Founder, Co-Founder, CTO, COO';
+    }
+
+    // Combine all searchable terms into keywords field (clean, no field labels)
+    if (keywordParts.length > 0) {
+      mappedCriteria.keywords = keywordParts.filter(k => k.trim()).join(' ');
+    }
+
+    return mappedCriteria;
+  };
+
+  // Handle thesis selection
+  const handleThesisSelect = (thesisId: string) => {
+    setSelectedThesisId(thesisId);
+
+    if (!thesisId) {
+      // If cleared, don't auto-fill
+      return;
+    }
+
+    const thesis = investmentTheses.find(t => t.id === thesisId);
+    if (thesis) {
+      // Map investment thesis to contact search criteria
+      const mappedCriteria = mapThesisToContactSearch(thesis);
+
+      // Auto-fill based on contact type
+      if (contactSearchType === 'people') {
+        setThesisCriteria(mappedCriteria);
+      } else if (contactSearchType === 'brokers') {
+        setBrokerSearchCriteria({
+          industries: mappedCriteria.industries,
+          subindustries: '',
+          location: mappedCriteria.location,
+          experience: '',
+          dealSize: '',
+          keywords: ''
+        });
+      } else if (contactSearchType === 'investors') {
+        setInvestorSearchCriteria({
+          industries: mappedCriteria.industries,
+          subindustries: '',
+          location: mappedCriteria.location,
+          investmentStage: mappedCriteria.fundingStage,
+          checkSize: '',
+          keywords: ''
+        });
+      }
+    }
+  };
+
+  // Handle save current criteria as new thesis
+  const handleSaveAsThesis = async () => {
+    if (!newThesisName.trim()) {
+      setMessage('Please enter a name for the thesis');
+      setShowError(true);
+      return;
+    }
+
+    setIsSavingThesis(true);
+    try {
+      // Convert contact search criteria to investment thesis criteria format
+      const criteria: any[] = [];
+      let currentCriteria: any = {};
+
+      if (contactSearchType === 'people') {
+        currentCriteria = thesisCriteria;
+      } else if (contactSearchType === 'brokers') {
+        currentCriteria = brokerSearchCriteria;
+      } else if (contactSearchType === 'investors') {
+        currentCriteria = investorSearchCriteria;
+      }
+
+      // Map to investment criteria format
+      if (currentCriteria.jobTitles) {
+        criteria.push({
+          id: `criterion-${Date.now()}-1`,
+          category: 'Team',
+          field: 'Job Title',
+          value: currentCriteria.jobTitles,
+          operator: 'equals',
+          weight: 1
+        });
+      }
+
+      if (currentCriteria.location) {
+        criteria.push({
+          id: `criterion-${Date.now()}-2`,
+          category: 'Geographic',
+          field: 'Location',
+          value: currentCriteria.location,
+          operator: 'equals',
+          weight: 1
+        });
+      }
+
+      if (currentCriteria.companySizeRange) {
+        criteria.push({
+          id: `criterion-${Date.now()}-3`,
+          category: 'Market',
+          field: 'Company Size',
+          value: currentCriteria.companySizeRange,
+          operator: 'equals',
+          weight: 1
+        });
+      }
+
+      if (currentCriteria.technologies) {
+        criteria.push({
+          id: `criterion-${Date.now()}-4`,
+          category: 'Technology',
+          field: 'Technologies',
+          value: currentCriteria.technologies,
+          operator: 'equals',
+          weight: 1
+        });
+      }
+
+      if (currentCriteria.fundingStage || currentCriteria.investmentStage) {
+        criteria.push({
+          id: `criterion-${Date.now()}-5`,
+          category: 'Financial',
+          field: 'Funding Stage',
+          value: currentCriteria.fundingStage || currentCriteria.investmentStage,
+          operator: 'equals',
+          weight: 1
+        });
+      }
+
+      if (currentCriteria.keywords) {
+        criteria.push({
+          id: `criterion-${Date.now()}-6`,
+          category: 'Subindustry',
+          field: 'Keywords',
+          value: currentCriteria.keywords,
+          operator: 'contains',
+          weight: 1
+        });
+      }
+
+      await thesisApi.createThesis({
+        name: newThesisName.trim(),
+        criteria
+      });
+
+      // Reload theses
+      await loadInvestmentTheses();
+
+      // Close dialog and reset
+      setSaveThesisDialogOpen(false);
+      setNewThesisName('');
+      setMessage('Thesis saved successfully to My Thesis!');
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Failed to save thesis:', error);
+      setMessage('Failed to save thesis');
+      setShowError(true);
+    } finally {
+      setIsSavingThesis(false);
+    }
+  };
 
   // Organization enrichment handlers
   const handleOrgFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -612,8 +905,15 @@ export default function DataEnrichment() {
 
     // Validate criteria based on contact type
     if (contactSearchType === 'people') {
-      if (!thesisCriteria.industries.trim()) {
-        setMessage('Please select an industry');
+      // Check if at least one search criterion is provided
+      const hasAnyCriteria =
+        (thesisCriteria.jobTitles && thesisCriteria.jobTitles.trim()) ||
+        (thesisCriteria.keywords && thesisCriteria.keywords.trim()) ||
+        (thesisCriteria.location && thesisCriteria.location.trim()) ||
+        (thesisCriteria.companySizeRange && thesisCriteria.companySizeRange.trim());
+
+      if (!hasAnyCriteria) {
+        setMessage('Please provide at least one search criterion (job titles, keywords, location, or company size)');
         setShowError(true);
         return;
       }
@@ -649,7 +949,7 @@ export default function DataEnrichment() {
     try {
       const searchPayload: any = {
         contactType: contactSearchType,
-        contactsToFind,
+        contactsToFind: parseInt(contactsToFind) || 10,
         // Include Apollo API key if available, otherwise will use OAuth
         apiKey: apolloApiKey || undefined
       };
@@ -714,9 +1014,22 @@ export default function DataEnrichment() {
             setMessage(`Found ${contacts.length} contacts, but failed to auto-save them. Check console for details.`);
           }
         } else {
-          setMessage('No contacts found matching your criteria');
+          // Provide more helpful message when no results found
+          const criteriaUsed = [];
+          if (thesisCriteria.jobTitles) criteriaUsed.push(`Job Titles: ${thesisCriteria.jobTitles}`);
+          if (thesisCriteria.keywords) criteriaUsed.push(`Keywords: ${thesisCriteria.keywords}`);
+          if (thesisCriteria.location) criteriaUsed.push(`Location: ${thesisCriteria.location}`);
+          if (thesisCriteria.companySizeRange) criteriaUsed.push('Company Size filter');
+          if (thesisCriteria.technologies) criteriaUsed.push('Technologies filter');
+          if (thesisCriteria.fundingStage) criteriaUsed.push('Funding Stage filter');
+
+          const helpMessage = criteriaUsed.length > 3
+            ? '\n\nTip: Try removing some Advanced Filters to get more results.'
+            : '\n\nTip: Try broader search criteria or different job titles.';
+
+          setMessage(`No contacts found matching your criteria.${helpMessage}\n\nSearch criteria used:\n${criteriaUsed.join('\n')}`);
         }
-        
+
         setShowSuccess(true);
       } else {
         setMessage(data.error || 'Failed to discover contacts');
@@ -2190,13 +2503,59 @@ export default function DataEnrichment() {
                 <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                   Contact Search Criteria
                 </Typography>
-                <Chip 
-                  label="Auto-saved locally" 
-                  color="success" 
-                  size="small" 
+                <Chip
+                  label="Auto-saved locally"
+                  color="success"
+                  size="small"
                   variant="outlined"
                 />
               </Box>
+
+              {/* Thesis Selector */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                  Load criteria from your saved Investment Theses
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Select Thesis (Optional)</InputLabel>
+                    <Select
+                      value={selectedThesisId}
+                      onChange={(e) => handleThesisSelect(e.target.value)}
+                      label="Select Thesis (Optional)"
+                    >
+                      <MenuItem value="">
+                        <em>None - Start Fresh</em>
+                      </MenuItem>
+                      {investmentTheses.map((thesis) => (
+                        <MenuItem key={thesis.id} value={thesis.id}>
+                          {thesis.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+
+                <Button
+                  variant="outlined"
+                  startIcon={<SaveIcon />}
+                  onClick={() => setSaveThesisDialogOpen(true)}
+                  fullWidth
+                  sx={{
+                    borderColor: '#9333ea',
+                    color: '#9333ea',
+                    '&:hover': {
+                      borderColor: '#7c3aed',
+                      bgcolor: 'rgba(147, 51, 234, 0.04)'
+                    }
+                  }}
+                >
+                  Save as New Thesis
+                </Button>
+              </Box>
+
+              <Divider sx={{ mb: 3 }} />
+
               {/* People at Companies Form */}
               {contactSearchType === 'people' && (
                 <>
@@ -2226,106 +2585,15 @@ export default function DataEnrichment() {
                 <Grid container spacing={3}>
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Industry *</InputLabel>
-                      <Select
-                        value={thesisCriteria.industries}
-                        onChange={(e) => handleThesisCriteriaChange('industries', e.target.value)}
-                        label="Industry *"
-                      >
-                        <MenuItem value="">Select an industry</MenuItem>
-                      
-                      {/* Healthcare */}
-                      <MenuItem value="Hospital & Health Care">Hospital & Health Care</MenuItem>
-                      <MenuItem value="Healthcare SaaS">Healthcare SaaS</MenuItem>
-                      <MenuItem value="Medical Devices">Medical Devices</MenuItem>
-                      <MenuItem value="Biotechnology">Biotechnology</MenuItem>
-                      <MenuItem value="Pharmaceuticals">Pharmaceuticals</MenuItem>
-                      <MenuItem value="Mental Health Care">Mental Health Care</MenuItem>
-                      <MenuItem value="Health Wellness and Fitness">Health Wellness and Fitness</MenuItem>
-                      
-                      {/* Technology */}
-                      <MenuItem value="Information Technology and Services">Information Technology and Services</MenuItem>
-                      <MenuItem value="Computer Software">Computer Software</MenuItem>
-                      <MenuItem value="SaaS">SaaS</MenuItem>
-                      <MenuItem value="Internet">Internet</MenuItem>
-                      <MenuItem value="Telecommunications">Telecommunications</MenuItem>
-                      <MenuItem value="Computer Hardware">Computer Hardware</MenuItem>
-                      <MenuItem value="Computer Networking">Computer Networking</MenuItem>
-                      <MenuItem value="Cybersecurity">Cybersecurity</MenuItem>
-                      <MenuItem value="Artificial Intelligence">Artificial Intelligence</MenuItem>
-                      
-                      {/* Financial Services */}
-                      <MenuItem value="Financial Services">Financial Services</MenuItem>
-                      <MenuItem value="Banking">Banking</MenuItem>
-                      <MenuItem value="Investment Banking">Investment Banking</MenuItem>
-                      <MenuItem value="Investment Management">Investment Management</MenuItem>
-                      <MenuItem value="Venture Capital & Private Equity">Venture Capital & Private Equity</MenuItem>
-                      <MenuItem value="Insurance">Insurance</MenuItem>
-                      <MenuItem value="Fintech">Fintech</MenuItem>
-                      <MenuItem value="Accounting">Accounting</MenuItem>
-                      <MenuItem value="Accounting SaaS">Accounting SaaS</MenuItem>
-                      
-                      {/* Real Estate */}
-                      <MenuItem value="Real Estate">Real Estate</MenuItem>
-                      <MenuItem value="Commercial Real Estate">Commercial Real Estate</MenuItem>
-                      <MenuItem value="Real Estate Technology">Real Estate Technology</MenuItem>
-                      <MenuItem value="Construction">Construction</MenuItem>
-                      <MenuItem value="Architecture & Planning">Architecture & Planning</MenuItem>
-                      
-                      {/* Manufacturing & Industrial */}
-                      <MenuItem value="Manufacturing">Manufacturing</MenuItem>
-                      <MenuItem value="Industrial Automation">Industrial Automation</MenuItem>
-                      <MenuItem value="Automotive">Automotive</MenuItem>
-                      <MenuItem value="Aviation & Aerospace">Aviation & Aerospace</MenuItem>
-                      <MenuItem value="Mechanical or Industrial Engineering">Mechanical or Industrial Engineering</MenuItem>
-                      
-                      {/* Consumer & Retail */}
-                      <MenuItem value="Retail">Retail</MenuItem>
-                      <MenuItem value="E-commerce">E-commerce</MenuItem>
-                      <MenuItem value="Consumer Goods">Consumer Goods</MenuItem>
-                      <MenuItem value="Food & Beverages">Food & Beverages</MenuItem>
-                      <MenuItem value="Restaurants">Restaurants</MenuItem>
-                      <MenuItem value="Apparel & Fashion">Apparel & Fashion</MenuItem>
-                      
-                      {/* Professional Services */}
-                      <MenuItem value="Management Consulting">Management Consulting</MenuItem>
-                      <MenuItem value="Marketing and Advertising">Marketing and Advertising</MenuItem>
-                      <MenuItem value="Public Relations and Communications">Public Relations and Communications</MenuItem>
-                      <MenuItem value="Legal Services">Legal Services</MenuItem>
-                      <MenuItem value="Human Resources">Human Resources</MenuItem>
-                      
-                      {/* Education & Research */}
-                      <MenuItem value="Education">Education</MenuItem>
-                      <MenuItem value="E-Learning">E-Learning</MenuItem>
-                      <MenuItem value="Research">Research</MenuItem>
-                      <MenuItem value="Higher Education">Higher Education</MenuItem>
-                      
-                      {/* Energy & Utilities */}
-                      <MenuItem value="Oil & Energy">Oil & Energy</MenuItem>
-                      <MenuItem value="Renewables & Environment">Renewables & Environment</MenuItem>
-                      <MenuItem value="Utilities">Utilities</MenuItem>
-                      
-                      {/* Media & Entertainment */}
-                      <MenuItem value="Media Production">Media Production</MenuItem>
-                      <MenuItem value="Entertainment">Entertainment</MenuItem>
-                      <MenuItem value="Publishing">Publishing</MenuItem>
-                      <MenuItem value="Broadcast Media">Broadcast Media</MenuItem>
-                      <MenuItem value="Gaming">Gaming</MenuItem>
-                      
-                      {/* Transportation & Logistics */}
-                      <MenuItem value="Transportation/Trucking/Railroad">Transportation/Trucking/Railroad</MenuItem>
-                      <MenuItem value="Logistics and Supply Chain">Logistics and Supply Chain</MenuItem>
-                      <MenuItem value="Warehousing">Warehousing</MenuItem>
-                      
-                      {/* Other */}
-                      <MenuItem value="Nonprofit Organization Management">Nonprofit Organization Management</MenuItem>
-                      <MenuItem value="Government Administration">Government Administration</MenuItem>
-                      <MenuItem value="Sports">Sports</MenuItem>
-                      <MenuItem value="Hospitality">Hospitality</MenuItem>
-                    </Select>
-                    </FormControl>
-                    <Tooltip title="The industry or sector the company operates in. Apollo searches company profiles and keywords to match this.">
+                    <TextField
+                      fullWidth
+                      label="Job Titles"
+                      placeholder="e.g., CEO, Founder, VP Sales, CTO"
+                      value={thesisCriteria.jobTitles}
+                      onChange={(e) => handleThesisCriteriaChange('jobTitles', e.target.value)}
+                      helperText="Comma-separated list of job titles to search for"
+                    />
+                    <Tooltip title="Apollo's person_titles parameter. Most important search field! Enter specific titles like 'CEO', 'VP of Sales', 'Head of Marketing'. Comma-separated for multiple titles.">
                       <IconButton size="small">
                         <InfoIcon fontSize="small" />
                       </IconButton>
@@ -2337,7 +2605,25 @@ export default function DataEnrichment() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TextField
                       fullWidth
-                      label="Location"
+                      label="Additional Keywords"
+                      placeholder="e.g., Healthcare, SaaS, B2B, Enterprise"
+                      value={thesisCriteria.keywords}
+                      onChange={(e) => handleThesisCriteriaChange('keywords', e.target.value)}
+                      helperText="Industry, business model, or other keywords. Auto-fills from thesis."
+                    />
+                    <Tooltip title="Apollo's q_keywords parameter. Searches company descriptions, industries, and profiles. Use for industry (Healthcare, Fintech), business model (SaaS, B2B), or any other keywords.">
+                      <IconButton size="small">
+                        <InfoIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TextField
+                      fullWidth
+                      label="Location (Optional)"
                       placeholder="e.g., California, New York, Texas"
                       value={thesisCriteria.location}
                       onChange={(e) => handleThesisCriteriaChange('location', e.target.value)}
@@ -2350,112 +2636,147 @@ export default function DataEnrichment() {
                   </Box>
                 </Grid>
 
+                {/* Advanced Filters Section */}
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Company Size (Employees)</InputLabel>
-                      <Select
-                        value={thesisCriteria.companySizeRange}
-                        onChange={(e) => handleThesisCriteriaChange('companySizeRange', e.target.value)}
-                        label="Company Size (Employees)"
-                      >
-                        <MenuItem value="">Any Size</MenuItem>
-                        <MenuItem value="1,10">1-10 employees (Seed/Startup)</MenuItem>
-                        <MenuItem value="11,50">11-50 employees (Early Stage)</MenuItem>
-                        <MenuItem value="51,200">51-200 employees (Growth Stage)</MenuItem>
-                        <MenuItem value="201,500">201-500 employees (Mid-Market)</MenuItem>
-                        <MenuItem value="501,1000">501-1,000 employees (Large)</MenuItem>
-                        <MenuItem value="1001,5000">1,001-5,000 employees (Enterprise)</MenuItem>
-                        <MenuItem value="5001,10000">5,001-10,000 employees (Large Enterprise)</MenuItem>
-                        <MenuItem value="10001,max">10,000+ employees (Fortune 500)</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Tooltip title="Number of employees. Indicates: company maturity, revenue scale (~$100K-200K revenue per employee is typical), organizational complexity, and decision-making speed.">
-                      <IconButton size="small">
-                        <InfoIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Funding/Growth Stage</InputLabel>
-                      <Select
-                        value={thesisCriteria.fundingStage}
-                        onChange={(e) => handleThesisCriteriaChange('fundingStage', e.target.value)}
-                        label="Funding/Growth Stage"
-                      >
-                        <MenuItem value="">Any Stage</MenuItem>
-                        <MenuItem value="seed">Seed Stage</MenuItem>
-                        <MenuItem value="series-a">Series A</MenuItem>
-                        <MenuItem value="series-b">Series B</MenuItem>
-                        <MenuItem value="series-c">Series C+</MenuItem>
-                        <MenuItem value="growth">Growth Stage</MenuItem>
-                        <MenuItem value="private-equity">Private Equity Backed</MenuItem>
-                        <MenuItem value="public">Public Company</MenuItem>
-                        <MenuItem value="bootstrapped">Bootstrapped/Profitable</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Tooltip title="Funding and growth stage. Indicates: capital availability, growth trajectory, investor backing, profitability focus, and acquisition readiness. Note: Data may be limited for private companies.">
-                      <IconButton size="small">
-                        <InfoIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TextField
-                      fullWidth
-                      label="Technologies Used (Optional)"
-                      placeholder="e.g., Salesforce, AWS, HubSpot, Stripe"
-                      value={thesisCriteria.technologies}
-                      onChange={(e) => handleThesisCriteriaChange('technologies', e.target.value)}
+                  <Divider sx={{ my: 2 }} />
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      p: 1,
+                      borderRadius: 1,
+                      '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' }
+                    }}
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  >
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                        Advanced Filters (Optional)
+                      </Typography>
+                      <Typography variant="caption" color="warning.main" sx={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                        ⚠️ Warning: These filters may significantly reduce search results
+                      </Typography>
+                    </Box>
+                    <ExpandMoreIcon
+                      sx={{
+                        transform: showAdvancedFilters ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.3s'
+                      }}
                     />
-                    <Tooltip title="Technology stack the company uses (e.g., Salesforce, AWS, HubSpot). Indicates: technical sophistication, digital maturity, infrastructure spend, and operational complexity. Companies using modern tech stacks often have higher valuations.">
-                      <IconButton size="small">
-                        <InfoIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
                   </Box>
+                  <Divider sx={{ my: 2 }} />
                 </Grid>
 
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Hiring Departments (Optional)</InputLabel>
-                      <Select
-                        value={thesisCriteria.jobDepartments}
-                        onChange={(e) => handleThesisCriteriaChange('jobDepartments', e.target.value)}
-                        label="Hiring Departments (Optional)"
-                      >
-                        <MenuItem value="">Any Department</MenuItem>
-                        <MenuItem value="sales">Sales</MenuItem>
-                        <MenuItem value="engineering">Engineering</MenuItem>
-                        <MenuItem value="marketing">Marketing</MenuItem>
-                        <MenuItem value="operations">Operations</MenuItem>
-                        <MenuItem value="finance">Finance</MenuItem>
-                        <MenuItem value="customer success">Customer Success</MenuItem>
-                        <MenuItem value="product">Product</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Tooltip title="Departments actively hiring. Indicates: company growth areas, strategic priorities, and expansion stage. Heavy sales hiring = revenue growth focus. Engineering hiring = product development. Multiple departments = rapid scaling.">
-                      <IconButton size="small">
-                        <InfoIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </Grid>
+                {/* Advanced Filters Content */}
+                {showAdvancedFilters && (
+                  <>
+                    <Grid item xs={12}>
+                      <Alert severity="warning" sx={{ mb: 2 }}>
+                        <Typography variant="body2" sx={{ fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                          <strong>Note:</strong> These filters exclude companies that don't match, which can dramatically reduce your contact pool. Use sparingly for best results.
+                        </Typography>
+                      </Alert>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FormControl fullWidth>
+                          <InputLabel>Company Size (Employees) - Optional</InputLabel>
+                          <Select
+                            value={thesisCriteria.companySizeRange}
+                            onChange={(e) => handleThesisCriteriaChange('companySizeRange', e.target.value)}
+                            label="Company Size (Employees) - Optional"
+                          >
+                            <MenuItem value="">Any Size (Recommended)</MenuItem>
+                            <MenuItem value="1,10">1-10 employees (Seed/Startup)</MenuItem>
+                            <MenuItem value="11,50">11-50 employees (Early Stage)</MenuItem>
+                            <MenuItem value="51,200">51-200 employees (Growth Stage)</MenuItem>
+                            <MenuItem value="201,500">201-500 employees (Mid-Market)</MenuItem>
+                            <MenuItem value="501,1000">501-1,000 employees (Large)</MenuItem>
+                            <MenuItem value="1001,5000">1,001-5,000 employees (Enterprise)</MenuItem>
+                            <MenuItem value="5001,10000">5,001-10,000 employees (Large Enterprise)</MenuItem>
+                            <MenuItem value="10001,max">10,000+ employees (Fortune 500)</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Tooltip title="Filters companies by employee count. WARNING: Excludes all companies outside this range.">
+                          <IconButton size="small">
+                            <InfoIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <FormControl fullWidth>
+                          <InputLabel>Funding/Growth Stage - Optional</InputLabel>
+                          <Select
+                            value={thesisCriteria.fundingStage}
+                            onChange={(e) => handleThesisCriteriaChange('fundingStage', e.target.value)}
+                            label="Funding/Growth Stage - Optional"
+                          >
+                            <MenuItem value="">Any Stage (Recommended)</MenuItem>
+                            <MenuItem value="seed">Seed Stage</MenuItem>
+                            <MenuItem value="series-a">Series A</MenuItem>
+                            <MenuItem value="series-b">Series B</MenuItem>
+                            <MenuItem value="series-c">Series C+</MenuItem>
+                            <MenuItem value="growth">Growth Stage</MenuItem>
+                            <MenuItem value="private-equity">Private Equity Backed</MenuItem>
+                            <MenuItem value="public">Public Company</MenuItem>
+                            <MenuItem value="bootstrapped">Bootstrapped/Profitable</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Tooltip title="WARNING: Data coverage is very limited for private companies. Most startups don't have public funding data.">
+                          <IconButton size="small">
+                            <InfoIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TextField
+                          fullWidth
+                          label="Technologies Used - Optional"
+                          placeholder="e.g., Salesforce, AWS, HubSpot, Stripe"
+                          value={thesisCriteria.technologies}
+                          onChange={(e) => handleThesisCriteriaChange('technologies', e.target.value)}
+                        />
+                        <Tooltip title="WARNING: Limited data coverage. Not all companies are tracked for tech stack.">
+                          <IconButton size="small">
+                            <InfoIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+                  </>
+                )}
+
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Number of Contacts to Find"
-                    type="number"
+                    type="text"
                     value={contactsToFind}
-                    onChange={(e) => setContactsToFind(parseInt(e.target.value) || 10)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string or valid numbers
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setContactsToFind(value);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Set to 10 if empty or invalid on blur
+                      const num = parseInt(e.target.value);
+                      if (isNaN(num) || num < 1) {
+                        setContactsToFind('10');
+                      } else {
+                        setContactsToFind(num.toString());
+                      }
+                    }}
                     helperText="How many contacts should Apollo search for? (1-50)"
                   />
                 </Grid>
@@ -2556,9 +2877,24 @@ export default function DataEnrichment() {
                     <TextField
                       fullWidth
                       label="Number of Brokers to Find"
-                      type="number"
+                      type="text"
                       value={contactsToFind}
-                      onChange={(e) => setContactsToFind(parseInt(e.target.value) || 10)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow empty string or valid numbers
+                        if (value === '' || /^\d+$/.test(value)) {
+                          setContactsToFind(value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Set to 10 if empty or invalid on blur
+                        const num = parseInt(e.target.value);
+                        if (isNaN(num) || num < 1) {
+                          setContactsToFind('10');
+                        } else {
+                          setContactsToFind(num.toString());
+                        }
+                      }}
                       helperText="How many brokers should Apollo search for? (1-50)"
                     />
                   </Grid>
@@ -2663,9 +2999,24 @@ export default function DataEnrichment() {
                     <TextField
                       fullWidth
                       label="Number of Investors to Find"
-                      type="number"
+                      type="text"
                       value={contactsToFind}
-                      onChange={(e) => setContactsToFind(parseInt(e.target.value) || 10)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow empty string or valid numbers
+                        if (value === '' || /^\d+$/.test(value)) {
+                          setContactsToFind(value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Set to 10 if empty or invalid on blur
+                        const num = parseInt(e.target.value);
+                        if (isNaN(num) || num < 1) {
+                          setContactsToFind('10');
+                        } else {
+                          setContactsToFind(num.toString());
+                        }
+                      }}
                       helperText="How many investors should Apollo search for? (1-50)"
                     />
                   </Grid>
@@ -2711,26 +3062,45 @@ export default function DataEnrichment() {
                   {discoveryResults && (
                     <Box sx={{ mb: 3 }}>
                       <Alert severity="success" sx={{ mb: 2 }}>
-                        Found {discoveryResults.summary?.found || 0} contacts matching your search criteria
-                        {contactsToFind > 0 && ` (requested ${contactsToFind})`}
+                        Found {discoveryResults.summary?.found || 0} of {discoveryResults.summary?.requested || 0} requested contacts
+                        {discoveryResults.summary?.searchTierDescription && ` - ${discoveryResults.summary.searchTierDescription}`}
                       </Alert>
 
-                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                         <Chip
-                          label={`Total: ${discoveryResults.summary?.total || 0}`}
+                          label={`Requested: ${discoveryResults.summary?.requested || 0}`}
+                          color="info"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Found: ${discoveryResults.summary?.found || 0}`}
                           color="primary"
                           variant="outlined"
                         />
                         <Chip
-                          label={`Success Rate: ${discoveryResults.summary?.successRate || 0}%`}
+                          label={`Fulfillment: ${discoveryResults.summary?.fulfillmentRate || 0}%`}
+                          color={discoveryResults.summary?.fulfillmentRate >= 80 ? "success" : discoveryResults.summary?.fulfillmentRate >= 50 ? "warning" : "error"}
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`Quality: ${discoveryResults.summary?.qualityRate || 0}%`}
                           color="success"
                           variant="outlined"
                         />
-                        {contactsToFind > 0 && (
+                        {discoveryResults.summary?.searchTier && (
                           <Chip
-                            label={`Requested: ${contactsToFind}`}
-                            color="info"
+                            label={`Search: ${discoveryResults.summary.searchTier.toUpperCase()}`}
+                            color="default"
                             variant="outlined"
+                            size="small"
+                          />
+                        )}
+                        {(discoveryResults.summary?.averageRelevanceScore ?? 0) > 0 && (
+                          <Chip
+                            label={`Avg Score: ${discoveryResults.summary.averageRelevanceScore ?? 0}`}
+                            color="secondary"
+                            variant="outlined"
+                            size="small"
                           />
                         )}
                       </Box>
@@ -2759,6 +3129,7 @@ export default function DataEnrichment() {
                         <TableCell>Name</TableCell>
                         <TableCell>Title</TableCell>
                         <TableCell>Company</TableCell>
+                        <TableCell>Website</TableCell>
                         <TableCell>Email</TableCell>
                         <TableCell>Phone</TableCell>
                         <TableCell>LinkedIn</TableCell>
@@ -2784,6 +3155,31 @@ export default function DataEnrichment() {
                           </TableCell>
                           <TableCell>{contact.title}</TableCell>
                           <TableCell>{contact.company}</TableCell>
+                          <TableCell>
+                            {contact.website ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <BusinessIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                                <Typography
+                                  variant="body2"
+                                  component="a"
+                                  href={contact.website.startsWith('http') ? contact.website : `https://${contact.website}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{
+                                    color: 'primary.main',
+                                    textDecoration: 'none',
+                                    '&:hover': {
+                                      textDecoration: 'underline'
+                                    }
+                                  }}
+                                >{contact.website}</Typography>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                Not Found
+                              </Typography>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {contact.email && contact.email !== 'email_not_unlocked' && !contact.email.includes('email_not_unlocked') ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -3103,6 +3499,60 @@ export default function DataEnrichment() {
               </Button>
             )}
           </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Save Thesis Dialog */}
+      <Dialog
+        open={saveThesisDialogOpen}
+        onClose={() => {
+          setSaveThesisDialogOpen(false);
+          setNewThesisName('');
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6" sx={{ fontWeight: 600, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+            Save as Investment Thesis
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+            Save your current search criteria as a new Investment Thesis. It will appear in "My Thesis" and can be reused here.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Thesis Name"
+            placeholder="e.g., Healthcare SaaS Companies, Series A Investors"
+            value={newThesisName}
+            onChange={(e) => setNewThesisName(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button
+            onClick={() => {
+              setSaveThesisDialogOpen(false);
+              setNewThesisName('');
+            }}
+            sx={{ color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveAsThesis}
+            disabled={!newThesisName.trim() || isSavingThesis}
+            startIcon={isSavingThesis ? <CircularProgress size={16} /> : <SaveIcon />}
+            sx={{
+              bgcolor: '#9333ea',
+              '&:hover': { bgcolor: '#7c3aed' }
+            }}
+          >
+            {isSavingThesis ? 'Saving...' : 'Save to My Thesis'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

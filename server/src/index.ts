@@ -32,6 +32,7 @@ import firebaseDocumentsRoutes from './routes/firebaseDocuments';
 import firebaseEmailsRoutes from './routes/firebaseEmails';
 import searcherProfilesRoutes from './routes/searcherProfiles';
 import thesisRoutes from './routes/thesis';
+import contactSearchThesisRoutes from './routes/contactSearchThesis';
 import onePagerRoutes from './routes/onePager';
 import headshotsRoutes from './routes/headshots';
 import logosRoutes from './routes/logos';
@@ -228,6 +229,8 @@ app.use('/api/firebase-emails', firebaseEmailsRoutes);
 app.use('/api/searcher-profiles', searcherProfilesRoutes);
 // Investment thesis routes
 app.use('/api/thesis', thesisRoutes);
+// Contact search thesis routes
+app.use('/api/contact-search-theses', firebaseAuthMiddleware, contactSearchThesisRoutes);
 // One-pager generation routes
 app.use('/api/one-pager', onePagerRoutes);
 // Headshot upload routes
