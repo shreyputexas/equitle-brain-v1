@@ -144,8 +144,12 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
       console.log('Fetching contacts...');
       const response = await contactsApi.getContacts();
       console.log('Contacts response:', response);
+      // Filter to only show contacts tagged as "deal"
+      const dealContacts = (response.contacts || []).filter((contact: any) =>
+        contact.tags && Array.isArray(contact.tags) && contact.tags.includes('deal')
+      );
       // Transform contacts to include isPrimary field
-      const transformedContacts = response.contacts.map((contact: any) => ({
+      const transformedContacts = dealContacts.map((contact: any) => ({
         ...contact,
         // Use contact.name if it exists, otherwise try to construct from first_name/last_name
         name: contact.name || `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || 'Unnamed Contact',

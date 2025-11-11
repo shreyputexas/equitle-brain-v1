@@ -3031,9 +3031,9 @@ export default function DataEnrichment() {
                     variant="contained"
                     size="large"
                     onClick={handleContactSearch}
-                    disabled={isDiscovering || !isKeyValid}
+                    disabled={isDiscovering || !isProviderConfigured()}
                     startIcon={isDiscovering ? <CircularProgress size={20} /> : <SearchIcon />}
-                    sx={{ 
+                    sx={{
                       mt: 1,
                       background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%) !important',
                       color: 'white !important',

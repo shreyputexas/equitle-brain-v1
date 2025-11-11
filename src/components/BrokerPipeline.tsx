@@ -890,8 +890,8 @@ export default function BrokerPipeline({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          border: isOver ? '2px solid #10b981' : '1px solid transparent',
-          bgcolor: isOver ? '#f0fdf4' : '#f8fafc',
+          border: isOver ? '2px solid #10b981' : '1px solid #e5e7eb',
+          bgcolor: isOver ? '#f0fdf4' : '#ffffff',
           boxShadow: isOver
             ? '0 8px 24px rgba(16, 185, 129, 0.25)'
             : '0 2px 8px rgba(0,0,0,0.05)',
@@ -941,7 +941,7 @@ export default function BrokerPipeline({
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <Box sx={{ bgcolor: '#f8f9fa', minHeight: '100vh', position: 'relative', width: '100%' }}>
+      <Box sx={{ mt: 2, position: 'relative', width: '100%' }}>
         {/* Pipeline Header with Black/Grey Gradient */}
         <Box sx={{ 
           background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
@@ -1011,7 +1011,7 @@ export default function BrokerPipeline({
           minHeight: '70vh',
           position: 'relative',
           zIndex: 1,
-          px: 3
+          px: 4
         }}>
         {stages.map((stage) => {
           const stageBrokers = getBrokersForStage(stage.value);

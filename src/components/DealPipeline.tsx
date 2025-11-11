@@ -799,7 +799,11 @@ export default function DealPipeline({
     try {
       // Fetch all available contacts
       const response = await contactsApi.getContacts({ limit: 1000 });
-      setAvailableContacts(response.contacts || []);
+      // Filter to only show contacts tagged as "deal"
+      const dealContacts = (response.contacts || []).filter((contact: any) =>
+        contact.tags && Array.isArray(contact.tags) && contact.tags.includes('deal')
+      );
+      setAvailableContacts(dealContacts);
 
       // Fetch the latest contacts for THIS specific deal
       // Use updatedDealContacts if available, otherwise fetch fresh from backend

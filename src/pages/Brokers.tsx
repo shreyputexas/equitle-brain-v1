@@ -287,27 +287,25 @@ export default function Brokers() {
       )}
 
       {/* Broker Pipeline */}
-      <Box sx={{ px: 4 }}>
-        <BrokerPipeline
-          brokers={brokers}
-          loading={false}
-          error={error}
-          onRefresh={loadBrokers}
-          onEditBroker={(broker) => {
-            setSelectedBroker(broker);
-            setEditBrokerModalOpen(true);
-          }}
-          onDeleteBroker={async (brokerId) => {
-            try {
-              await brokersApi.deleteBroker(brokerId);
-              setBrokers(prev => prev.filter(b => b.id !== brokerId));
-            } catch (err: any) {
-              console.error('Error deleting broker:', err);
-              setError('Failed to delete broker');
-            }
-          }}
-        />
-      </Box>
+      <BrokerPipeline
+        brokers={brokers}
+        loading={false}
+        error={error}
+        onRefresh={loadBrokers}
+        onEditBroker={(broker) => {
+          setSelectedBroker(broker);
+          setEditBrokerModalOpen(true);
+        }}
+        onDeleteBroker={async (brokerId) => {
+          try {
+            await brokersApi.deleteBroker(brokerId);
+            setBrokers(prev => prev.filter(b => b.id !== brokerId));
+          } catch (err: any) {
+            console.error('Error deleting broker:', err);
+            setError('Failed to delete broker');
+          }
+        }}
+      />
 
       {/* Broker Outreach Section */}
       <BrokerOutreach />

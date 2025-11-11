@@ -526,10 +526,28 @@ export class ApolloService {
       enrichRequest.reveal_phone_number = true;
       enrichRequest.webhook_url = webhookUrl;
       
-      logger.info('Using webhook URL for phone number reveal', { 
+      // Check if webhook URL is localhost or ngrok (which may block webhooks)
+      const isLocalhost = webhookUrl.includes('localhost') || webhookUrl.includes('127.0.0.1');
+      const isNgrok = webhookUrl.includes('ngrok');
+
+      if (isLocalhost) {
+        logger.warn('⚠️ WEBHOOK URL IS LOCALHOST - Apollo cannot send webhooks to localhost!', {
+          webhookUrl,
+          solution: 'Use ngrok or deploy to a public server to receive phone numbers'
+        });
+      } else if (isNgrok) {
+        logger.warn('⚠️ WEBHOOK URL IS NGROK FREE TIER - May be blocked by ngrok warning page!', {
+          webhookUrl,
+          issue: 'Ngrok free tier shows a browser warning page for automated requests',
+          solution: 'Upgrade to ngrok paid tier OR use cloudflare tunnel OR deploy to production server'
+        });
+      }
+
+      logger.info('📞 Using webhook URL for phone number reveal', {
         webhookUrl: webhookUrl,
         personId: params.id,
-        personName: `${params.first_name} ${params.last_name}`
+        personName: `${params.first_name} ${params.last_name}`,
+        webhookAccessible: !isLocalhost && !isNgrok
       });
 
       // Add available parameters
@@ -639,37 +657,50 @@ export class ApolloService {
 
         // Check webhook store for phone numbers (Apollo sends them asynchronously via webhook)
         let phoneNumbers = person.phone_numbers || [];
-        
+
         // Wait a bit for webhook to arrive (Apollo webhooks are usually fast)
         if (enrichRequest.reveal_phone_number && personId) {
-          logger.info('Checking webhook store for phone numbers', { personId });
-          
-          // Try multiple times with delays (webhook might arrive after API response)
-          // Apollo webhooks can take 1-5 seconds to arrive
-          for (let attempt = 0; attempt < 10; attempt++) {
-            const webhookPhones = ApolloWebhookService.getPhoneNumbersByPersonId(personId);
-            if (webhookPhones && webhookPhones.length > 0) {
-              phoneNumbers = webhookPhones;
-              logger.info('✅ Found phone numbers from webhook!', {
-                personId,
-                phoneCount: webhookPhones.length,
-                attempt: attempt + 1,
-                waitTime: `${attempt * 500}ms`
-              });
-              break;
-            }
-            
-            // Wait 500ms between attempts (total max wait: 4.5 seconds)
-            if (attempt < 9) {
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
-          }
-          
-          if (phoneNumbers.length === 0) {
-            logger.info('No phone numbers found in webhook store yet (may arrive later)', {
+          const webhookUrl = enrichRequest.webhook_url || '';
+          const isProblematicWebhook = webhookUrl.includes('localhost') ||
+                                       webhookUrl.includes('127.0.0.1') ||
+                                       webhookUrl.includes('ngrok');
+
+          if (isProblematicWebhook) {
+            logger.warn('⚠️ Phone numbers require publicly accessible webhook - skipping wait', {
               personId,
-              webhookUrl: enrichRequest.webhook_url
+              webhookUrl,
+              reason: webhookUrl.includes('ngrok') ? 'ngrok free tier blocks webhooks' : 'localhost not accessible'
             });
+          } else {
+            logger.info('Checking webhook store for phone numbers', { personId });
+
+            // Try multiple times with delays (webhook might arrive after API response)
+            // Apollo webhooks can take 1-5 seconds to arrive
+            for (let attempt = 0; attempt < 10; attempt++) {
+              const webhookPhones = ApolloWebhookService.getPhoneNumbersByPersonId(personId);
+              if (webhookPhones && webhookPhones.length > 0) {
+                phoneNumbers = webhookPhones;
+                logger.info('✅ Found phone numbers from webhook!', {
+                  personId,
+                  phoneCount: webhookPhones.length,
+                  attempt: attempt + 1,
+                  waitTime: `${attempt * 500}ms`
+                });
+                break;
+              }
+
+              // Wait 500ms between attempts (total max wait: 4.5 seconds)
+              if (attempt < 9) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            }
+
+            if (phoneNumbers.length === 0) {
+              logger.info('No phone numbers found in webhook store yet (may arrive later)', {
+                personId,
+                webhookUrl: enrichRequest.webhook_url
+              });
+            }
           }
         }
 
@@ -717,12 +748,35 @@ export class ApolloService {
         });
 
         if (phoneNumbers.length === 0) {
-          logger.warn('⚠️ Enrichment succeeded but NO PHONE NUMBERS found (checked webhook store)', {
-            name: person.name,
-            company: person.organization?.name,
-            personId,
-            webhookUrl: enrichRequest.webhook_url
-          });
+          const webhookUrl = enrichRequest.webhook_url || '';
+          const isProblematicWebhook = webhookUrl.includes('localhost') ||
+                                       webhookUrl.includes('127.0.0.1') ||
+                                       webhookUrl.includes('ngrok');
+
+          if (isProblematicWebhook) {
+            logger.error('❌ NO PHONE NUMBERS - Webhook URL is not publicly accessible!', {
+              name: person.name,
+              company: person.organization?.name,
+              personId,
+              webhookUrl,
+              problem: webhookUrl.includes('ngrok')
+                ? 'Ngrok free tier blocks automated webhooks with a warning page'
+                : 'Localhost URLs cannot receive webhooks from Apollo',
+              solution: 'To receive phone numbers: (1) Upgrade to ngrok paid tier, (2) Use Cloudflare Tunnel, (3) Deploy to production with public URL'
+            });
+          } else {
+            logger.warn('⚠️ Enrichment succeeded but NO PHONE NUMBERS found (checked webhook store)', {
+              name: person.name,
+              company: person.organization?.name,
+              personId,
+              webhookUrl,
+              possibleReasons: [
+                '1. Apollo has no phone number data for this contact',
+                '2. Your Apollo plan lacks phone number access',
+                '3. Phone was sent via webhook but not received (check webhook endpoint logs)'
+              ]
+            });
+          }
         }
 
         return enrichedPerson;

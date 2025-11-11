@@ -161,6 +161,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
         // Determine contact type from tags
         let contactType: 'deal' | 'investor' | 'broker' = 'deal';
         const tags = contact.tags || [];
+        const originalTags = [...tags]; // Preserve original tags for filtering
 
         if (tags.includes('investor') || tags.includes('investors')) {
           contactType = 'investor';
@@ -178,6 +179,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
           last_name: contact.lastName || contact.last_name || '',
           type: contactType,
           status: contact.status || 'active',
+          originalTags: originalTags, // Preserve original tags for filtering
           tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
         };
       });
@@ -585,7 +587,14 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   fontWeight: 400
                 }}
               >
-                {contacts.filter(contact => contact.type === 'broker').length} contacts available. 
+                {contacts.filter(contact => {
+                  const originalTags = (contact as any).originalTags || [];
+                  if (isDealPage) {
+                    return originalTags.includes('deal');
+                  } else {
+                    return originalTags.includes('broker') || originalTags.includes('brokers');
+                  }
+                }).length} contacts available. 
                 Selected contacts will auto-populate the contact names and enable LinkedIn/Email icons.
               </Typography>
             </CardContent>
@@ -1376,7 +1385,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   mb: 1
                 }}
               >
-                Select Broker Contacts for Outreach
+                {isDealPage ? 'Select Deal Contacts for Outreach' : 'Select Broker Contacts for Outreach'}
               </Typography>
               <Typography
                 variant="body2"
@@ -1388,7 +1397,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   letterSpacing: '-0.01em'
                 }}
               >
-                Choose up to 10 broker contacts to auto-populate contact names and enable LinkedIn/Email functionality
+                Choose up to 10 {isDealPage ? 'deal' : 'broker'} contacts to auto-populate contact names and enable LinkedIn/Email functionality
               </Typography>
             </Box>
             <Button
@@ -1422,7 +1431,14 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             ) : (
               <List>
                 {contacts
-                  .filter(contact => contact.type === 'broker')
+                  .filter(contact => {
+                    const originalTags = (contact as any).originalTags || [];
+                    if (isDealPage) {
+                      return originalTags.includes('deal');
+                    } else {
+                      return originalTags.includes('broker') || originalTags.includes('brokers');
+                    }
+                  })
                   .map((contact) => (
                   <ListItem key={contact.id} disablePadding>
                     <ListItemButton

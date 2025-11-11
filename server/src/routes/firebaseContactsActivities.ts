@@ -498,6 +498,19 @@ router.post('/contacts/enrich-phone-numbers', firebaseAuthMiddleware, async (req
         }
         if (contactData.company) enrichmentParams.organization_name = contactData.company;
 
+        // Set a timeout to mark as unavailable if enrichment takes too long (30 seconds)
+        // Phone webhooks from Apollo typically arrive within 1-5 seconds if working properly
+        const enrichmentTimeout = setTimeout(async () => {
+          try {
+            await ContactsActivitiesFirestoreService.updateContact(userId, contactId, {
+              phoneNumberStatus: 'unavailable'
+            });
+            logger.warn(`Phone enrichment timeout for contact ${contactId} - marked as unavailable after 30 seconds`);
+          } catch (err) {
+            logger.error(`Failed to update timeout status for contact ${contactId}:`, err);
+          }
+        }, 30 * 1000); // 30 seconds
+
         // Call enrichment service and update contact with results
         OptimizedEnrichmentService.enrichPerson(
           apolloService,
@@ -508,6 +521,9 @@ router.post('/contacts/enrich-phone-numbers', firebaseAuthMiddleware, async (req
             waitForWebhook: false
           }
         ).then(async (enrichmentResult: any) => {
+          // Clear the timeout since enrichment completed
+          clearTimeout(enrichmentTimeout);
+
           // Update contact with enriched data
           const updateData: any = {};
 
@@ -540,8 +556,20 @@ router.post('/contacts/enrich-phone-numbers', firebaseAuthMiddleware, async (req
             await ContactsActivitiesFirestoreService.updateContact(userId, contactId, updateData);
             logger.info(`Updated contact ${contactId} with enriched data`, { updateData });
           }
-        }).catch((error: any) => {
+        }).catch(async (error: any) => {
+          // Clear the timeout since enrichment failed
+          clearTimeout(enrichmentTimeout);
+
           logger.error(`Background enrichment failed for contact ${contactId}:`, error);
+          // Update status to unavailable if enrichment fails
+          try {
+            await ContactsActivitiesFirestoreService.updateContact(userId, contactId, {
+              phoneNumberStatus: 'unavailable'
+            });
+            logger.info(`Set phoneNumberStatus to unavailable for contact ${contactId} after enrichment failure`);
+          } catch (updateError) {
+            logger.error(`Failed to update phoneNumberStatus for contact ${contactId}:`, updateError);
+          }
         });
 
         enrichedCount++;
@@ -562,6 +590,59 @@ router.post('/contacts/enrich-phone-numbers', firebaseAuthMiddleware, async (req
     res.status(500).json({
       success: false,
       error: 'Failed to enrich phone numbers: ' + error.message
+    });
+  }
+});
+
+// @route   POST /api/firebase/contacts/reset-stuck-phone-status
+// @desc    Reset contacts stuck in 'fetching' status to 'unavailable'
+// @access  Private
+router.post('/contacts/reset-stuck-phone-status', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+
+    logger.info(`Resetting stuck phone statuses for user ${userId}`);
+
+    // Get all contacts for this user
+    const contactsResult = await ContactsActivitiesFirestoreService.getAllContacts(userId, {});
+    const contacts = contactsResult.contacts || [];
+
+    // Find contacts stuck in 'fetching' status
+    const stuckContacts = contacts.filter((contact: any) =>
+      contact.phoneNumberStatus === 'fetching'
+    );
+
+    logger.info(`Found ${stuckContacts.length} contacts stuck in 'fetching' status`);
+
+    let resetCount = 0;
+    const errors: string[] = [];
+
+    // Reset each stuck contact
+    for (const contact of stuckContacts) {
+      try {
+        await ContactsActivitiesFirestoreService.updateContact(userId, contact.id, {
+          phoneNumberStatus: 'unavailable'
+        });
+        resetCount++;
+        logger.info(`Reset phoneNumberStatus for contact ${contact.id} (${contact.name || 'Unknown'})`);
+      } catch (error: any) {
+        logger.error(`Failed to reset contact ${contact.id}:`, error);
+        errors.push(`Contact ${contact.id}: ${error.message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Reset ${resetCount} contacts that were stuck in 'fetching' status`,
+      resetCount,
+      totalStuck: stuckContacts.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error: any) {
+    logger.error('Reset stuck phone status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset stuck phone statuses: ' + error.message
     });
   }
 });
