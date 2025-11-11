@@ -14,9 +14,12 @@ export interface CreateContactData {
   status?: string;
   isKeyContact?: boolean;
   dealId?: string;
+  metadata?: Record<string, any>;
 }
 
-export interface UpdateContactData extends Partial<CreateContactData> {}
+export interface UpdateContactData extends Partial<CreateContactData> {
+  metadata?: Record<string, any>;
+}
 
 export interface ContactsResponse {
   contacts: any[];
@@ -139,6 +142,19 @@ class ContactsApiService {
       return response.data;
     } catch (error) {
       console.error(`Error logging interaction for contact ${contactId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Associate an email thread with a contact (broker)
+   */
+  async associateEmailThread(contactId: string, emailData: { threadId: string; subject: string }): Promise<{ communicationId: string }> {
+    try {
+      const response = await axios.post(`/api/firebase/contacts/${contactId}/email-thread`, emailData);
+      return response.data?.data || response.data || { communicationId: '' };
+    } catch (error) {
+      console.error(`Error associating email thread to contact ${contactId}:`, error);
       throw error;
     }
   }

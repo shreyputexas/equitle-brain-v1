@@ -574,7 +574,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   fontWeight: 400
                 }}
               >
-                {contacts.length} contacts available. 
+                {contacts.filter(contact => contact.type === 'broker').length} contacts available. 
                 Selected contacts will auto-populate the contact names and enable LinkedIn/Email icons.
               </Typography>
             </CardContent>
@@ -1365,19 +1365,19 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   mb: 1
                 }}
               >
-                Select Contacts for LinkedIn Outreach
+                Select Broker Contacts for Outreach
               </Typography>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  fontSize: '0.9rem', 
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.9rem',
                   color: 'rgba(255, 255, 255, 0.8)',
                   lineHeight: 1.5,
                   fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   letterSpacing: '-0.01em'
                 }}
               >
-                Choose up to 10 deals contacts to auto-populate contact names and enable LinkedIn/Email functionality
+                Choose up to 10 broker contacts to auto-populate contact names and enable LinkedIn/Email functionality
               </Typography>
             </Box>
             <Button
@@ -1411,7 +1411,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
             ) : (
               <List>
                 {contacts
-                  .filter(contact => contact.type === 'deal')
+                  .filter(contact => contact.type === 'broker')
                   .map((contact) => (
                   <ListItem key={contact.id} disablePadding>
                     <ListItemButton

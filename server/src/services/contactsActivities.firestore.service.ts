@@ -450,4 +450,143 @@ export class ContactsActivitiesFirestoreService {
       throw new Error('Failed to create communication');
     }
   }
+
+  // Associate email thread with contact (broker)
+  static async associateEmailThread(userId: string, contactId: string, threadId: string, subject: string) {
+    try {
+      // Verify contact exists
+      const contactRef = FirestoreHelpers.getUserDocInCollection(userId, 'contacts', contactId);
+      const contactDoc = await contactRef.get();
+
+      if (!contactDoc.exists) {
+        throw new Error('Contact not found');
+      }
+
+      const contactData = contactDoc.data();
+
+      // Try to fetch thread details from Gmail to get messageId and snippet
+      let messageId: string | undefined;
+      let snippet: string | undefined;
+      let fromEmail: string | undefined;
+      let toEmails: string[] | undefined;
+
+      try {
+        // Get Gmail access token
+        const { db } = await import('../lib/firebase');
+        const integrationsSnapshot = await db.collection('integrations')
+          .where('userId', '==', userId)
+          .where('provider', '==', 'google')
+          .where('type', '==', 'gmail')
+          .where('isActive', '==', true)
+          .limit(1)
+          .get();
+
+        if (!integrationsSnapshot.empty) {
+          const integrationData = integrationsSnapshot.docs[0].data();
+          const accessToken = integrationData.accessToken;
+
+          if (accessToken) {
+            // Fetch thread details using GmailService
+            const { GmailService } = await import('./gmail');
+            const auth = (await import('./googleAuth')).default.createAuthenticatedClient(accessToken);
+            const { google } = await import('googleapis');
+            const gmail = google.gmail({ version: 'v1', auth });
+
+            const threadResponse = await gmail.users.threads.get({
+              userId: 'me',
+              id: threadId,
+              format: 'metadata',
+              metadataHeaders: ['From', 'To', 'Subject']
+            });
+
+            if (threadResponse.data.messages && threadResponse.data.messages.length > 0) {
+              const latestMessage = threadResponse.data.messages[threadResponse.data.messages.length - 1];
+              messageId = latestMessage.id || undefined;
+              snippet = latestMessage.snippet || undefined;
+
+              // Extract from/to from headers
+              const headers = latestMessage.payload?.headers || [];
+              const fromHeader = headers.find(h => h.name?.toLowerCase() === 'from');
+              const toHeader = headers.find(h => h.name?.toLowerCase() === 'to');
+
+              if (fromHeader?.value) {
+                fromEmail = fromHeader.value;
+              }
+              if (toHeader?.value) {
+                toEmails = toHeader.value.split(',').map(e => e.trim());
+              }
+
+              logger.info('Fetched Gmail thread details', {
+                userId,
+                threadId,
+                messageId,
+                snippetLength: snippet?.length || 0,
+                hasFromEmail: !!fromEmail,
+                toEmailsCount: toEmails?.length || 0
+              });
+            }
+          }
+        }
+      } catch (gmailError: any) {
+        // Log but don't fail the association if Gmail fetch fails
+        logger.warn('Failed to fetch Gmail thread details, continuing without messageId/snippet', {
+          userId,
+          threadId,
+          error: gmailError.message
+        });
+      }
+
+      // Create a communication record to link the email thread to the contact
+      const communicationData: any = {
+        contactId,
+        type: 'email',
+        subject,
+        threadId,
+        direction: 'inbound',
+        status: 'associated',
+        isRead: false,
+        createdAt: FirestoreHelpers.serverTimestamp(),
+        updatedAt: FirestoreHelpers.serverTimestamp(),
+      };
+
+      // Add optional fields if we fetched them
+      if (messageId) {
+        communicationData.messageId = messageId;
+      }
+      if (snippet) {
+        communicationData.snippet = snippet;
+      }
+      if (fromEmail) {
+        communicationData.fromEmail = fromEmail;
+      }
+      if (toEmails && toEmails.length > 0) {
+        communicationData.toEmails = toEmails;
+      }
+
+      const communicationRef = await FirestoreHelpers.getUserCollection(userId, 'communications').add(communicationData);
+
+      logger.info('Email thread associated with contact', {
+        userId,
+        contactId,
+        threadId,
+        subject,
+        contactName: contactData?.name,
+        communicationId: communicationRef.id,
+        hasMessageId: !!messageId,
+        hasSnippet: !!snippet
+      });
+
+      return {
+        message: 'Email thread associated with contact successfully',
+        communicationId: communicationRef.id
+      };
+    } catch (error: any) {
+      logger.error('Error associating email thread with contact:', error);
+      logger.error('Error stack:', error.stack);
+      if (error.message === 'Contact not found') {
+        throw error;
+      }
+      throw new Error('Failed to associate email thread with contact');
+    }
+  }
 }

@@ -694,4 +694,49 @@ router.post('/communications', firebaseAuthMiddleware, async (req, res) => {
   }
 });
 
+// @route   POST /api/firebase/contacts/:id/email-thread
+// @desc    Associate email thread with contact (broker)
+// @access  Private
+router.post('/contacts/:id/email-thread', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { id: contactId } = req.params;
+    const { threadId, subject } = req.body;
+
+    if (!threadId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thread ID is required'
+      });
+    }
+
+    const result = await ContactsActivitiesFirestoreService.associateEmailThread(
+      userId,
+      contactId,
+      threadId,
+      subject || '(No Subject)'
+    );
+
+    res.json({
+      success: true,
+      message: 'Email thread associated with contact successfully',
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Associate email thread to contact error:', error);
+
+    if (error.message === 'Contact not found') {
+      return res.status(404).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 export default router;

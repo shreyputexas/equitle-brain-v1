@@ -18,6 +18,7 @@ import { WebSocketServer } from 'ws';
 import firebaseAuthRoutes from './routes/firebaseAuth';
 // import dealRoutes from './routes/deals'; // Temporarily disabled due to Prisma dependency
 import firebaseDealRoutes from './routes/firebaseDeals';
+import firebaseBrokerRoutes from './routes/firebaseBrokers';
 import brainRoutes from './routes/brain';
 // import investorRoutes from './routes/investors'; // Temporarily disabled due to Prisma dependency
 import firebaseInvestorRoutes from './routes/firebaseInvestors';
@@ -241,6 +242,8 @@ app.use('/api/firebase-auth', firebaseAuthRoutes);
 // app.use('/api/deals', dealRoutes); // Temporarily disabled due to Prisma dependency
 // New Firebase deals routes
 app.use('/api/firebase-deals', firebaseDealRoutes);
+// New Firebase brokers routes
+app.use('/api/firebase-brokers', firebaseBrokerRoutes);
 app.use('/api/brain', firebaseAuthMiddleware, brainRoutes);
 // Legacy Prisma investor routes (will be deprecated)
 // app.use('/api/investors', firebaseAuthMiddleware, investorRoutes); // Temporarily disabled due to Prisma dependency

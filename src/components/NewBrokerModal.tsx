@@ -27,6 +27,8 @@ import {
   Autocomplete
 } from '@mui/material';
 import contactsApi from '../services/contactsApi';
+import brokersApi from '../services/brokersApi';
+import EmailSelectionModal from './EmailSelectionModal';
 import {
   Close as CloseIcon,
   Business as BusinessIcon,
@@ -38,6 +40,7 @@ import {
   AttachMoney as MoneyIcon,
   TrendingUp as TrendingUpIcon,
   Group as GroupIcon,
+  Email as EmailIcon,
 } from '@mui/icons-material';
 
 interface NewBrokerModalProps {
@@ -100,6 +103,12 @@ const statuses = [
   { value: 'not-interested', label: 'Not Interested' }
 ];
 
+const brokerStages = [
+  { value: 'all', label: 'All' },
+  { value: 'response-received', label: 'Response Received' },
+  { value: 'closing', label: 'Closing' }
+];
+
 export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerModalProps) {
   const ACCENT_MAROON = '#800020';
   const ACCENT_MAROON_DARK = '#660018';
@@ -122,6 +131,10 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
   const [availableContacts, setAvailableContacts] = useState<Contact[]>([]);
   const [existingBrokers, setExistingBrokers] = useState<any[]>([]);
   const [selectedExistingBroker, setSelectedExistingBroker] = useState<any>(null);
+  const [selectedStage, setSelectedStage] = useState<string>('');
+  const [emailSelectionModalOpen, setEmailSelectionModalOpen] = useState(false);
+  const [selectedEmailThreadIds, setSelectedEmailThreadIds] = useState<string[]>([]);
+  const [selectedEmailSubjects, setSelectedEmailSubjects] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -147,10 +160,13 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
 
   const loadExistingBrokers = async () => {
     try {
-      // Pull brokers from contacts with type 'broker'
+      // Pull brokers from contacts with tags 'broker' or 'brokers'
       const response = await contactsApi.getContacts();
       const contacts = response.contacts || [];
-      const brokerContacts = contacts.filter((contact: any) => contact.type === 'broker');
+      const brokerContacts = contacts.filter((contact: any) => {
+        const tags = contact.tags || [];
+        return tags.includes('broker') || tags.includes('brokers');
+      });
       setExistingBrokers(brokerContacts);
     } catch (err) {
       console.error('Error loading existing brokers:', err);
@@ -174,47 +190,177 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
     setSelectedContacts(prev => prev.filter(c => c.id !== contactId));
   };
 
+  // Email selection handlers
+  const handleOpenEmailSelection = () => {
+    setEmailSelectionModalOpen(true);
+  };
+
+  const handleEmailSelected = (threadIds: string[], subjects: string[]) => {
+    setSelectedEmailThreadIds(threadIds);
+    setSelectedEmailSubjects(subjects);
+  };
+
+  const handleRemoveEmail = (threadId: string) => {
+    setSelectedEmailThreadIds(prev => prev.filter(id => id !== threadId));
+    setSelectedEmailSubjects((prev) => {
+      const index = selectedEmailThreadIds.indexOf(threadId);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!formData.name || !formData.type) {
-      setError('Please fill in all required fields');
-      return;
+    console.log('=== handleSubmit called ===');
+    console.log('isCreatingNew:', isCreatingNew);
+    console.log('selectedExistingBroker:', selectedExistingBroker);
+    console.log('selectedStage:', selectedStage);
+    console.log('formData:', formData);
+
+    if (isCreatingNew) {
+      if (!formData.name || !formData.type) {
+        const missingFields = [];
+        if (!formData.name) missingFields.push('Name');
+        if (!formData.type) missingFields.push('Broker Category');
+        setError(`Please fill in required fields: ${missingFields.join(', ')}`);
+        return;
+      }
+    } else {
+      if (!selectedExistingBroker) {
+        setError('Please select a broker from the dropdown');
+        return;
+      }
+      if (!selectedStage) {
+        setError('Please select a pipeline stage for this broker');
+        return;
+      }
     }
 
     setLoading(true);
     setError(null);
 
     try {
-      // Create broker data
-      const brokerData = {
-        name: formData.name,
-        type: formData.type,
-        deal_size: formData.dealSize,
-        specialization: formData.specialization,
-        status: formData.status,
-        notes: formData.notes,
-        website: formData.website,
-        location: formData.location,
-        aum: formData.aum,
-        contacts: selectedContacts.map(c => c.id)
-      };
+      if (isCreatingNew) {
+        // Create new broker record with full details
+        console.log('=== Creating new broker ===');
+        const brokerData: any = {
+          name: formData.name,
+          status: (formData.status || 'active') as 'active' | 'paused' | 'closed' | 'not-interested',
+          stage: 'all' as 'all' | 'response-received' | 'closing',
+          priority: 'medium' as 'low' | 'medium' | 'high',
+        };
 
-      // TODO: Replace with actual broker API call
-      console.log('Creating broker:', brokerData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+        // Only add optional fields if they have values
+        if (formData.type) brokerData.type = formData.type;
+        if (formData.dealSize) brokerData.dealSize = formData.dealSize;
+        if (formData.specialization) brokerData.specialization = formData.specialization;
+        if (formData.notes) brokerData.notes = formData.notes;
+        if (formData.website) brokerData.website = formData.website;
+        if (formData.location) brokerData.location = formData.location;
+        if (formData.aum) brokerData.aum = formData.aum;
+        if (formData.firmName) brokerData.firmName = formData.firmName;
+        if (formData.brokerType) brokerData.brokerType = formData.brokerType as 'firm' | 'individual';
+        if (selectedContacts.length > 0) brokerData.contactIds = selectedContacts.map(c => c.id);
+
+        console.log('Creating broker with data:', brokerData);
+        const createdBroker = await brokersApi.createBroker(brokerData);
+        console.log('Broker created successfully:', createdBroker);
+
+        // Associate selected contacts with the broker
+        if (selectedContacts.length > 0) {
+          console.log(`Associating ${selectedContacts.length} contacts with broker...`);
+          for (const contact of selectedContacts) {
+            try {
+              await brokersApi.associateContact(createdBroker.id, contact.id);
+              console.log(`Associated contact ${contact.id} with broker`);
+            } catch (contactError: any) {
+              console.error(`Error associating contact ${contact.id}:`, contactError);
+            }
+          }
+        }
+      } else {
+        // Create broker from existing contact
+        console.log('=== Creating broker from existing contact ===');
+        console.log('Contact ID:', selectedExistingBroker.id);
+        console.log('Contact Name:', selectedExistingBroker.name);
+        console.log('Selected Stage:', selectedStage);
+
+        const brokerData: any = {
+          name: selectedExistingBroker.name,
+          status: 'active' as const,
+          stage: selectedStage as 'all' | 'response-received' | 'closing',
+          priority: 'medium' as const,
+          brokerType: 'individual' as const,
+          contactIds: [selectedExistingBroker.id]
+        };
+
+        // Only add optional fields if they have values
+        if (selectedExistingBroker.title) brokerData.type = selectedExistingBroker.title;
+        if (selectedExistingBroker.company) brokerData.firmName = selectedExistingBroker.company;
+        if (selectedExistingBroker.website) brokerData.website = selectedExistingBroker.website;
+        if (selectedExistingBroker.notes) brokerData.notes = selectedExistingBroker.notes;
+
+        console.log('Creating broker with data:', brokerData);
+        const createdBroker = await brokersApi.createBroker(brokerData);
+        console.log('Broker created successfully:', createdBroker);
+
+        // Associate the contact with the broker
+        console.log('Associating contact with broker...');
+        await brokersApi.associateContact(createdBroker.id, selectedExistingBroker.id);
+        console.log('Contact associated with broker');
+
+        // Associate email threads with broker if any were selected
+        if (selectedEmailThreadIds.length > 0) {
+          console.log(`Associating ${selectedEmailThreadIds.length} email threads...`);
+
+          // First, create communication records for each email thread
+          for (let i = 0; i < selectedEmailThreadIds.length; i++) {
+            try {
+              console.log(`Creating communication for email thread ${i + 1}/${selectedEmailThreadIds.length}...`);
+
+              // Associate the email thread with the contact first (creates communication record)
+              const result = await contactsApi.associateEmailThread(selectedExistingBroker.id, {
+                threadId: selectedEmailThreadIds[i],
+                subject: selectedEmailSubjects[i] || '(No Subject)'
+              });
+              console.log(`Email thread ${selectedEmailThreadIds[i]} associated with contact, communicationId:`, result.communicationId);
+
+              // Now associate the communication with the broker
+              if (result.communicationId) {
+                console.log(`Associating communication ${result.communicationId} with broker ${createdBroker.id}...`);
+                await brokersApi.associateCommunication(createdBroker.id, result.communicationId);
+                console.log(`Communication ${result.communicationId} successfully linked to broker`);
+              }
+            } catch (emailError: any) {
+              console.error(`Error associating email thread ${selectedEmailThreadIds[i]}:`, emailError);
+              console.error('Email error details:', emailError.response?.data || emailError.message);
+              // Don't fail the entire operation if email association fails
+            }
+          }
+        }
+
+        console.log('=== Broker creation complete ===');
+      }
+
       setSuccess(true);
-      setTimeout(() => {
-        onSuccess();
-        handleClose();
-      }, 1500);
+      // Immediately trigger the parent callback to reload and close
+      onSuccess();
 
     } catch (err: any) {
-      setError(err.message || 'Failed to create broker');
-    } finally {
+      console.error('=== Error in handleSubmit ===');
+      console.error('Error object:', err);
+      console.error('Error message:', err.message);
+      console.error('Error response:', err.response);
+      console.error('Error response data:', err.response?.data);
+
+      // Show detailed validation errors if available
+      let errorMessage = err.response?.data?.message || err.message || 'Failed to create broker';
+      if (err.response?.data?.details && Array.isArray(err.response.data.details)) {
+        errorMessage = `${errorMessage}: ${err.response.data.details.join(', ')}`;
+      }
+      console.error('Final error message:', errorMessage);
+      setError(errorMessage);
       setLoading(false);
     }
+    console.log('=== handleSubmit finished ===');
   };
 
   const handleClose = () => {
@@ -233,6 +379,9 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
     });
     setSelectedContacts([]);
     setSelectedExistingBroker(null);
+    setSelectedStage('');
+    setSelectedEmailThreadIds([]);
+    setSelectedEmailSubjects([]);
     setIsCreatingNew(true);
     setError(null);
     setSuccess(false);
@@ -291,10 +440,12 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
       </Box>
 
       {/* Content Area */}
-      <Box sx={{ 
+      <DialogContent sx={{ 
         p: 4, 
         bgcolor: '#F8FAFC',
-        color: '#1E293B'
+        color: '#1E293B',
+        overflowY: 'auto',
+        maxHeight: 'calc(100vh - 280px)'
       }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
@@ -584,7 +735,11 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
             <Autocomplete
               options={existingBrokers}
               getOptionLabel={(option) => `${option.name} - ${option.company || 'No Company'}`}
-              onChange={(_, value) => setSelectedExistingBroker(value)}
+              onChange={(_, value) => {
+                setSelectedExistingBroker(value);
+                setSelectedStage('');
+              }}
+              value={selectedExistingBroker}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -617,21 +772,118 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
               )}
             />
             {selectedExistingBroker && (
-              <Box sx={{ mt: 3, p: 2, bgcolor: '#fdf2f8', borderRadius: 2, border: `1px solid ${ACCENT_MAROON}` }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: ACCENT_MAROON, mb: 1 }}>
-                  Selected Broker
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#1e293b' }}>
-                  {selectedExistingBroker.name} • {selectedExistingBroker.title || 'Broker'}
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#64748b' }}>
-                  {selectedExistingBroker.company || 'No Company'} • {selectedExistingBroker.email}
-                </Typography>
-              </Box>
+              <>
+                <Box sx={{ mt: 3, p: 2, bgcolor: '#fdf2f8', borderRadius: 2, border: `1px solid ${ACCENT_MAROON}` }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: ACCENT_MAROON, mb: 1 }}>
+                    Selected Broker
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#1e293b' }}>
+                    {selectedExistingBroker.name} • {selectedExistingBroker.title || 'Broker'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748b' }}>
+                    {selectedExistingBroker.company || 'No Company'} • {selectedExistingBroker.email}
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#1e293b', mb: 2 }}>
+                    Assign to Pipeline Stage
+                  </Typography>
+                  <FormControl fullWidth required>
+                    <InputLabel>Select Stage *</InputLabel>
+                    <Select
+                      value={selectedStage}
+                      onChange={(e) => setSelectedStage(e.target.value)}
+                      label="Select Stage *"
+                    >
+                      {brokerStages.map((stage) => (
+                        <MenuItem key={stage.value} value={stage.value}>
+                          {stage.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Typography variant="caption" sx={{ color: '#64748b', mt: 1, display: 'block' }}>
+                    Choose which stage to assign this broker to in your pipeline
+                  </Typography>
+                </Box>
+                <Box sx={{ mt: 3 }}>
+                  <Divider sx={{ mb: 3 }} />
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" sx={{
+                      fontWeight: 600,
+                      color: '#1e293b',
+                      mb: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <EmailIcon sx={{ fontSize: 20 }} />
+                      Email Association
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Associate an email thread with this broker to track communication
+                    </Typography>
+
+                    {selectedEmailThreadIds.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {selectedEmailThreadIds.map((threadId, index) => (
+                          <Card key={threadId} sx={{
+                            bgcolor: '#F0F9FF',
+                            border: '1px solid #BAE6FD',
+                            borderRadius: 2
+                          }}>
+                            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0C4A6E', mb: 0.5 }}>
+                                    Email Thread {selectedEmailThreadIds.length > 1 ? `${index + 1}` : ''}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ color: '#075985' }}>
+                                    {selectedEmailSubjects[index] || 'Email thread selected'}
+                                  </Typography>
+                                </Box>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleRemoveEmail(threadId)}
+                                  sx={{ color: '#64748B' }}
+                                >
+                                  <CloseIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        onClick={handleOpenEmailSelection}
+                        disabled={loading}
+                        startIcon={<EmailIcon />}
+                        sx={{
+                          borderColor: '#E2E8F0',
+                          color: '#64748B',
+                          fontWeight: 600,
+                          px: 3,
+                          py: 1.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          '&:hover': {
+                            borderColor: '#9CA3AF',
+                            backgroundColor: '#F1F5F9',
+                          }
+                        }}
+                      >
+                        Select Email Thread
+                      </Button>
+                    )}
+                  </Box>
+                </Box>
+              </>
             )}
           </Box>
         )}
-      </Box>
+      </DialogContent>
 
       <DialogActions sx={{ 
         p: 4, 
@@ -659,8 +911,15 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
           Cancel
         </Button>
         <Button
-          onClick={handleSubmit}
-          disabled={loading || (isCreatingNew ? (!formData.name || !formData.type) : !selectedExistingBroker)}
+          type="button"
+          onClick={(e) => {
+            console.log('=== Button clicked ===');
+            console.log('Button disabled?', loading || (isCreatingNew ? (!formData.name || !formData.type) : (!selectedExistingBroker || !selectedStage)));
+            e.preventDefault();
+            e.stopPropagation();
+            handleSubmit();
+          }}
+          disabled={loading || (isCreatingNew ? (!formData.name || !formData.type) : (!selectedExistingBroker || !selectedStage))}
           variant="contained"
           startIcon={loading ? <CircularProgress size={20} /> : <GroupIcon />}
           sx={{
@@ -681,9 +940,18 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
             }
           }}
         >
-          {loading ? 'Processing...' : (isCreatingNew ? 'Create Broker' : 'Add Selected Broker')}
+          {loading ? 'Processing...' : (isCreatingNew ? 'Create Broker' : 'Confirm & Add Broker')}
         </Button>
       </DialogActions>
+
+      {/* Email Selection Modal */}
+      <EmailSelectionModal
+        open={emailSelectionModalOpen}
+        onClose={() => setEmailSelectionModalOpen(false)}
+        onSelect={handleEmailSelected}
+        selectedThreadIds={selectedEmailThreadIds}
+        multiSelect={true}
+      />
     </Dialog>
   );
 }
