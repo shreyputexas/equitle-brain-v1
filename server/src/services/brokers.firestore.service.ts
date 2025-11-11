@@ -349,4 +349,162 @@ export class BrokersFirestoreService {
       throw new Error('Failed to associate communication with broker');
     }
   }
+
+  // Associate email thread with broker
+  static async associateEmailThread(userId: string, brokerId: string, threadId: string, subject: string) {
+    try {
+      // Verify broker exists
+      const brokerRef = FirestoreHelpers.getUserDocInCollection(userId, 'brokers', brokerId);
+      const brokerDoc = await brokerRef.get();
+
+      if (!brokerDoc.exists) {
+        throw new Error('Broker not found');
+      }
+
+      // Try to fetch thread details from Gmail to get messageId and snippet
+      let messageId: string | undefined;
+      let snippet: string | undefined;
+      let fromEmail: string | undefined;
+      let toEmails: string[] | undefined;
+
+      try {
+        // Get Gmail access token
+        const integrationsSnapshot = await db.collection('integrations')
+          .where('userId', '==', userId)
+          .where('provider', '==', 'google')
+          .where('type', '==', 'gmail')
+          .where('isActive', '==', true)
+          .limit(1)
+          .get();
+
+        if (!integrationsSnapshot.empty) {
+          const integrationData = integrationsSnapshot.docs[0].data();
+          const accessToken = integrationData.accessToken;
+
+          if (accessToken) {
+            // Fetch thread details using Gmail API
+            const { google } = await import('googleapis');
+            const auth = (await import('./googleAuth')).default.createAuthenticatedClient(accessToken);
+            const gmail = google.gmail({ version: 'v1', auth });
+
+            const threadResponse = await gmail.users.threads.get({
+              userId: 'me',
+              id: threadId,
+            });
+
+            const thread = threadResponse.data;
+            if (thread.messages && thread.messages.length > 0) {
+              const latestMessage = thread.messages[thread.messages.length - 1];
+              messageId = latestMessage.id;
+              snippet = latestMessage.snippet;
+
+              // Extract from/to emails from headers
+              const headers = latestMessage.payload?.headers || [];
+              const fromHeader = headers.find((h: any) => h.name.toLowerCase() === 'from');
+              const toHeader = headers.find((h: any) => h.name.toLowerCase() === 'to');
+
+              if (fromHeader) {
+                fromEmail = fromHeader.value;
+              }
+              if (toHeader) {
+                toEmails = toHeader.value.split(',').map((e: string) => e.trim());
+              }
+            }
+          }
+        }
+      } catch (gmailError) {
+        logger.warn('Could not fetch Gmail thread details, creating minimal communication record', { gmailError });
+      }
+
+      // Create communication record
+      const communicationData = {
+        type: 'email',
+        threadId,
+        messageId,
+        subject: subject || '(No Subject)',
+        snippet,
+        fromEmail,
+        toEmails,
+        direction: 'inbound', // Default to inbound
+        status: 'received',
+        metadata: {
+          brokerId,
+        },
+        createdAt: FirestoreHelpers.serverTimestamp(),
+        updatedAt: FirestoreHelpers.serverTimestamp(),
+      };
+
+      const communicationsCollection = FirestoreHelpers.getUserCollection(userId, 'communications');
+      const commDocRef = await communicationsCollection.add(communicationData);
+
+      logger.info('Email thread associated with broker', {
+        userId,
+        brokerId,
+        threadId,
+        communicationId: commDocRef.id
+      });
+
+      return {
+        message: 'Email thread associated with broker successfully',
+        communication: {
+          id: commDocRef.id,
+          ...communicationData
+        }
+      };
+    } catch (error: any) {
+      logger.error('Error associating email thread with broker:', error);
+      if (error.message === 'Broker not found') {
+        throw error;
+      }
+      throw new Error('Failed to associate email thread with broker');
+    }
+  }
+
+  // Disassociate (delete) email thread from broker
+  static async disassociateEmailThread(userId: string, brokerId: string, threadId: string) {
+    try {
+      // Verify broker exists
+      const brokerRef = FirestoreHelpers.getUserDocInCollection(userId, 'brokers', brokerId);
+      const brokerDoc = await brokerRef.get();
+
+      if (!brokerDoc.exists) {
+        throw new Error('Broker not found');
+      }
+
+      // Find and delete the communication with this threadId and brokerId
+      const communicationsCollection = FirestoreHelpers.getUserCollection(userId, 'communications');
+      const commSnapshot = await communicationsCollection
+        .where('threadId', '==', threadId)
+        .where('metadata.brokerId', '==', brokerId)
+        .limit(1)
+        .get();
+
+      if (commSnapshot.empty) {
+        logger.warn('Communication not found for deletion', { userId, brokerId, threadId });
+        // Don't throw error, just return - thread might have been already deleted
+        return { message: 'Email thread not found or already removed' };
+      }
+
+      // Delete the communication document
+      await commSnapshot.docs[0].ref.delete();
+
+      logger.info('Email thread disassociated from broker', {
+        userId,
+        brokerId,
+        threadId,
+        communicationId: commSnapshot.docs[0].id
+      });
+
+      return {
+        message: 'Email thread disassociated from broker successfully',
+        deletedCommunicationId: commSnapshot.docs[0].id
+      };
+    } catch (error: any) {
+      logger.error('Error disassociating email thread from broker:', error);
+      if (error.message === 'Broker not found') {
+        throw error;
+      }
+      throw new Error('Failed to disassociate email thread from broker');
+    }
+  }
 }

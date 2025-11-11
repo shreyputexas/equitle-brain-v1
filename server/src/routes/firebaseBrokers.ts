@@ -247,6 +247,87 @@ router.post('/brokers/:id/contacts/:contactId', firebaseAuthMiddleware, async (r
   }
 });
 
+// @route   POST /api/firebase-brokers/:id/email-thread
+// @desc    Associate email thread with broker
+// @access  Private
+router.post('/brokers/:id/email-thread', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { id: brokerId } = req.params;
+    const { threadId, subject } = req.body;
+
+    if (!threadId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thread ID is required'
+      });
+    }
+
+    const result = await BrokersFirestoreService.associateEmailThread(
+      userId,
+      brokerId,
+      threadId,
+      subject || '(No Subject)'
+    );
+
+    res.json({
+      success: true,
+      message: 'Email thread associated with broker successfully',
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Associate email thread to broker error:', error);
+
+    if (error.message === 'Broker not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Broker not found'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to associate email thread with broker'
+    });
+  }
+});
+
+// @route   DELETE /api/firebase-brokers/:id/email-thread/:threadId
+// @desc    Disassociate email thread from broker
+// @access  Private
+router.delete('/brokers/:id/email-thread/:threadId', firebaseAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const { id: brokerId, threadId } = req.params;
+
+    const result = await BrokersFirestoreService.disassociateEmailThread(
+      userId,
+      brokerId,
+      threadId
+    );
+
+    res.json({
+      success: true,
+      message: 'Email thread disassociated from broker successfully',
+      data: result
+    });
+  } catch (error: any) {
+    logger.error('Disassociate email thread from broker error:', error);
+
+    if (error.message === 'Broker not found') {
+      return res.status(404).json({
+        success: false,
+        message: 'Broker not found'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to disassociate email thread from broker'
+    });
+  }
+});
+
 // @route   POST /api/firebase/brokers/:id/communications/:communicationId
 // @desc    Associate communication with broker
 // @access  Private

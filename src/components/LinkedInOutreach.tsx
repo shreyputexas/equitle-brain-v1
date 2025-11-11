@@ -47,6 +47,7 @@ import {
   Close as CloseIcon,
   Email as EmailIcon
 } from '@mui/icons-material';
+import { useLocation } from 'react-router-dom';
 import axios from '../lib/axios';
 
 interface Contact {
@@ -102,6 +103,12 @@ interface LinkedInOutreachProps {
 }
 
 const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated }) => {
+  const location = useLocation();
+  
+  // Determine context based on current route
+  const isBrokerPage = location.pathname.includes('/outreach/brokers');
+  const isDealPage = location.pathname.includes('/outreach/deals');
+  
   // Black accent colors for consistency across all pages
   const ACCENT_BLACK = '#1a1a1a';
   const ACCENT_GREY = '#2c2c2c';
@@ -447,7 +454,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   mb: 1
                 }}
               >
-                Bulk Outreach Generator
+                {isBrokerPage ? 'Broker Outreach' : isDealPage ? 'Deal Outreach' : 'Bulk Outreach Generator'}
               </Typography>
               <Typography 
                 variant="body1" 
@@ -458,7 +465,11 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   letterSpacing: '-0.01em'
                 }}
               >
-                Generate personalized messages and/or emails for multiple contacts at once
+                {isBrokerPage 
+                  ? 'Generate personalized messages and emails for your broker contacts'
+                  : isDealPage
+                  ? 'Generate personalized messages and emails for your deal contacts'
+                  : 'Generate personalized messages and/or emails for multiple contacts at once'}
               </Typography>
             </Box>
           </Box>

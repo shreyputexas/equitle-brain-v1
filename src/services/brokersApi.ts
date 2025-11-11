@@ -192,6 +192,30 @@ class BrokersApiService {
       throw error;
     }
   }
+
+  /**
+   * Associate an email thread with a broker
+   */
+  async associateEmailThread(brokerId: string, emailData: { threadId: string; subject: string }): Promise<void> {
+    try {
+      await axios.post(`${this.baseURL}/brokers/${brokerId}/email-thread`, emailData);
+    } catch (error) {
+      console.error(`Error associating email thread to broker ${brokerId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disassociate an email thread from a broker
+   */
+  async disassociateEmailThread(brokerId: string, threadId: string): Promise<void> {
+    try {
+      await axios.delete(`${this.baseURL}/brokers/${brokerId}/email-thread/${threadId}`);
+    } catch (error) {
+      console.error(`Error disassociating email thread ${threadId} from broker ${brokerId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export const brokersApi = new BrokersApiService();

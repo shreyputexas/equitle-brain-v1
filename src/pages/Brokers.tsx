@@ -5,14 +5,17 @@ import {
   Button,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  Grid
 } from '@mui/material';
 import {
-  Add as AddIcon
+  Add as AddIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 import NewBrokerModal from '../components/NewBrokerModal';
-import LinkedInOutreach from '../components/LinkedInOutreach';
+import BrokerOutreach from '../components/BrokerOutreach';
 import BrokerPipeline from '../components/BrokerPipeline';
+import EditBrokerModal from '../components/EditBrokerModal';
 import brokersApi, { Broker } from '../services/brokersApi';
 import contactsApi from '../services/contactsApi';
 
@@ -24,6 +27,8 @@ export default function Brokers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newBrokerModalOpen, setNewBrokerModalOpen] = useState(false);
+  const [editBrokerModalOpen, setEditBrokerModalOpen] = useState(false);
+  const [selectedBroker, setSelectedBroker] = useState<Broker | null>(null);
   const [brokerContacts, setBrokerContacts] = useState<Record<string, any[]>>({});
 
   // Load brokers on component mount
@@ -36,8 +41,13 @@ export default function Brokers() {
       setLoading(true);
       setError(null);
 
+      console.log('🔄 Loading brokers with contacts and communications...');
+
       const result = await brokersApi.getBrokers({ include: 'contacts,communications' });
-      console.log('Loaded brokers:', result);
+      console.log('📦 Loaded brokers from API:', result);
+
+      // Clear broker contacts state before refreshing
+      const newBrokerContacts: Record<string, any[]> = {};
 
       // Fetch contacts and communications for each broker
       const brokersWithData = await Promise.all(
@@ -48,6 +58,8 @@ export default function Brokers() {
             const contacts = contactsResult.contacts.filter((c: any) =>
               c.metadata?.brokerId === broker.id
             );
+
+            console.log(`👥 Broker ${broker.name} (${broker.id}) has ${contacts.length} contact(s)`);
 
             // Map contacts to Person format
             const people = contacts.map((c: any) => ({
@@ -66,9 +78,9 @@ export default function Brokers() {
               tags: c.tags
             }));
 
-            // Store contacts by broker ID
+            // Store contacts by broker ID in new state
             if (contacts.length > 0) {
-              setBrokerContacts(prev => ({ ...prev, [broker.id]: people }));
+              newBrokerContacts[broker.id] = people;
             }
 
             return {
@@ -83,6 +95,10 @@ export default function Brokers() {
         })
       );
 
+      console.log('✅ Brokers loaded with data:', brokersWithData);
+
+      // Update state with fresh data
+      setBrokerContacts(newBrokerContacts);
       setBrokers(brokersWithData);
     } catch (err: any) {
       console.error('Error loading brokers:', err);
@@ -102,55 +118,162 @@ export default function Brokers() {
 
   return (
     <Box sx={{ bgcolor: '#F8FAFC', minHeight: '100vh' }}>
-      {/* Header */}
+      {/* Pipeline Banner */}
       <Box sx={{
-        background: 'linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%)',
-        color: 'white',
-        px: 4,
-        py: 3,
-        mb: 3
+        position: 'relative',
+        bgcolor: 'white',
+        borderRadius: '0 0 32px 32px',
+        overflow: 'hidden',
+        mb: 6,
+        boxShadow: '0 8px 32px rgba(15, 23, 42, 0.08)'
       }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'white' }}>
-              Broker Pipeline
-            </Typography>
-            <Chip
-              label={`${brokers.length} Broker${brokers.length !== 1 ? 's' : ''}`}
-              sx={{
-                bgcolor: '#f97316',
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '0.875rem'
-              }}
-            />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-              Track and manage your broker relationships
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setNewBrokerModalOpen(true)}
-              sx={{
-                bgcolor: '#f97316',
-                color: 'white',
-                px: 3,
-                py: 1.5,
-                borderRadius: 2,
-                fontWeight: 600,
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                '&:hover': {
-                  bgcolor: '#ea580c',
-                  boxShadow: '0 6px 16px rgba(249, 115, 22, 0.4)',
-                }
-              }}
-            >
-              Add Broker
-            </Button>
-          </Box>
+        {/* Background Pattern */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.02) 0%, rgba(234, 88, 12, 0.05) 100%)',
+          zIndex: 1,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            width: 120,
+            height: 120,
+            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+            borderRadius: '50%',
+            opacity: 0.15,
+            zIndex: 1
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 20,
+            left: 20,
+            width: 80,
+            height: 80,
+            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+            borderRadius: 2,
+            opacity: 0.15,
+            transform: 'rotate(15deg)',
+            zIndex: 1
+          }
+        }} />
+
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4, py: 6 }}>
+          <Grid container spacing={4} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Box sx={{ position: 'relative', zIndex: 2 }}>
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 2,
+                    color: '#1e293b',
+                    fontSize: { xs: '2.2rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    letterSpacing: '-0.02em',
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    textTransform: 'uppercase',
+                    background: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  BROKER OUTREACH
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 500,
+                    mb: 3,
+                    color: '#475569',
+                    fontSize: '1.1rem',
+                    lineHeight: 1.5,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  }}
+                >
+                  Track and manage your broker relationships from initial outreach to closing
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: '#64748b',
+                    mb: 4,
+                    maxWidth: '600px',
+                    lineHeight: 1.6,
+                    fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                  }}
+                >
+                  Track your brokers, send tailored emails, and get notified when new responses come in.
+                </Typography>
+
+                {/* Action Buttons */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="text"
+                    size="large"
+                    startIcon={<AddIcon />}
+                    onClick={() => setNewBrokerModalOpen(true)}
+                    sx={{
+                      background: 'transparent',
+                      color: '#6b7280',
+                      border: 'none',
+                      boxShadow: 'none',
+                      px: 3,
+                      py: 1.5,
+                      borderRadius: 2,
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      textTransform: 'none',
+                      fontFamily: '"Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                      '&:hover': {
+                        background: '#f9fafb',
+                        color: '#374151',
+                        transform: 'translateY(-1px)'
+                      },
+                      '& .MuiButton-startIcon': {
+                        color: '#6b7280'
+                      },
+                      '&:hover .MuiButton-startIcon': {
+                        color: '#374151'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    New Broker
+                  </Button>
+                </Box>
+              </Box>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Box sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <Box sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 3,
+                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 8px 32px rgba(249, 115, 22, 0.3)'
+                }}>
+                  <BusinessIcon sx={{ fontSize: 64, color: 'white' }} />
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
         </Box>
       </Box>
 
@@ -171,8 +294,8 @@ export default function Brokers() {
           error={error}
           onRefresh={loadBrokers}
           onEditBroker={(broker) => {
-            // TODO: Implement edit functionality
-            console.log('Edit broker:', broker);
+            setSelectedBroker(broker);
+            setEditBrokerModalOpen(true);
           }}
           onDeleteBroker={async (brokerId) => {
             try {
@@ -186,8 +309,8 @@ export default function Brokers() {
         />
       </Box>
 
-      {/* LinkedIn Outreach Section */}
-      <LinkedInOutreach />
+      {/* Broker Outreach Section */}
+      <BrokerOutreach />
 
       {/* New Broker Modal */}
       <NewBrokerModal
@@ -196,10 +319,25 @@ export default function Brokers() {
         onSuccess={async () => {
           console.log('Broker created successfully, closing modal and reloading...');
           setNewBrokerModalOpen(false);
-          // Wait a moment for Firestore to update, then reload brokers
-          setTimeout(async () => {
-            await loadBrokers();
-          }, 800);
+          // Reload brokers immediately to show new broker
+          await loadBrokers();
+        }}
+      />
+
+      {/* Edit Broker Modal */}
+      <EditBrokerModal
+        open={editBrokerModalOpen}
+        broker={selectedBroker}
+        onClose={() => {
+          setEditBrokerModalOpen(false);
+          setSelectedBroker(null);
+        }}
+        onSuccess={async () => {
+          console.log('Broker updated successfully, closing modal and reloading...');
+          setEditBrokerModalOpen(false);
+          setSelectedBroker(null);
+          // Reload brokers immediately to show updated data
+          await loadBrokers();
         }}
       />
     </Box>
