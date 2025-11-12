@@ -995,23 +995,39 @@ export default function DataEnrichment() {
         // Automatically save discovered contacts to the database
         if (contacts.length > 0) {
           try {
-            const saveResponse = await axios.post('/api/firebase/contacts/bulk-save', {
+            console.log('📝 [SAVE] Attempting to save contacts:', {
+              count: contacts.length,
+              contactType: contactSearchType,
+              firstContact: contacts[0]
+            });
+
+            const saveResponse = await axios.post(getApiUrl('firebase/contacts/bulk-save'), {
               contacts: contacts,
-              contactType: contactSearchType // 'people', 'broker', or 'investor'
+              contactType: contactSearchType // 'people', 'brokers', or 'investors'
             });
 
             const saveData = saveResponse.data;
-            console.log('Bulk save response:', saveData);
+            console.log('✅ [SAVE] Bulk save response:', saveData);
 
             if (saveResponse.status === 200 && saveData.success) {
-              setMessage(`✅ Found and saved ${saveData.saved} contacts to your Contacts page!`);
+              const skippedInfo = saveData.skipped > 0 ? ` (${saveData.skipped} skipped)` : '';
+              setMessage(`✅ Found and saved ${saveData.saved} contacts to your Contacts page!${skippedInfo}`);
+
+              // Log any skipped contacts for debugging
+              if (saveData.skippedNames && saveData.skippedNames.length > 0) {
+                console.warn('⚠️ [SAVE] Skipped contacts:', saveData.skippedNames);
+              }
             } else {
-              console.error('Failed to save contacts:', saveData);
+              console.error('❌ [SAVE] Failed to save contacts:', saveData);
               setMessage(`Found ${contacts.length} contacts, but failed to save them: ${saveData.error || 'Unknown error'}`);
+              setShowError(true);
             }
-          } catch (saveError) {
-            console.error('Error auto-saving contacts:', saveError);
-            setMessage(`Found ${contacts.length} contacts, but failed to auto-save them. Check console for details.`);
+          } catch (saveError: any) {
+            console.error('❌ [SAVE] Error auto-saving contacts:', saveError);
+            console.error('❌ [SAVE] Error details:', saveError.response?.data || saveError.message);
+            const errorMsg = saveError.response?.data?.error || saveError.message || 'Unknown error';
+            setMessage(`Found ${contacts.length} contacts, but failed to auto-save them: ${errorMsg}`);
+            setShowError(true);
           }
         } else {
           // Provide more helpful message when no results found

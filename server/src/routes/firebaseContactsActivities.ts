@@ -334,19 +334,26 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid contacts data' });
     }
 
-    logger.info(`Bulk saving ${enrichedContacts.length} ${contactType} contacts for user ${userId}`);
+    logger.info(`📝 [BULK-SAVE] Starting bulk save: ${enrichedContacts.length} ${contactType} contacts for user ${userId}`);
+    console.log(`📝 [BULK-SAVE] First contact sample:`, enrichedContacts[0]);
 
     const savedContacts: any[] = [];
     const skippedContacts: string[] = [];
 
     for (const enrichedContact of enrichedContacts) {
       try {
-        logger.info(`Processing contact: ${enrichedContact.name}`, { enrichedContact });
-        
+        logger.info(`Processing contact: ${enrichedContact.name}`, {
+          name: enrichedContact.name,
+          email: enrichedContact.email,
+          phone: enrichedContact.phone,
+          contactType: enrichedContact.contactType,
+          hasLinkedIn: !!enrichedContact.linkedin_url
+        });
+
         // Check if contact already exists by email
         let existingContacts: any[] = [];
-        if (enrichedContact.email && 
-            enrichedContact.email !== 'email_not_unlocked' && 
+        if (enrichedContact.email &&
+            enrichedContact.email !== 'email_not_unlocked' &&
             !enrichedContact.email.includes('email_not_unlocked')) {
           const result = await ContactsActivitiesFirestoreService.getAllContacts(userId, {
             search: enrichedContact.email
@@ -356,7 +363,17 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
 
         let savedContact;
         // Use contactType from the enrichedContact if available, otherwise use the default
-        const finalContactType = enrichedContact.contactType || contactType;
+        // Normalize to singular form for consistency: 'brokers' -> 'broker', 'investors' -> 'investor', 'people' stays as 'people'
+        let finalContactType = enrichedContact.contactType || contactType;
+
+        // Normalize contactType: remove trailing 's' for brokers/investors
+        if (finalContactType === 'brokers') {
+          finalContactType = 'broker';
+        } else if (finalContactType === 'investors') {
+          finalContactType = 'investor';
+        }
+
+        logger.info(`Contact type normalized from '${enrichedContact.contactType || contactType}' to '${finalContactType}'`);
         
         if (existingContacts.length > 0) {
           // Update existing contact
@@ -371,6 +388,7 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
             notes: enrichedContact.notes || existingContact.notes,
             tags: [...new Set([...(existingContact.tags || []), finalContactType, ...(enrichedContact.tags || [])])],
           });
+          logger.info(`✅ Updated existing contact: ${enrichedContact.name}`);
         } else {
           // Create new contact
           const contactData: any = {
@@ -381,7 +399,7 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
             relationshipScore: 0,
             isKeyContact: false
           };
-          
+
           // Only add fields that have values (not undefined)
           if (enrichedContact.email &&
               enrichedContact.email !== 'email_not_unlocked' &&
@@ -407,29 +425,44 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
           if (enrichedContact.company) contactData.company = enrichedContact.company;
           if (enrichedContact.website) contactData.website = enrichedContact.website;
           if (enrichedContact.notes) contactData.notes = enrichedContact.notes;
-          
+
           logger.info(`Creating contact with data:`, contactData);
           savedContact = await ContactsActivitiesFirestoreService.createContact(userId, contactData);
+          logger.info(`✅ Created new contact: ${enrichedContact.name} with tags: ${contactData.tags.join(', ')}`);
         }
         savedContacts.push(savedContact);
-        logger.info(`Successfully saved contact: ${enrichedContact.name}`);
+        logger.info(`Successfully processed contact: ${enrichedContact.name}`);
       } catch (contactError: any) {
         logger.error(`Error saving contact ${enrichedContact.name}:`, contactError);
         skippedContacts.push(enrichedContact.name);
       }
     }
 
-    logger.info(`Bulk save complete: ${savedContacts.length} saved, ${skippedContacts.length} skipped`);
-    
-    res.json({
+    logger.info(`✅ [BULK-SAVE] Bulk save complete: ${savedContacts.length} saved, ${skippedContacts.length} skipped`);
+
+    if (skippedContacts.length > 0) {
+      logger.warn(`⚠️ [BULK-SAVE] Skipped contacts: ${skippedContacts.join(', ')}`);
+    }
+
+    const response = {
       success: true,
       saved: savedContacts.length,
       skipped: skippedContacts.length,
       skippedNames: skippedContacts,
       contacts: savedContacts
+    };
+
+    console.log(`📊 [BULK-SAVE] Final response:`, {
+      success: response.success,
+      saved: response.saved,
+      skipped: response.skipped,
+      totalContacts: savedContacts.length
     });
+
+    res.json(response);
   } catch (error: any) {
-    logger.error('Bulk save contacts error:', error);
+    logger.error('❌ [BULK-SAVE] Bulk save contacts error:', error);
+    console.error('❌ [BULK-SAVE] Error stack:', error.stack);
     res.status(500).json({ success: false, error: 'Failed to save contacts: ' + error.message });
   }
 });
