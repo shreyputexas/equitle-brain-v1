@@ -151,8 +151,8 @@ class ContactsApiService {
    */
   async associateEmailThread(contactId: string, emailData: { threadId: string; subject: string }): Promise<{ communicationId: string }> {
     try {
-      const response = await axios.post(`/api/firebase/contacts/${contactId}/email-thread`, emailData);
-      return response.data?.data || response.data || { communicationId: '' };
+      const response = await axios.post<{ data?: { communicationId: string }; communicationId?: string }>(`/api/firebase/contacts/${contactId}/email-thread`, emailData);
+      return response.data?.data || (response.data as { communicationId: string }) || { communicationId: '' };
     } catch (error) {
       console.error(`Error associating email thread to contact ${contactId}:`, error);
       throw error;

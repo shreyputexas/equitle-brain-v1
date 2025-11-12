@@ -1000,11 +1000,11 @@ export default function DataEnrichment() {
               contactType: contactSearchType // 'people', 'broker', or 'investor'
             });
 
-            const saveData = saveResponse.data;
+            const saveData = saveResponse.data as { success?: boolean; saved?: number; error?: string };
             console.log('Bulk save response:', saveData);
 
             if (saveResponse.status === 200 && saveData.success) {
-              setMessage(`✅ Found and saved ${saveData.saved} contacts to your Contacts page!`);
+              setMessage(`✅ Found and saved ${saveData.saved || 0} contacts to your Contacts page!`);
             } else {
               console.error('Failed to save contacts:', saveData);
               setMessage(`Found ${contacts.length} contacts, but failed to save them: ${saveData.error || 'Unknown error'}`);

@@ -404,7 +404,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
     setSchedulingMessageId(profile.id);
 
     try {
-      const response = await axios.post('/api/email-drafts/create', {
+      const response = await axios.post<{ success: boolean; data?: { provider: string }; error?: string }>('/api/email-drafts/create', {
         to: profile.contactEmail,
         subject: profile.generatedMessage.message.subject,
         body: profile.generatedMessage.message.body,
@@ -412,7 +412,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
       });
 
       if (response.data.success) {
-        alert(`Draft created successfully in ${response.data.data.provider}!`);
+        alert(`Draft created successfully in ${response.data.data?.provider || 'email'}!`);
 
         // Mark as scheduled
         setBulkProfiles(prev => prev.map(p =>
