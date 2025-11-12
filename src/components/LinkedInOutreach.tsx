@@ -591,7 +591,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                 {contacts.filter(contact => {
                   const originalTags = (contact as any).originalTags || [];
                   if (isDealPage) {
-                    return originalTags.includes('deal');
+                    return originalTags.includes('deal') || originalTags.includes('people');
                   } else {
                     return originalTags.includes('broker') || originalTags.includes('brokers');
                   }
@@ -1435,7 +1435,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                   .filter(contact => {
                     const originalTags = (contact as any).originalTags || [];
                     if (isDealPage) {
-                      return originalTags.includes('deal');
+                      return originalTags.includes('deal') || originalTags.includes('people');
                     } else {
                       return originalTags.includes('broker') || originalTags.includes('brokers');
                     }
