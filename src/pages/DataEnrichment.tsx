@@ -1006,12 +1006,12 @@ export default function DataEnrichment() {
               contactType: contactSearchType // 'people', 'brokers', or 'investors'
             });
 
-            const saveData = saveResponse.data;
+            const saveData = saveResponse.data as { success?: boolean; saved?: number; skipped?: number; skippedNames?: string[]; error?: string };
             console.log('✅ [SAVE] Bulk save response:', saveData);
 
             if (saveResponse.status === 200 && saveData.success) {
-              const skippedInfo = saveData.skipped > 0 ? ` (${saveData.skipped} skipped)` : '';
-              setMessage(`✅ Found and saved ${saveData.saved} contacts to your Contacts page!${skippedInfo}`);
+              const skippedInfo = saveData.skipped && saveData.skipped > 0 ? ` (${saveData.skipped} skipped)` : '';
+              setMessage(`✅ Found and saved ${saveData.saved || 0} contacts to your Contacts page!${skippedInfo}`);
 
               // Log any skipped contacts for debugging
               if (saveData.skippedNames && saveData.skippedNames.length > 0) {

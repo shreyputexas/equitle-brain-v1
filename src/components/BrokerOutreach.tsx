@@ -417,7 +417,7 @@ const BrokerOutreach: React.FC = () => {
     setSchedulingMessageId(profile.id);
 
     try {
-      const response = await axios.post('/api/email-drafts/create', {
+      const response = await axios.post<{ success: boolean; data?: { provider: string }; error?: string }>('/api/email-drafts/create', {
         to: profile.contactEmail,
         subject: profile.generatedMessage.message.subject,
         body: profile.generatedMessage.message.body,
@@ -425,7 +425,7 @@ const BrokerOutreach: React.FC = () => {
       });
 
       if (response.data.success) {
-        alert(`Draft created successfully in ${response.data.data.provider}!`);
+        alert(`Draft created successfully in ${response.data.data?.provider || 'email'}!`);
 
         setBulkProfiles(prev => prev.map(p =>
           p.id === profile.id

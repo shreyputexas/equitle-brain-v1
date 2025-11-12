@@ -7,6 +7,7 @@ import { ElevenLabsService } from '../services/elevenlabs.service';
 import { SlybroadcastService, IndividualVoicemailRequest } from '../services/slybroadcast.service';
 import logger from '../utils/logger';
 import { io } from '../index';
+import { db, FirestoreHelpers } from '../lib/firebase';
 
 const router = Router();
 
@@ -55,11 +56,74 @@ interface Campaign {
   voicemailSentAt?: string;
 }
 
-// In-memory storage for demo (replace with database later)
+// In-memory storage for voice clones (these come from ElevenLabs API)
 const voiceClones: VoiceClone[] = [];
-const campaigns: Campaign[] = [];
+
+// Firestore collection for campaigns (persistent storage)
+const CAMPAIGNS_COLLECTION = 'massVoicemailCampaigns';
 
 const elevenLabsService = new ElevenLabsService();
+
+// Helper functions for Firestore campaign operations
+async function saveCampaignToFirestore(campaign: Campaign): Promise<void> {
+  try {
+    const campaignRef = db.collection(CAMPAIGNS_COLLECTION).doc(campaign.id);
+    await campaignRef.set({
+      ...campaign,
+      updatedAt: FirestoreHelpers.serverTimestamp(),
+    }, { merge: true });
+    logger.debug('Campaign saved to Firestore', { campaignId: campaign.id });
+  } catch (error) {
+    logger.error('Failed to save campaign to Firestore', { campaignId: campaign.id, error });
+    throw error;
+  }
+}
+
+async function getCampaignFromFirestore(campaignId: string): Promise<Campaign | null> {
+  try {
+    const campaignDoc = await db.collection(CAMPAIGNS_COLLECTION).doc(campaignId).get();
+    if (!campaignDoc.exists) {
+      return null;
+    }
+    return campaignDoc.data() as Campaign;
+  } catch (error) {
+    logger.error('Failed to get campaign from Firestore', { campaignId, error });
+    throw error;
+  }
+}
+
+async function getAllCampaignsFromFirestore(): Promise<Campaign[]> {
+  try {
+    const snapshot = await db.collection(CAMPAIGNS_COLLECTION)
+      .orderBy('created_at', 'desc')
+      .get();
+    return snapshot.docs.map(doc => doc.data() as Campaign);
+  } catch (error) {
+    logger.error('Failed to get campaigns from Firestore', { error });
+    // If ordering fails, try without orderBy
+    try {
+      const snapshot = await db.collection(CAMPAIGNS_COLLECTION).get();
+      return snapshot.docs.map(doc => doc.data() as Campaign);
+    } catch (fallbackError) {
+      logger.error('Failed to get campaigns from Firestore (fallback)', { error: fallbackError });
+      return [];
+    }
+  }
+}
+
+async function updateCampaignInFirestore(campaignId: string, updates: Partial<Campaign>): Promise<void> {
+  try {
+    const campaignRef = db.collection(CAMPAIGNS_COLLECTION).doc(campaignId);
+    await campaignRef.update({
+      ...updates,
+      updatedAt: FirestoreHelpers.serverTimestamp(),
+    });
+    logger.debug('Campaign updated in Firestore', { campaignId, updates });
+  } catch (error) {
+    logger.error('Failed to update campaign in Firestore', { campaignId, error });
+    throw error;
+  }
+}
 
 // Get all voice clones
 router.get('/voices', async (req: Request, res: Response) => {
@@ -357,7 +421,8 @@ router.post('/create-campaign', upload.single('contacts'), async (req: Request, 
       generated_files: [],
     };
 
-    campaigns.push(campaign);
+    // Save campaign to Firestore (persistent storage)
+    await saveCampaignToFirestore(campaign);
 
     // Clean up uploaded file
     fs.unlinkSync(contactsFile.path);
@@ -390,6 +455,7 @@ router.post('/create-campaign', upload.single('contacts'), async (req: Request, 
 // Get all campaigns
 router.get('/campaigns', async (req: Request, res: Response) => {
   try {
+    const campaigns = await getAllCampaignsFromFirestore();
     const campaignList = campaigns.map(campaign => ({
       id: campaign.id,
       name: campaign.name,
@@ -412,7 +478,7 @@ router.get('/campaigns', async (req: Request, res: Response) => {
 router.get('/campaigns/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const campaign = campaigns.find(c => c.id === id);
+    const campaign = await getCampaignFromFirestore(id);
 
     if (!campaign) {
       return res.status(404).json({ message: 'Campaign not found' });
@@ -429,7 +495,7 @@ router.get('/campaigns/:id', async (req: Request, res: Response) => {
 router.get('/campaigns/:id/download', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const campaign = campaigns.find(c => c.id === id);
+    const campaign = await getCampaignFromFirestore(id);
 
     if (!campaign) {
       return res.status(404).json({ message: 'Campaign not found' });
@@ -504,7 +570,7 @@ function substituteTemplate(template: string, contact: Contact): string {
 async function generateCampaignMP3s(campaignId: string): Promise<void> {
   logger.info('🎵 Starting MP3 generation for campaign', { campaignId });
 
-  const campaign = campaigns.find(c => c.id === campaignId);
+  let campaign = await getCampaignFromFirestore(campaignId);
   if (!campaign) {
     logger.error('❌ Campaign not found for MP3 generation', { campaignId });
     return;
@@ -519,6 +585,7 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
     });
 
     campaign.status = 'generating';
+    await updateCampaignInFirestore(campaignId, { status: 'generating' });
 
     // Create campaign directory for MP3 files
     const campaignDir = path.join('uploads', 'campaigns', campaignId);
@@ -593,6 +660,13 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
         campaign.completed_contacts = completedCount;
         campaign.progress = Math.round((completedCount / totalContacts) * 100);
 
+        // Update campaign in Firestore
+        await updateCampaignInFirestore(campaignId, {
+          generated_files: campaign.generated_files,
+          completed_contacts: completedCount,
+          progress: campaign.progress,
+        });
+
         // Emit real-time progress update
         io.emit('campaign-progress', {
           campaignId: campaignId,
@@ -626,6 +700,9 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
     const finalStatus = completedCount === totalContacts ? 'completed' : 'failed';
     campaign.status = finalStatus;
 
+    // Update campaign status in Firestore
+    await updateCampaignInFirestore(campaignId, { status: finalStatus });
+
     // Emit final campaign status update
     io.emit('campaign-completed', {
       campaignId: campaignId,
@@ -645,7 +722,7 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
     });
 
   } catch (error) {
-    campaign.status = 'failed';
+    await updateCampaignInFirestore(campaignId, { status: 'failed' });
     logger.error(`💥 Campaign ${campaignId} failed with critical error:`, {
       error: error instanceof Error ? error.message : error,
       stack: error instanceof Error ? error.stack : undefined,
@@ -654,28 +731,93 @@ async function generateCampaignMP3s(campaignId: string): Promise<void> {
   }
 }
 
-// Serve MP3 file directly
+// Serve MP3 file directly (public endpoint for Slybroadcast)
 router.get('/mp3/:campaignId/:filename', async (req: Request, res: Response) => {
   try {
     const { campaignId, filename } = req.params;
+    
+    // Security: Validate inputs to prevent path traversal attacks
+    if (!campaignId || !filename || 
+        campaignId.includes('..') || filename.includes('..') ||
+        campaignId.includes('/') || filename.includes('/') ||
+        !/^[a-zA-Z0-9._-]+$/.test(campaignId) || 
+        !/^[a-zA-Z0-9._-]+\.mp3$/.test(filename)) {
+      logger.warn('⚠️ Invalid MP3 request parameters', { campaignId, filename });
+      return res.status(400).json({ message: 'Invalid request parameters' });
+    }
+    
     const filePath = path.join('uploads', 'campaigns', campaignId, filename);
+    
+    // Additional security: Ensure resolved path is within uploads directory
+    const resolvedPath = path.resolve(filePath);
+    const uploadsDir = path.resolve('uploads', 'campaigns');
+    if (!resolvedPath.startsWith(uploadsDir)) {
+      logger.warn('⚠️ Path traversal attempt detected', { campaignId, filename, resolvedPath });
+      return res.status(400).json({ message: 'Invalid file path' });
+    }
 
     logger.info('🎵 Direct MP3 file request', { campaignId, filename, filePath });
 
     if (!fs.existsSync(filePath)) {
+      logger.warn('⚠️ MP3 file not found', { campaignId, filename, filePath });
       return res.status(404).json({ message: 'MP3 file not found' });
     }
 
+    // Set headers for public access and proper content type
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    
+    // Don't set Content-Disposition to allow direct playback/download by Slybroadcast
     const fileStream = fs.createReadStream(filePath);
+    fileStream.on('error', (error) => {
+      logger.error('Error streaming MP3 file:', { campaignId, filename, error });
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error streaming file' });
+      }
+    });
     fileStream.pipe(res);
   } catch (error) {
     logger.error('Failed to serve MP3 file:', error);
-    res.status(500).json({ message: 'Failed to serve MP3 file' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to serve MP3 file' });
+    }
   }
 });
+
+// Helper function to generate public MP3 URL
+function getPublicMp3Url(campaignId: string, filename: string, req?: Request): string {
+  // Prefer BASE_URL or BACKEND_URL environment variable for production
+  const baseUrl = process.env.BASE_URL || 
+                  process.env.BACKEND_URL ||
+                  (req ? `${req.protocol}://${req.get('host')}` : 'http://localhost:4001');
+  
+  // Ensure URL doesn't end with slash
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  
+  // CRITICAL: Check if URL is localhost (won't work for Slybroadcast)
+  if (cleanBaseUrl.includes('localhost') || cleanBaseUrl.includes('127.0.0.1')) {
+    logger.warn('⚠️ BASE_URL/BACKEND_URL not set - using localhost (will not work for Slybroadcast)', {
+      baseUrl: cleanBaseUrl,
+      hint: 'Set BASE_URL or BACKEND_URL environment variable to your production domain'
+    });
+    // Still generate the URL but log warning - let the validation catch it
+  }
+  
+  // Validate campaignId and filename to prevent path traversal
+  if (!campaignId || !filename || campaignId.includes('..') || filename.includes('..')) {
+    throw new Error('Invalid campaign ID or filename');
+  }
+  
+  const fullUrl = `${cleanBaseUrl}/api/mass-voicemail/mp3/${campaignId}/${encodeURIComponent(filename)}`;
+  
+  // Final validation
+  if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+    throw new Error(`Generated URL is not valid: ${fullUrl}`);
+  }
+  
+  return fullUrl;
+}
 
 // Send personalized voicemail campaign using Slybroadcast
 router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, res: Response) => {
@@ -689,8 +831,8 @@ router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, 
       callerIdName
     });
 
-    // Get campaign from memory
-    const campaign = campaigns.find(c => c.id === campaignId);
+    // Get campaign from Firestore
+    const campaign = await getCampaignFromFirestore(campaignId);
 
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
@@ -716,9 +858,6 @@ router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, 
       return res.status(400).json({ error: 'Campaign files not found' });
     }
 
-    // Create base URL for MP3 files (for URL-based delivery)
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:4001';
-
     // Create individual voicemail requests for each contact
     const voicemailRequests: IndividualVoicemailRequest[] = [];
 
@@ -730,15 +869,39 @@ router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, 
 
       if (mp3Files.length > 0) {
         const mp3File = mp3Files[0];
-        const mp3Url = `${baseUrl}/uploads/campaigns/${campaignId}/${mp3File}`;
+        try {
+          // Generate public URL for Slybroadcast (required by their API)
+          const mp3Url = getPublicMp3Url(campaignId, mp3File, req);
 
-        voicemailRequests.push({
-          phoneNumber: contact.phone,
-          mp3Url: mp3Url,
-          callerIdNumber,
-          callerIdName,
-          title: `${campaign.name} - ${contact.name}`
-        });
+          // Validate URL is not empty and looks like a valid URL
+          if (!mp3Url || !mp3Url.trim() || !mp3Url.startsWith('http')) {
+            throw new Error(`Invalid URL generated: ${mp3Url}`);
+          }
+
+          logger.info('🔗 Generated public MP3 URL for Slybroadcast', {
+            contactName: contact.name,
+            filename: mp3File,
+            mp3Url,
+            urlLength: mp3Url.length
+          });
+
+          voicemailRequests.push({
+            phoneNumber: contact.phone,
+            mp3Url: mp3Url.trim(), // Use public URL instead of file path
+            callerIdNumber,
+            callerIdName,
+            title: `${campaign.name} - ${contact.name}`
+          });
+        } catch (error) {
+          logger.error('❌ Failed to generate MP3 URL', {
+            contactName: contact.name,
+            filename: mp3File,
+            error: (error as Error).message,
+            campaignId
+          });
+          // Skip this contact if URL generation fails - don't fall back to file path
+          // Slybroadcast requires URLs, not base64
+        }
       } else {
         logger.warn('⚠️ No MP3 file found for contact', {
           contactName: contact.name,
@@ -759,9 +922,12 @@ router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, 
     // Send personalized voicemails
     const result = await slybroadcastService.sendPersonalizedVoicemails(voicemailRequests);
 
-    // Update campaign status
-    campaign.voicemailStatus = 'sent';
-    campaign.voicemailSentAt = new Date().toISOString();
+    // Update campaign status in Firestore
+    const voicemailSentAt = new Date().toISOString();
+    await updateCampaignInFirestore(campaignId, {
+      voicemailStatus: 'sent',
+      voicemailSentAt,
+    });
 
     // Emit voicemail delivery completion
     io.emit('voicemail-delivery-completed', {
@@ -791,7 +957,7 @@ router.post('/campaigns/:id/send-personalized-voicemails', async (req: Request, 
       },
       campaignUpdate: {
         voicemailStatus: 'sent',
-        voicemailSentAt: campaign.voicemailSentAt
+        voicemailSentAt
       }
     });
 
@@ -813,8 +979,8 @@ router.post('/campaigns/:id/send-voicemails', async (req: Request, res: Response
       callerIdName
     });
 
-    // Get campaign from memory (in a real app, this would be from database)
-    const campaign = campaigns.find(c => c.id === campaignId);
+    // Get campaign from Firestore
+    const campaign = await getCampaignFromFirestore(campaignId);
 
     if (!campaign) {
       return res.status(404).json({ error: 'Campaign not found' });
@@ -841,8 +1007,24 @@ router.post('/campaigns/:id/send-voicemails', async (req: Request, res: Response
       return res.status(400).json({ error: 'No MP3 files found for this campaign' });
     }
 
-    // For now, use the first MP3 file (in future, could send individual files per contact)
-    const mp3FilePath = path.join(campaignDir, mp3Files[0]);
+    // Generate public URL for Slybroadcast (required by their API)
+    const mp3File = mp3Files[0];
+    let mp3Url: string;
+    try {
+      mp3Url = getPublicMp3Url(campaignId, mp3File, req);
+      logger.info('🔗 Generated public MP3 URL for bulk voicemail', {
+        filename: mp3File,
+        mp3Url
+      });
+    } catch (error) {
+      logger.error('❌ Failed to generate MP3 URL', {
+        filename: mp3File,
+        error: (error as Error).message
+      });
+      return res.status(500).json({ 
+        error: 'Failed to generate MP3 URL. Please ensure BASE_URL or BACKEND_URL environment variable is set.' 
+      });
+    }
 
     // Format and validate phone numbers
     const phoneNumbers = campaign.contacts.map((contact: Contact) => contact.phone?.toString() || '');
@@ -862,22 +1044,25 @@ router.post('/campaigns/:id/send-voicemails', async (req: Request, res: Response
       });
     }
 
-    // Send voicemail campaign
+    // Send voicemail campaign using public URL
     const result = await slybroadcastService.sendVoicemailCampaign({
       phoneNumbers: validPhones,
-      mp3FilePath,
+      mp3Url: mp3Url, // Use public URL for Slybroadcast
       callerIdNumber,
       callerIdName,
       title: campaign.name
     });
 
     if (result.success) {
-      // Update campaign status (in a real app, save to database)
-      campaign.voicemailStatus = 'sent';
-      campaign.voicemailBroadcastId = result.broadcastId;
-      campaign.validPhones = validPhones;
-      campaign.invalidPhones = invalidPhones;
-      campaign.voicemailSentAt = new Date().toISOString();
+      // Update campaign status in Firestore
+      const voicemailSentAt = new Date().toISOString();
+      await updateCampaignInFirestore(campaignId, {
+        voicemailStatus: 'sent',
+        voicemailBroadcastId: result.broadcastId,
+        validPhones,
+        invalidPhones,
+        voicemailSentAt,
+      });
 
       logger.info('🎉 Voicemail campaign sent successfully', {
         campaignId,
@@ -895,7 +1080,7 @@ router.post('/campaigns/:id/send-voicemails', async (req: Request, res: Response
         campaignUpdate: {
           voicemailStatus: 'sent',
           voicemailBroadcastId: result.broadcastId,
-          voicemailSentAt: campaign.voicemailSentAt
+          voicemailSentAt
         }
       });
     } else {
@@ -935,11 +1120,11 @@ router.get('/test-slybroadcast', async (req: Request, res: Response) => {
 // Test individual voicemail sending
 router.post('/test-individual-voicemail', async (req: Request, res: Response) => {
   try {
-    const { phoneNumber, mp3Url, callerIdNumber, callerIdName } = req.body;
+    const { phoneNumber, mp3Url, mp3FilePath, callerIdNumber, callerIdName } = req.body;
 
-    if (!phoneNumber || !mp3Url || !callerIdNumber) {
+    if (!phoneNumber || (!mp3Url && !mp3FilePath) || !callerIdNumber) {
       return res.status(400).json({
-        error: 'phoneNumber, mp3Url, and callerIdNumber are required'
+        error: 'phoneNumber, (mp3Url or mp3FilePath), and callerIdNumber are required'
       });
     }
 
@@ -955,6 +1140,7 @@ router.post('/test-individual-voicemail', async (req: Request, res: Response) =>
     const result = await slybroadcastService.sendIndividualVoicemail({
       phoneNumber,
       mp3Url,
+      mp3FilePath,
       callerIdNumber,
       callerIdName,
       title: 'Test Voicemail'
