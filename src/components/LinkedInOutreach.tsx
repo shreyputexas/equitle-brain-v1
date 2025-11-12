@@ -274,7 +274,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
 
     // Get profiles with LinkedIn data
     const profilesWithData = bulkProfiles.filter(profile => profile.rawLinkedInText.trim());
-    
+
     if (profilesWithData.length === 0) {
       setBulkMessage({
         type: 'error',
@@ -287,58 +287,101 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
     setBulkMessage(null);
 
     // Reset all profiles to pending
-    setBulkProfiles(prev => prev.map(profile => ({ ...profile, status: 'pending' as const })));
+    setBulkProfiles(prev => prev.map(profile => ({ ...profile, status: 'pending' as const, error: undefined })));
 
-    // Process each profile
-    for (const profile of profilesWithData) {
+    // Helper function to introduce delay
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Helper function to generate message for a single profile with retry logic
+    const generateMessageForProfile = async (profile: BulkLinkedInProfile, retryCount = 0): Promise<void> => {
+      const maxRetries = 2;
+
       try {
         // Update status to generating
-        setBulkProfiles(prev => prev.map(p => 
-          p.id === profile.id ? { ...p, status: 'generating' as const } : p
+        setBulkProfiles(prev => prev.map(p =>
+          p.id === profile.id ? { ...p, status: 'generating' as const, error: undefined } : p
         ));
 
-        const response = await axios.post('/api/linkedin-outreach/generate-message', {
+        console.log(`🔄 Generating message for profile ${profile.id} (${profile.contactName || 'Unnamed'}) - Attempt ${retryCount + 1}`);
+
+        const response = await axios.post<{ success: boolean; data?: any; error?: string }>('/api/linkedin-outreach/generate-message', {
           linkedinProfileData: {
             rawLinkedInText: profile.rawLinkedInText,
             websiteUrl: profile.websiteUrl,
             callPreference: globalCallPreference,
-            outreachType: globalOutreachType
+            outreachType: globalOutreachType,
+            contactName: profile.contactName,
+            contactEmail: profile.contactEmail
           }
+        }, {
+          timeout: 60000 // 60 second timeout
         });
 
         const result = response.data;
 
         if (result.success) {
-          setBulkProfiles(prev => prev.map(p => 
-            p.id === profile.id 
-              ? { ...p, status: 'success' as const, generatedMessage: result.data }
+          console.log(`✅ Successfully generated message for profile ${profile.id}`);
+          setBulkProfiles(prev => prev.map(p =>
+            p.id === profile.id
+              ? { ...p, status: 'success' as const, generatedMessage: result.data, error: undefined }
               : p
           ));
         } else {
-          setBulkProfiles(prev => prev.map(p => 
-            p.id === profile.id 
-              ? { ...p, status: 'error' as const, error: result.error || 'Failed to generate message' }
+          console.error(`❌ Server returned error for profile ${profile.id}:`, result.error);
+          setBulkProfiles(prev => prev.map(p =>
+            p.id === profile.id
+              ? { ...p, status: 'error' as const, error: result.error || 'Server error' }
               : p
           ));
         }
-      } catch (error) {
-        console.error(`❌ Error generating message for profile ${profile.id}:`, error);
-        setBulkProfiles(prev => prev.map(p => 
-          p.id === profile.id 
-            ? { ...p, status: 'error' as const, error: 'Network error' }
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error || error.message || 'Network error';
+        console.error(`❌ Error generating message for profile ${profile.id}:`, errorMessage);
+
+        // Retry logic for network errors or timeouts
+        if (retryCount < maxRetries && (
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('ECONNRESET') ||
+          error.code === 'ECONNABORTED'
+        )) {
+          console.log(`🔄 Retrying profile ${profile.id} in 3 seconds... (${retryCount + 1}/${maxRetries})`);
+          await delay(3000); // Wait 3 seconds before retry
+          return generateMessageForProfile(profile, retryCount + 1);
+        }
+
+        setBulkProfiles(prev => prev.map(p =>
+          p.id === profile.id
+            ? { ...p, status: 'error' as const, error: errorMessage }
             : p
         ));
       }
+    };
+
+    // Process profiles sequentially with delays to prevent overwhelming the server
+    for (let i = 0; i < profilesWithData.length; i++) {
+      const profile = profilesWithData[i];
+
+      await generateMessageForProfile(profile);
+
+      // Add delay between requests (except for the last one)
+      if (i < profilesWithData.length - 1) {
+        console.log(`⏳ Waiting 2 seconds before processing next profile...`);
+        await delay(2000); // 2 second delay between requests
+      }
     }
 
-    // Show completion message
-    const successCount = bulkProfiles.filter(p => p.status === 'success').length;
-    const errorCount = bulkProfiles.filter(p => p.status === 'error').length;
-    
+    // Calculate final results
+    const finalProfiles = bulkProfiles.filter(p => profilesWithData.some(pd => pd.id === p.id));
+    const successCount = finalProfiles.filter(p => p.status === 'success').length;
+    const errorCount = finalProfiles.filter(p => p.status === 'error').length;
+
+    console.log(`🏁 Bulk generation completed: ${successCount} success, ${errorCount} errors`);
+
     if (successCount > 0) {
       setBulkMessage({
         type: 'success',
-        text: `Successfully generated ${successCount} messages${errorCount > 0 ? `, ${errorCount} failed` : ''}.`
+        text: `Successfully generated ${successCount} message${successCount !== 1 ? 's' : ''}${errorCount > 0 ? `, ${errorCount} failed` : ''}.`
       });
     } else {
       setBulkMessage({
@@ -1090,7 +1133,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                              Person {profile.id}
+                              {profile.contactName || `Person ${profile.id}`}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               • AI-Generated Message
@@ -1294,7 +1337,7 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
                 .map((profile) => (
                   <Alert key={profile.id} severity="error" sx={{ mb: 1 }}>
                     <Typography variant="subtitle2">
-                      Person {profile.id}: {profile.error}
+                      {profile.contactName || `Person ${profile.id}`}: {profile.error}
                     </Typography>
                   </Alert>
                 ))}

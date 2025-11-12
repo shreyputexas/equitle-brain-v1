@@ -2,13 +2,20 @@ import express from 'express';
 import { spawn } from 'child_process';
 import path from 'path';
 import { OpenAIService } from '../services/openai.service';
+import { SearcherProfilesFirestoreService } from '../services/searcherProfiles.firestore.service';
+import { firebaseAuthMiddleware } from '../middleware/firebaseAuth';
 
 const router = express.Router();
 
 interface LinkedInData {
+  contactName: string; // Person's full name
   interest: string;
   aboutMe: string;
   experience: string;
+  specificCompanies: string; // Specific companies they've worked at
+  specificRoles: string; // Specific job titles and roles
+  achievements: string; // Specific achievements and accomplishments
+  skills: string; // Key skills and expertise areas
   latestPost: string;
   education: string;
   location: string;
@@ -22,26 +29,120 @@ interface MessageGenerationRequest {
     websiteUrl?: string; // Made optional
     callPreference: string;
     outreachType: string;
+    contactName?: string; // Contact's name for personalized greeting
+    contactEmail?: string; // Contact's email
   };
 }
 
-// POST /api/linkedin-outreach/generate-message - Generate personalized message
-router.post('/generate-message', async (req, res) => {
+// Rate limiting for bulk processing
+const requestTimes: { [key: string]: number[] } = {};
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per minute per IP
+
+// Simple rate limiting function
+const isRateLimited = (ip: string): boolean => {
+  const now = Date.now();
+  const userRequests = requestTimes[ip] || [];
+
+  // Remove requests outside the window
+  const recentRequests = userRequests.filter(time => now - time < RATE_LIMIT_WINDOW);
+  requestTimes[ip] = recentRequests;
+
+  if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+    return true;
+  }
+
+  // Add current request
+  requestTimes[ip].push(now);
+  return false;
+};
+
+// Function to get user profile information for signature
+const getUserProfileInfo = async (req: express.Request): Promise<{ name: string; title: string; } | null> => {
   try {
+    // Extract userId from the request headers or token (depending on your auth setup)
+    const userId = (req as any).userId || req.headers['x-user-id'];
+
+    console.log('🔍 LinkedIn Outreach - Getting user profile info:', {
+      hasUserId: !!userId,
+      userId: userId,
+      reqUserId: (req as any).userId,
+      headerUserId: req.headers['x-user-id']
+    });
+
+    if (!userId) {
+      console.warn('⚠️ LinkedIn Outreach - No userId found in request for profile lookup');
+      return { name: 'Shariq Hafizi', title: 'Founder & CEO, Equitle' }; // Fallback
+    }
+
+    const searcherProfilesService = new SearcherProfilesFirestoreService();
+    const profiles = await searcherProfilesService.getSearcherProfiles(userId);
+
+    console.log('🔍 LinkedIn Outreach - Searcher profiles retrieved:', {
+      profileCount: profiles?.length || 0,
+      profiles: profiles?.map(p => ({ id: p.id, name: p.name, title: p.title })) || []
+    });
+
+    if (profiles && profiles.length > 0) {
+      const profile = profiles[0]; // Use first profile
+      const userInfo = {
+        name: profile.name || 'Shariq Hafizi',
+        title: profile.title || 'Search Fund Professional'
+      };
+      console.log('✅ LinkedIn Outreach - Using user profile:', userInfo);
+      return userInfo;
+    }
+
+    // Fallback if no profile found
+    console.warn('⚠️ LinkedIn Outreach - No profiles found, using fallback');
+    return { name: 'Shariq Hafizi', title: 'Founder & CEO, Equitle' };
+  } catch (error) {
+    console.error('❌ LinkedIn Outreach - Error fetching user profile:', error);
+    return { name: 'Shariq Hafizi', title: 'Founder & CEO, Equitle' }; // Fallback
+  }
+};
+
+// POST /api/linkedin-outreach/generate-message - Generate personalized message
+router.post('/generate-message', firebaseAuthMiddleware, async (req, res) => {
+  const startTime = Date.now();
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+
+  try {
+    // Rate limiting check
+    if (isRateLimited(clientIp)) {
+      console.warn(`⚠️ Rate limit exceeded for IP: ${clientIp}`);
+      return res.status(429).json({
+        success: false,
+        error: 'Too many requests. Please wait before trying again.'
+      });
+    }
+
     const { linkedinProfileData }: MessageGenerationRequest = req.body;
 
     if (!linkedinProfileData || !linkedinProfileData.rawLinkedInText) {
-      return res.status(400).json({ error: 'LinkedIn profile data is required' });
+      return res.status(400).json({
+        success: false,
+        error: 'LinkedIn profile data is required'
+      });
     }
 
-    console.log(`Generating message for outreach type: ${linkedinProfileData.outreachType}`);
+    console.log(`🚀 [${clientIp}] Generating message for outreach type: ${linkedinProfileData.outreachType}`);
+
+    // Get user profile for signature
+    console.log('🔍 LinkedIn Outreach - About to get user profile info...');
+    const userProfile = await getUserProfileInfo(req);
+    console.log('🔍 LinkedIn Outreach - User profile retrieved for signature:', userProfile);
 
     // Extract LinkedIn data from raw text using AI
     const extractedLinkedInData = await extractLinkedInData(linkedinProfileData.rawLinkedInText);
-    
+
     // Add form data to extracted data
     extractedLinkedInData.callPreference = linkedinProfileData.callPreference;
     extractedLinkedInData.outreachType = linkedinProfileData.outreachType;
+
+    // Extract contact name from LinkedIn profile if not provided directly
+    const contactName = linkedinProfileData.contactName || extractedLinkedInData.contactName || 'there';
+    const contactEmail = linkedinProfileData.contactEmail;
 
     // Check if website URL is provided
     if (linkedinProfileData.websiteUrl && linkedinProfileData.websiteUrl.trim() !== '') {
@@ -49,29 +150,36 @@ router.post('/generate-message', async (req, res) => {
       try {
         new URL(linkedinProfileData.websiteUrl);
       } catch (e) {
-        return res.status(400).json({ error: 'Invalid URL format' });
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid URL format'
+        });
       }
 
-      console.log(`Website URL provided: ${linkedinProfileData.websiteUrl} - Running scraper...`);
+      console.log(`🌐 [${clientIp}] Website URL provided: ${linkedinProfileData.websiteUrl} - Running scraper...`);
 
       // Scrape the website and generate message with company info
-      scrapeAndGenerateMessage(linkedinProfileData.websiteUrl, extractedLinkedInData, res);
+      scrapeAndGenerateMessage(linkedinProfileData.websiteUrl, extractedLinkedInData, res, startTime, clientIp, contactName, userProfile);
     } else {
       // No website URL - generate message without company info
-      console.log('No website URL provided - Generating message without company data');
-      generateMessageWithoutCompanyInfo(extractedLinkedInData, res);
+      console.log(`📄 [${clientIp}] No website URL provided - Generating message without company data`);
+      generateMessageWithoutCompanyInfo(extractedLinkedInData, res, startTime, clientIp, contactName, userProfile);
     }
 
   } catch (error) {
-    console.error('Error in generate-message endpoint:', error);
+    console.error(`❌ [${clientIp}] Error in generate-message endpoint:`, error);
+    const duration = Date.now() - startTime;
+    console.log(`⏱️ [${clientIp}] Request failed after ${duration}ms`);
+
     res.status(500).json({
+      success: false,
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
 
-async function scrapeAndGenerateMessage(websiteUrl: string, linkedinData: LinkedInData, res: express.Response) {
+async function scrapeAndGenerateMessage(websiteUrl: string, linkedinData: LinkedInData, res: express.Response, startTime: number, clientIp: string, contactName: string, userProfile: { name: string; title: string; } | null) {
   const scraperPath = path.join(__dirname, '../../../website_scraper.py');
   const scraperDir = path.dirname(scraperPath);
   
@@ -111,12 +219,16 @@ else:
   });
 
   scraper.on('close', async (code) => {
-    console.log('Python scraper exit code:', code);
-    console.log('Python scraper output:', scraperOutput);
-    console.log('Python scraper error:', scraperError);
-    
+    const duration = Date.now() - startTime;
+    console.log(`🐍 [${clientIp}] Python scraper exit code: ${code} (${duration}ms)`);
+    console.log(`📄 [${clientIp}] Python scraper output:`, scraperOutput);
+    if (scraperError) {
+      console.error(`❌ [${clientIp}] Python scraper error:`, scraperError);
+    }
+
     if (code !== 0) {
       return res.status(500).json({
+        success: false,
         error: 'Failed to scrape website',
         details: scraperError
       });
@@ -129,15 +241,19 @@ else:
       const companyInfo = JSON.parse(jsonLine);
 
       if (companyInfo.error) {
-        return res.status(500).json({ error: companyInfo.error });
+        return res.status(500).json({
+          success: false,
+          error: companyInfo.error
+        });
       }
 
       // Now generate the personalized message using OpenAI with company info
-      generatePersonalizedMessage(companyInfo, linkedinData, res);
+      generatePersonalizedMessage(companyInfo, linkedinData, res, startTime, clientIp, contactName, userProfile);
 
     } catch (e) {
-      console.error('Error parsing scraper output:', e);
+      console.error(`❌ [${clientIp}] Error parsing scraper output:`, e);
       res.status(500).json({
+        success: false,
         error: 'Failed to parse scraper output',
         details: scraperOutput
       });
@@ -145,119 +261,176 @@ else:
   });
 }
 
-async function generateMessageWithoutCompanyInfo(linkedinData: LinkedInData, res: express.Response) {
+async function generateMessageWithoutCompanyInfo(linkedinData: LinkedInData, res: express.Response, startTime: number, clientIp: string, contactName: string, userProfile: { name: string; title: string; } | null) {
   try {
     let prompt = '';
     
     if (linkedinData.outreachType === 'Interest in Acquisition') {
-      prompt = `You are a search fund professional reaching out to a potential contact. Generate a personalized LinkedIn message based on the following information:
+      prompt = `You are ${userProfile?.name || 'a search fund professional'}, ${userProfile?.title || 'a search fund professional'}, reaching out to a potential acquisition target.
 
-TARGET PERSON'S LinkedIn Profile Data:
-Interest: ${linkedinData.interest}
-About Me: ${linkedinData.aboutMe}
-Experience: ${linkedinData.experience}
-Latest Post: ${linkedinData.latestPost}
+CONTACT INFORMATION:
+Contact Name: ${contactName}
+First Name: ${contactName.split(' ')[0]}
+
+TARGET PERSON'S DETAILED LinkedIn Profile Data:
+Contact Name: ${linkedinData.contactName}
+Specific Companies: ${linkedinData.specificCompanies}
+Specific Roles: ${linkedinData.specificRoles}
+Key Achievements: ${linkedinData.achievements}
+Skills/Expertise: ${linkedinData.skills}
+About/Summary: ${linkedinData.aboutMe}
 Education: ${linkedinData.education}
 Location: ${linkedinData.location}
+Latest Post: ${linkedinData.latestPost}
 Call Preference: ${linkedinData.callPreference}
 
-CONTEXT: You are a search fund professional exploring acquisition opportunities. This is an initial outreach without specific company research yet.
+CRITICAL PERSONALIZATION REQUIREMENTS:
+1. Start with "Hi ${contactName.split(' ')[0] || contactName}," (use first name only in greeting)
+2. Reference SPECIFIC companies, roles, or achievements from their profile (not generic industry terms)
+3. Use exact company names and job titles mentioned in their experience
+4. Reference specific numbers, metrics, or accomplishments when available
+5. End with proper signature: "Best regards,\n${userProfile?.name || 'Shariq Hafizi'}\n${userProfile?.title || 'Founder & CEO, Equitle'}"
+
+EXAMPLES OF SPECIFIC vs GENERIC:
+❌ AVOID: "your experience in SaaS and growth marketing"
+✅ USE: "your role as VP of Growth at Slack where you scaled user acquisition from 1M to 10M users"
+
+❌ AVOID: "your background in finance"
+✅ USE: "your experience as Managing Director at Goldman Sachs leading the $2B technology investment fund"
 
 TASK:
-Create a personalized acquisition-focused outreach message that:
-1. References specific details from the target person's LinkedIn profile
-2. Shows genuine interest in their business/industry expertise
+Create a highly personalized acquisition-focused outreach message that:
+1. Uses their specific company names, job titles, and achievements
+2. Shows you've thoroughly researched their background
 3. Incorporates their call preference: ${linkedinData.callPreference}
-4. Positions you as a search fund professional interested in learning about potential opportunities
-5. Is professional but warm and engaging
-6. Includes a clear call-to-action for the specific time preference
-7. Is concise and respectful of their time
+4. Positions you as a search fund professional interested in learning about potential acquisition opportunities
+5. References specific accomplishments or notable experiences from their profile
+6. Is professional but warm and engaging
+7. Includes clear call-to-action for the specified time preference
 
 FORMAT:
 Return a JSON object with:
-- subject: Email subject line
-- body: The message body
-- approach: Brief explanation of why this approach was chosen
+- subject: Compelling email subject line referencing something specific from their background
+- body: The complete message body with proper greeting and signature
+- approach: Brief explanation of the specific personalization used
 
-Make the message feel personal and authentic based on their LinkedIn profile.`;
+The message should feel like you've done extensive research on them specifically.`;
     } else if (linkedinData.outreachType === 'Interest in Entrepreneurial Journey') {
-      prompt = `You are a search fund professional reaching out to learn from a successful entrepreneur. Generate a personalized LinkedIn message based on the following information:
+      prompt = `You are ${userProfile?.name || 'a search fund professional'}, ${userProfile?.title || 'a search fund professional'}, reaching out to learn from a successful entrepreneur.
 
-TARGET PERSON'S LinkedIn Profile Data:
-Interest: ${linkedinData.interest}
-About Me: ${linkedinData.aboutMe}
-Experience: ${linkedinData.experience}
-Latest Post: ${linkedinData.latestPost}
+CONTACT INFORMATION:
+Contact Name: ${contactName}
+First Name: ${contactName.split(' ')[0]}
+
+TARGET PERSON'S DETAILED LinkedIn Profile Data:
+Contact Name: ${linkedinData.contactName}
+Specific Companies: ${linkedinData.specificCompanies}
+Specific Roles: ${linkedinData.specificRoles}
+Key Achievements: ${linkedinData.achievements}
+Skills/Expertise: ${linkedinData.skills}
+About/Summary: ${linkedinData.aboutMe}
 Education: ${linkedinData.education}
 Location: ${linkedinData.location}
+Latest Post: ${linkedinData.latestPost}
 Call Preference: ${linkedinData.callPreference}
 
-CONTEXT: You are a search fund professional looking to learn from successful entrepreneurs and their experiences.
+CRITICAL PERSONALIZATION REQUIREMENTS:
+1. Start with "Hi ${contactName.split(' ')[0] || contactName}," (use first name only in greeting)
+2. Reference SPECIFIC companies they founded/led, deals they closed, or teams they built
+3. Use exact company names, funding amounts, growth metrics, or team sizes when available
+4. Reference their specific entrepreneurial achievements and journey milestones
+5. End with proper signature: "Best regards,\n${userProfile?.name || 'Shariq Hafizi'}\n${userProfile?.title || 'Founder & CEO, Equitle'}"
+
+EXAMPLES OF SPECIFIC vs GENERIC:
+❌ AVOID: "your entrepreneurial experience"
+✅ USE: "your journey building Airbnb from a simple idea to a $75B company serving 1B+ guests"
+
+❌ AVOID: "your startup background"
+✅ USE: "how you led Stripe through their Series A to $95B valuation, scaling from 50 to 3,000+ employees"
 
 TASK:
-Create a personalized entrepreneurial journey-focused outreach message that:
-1. References specific details from the target person's LinkedIn profile
-2. Shows genuine interest in learning from their journey and experiences
+Create a highly personalized entrepreneurial journey-focused outreach message that:
+1. References their specific companies, funding rounds, growth metrics, or notable achievements
+2. Shows genuine interest in learning from their specific journey and experiences
 3. Incorporates their call preference: ${linkedinData.callPreference}
-4. Positions you as a search fund professional seeking mentorship/insights
-5. Is professional but warm and engaging
-6. Includes a clear call-to-action for the specific time preference
-7. Is concise and respectful of their time
+4. Positions you as a search fund professional seeking specific insights/mentorship
+5. References their actual entrepreneurial accomplishments with numbers when possible
+6. Is professional but warm and shows you've done extensive research
+7. Includes clear call-to-action for the specified time preference
 
 FORMAT:
 Return a JSON object with:
-- subject: Email subject line
-- body: The message body
-- approach: Brief explanation of why this approach was chosen
+- subject: Compelling email subject line referencing their specific entrepreneurial achievement
+- body: The complete message body with proper greeting and signature
+- approach: Brief explanation of the specific entrepreneurial details referenced
 
-Make the message feel personal and authentic. Show that you've researched their profile and are genuinely interested in learning from them.`;
+Make the message feel personal and show that you've researched their specific journey.`;
     } else {
       // Default prompt
-      prompt = `You are a search fund professional reaching out to a potential business connection. Generate a personalized LinkedIn message based on the following information:
+      prompt = `You are ${userProfile?.name || 'a search fund professional'}, ${userProfile?.title || 'a search fund professional'}, reaching out to a potential business connection.
 
-TARGET PERSON'S LinkedIn Profile Data:
-Interest: ${linkedinData.interest}
-About Me: ${linkedinData.aboutMe}
-Experience: ${linkedinData.experience}
-Latest Post: ${linkedinData.latestPost}
+CONTACT INFORMATION:
+Contact Name: ${contactName}
+First Name: ${contactName.split(' ')[0]}
+
+TARGET PERSON'S DETAILED LinkedIn Profile Data:
+Contact Name: ${linkedinData.contactName}
+Specific Companies: ${linkedinData.specificCompanies}
+Specific Roles: ${linkedinData.specificRoles}
+Key Achievements: ${linkedinData.achievements}
+Skills/Expertise: ${linkedinData.skills}
+About/Summary: ${linkedinData.aboutMe}
 Education: ${linkedinData.education}
 Location: ${linkedinData.location}
+Latest Post: ${linkedinData.latestPost}
 Call Preference: ${linkedinData.callPreference}
 
-CONTEXT: You are a search fund professional looking to connect with potential business opportunities and interesting people in your space.
+CRITICAL PERSONALIZATION REQUIREMENTS:
+1. Start with "Hi ${contactName.split(' ')[0] || contactName}," (use first name only in greeting)
+2. Reference SPECIFIC companies, roles, or achievements from their profile
+3. Use exact company names and job titles mentioned in their experience
+4. Reference specific accomplishments or notable work when available
+5. End with proper signature: "Best regards,\n${userProfile?.name || 'Shariq Hafizi'}\n${userProfile?.title || 'Founder & CEO, Equitle'}"
+
+EXAMPLES OF SPECIFIC vs GENERIC:
+❌ AVOID: "your experience in technology"
+✅ USE: "your role as CTO at Tesla where you led the development of the Model S autopilot system"
+
+❌ AVOID: "your background in consulting"
+✅ USE: "your work as Partner at McKinsey leading digital transformation projects for Fortune 500 companies"
 
 TASK:
-Create a personalized outreach message that:
-1. References specific details from the target person's LinkedIn profile
-2. Shows genuine interest in their work and background
+Create a highly personalized business outreach message that:
+1. Uses their specific company names, job titles, and achievements
+2. Shows genuine interest in their professional background
 3. Incorporates their call preference: ${linkedinData.callPreference}
-4. Positions you as a search fund professional
-5. Is professional but warm and engaging
-6. Includes a clear call-to-action for the specific time preference
-7. Is concise and respectful of their time
+4. Positions you as a search fund professional looking to connect
+5. References specific accomplishments or notable experiences from their profile
+6. Is professional but warm and engaging
+7. Includes clear call-to-action for the specified time preference
 
 FORMAT:
 Return a JSON object with:
-- subject: Email subject line
-- body: The message body
-- approach: Brief explanation of why this approach was chosen
+- subject: Compelling email subject line referencing something specific from their background
+- body: The complete message body with proper greeting and signature
+- approach: Brief explanation of the specific details referenced
 
-Make the message feel personal and authentic based on their LinkedIn profile.`;
+Make the message feel personal and show that you've researched their specific background.`;
     }
 
     const openaiService = new OpenAIService();
     
     try {
-      console.log('🤖 Calling OpenAI to generate personalized message (without company data)...');
-      
+      console.log(`🤖 [${clientIp}] Calling OpenAI to generate personalized message (without company data)...`);
+
       const aiResponse = await openaiService.generateResponse(
         prompt,
         [],
         ''
       );
-      
-      console.log('✅ OpenAI response received:', aiResponse.substring(0, 200) + '...');
-      
+
+      console.log(`✅ [${clientIp}] OpenAI response received:`, aiResponse.substring(0, 200) + '...');
+
       // Parse the AI response
       let aiMessage;
       try {
@@ -272,16 +445,17 @@ Make the message feel personal and authentic based on their LinkedIn profile.`;
           };
         }
       } catch (parseError) {
-        console.log('⚠️ Could not parse AI response as JSON, using as-is');
+        console.log(`⚠️ [${clientIp}] Could not parse AI response as JSON, using as-is`);
         aiMessage = {
           subject: `Let's connect`,
           body: aiResponse,
           approach: `AI-generated message based on ${linkedinData.outreachType}`
         };
       }
-      
-      console.log('📧 Generated message:', aiMessage.subject);
-      
+
+      const duration = Date.now() - startTime;
+      console.log(`📧 [${clientIp}] Generated message: "${aiMessage.subject}" (${duration}ms)`);
+
       res.json({
         success: true,
         data: {
@@ -293,15 +467,18 @@ Make the message feel personal and authentic based on their LinkedIn profile.`;
       });
       
     } catch (openaiError) {
-      console.error('❌ OpenAI API error:', openaiError);
-      
+      console.error(`❌ [${clientIp}] OpenAI API error:`, openaiError);
+
       // Fallback to a basic template if OpenAI fails
       const fallbackMessage = {
         subject: `Quick question`,
         body: `Hi there,\n\nI came across your profile and was impressed by your background in ${linkedinData.experience}. I'm a search fund professional and would love to connect.\n\nI'm particularly interested in ${linkedinData.callPreference.toLowerCase()} to discuss potential opportunities.\n\nWould you be open to a brief call ${linkedinData.callPreference.toLowerCase()}?\n\nBest regards,\nShariq Hafizi\nFounder & CEO, Equitle`,
         approach: `Fallback message due to OpenAI error: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`
       };
-      
+
+      const duration = Date.now() - startTime;
+      console.log(`📧 [${clientIp}] Using fallback message (${duration}ms)`);
+
       res.json({
         success: true,
         data: {
@@ -314,8 +491,12 @@ Make the message feel personal and authentic based on their LinkedIn profile.`;
     }
 
   } catch (error) {
-    console.error('Error generating message without company info:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [${clientIp}] Error generating message without company info:`, error);
+    console.log(`⏱️ [${clientIp}] Request failed after ${duration}ms`);
+
     res.status(500).json({
+      success: false,
       error: 'Failed to generate personalized message',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -325,23 +506,41 @@ Make the message feel personal and authentic based on their LinkedIn profile.`;
 async function extractLinkedInData(rawLinkedInText: string): Promise<LinkedInData> {
   try {
     const openaiService = new OpenAIService();
-    
-    const extractionPrompt = `Extract the following information from this LinkedIn profile text:
+
+    const extractionPrompt = `You are an expert at extracting specific details from LinkedIn profiles. Extract the following information with maximum specificity and detail:
 
 LINKEDIN PROFILE TEXT:
 ${rawLinkedInText}
 
+CRITICAL INSTRUCTIONS:
+- Extract SPECIFIC company names, job titles, achievements, and numbers/metrics
+- Do NOT generalize (e.g., avoid "experience in SaaS" - instead say "VP of Engineering at Stripe, scaling payment infrastructure")
+- Include specific accomplishments, revenue numbers, team sizes, growth metrics when available
+- Preserve exact company names, job titles, and quantifiable results
+
 Please extract and return ONLY a JSON object with these exact fields:
 {
-  "interest": "What the person is passionate about professionally",
-  "aboutMe": "Their about/summary section content", 
-  "experience": "Their work experience and key achievements",
-  "latestPost": "Their most recent LinkedIn post or update",
-  "education": "Their educational background and degrees",
-  "location": "Their city, state/country"
+  "contactName": "The person's full name (first and last name)",
+  "interest": "What the person is passionate about professionally based on their profile",
+  "aboutMe": "Their about/summary section content verbatim",
+  "experience": "Complete work experience with specific companies, roles, and timeframes",
+  "specificCompanies": "List of specific company names they've worked at (e.g., 'Google, Microsoft, Stripe')",
+  "specificRoles": "List of specific job titles they've held (e.g., 'VP Engineering, Senior Product Manager, Founder')",
+  "achievements": "Specific accomplishments with numbers/metrics when available (e.g., 'Scaled team from 5 to 50 engineers', 'Increased revenue by 300%', 'Led $10M funding round')",
+  "skills": "Specific technical skills, expertise areas, or industry knowledge mentioned",
+  "latestPost": "Their most recent LinkedIn post or update content",
+  "education": "Educational background including specific schools, degrees, and any notable achievements",
+  "location": "Their current city, state/country"
 }
 
-If any information is not available, use "Not specified" for that field.
+EXAMPLES OF GOOD vs BAD EXTRACTION:
+❌ BAD: "experience in SaaS and growth marketing"
+✅ GOOD: "VP of Growth at Slack where she scaled user acquisition from 1M to 10M users through innovative referral programs and product-led growth strategies"
+
+❌ BAD: "background in finance"
+✅ GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
+
+If any information is not available or unclear, use "Not specified" for that field.
 Return ONLY the JSON object, no other text.`;
 
     const aiResponse = await openaiService.generateResponse(
@@ -355,7 +554,17 @@ Return ONLY the JSON object, no other text.`;
     if (jsonMatch) {
       const extractedData = JSON.parse(jsonMatch[0]);
       return {
-        ...extractedData,
+        contactName: extractedData.contactName || 'Not specified',
+        interest: extractedData.interest || 'Not specified',
+        aboutMe: extractedData.aboutMe || 'Not specified',
+        experience: extractedData.experience || 'Not specified',
+        specificCompanies: extractedData.specificCompanies || 'Not specified',
+        specificRoles: extractedData.specificRoles || 'Not specified',
+        achievements: extractedData.achievements || 'Not specified',
+        skills: extractedData.skills || 'Not specified',
+        latestPost: extractedData.latestPost || 'Not specified',
+        education: extractedData.education || 'Not specified',
+        location: extractedData.location || 'Not specified',
         callPreference: '',
         outreachType: ''
       };
@@ -363,9 +572,14 @@ Return ONLY the JSON object, no other text.`;
 
     // Fallback if JSON parsing fails
     return {
+      contactName: 'Not specified',
       interest: 'Not specified',
-      aboutMe: 'Not specified', 
+      aboutMe: 'Not specified',
       experience: 'Not specified',
+      specificCompanies: 'Not specified',
+      specificRoles: 'Not specified',
+      achievements: 'Not specified',
+      skills: 'Not specified',
       latestPost: 'Not specified',
       education: 'Not specified',
       location: 'Not specified',
@@ -376,9 +590,14 @@ Return ONLY the JSON object, no other text.`;
   } catch (error) {
     console.error('Error extracting LinkedIn data:', error);
     return {
+      contactName: 'Not specified',
       interest: 'Not specified',
       aboutMe: 'Not specified',
-      experience: 'Not specified', 
+      experience: 'Not specified',
+      specificCompanies: 'Not specified',
+      specificRoles: 'Not specified',
+      achievements: 'Not specified',
+      skills: 'Not specified',
       latestPost: 'Not specified',
       education: 'Not specified',
       location: 'Not specified',
@@ -388,46 +607,62 @@ Return ONLY the JSON object, no other text.`;
   }
 }
 
-async function generatePersonalizedMessage(companyInfo: any, linkedinData: LinkedInData, res: express.Response) {
+async function generatePersonalizedMessage(companyInfo: any, linkedinData: LinkedInData, res: express.Response, startTime: number, clientIp: string, contactName: string, userProfile: { name: string; title: string; } | null) {
   try {
     let prompt = '';
     
     if (linkedinData.outreachType === 'Interest in Acquisition') {
-      prompt = `You are a search fund professional reaching out to a potential acquisition target. Generate a personalized LinkedIn message based on the following information:
+      prompt = `You are ${userProfile?.name || 'a search fund professional'}, ${userProfile?.title || 'a search fund professional'}, reaching out to a potential acquisition target.
+
+CONTACT INFORMATION:
+Contact Name: ${contactName}
+First Name: ${contactName.split(' ')[0]}
 
 TARGET COMPANY INFORMATION:
 Company: ${companyInfo.company_name}
 Website: ${companyInfo.url}
 About Text: ${companyInfo.about_text}
 
-TARGET PERSON'S LinkedIn Profile Data (this is the person you're reaching out to - likely the founder/owner/decision maker):
-Interest: ${linkedinData.interest}
-About Me: ${linkedinData.aboutMe}
-Experience: ${linkedinData.experience}
-Latest Post: ${linkedinData.latestPost}
+TARGET PERSON'S DETAILED LinkedIn Profile Data:
+Contact Name: ${linkedinData.contactName}
+Specific Companies: ${linkedinData.specificCompanies}
+Specific Roles: ${linkedinData.specificRoles}
+Key Achievements: ${linkedinData.achievements}
+Skills/Expertise: ${linkedinData.skills}
+About/Summary: ${linkedinData.aboutMe}
 Education: ${linkedinData.education}
 Location: ${linkedinData.location}
+Latest Post: ${linkedinData.latestPost}
 Call Preference: ${linkedinData.callPreference}
 
-CONTEXT: You are a search fund professional looking to acquire or partner with this company. The LinkedIn data above is about the person you're reaching out to (the target), not about you.
+CRITICAL PERSONALIZATION REQUIREMENTS:
+1. Start with "Hi ${contactName.split(' ')[0] || contactName}," (use first name only in greeting)
+2. Reference SPECIFIC companies, roles, achievements, and metrics from their profile
+3. Mention specific aspects of their company (${companyInfo.company_name}) from the website research
+4. Use exact company names, job titles, and accomplishments
+5. End with proper signature: "Best regards,\n${userProfile?.name || 'Shariq Hafizi'}\n${userProfile?.title || 'Founder & CEO, Equitle'}"
+
+EXAMPLES OF SPECIFIC vs GENERIC:
+❌ AVOID: "your experience in the tech industry and your company"
+✅ USE: "your role as CTO at ${companyInfo.company_name} where you've built the AI-powered platform serving 50,000+ customers"
 
 TASK:
-Create a personalized acquisition-focused outreach message that:
-1. References specific details from the target person's LinkedIn profile
-2. Mentions relevant information from their company website
+Create a highly personalized acquisition-focused outreach message that:
+1. Uses their specific company names, job titles, and achievements from LinkedIn
+2. References specific details about ${companyInfo.company_name} from the company research
 3. Incorporates their call preference: ${linkedinData.callPreference}
-4. Positions you as a search fund professional interested in acquisition/partnership
-5. Shows you've done your homework on both the person and their company
+4. Positions you as a search fund professional interested in acquisition opportunities
+5. Shows you've researched both their personal background and their company thoroughly
 6. Is professional but warm and engaging
-7. Includes a clear call-to-action for the specific time preference
+7. Includes clear call-to-action for the specified time preference
 
 FORMAT:
 Return a JSON object with:
-- subject: Email subject line
-- body: The message body
-- approach: Brief explanation of why this approach was chosen
+- subject: Compelling email subject line mentioning their company or specific achievement
+- body: The complete message body with proper greeting and signature
+- approach: Brief explanation of the specific personalization used
 
-Make the message feel personal and authentic. Show that you understand their business and have researched them specifically as a search fund professional.`;
+Make the message feel like you've done extensive research on both them personally and their company.`;
     } else if (linkedinData.outreachType === 'Interest in Entrepreneurial Journey') {
       prompt = `You are a search fund professional reaching out to learn from a successful entrepreneur's journey. Generate a personalized LinkedIn message based on the following information:
 
@@ -506,16 +741,16 @@ Make the message feel personal and authentic. Show that you understand their bus
     const openaiService = new OpenAIService();
     
     try {
-      console.log('🤖 Calling OpenAI to generate personalized message...');
-      
+      console.log(`🤖 [${clientIp}] Calling OpenAI to generate personalized message...`);
+
       const aiResponse = await openaiService.generateResponse(
         prompt,
         [],
         ''
       );
-      
-      console.log('✅ OpenAI response received:', aiResponse.substring(0, 200) + '...');
-      
+
+      console.log(`✅ [${clientIp}] OpenAI response received:`, aiResponse.substring(0, 200) + '...');
+
       // Parse the AI response
       let aiMessage;
       try {
@@ -530,16 +765,17 @@ Make the message feel personal and authentic. Show that you understand their bus
           };
         }
       } catch (parseError) {
-        console.log('⚠️ Could not parse AI response as JSON, using as-is');
+        console.log(`⚠️ [${clientIp}] Could not parse AI response as JSON, using as-is`);
         aiMessage = {
           subject: `Personalized outreach to ${companyInfo.company_name}`,
           body: aiResponse,
           approach: `AI-generated message based on ${linkedinData.outreachType}`
         };
       }
-      
-      console.log('📧 Generated message:', aiMessage.subject);
-      
+
+      const duration = Date.now() - startTime;
+      console.log(`📧 [${clientIp}] Generated message: "${aiMessage.subject}" (${duration}ms)`);
+
       res.json({
         success: true,
         data: {
@@ -555,14 +791,17 @@ Make the message feel personal and authentic. Show that you understand their bus
       });
       
     } catch (openaiError) {
-      console.error('❌ OpenAI API error:', openaiError);
-      
+      console.error(`❌ [${clientIp}] OpenAI API error:`, openaiError);
+
       const fallbackMessage = {
         subject: `Quick question about ${companyInfo.company_name}`,
         body: `Hi there,\n\nI came across ${companyInfo.company_name} and was impressed by your work. Based on your background in ${linkedinData.experience}, I thought you might be interested in connecting.\n\nI'm particularly interested in ${linkedinData.callPreference.toLowerCase()} to discuss potential opportunities.\n\nWould you be open to a brief call ${linkedinData.callPreference.toLowerCase()}?\n\nBest regards,\nShariq Hafizi\nFounder & CEO, Equitle`,
         approach: `Fallback message due to OpenAI error: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`
       };
-      
+
+      const duration = Date.now() - startTime;
+      console.log(`📧 [${clientIp}] Using fallback message (${duration}ms)`);
+
       res.json({
         success: true,
         data: {
@@ -579,8 +818,12 @@ Make the message feel personal and authentic. Show that you understand their bus
     }
 
   } catch (error) {
-    console.error('Error generating message:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [${clientIp}] Error generating message:`, error);
+    console.log(`⏱️ [${clientIp}] Request failed after ${duration}ms`);
+
     res.status(500).json({
+      success: false,
       error: 'Failed to generate personalized message',
       details: error instanceof Error ? error.message : 'Unknown error'
     });

@@ -854,7 +854,7 @@ const MyThesis: React.FC = () => {
       console.log('Using template:', templateValue, '(frontend value:', selectedIndustryTemplate, ')');
 
       // Call the basic document generation API
-      const response = await axios.post('/api/one-pager/generate-basic-document', {
+      const response = await axios.post<Blob>('/api/one-pager/generate-basic-document', {
         thesisData,
         selectedIndustry: industryToUse,
         template: templateValue

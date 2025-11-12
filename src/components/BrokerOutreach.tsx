@@ -310,7 +310,7 @@ const BrokerOutreach: React.FC = () => {
           callPreference: globalCallPreference
         });
 
-        const response = await axios.post('/api/broker-outreach/generate-message', {
+        const response = await axios.post<{ success: boolean; data?: any; error?: string }>('/api/broker-outreach/generate-message', {
           brokerData: {
             rawLinkedInText: profile.rawLinkedInText,
             websiteUrl: profile.websiteUrl,
