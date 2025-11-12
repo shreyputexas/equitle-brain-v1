@@ -8,7 +8,8 @@ export interface SlybroadcastConfig {
 
 export interface VoicemailDeliveryRequest {
   phoneNumbers: string[];
-  mp3FilePath: string;
+  mp3FilePath?: string;
+  mp3Url?: string;
   callerIdNumber?: string;
   callerIdName?: string;
   title?: string;
@@ -62,6 +63,8 @@ export class SlybroadcastService {
         phoneNumber: request.phoneNumber,
         mp3File: request.mp3FilePath,
         mp3Url: request.mp3Url,
+        hasMp3Url: !!request.mp3Url,
+        hasMp3FilePath: !!request.mp3FilePath,
         title: request.title
       });
 
@@ -97,15 +100,56 @@ export class SlybroadcastService {
       formParams.append('c_phone', validPhone);
       formParams.append('c_date', dateStr);
 
-      // Use external URL (required for Slybroadcast)
-      if (request.mp3Url) {
-        formParams.append('c_url', request.mp3Url);
+      // Use external URL if provided (PREFERRED METHOD for Slybroadcast)
+      // Slybroadcast API requires publicly accessible URLs, not base64 data
+      if (request.mp3Url && request.mp3Url.trim() && request.mp3Url.startsWith('http')) {
+        const cleanUrl = request.mp3Url.trim();
+        
+        // Warn if URL is localhost (won't work for Slybroadcast)
+        if (cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1')) {
+          logger.error('❌ MP3 URL is localhost - Slybroadcast cannot access it!', {
+            mp3Url: cleanUrl,
+            phoneNumber: validPhone,
+            hint: 'Set BASE_URL or BACKEND_URL environment variable to your production domain'
+          });
+          return {
+            success: false,
+            error: `MP3 URL is not publicly accessible (localhost). Please set BASE_URL or BACKEND_URL environment variable. URL: ${cleanUrl}`
+          };
+        }
+        
+        formParams.append('c_url', cleanUrl);
         formParams.append('c_audio', 'MP3'); // Required: specify file type
-        logger.info('📡 Using MP3 URL for delivery', { mp3Url: request.mp3Url });
+        logger.info('📡 Using MP3 URL for delivery (preferred method)', { 
+          mp3Url: cleanUrl,
+          urlLength: cleanUrl.length
+        });
+      } else if (request.mp3FilePath) {
+        // Fallback to base64 only if URL is not available
+        // NOTE: Base64 method is less reliable - prefer URL method
+        logger.warn('⚠️ Using base64 file upload (URL method preferred)', {
+          mp3FilePath: request.mp3FilePath,
+          reason: 'mp3Url not provided'
+        });
+        
+        if (!fs.existsSync(request.mp3FilePath)) {
+          return {
+            success: false,
+            error: 'MP3 file not found'
+          };
+        }
+        const audioBuffer = fs.readFileSync(request.mp3FilePath);
+        const audioBase64 = audioBuffer.toString('base64');
+        formParams.append('c_record_audio', audioBase64);
+        logger.info('📡 Using MP3 file upload (base64) for delivery', { 
+          mp3FilePath: request.mp3FilePath, 
+          fileSize: audioBuffer.length 
+        });
       } else {
+        logger.error('❌ No MP3 URL or file path provided');
         return {
           success: false,
-          error: 'MP3 URL is required for Slybroadcast delivery. File uploads not supported.'
+          error: 'Either MP3 URL or MP3 file path is required for Slybroadcast delivery'
         };
       }
 
@@ -213,16 +257,9 @@ export class SlybroadcastService {
       logger.info('🚀 Starting Slybroadcast voicemail delivery', {
         phoneCount: request.phoneNumbers.length,
         mp3File: request.mp3FilePath,
+        mp3Url: request.mp3Url,
         title: request.title
       });
-
-      // Check if MP3 file exists
-      if (!fs.existsSync(request.mp3FilePath)) {
-        return {
-          success: false,
-          error: 'MP3 file not found'
-        };
-      }
 
       // Required date parameter (immediate delivery)
       const now = new Date();
@@ -238,10 +275,6 @@ export class SlybroadcastService {
 
       const dateStr = `${easternTime.find(p => p.type === 'month')?.value}/${easternTime.find(p => p.type === 'day')?.value}/${easternTime.find(p => p.type === 'year')?.value} ${easternTime.find(p => p.type === 'hour')?.value}:${easternTime.find(p => p.type === 'minute')?.value}`;
 
-      // Read the audio file as base64
-      const audioBuffer = fs.readFileSync(request.mp3FilePath);
-      const audioBase64 = audioBuffer.toString('base64');
-
       // Create URL-encoded form data (as expected by their API)
       const formParams = new URLSearchParams();
       formParams.append('c_uid', this.email);
@@ -249,10 +282,30 @@ export class SlybroadcastService {
       formParams.append('c_phone', request.phoneNumbers.join(','));
       formParams.append('c_date', dateStr);
 
-      // For bulk campaigns, we'll use the first MP3 file as URL
-      // In production, you'd want to use a single representative audio file
-      formParams.append('c_url', `${process.env.BACKEND_URL || 'http://localhost:4001'}/uploads/campaigns/temp/${request.mp3FilePath}`);
-      formParams.append('c_audio', 'MP3');
+      // Use public URL if provided (preferred method for Slybroadcast)
+      if (request.mp3Url) {
+        formParams.append('c_url', request.mp3Url);
+        formParams.append('c_audio', 'MP3'); // Required: specify file type
+        logger.info('📡 Using MP3 URL for bulk delivery', { mp3Url: request.mp3Url });
+      } else if (request.mp3FilePath) {
+        // Fallback to file upload if URL not provided
+        if (!fs.existsSync(request.mp3FilePath)) {
+          return {
+            success: false,
+            error: 'MP3 file not found'
+          };
+        }
+        // Read the audio file as base64
+        const audioBuffer = fs.readFileSync(request.mp3FilePath);
+        const audioBase64 = audioBuffer.toString('base64');
+        formParams.append('c_record_audio', audioBase64);
+        logger.info('📡 Using MP3 file upload for bulk delivery', { mp3FilePath: request.mp3FilePath, fileSize: audioBuffer.length });
+      } else {
+        return {
+          success: false,
+          error: 'Either MP3 URL or MP3 file path is required for Slybroadcast delivery'
+        };
+      }
 
       // Caller ID is required
       if (!request.callerIdNumber) {
@@ -269,9 +322,8 @@ export class SlybroadcastService {
         phoneNumbers: request.phoneNumbers.join(','),
         date: dateStr,
         callerID: request.callerIdNumber || 'none',
-        audioFile: request.mp3FilePath,
-        audioSize: audioBuffer.length,
-        base64Length: audioBase64.length
+        mp3Url: request.mp3Url,
+        mp3FilePath: request.mp3FilePath
       });
 
       // Send request to Slybroadcast with URL-encoded form data
