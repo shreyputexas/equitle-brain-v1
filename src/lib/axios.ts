@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { auth } from './firebase';
+import { API_BASE_URL } from '../config/api';
 
-// Create axios instance
-const axiosInstance = axios.create({});
+// Create axios instance with proper base URL
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL
+});
 
 // Request interceptor to add fresh token to every request
 axiosInstance.interceptors.request.use(
