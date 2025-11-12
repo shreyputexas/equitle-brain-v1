@@ -57,6 +57,7 @@ interface Contact {
   state?: string;
   country?: string;
   tags?: string[];
+  originalTags?: string[];
 }
 
 interface BulkBrokerProfile {
@@ -128,6 +129,7 @@ const BrokerOutreach: React.FC = () => {
       const contactsWithTypes = contactsList.map((contact: any) => {
         let contactType: 'deal' | 'investor' | 'broker' = 'deal';
         const tags = contact.tags || [];
+        const originalTags = [...tags]; // Preserve original tags for filtering
 
         if (tags.includes('investor') || tags.includes('investors')) {
           contactType = 'investor';
@@ -144,6 +146,7 @@ const BrokerOutreach: React.FC = () => {
           last_name: contact.lastName || contact.last_name || '',
           type: contactType,
           status: contact.status || 'active',
+          originalTags: originalTags, // Preserve original tags for filtering
           tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
         };
       });

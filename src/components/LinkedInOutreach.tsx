@@ -66,6 +66,7 @@ interface Contact {
   state?: string;
   country?: string;
   tags?: string[];
+  originalTags?: string[];
 }
 
 interface LinkedInData {

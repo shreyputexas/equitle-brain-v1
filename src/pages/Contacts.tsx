@@ -72,6 +72,7 @@ interface Contact {
   headline?: string;
   photo_url?: string;
   tags?: string[];
+  originalTags?: string[]; // Preserve original tags for filtering
   lastContacted?: string;
   status?: 'active' | 'inactive' | 'pending';
   createdAt?: string;
@@ -132,6 +133,7 @@ const Contacts: React.FC = () => {
         // Determine contact type from tags
         let contactType: ContactType = 'deal';
         const tags = contact.tags || [];
+        const originalTags = [...tags]; // Preserve original tags for filtering
 
         if (tags.includes('investor') || tags.includes('investors')) {
           contactType = 'investor';
@@ -146,6 +148,7 @@ const Contacts: React.FC = () => {
           linkedin_url: contact.linkedinUrl || contact.linkedin_url, // Map backend camelCase to frontend snake_case
           type: contactType,
           status: contact.status || 'active',
+          originalTags: originalTags, // Preserve original tags for filtering
           tags: tags.filter((tag: string) => !['people', 'broker', 'investor', 'brokers', 'investors', 'deal'].includes(tag))
         };
       });
