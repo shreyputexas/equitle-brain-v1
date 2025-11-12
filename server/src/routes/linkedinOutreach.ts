@@ -75,8 +75,7 @@ const getUserProfileInfo = async (req: express.Request): Promise<{ name: string;
       return { name: 'Shariq Hafizi', title: 'Founder & CEO, Equitle' }; // Fallback
     }
 
-    const searcherProfilesService = new SearcherProfilesFirestoreService();
-    const profiles = await searcherProfilesService.getSearcherProfiles(userId);
+    const profiles = await SearcherProfilesFirestoreService.getSearcherProfiles(userId);
 
     console.log('🔍 LinkedIn Outreach - Searcher profiles retrieved:', {
       profileCount: profiles?.length || 0,
