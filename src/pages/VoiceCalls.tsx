@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { getApiUrl, getSocketUrl } from '../config/api';
+import axios from '../lib/axios';
+import { contactsApi } from '../services/contactsApi';
 import VoiceCallAnalytics from '../components/VoiceCallAnalytics';
 import CallInspectionModal from '../components/CallInspectionModal';
 import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
@@ -47,7 +49,12 @@ import {
   Stack,
   Collapse,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Checkbox,
+  ListItemIcon,
+  ListItemButton,
+  Autocomplete,
+  Fade
 } from '@mui/material';
 import {
   Phone as PhoneIcon,
@@ -74,7 +81,10 @@ import {
   Business as BusinessIcon,
   Analytics as AnalyticsIcon,
   CheckCircle as CheckCircleIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Search as SearchIcon,
+  ContactPhone as ContactPhoneIcon,
+  SelectAll as SelectAllIcon
 } from '@mui/icons-material';
 
 interface VoiceProfile {
@@ -116,6 +126,30 @@ interface CampaignContact {
   phoneNumber: string;
   companyName?: string;
   status: 'pending' | 'calling' | 'completed' | 'failed';
+}
+
+type ContactType = 'all' | 'deal' | 'investor' | 'broker';
+
+interface Contact {
+  id: string;
+  name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  phoneNumberStatus?: 'fetching' | 'available' | 'unavailable';
+  linkedin_url: string;
+  title: string;
+  company: string;
+  website?: string;
+  type: ContactType;
+  organization_id?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  headline?: string;
+  tags?: string[];
+  originalTags?: string[];
 }
 
 interface MessageTemplate {
@@ -236,6 +270,14 @@ export default function VoiceCalls() {
   
   // Custom voice request state
   const [showCustomVoiceDialog, setShowCustomVoiceDialog] = useState(false);
+
+  // Contact selection state
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([]);
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+  const [showContactSelector, setShowContactSelector] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [inputMode, setInputMode] = useState<'manual' | 'contacts'>('manual');
   const [customVoiceEmail, setCustomVoiceEmail] = useState('');
   const [customVoiceLoading, setCustomVoiceLoading] = useState(false);
   const [showCustomVoiceSuccess, setShowCustomVoiceSuccess] = useState(false);
@@ -338,10 +380,98 @@ export default function VoiceCalls() {
     }
   };
 
-  const handleStartCall = async () => {
-    if (!phoneNumber.trim()) {
-      setMessage('Please enter a phone number');
+  const handleMassCampaign = async () => {
+    if (selectedContacts.length === 0) {
+      setMessage('Please select at least one contact');
       setShowError(true);
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Create a mass campaign
+    try {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const campaignData = {
+        name: `Voice Campaign - ${new Date().toLocaleDateString()}`,
+        description: `Mass voice campaign for ${selectedContacts.length} contacts`,
+        messageTemplate: customInstructions.trim() || 'Voice campaign call',
+        contacts: selectedContacts.map(contact => ({
+          name: contact.name,
+          phoneNumber: contact.phone,
+          companyName: contact.company,
+          contactId: contact.id,
+          contactType: contact.type
+        })),
+        callSettings: {
+          callType,
+          dealType,
+          investmentRange,
+          industryFocus: industryFocus.trim(),
+          voiceId: selectedVoice || undefined,
+          callerName: callerName.trim(),
+          callObjective: callObjective.trim(),
+          referralSource: referralSource.trim(),
+          callingCompany: callingCompany.trim()
+        }
+      };
+
+      const response = await fetch(getApiUrl('voice-agent/create-mass-campaign'), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(campaignData)
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessage(`Mass campaign created successfully! Calling ${selectedContacts.length} contacts.`);
+        setShowSuccess(true);
+        // Switch to Mass Campaigns tab to show progress
+        setCurrentTab(1);
+        // Refresh campaigns
+        await loadCampaigns();
+        // Clear selection
+        setSelectedContacts([]);
+      } else {
+        throw new Error(data.message || 'Failed to create mass campaign');
+      }
+    } catch (error) {
+      console.error('Error creating mass campaign:', error);
+      setMessage(`Failed to create mass campaign: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setShowError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartCall = async () => {
+    // Validate input based on mode
+    if (inputMode === 'manual') {
+      if (!phoneNumber.trim()) {
+        setMessage('Please enter a phone number');
+        setShowError(true);
+        return;
+      }
+    } else {
+      if (selectedContacts.length === 0) {
+        setMessage('Please select at least one contact');
+        setShowError(true);
+        return;
+      }
+    }
+
+    // Handle multiple contacts (mass campaign)
+    if (inputMode === 'contacts' && selectedContacts.length > 1) {
+      handleMassCampaign();
       return;
     }
 
@@ -361,10 +491,10 @@ export default function VoiceCalls() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          phoneNumber: phoneNumber.trim(),
+          phoneNumber: inputMode === 'manual' ? phoneNumber.trim() : selectedContacts[0].phone,
           callType,
-          contactName: contactName.trim(),
-          companyName: companyName.trim(),
+          contactName: inputMode === 'manual' ? contactName.trim() : selectedContacts[0].name,
+          companyName: inputMode === 'manual' ? companyName.trim() : selectedContacts[0].company,
           dealType,
           investmentRange,
           industryFocus: industryFocus.trim(),
@@ -373,7 +503,10 @@ export default function VoiceCalls() {
           callerName: callerName.trim(),
           callObjective: callObjective.trim(),
           referralSource: referralSource.trim(),
-          callingCompany: callingCompany.trim()
+          callingCompany: callingCompany.trim(),
+          // Include contact metadata
+          contactId: inputMode === 'contacts' ? selectedContacts[0].id : undefined,
+          contactType: inputMode === 'contacts' ? selectedContacts[0].type : undefined
         })
       });
 
@@ -508,6 +641,89 @@ export default function VoiceCalls() {
     } catch (error) {
       console.error('Failed to load campaigns:', error);
       setCampaigns([]);
+    }
+  };
+
+  // Contact management functions
+  const fetchContacts = async () => {
+    try {
+      setContactsLoading(true);
+      console.log('Fetching contacts from contactsApi...');
+      const response = await contactsApi.getContacts({ limit: 1000 });
+
+      if (response.contacts && response.contacts.length > 0) {
+        const contactsData = response.contacts.map((contact: any) => ({
+          ...contact,
+          phone: contact.phone || contact.phoneNumber || contact.mobile,
+          type: contact.type || 'all'
+        }));
+        setContacts(contactsData);
+        console.log('Contacts loaded:', contactsData.length);
+      } else {
+        console.error('No contacts data received');
+        setContacts([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching contacts:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      setContacts([]);
+      if (error.response?.status === 401) {
+        setMessage('Authentication required to load contacts. Please sign in.');
+      } else {
+        setMessage(`Failed to load contacts: ${error.response?.data?.error || error.message}`);
+      }
+      setShowError(true);
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
+  const handleContactSelect = (contact: Contact) => {
+    if (selectedContacts.find(c => c.id === contact.id)) {
+      // Remove from selection
+      setSelectedContacts(prev => prev.filter(c => c.id !== contact.id));
+    } else {
+      // Add to selection
+      setSelectedContacts(prev => [...prev, contact]);
+    }
+  };
+
+  const handleSelectAllContacts = () => {
+    const filteredContacts = getFilteredContacts();
+    if (selectedContacts.length === filteredContacts.length) {
+      // Deselect all
+      setSelectedContacts([]);
+    } else {
+      // Select all
+      setSelectedContacts(filteredContacts);
+    }
+  };
+
+  const getFilteredContacts = () => {
+    return contacts.filter(contact => {
+      const hasPhone = contact.phone && contact.phone.trim() !== '';
+      const matchesSearch = contactSearchQuery === '' ||
+        contact.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+        contact.company.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+        (contact.phone && contact.phone.includes(contactSearchQuery));
+      return hasPhone && matchesSearch;
+    });
+  };
+
+  const handleInputModeChange = (event: any, newMode: 'manual' | 'contacts') => {
+    if (newMode !== null) {
+      setInputMode(newMode);
+      if (newMode === 'contacts' && contacts.length === 0) {
+        fetchContacts();
+      }
+      // Reset selections when switching modes
+      setSelectedContacts([]);
+      setPhoneNumber('');
     }
   };
 
@@ -1318,19 +1534,182 @@ export default function VoiceCalls() {
                 </FormControl>
               </Box>
 
-              {/* Phone Number Input */}
+              {/* Contact Selection Mode */}
               <Box sx={{ maxWidth: 500, mx: 'auto', mb: 4 }}>
-                <TextField
+                <ToggleButtonGroup
+                  value={inputMode}
+                  exclusive
+                  onChange={handleInputModeChange}
+                  aria-label="input mode"
                   fullWidth
-                  label="Phone Number"
-                  placeholder="+1 (555) 123-4567"
-                  value={phoneNumber}
-                  onChange={handlePhoneNumberChange}
                   sx={{ mb: 3 }}
-                  helperText="Enter the phone number to call (include country code)"
-                />
+                >
+                  <ToggleButton value="manual" aria-label="manual input">
+                    <PhoneIcon sx={{ mr: 1 }} />
+                    Manual Entry
+                  </ToggleButton>
+                  <ToggleButton value="contacts" aria-label="select from contacts">
+                    <ContactPhoneIcon sx={{ mr: 1 }} />
+                    Select Contacts
+                  </ToggleButton>
+                </ToggleButtonGroup>
 
-                {/* Voice Selection */}
+                {inputMode === 'manual' ? (
+                  <TextField
+                    fullWidth
+                    label="Phone Number"
+                    placeholder="+1 (555) 123-4567"
+                    value={phoneNumber}
+                    onChange={handlePhoneNumberChange}
+                    sx={{ mb: 3 }}
+                    helperText="Enter the phone number to call (include country code)"
+                  />
+                ) : (
+                  <Box>
+                    {/* Contact Search */}
+                    <TextField
+                      fullWidth
+                      label="Search Contacts"
+                      placeholder="Search by name, company, or phone..."
+                      value={contactSearchQuery}
+                      onChange={(e) => setContactSearchQuery(e.target.value)}
+                      InputProps={{
+                        startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                      }}
+                      sx={{ mb: 2 }}
+                    />
+
+                    {contactsLoading ? (
+                      <Box sx={{ textAlign: 'center', p: 3 }}>
+                        <CircularProgress size={24} />
+                        <Typography variant="body2" sx={{ mt: 1 }}>Loading contacts...</Typography>
+                      </Box>
+                    ) : (
+                      <Box>
+                        {/* Contact Selection Summary */}
+                        {selectedContacts.length > 0 && (
+                          <Paper sx={{ p: 2, mb: 2, bgcolor: 'primary.50' }}>
+                            <Typography variant="body2" color="primary">
+                              {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
+                            </Typography>
+                            <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                              {selectedContacts.slice(0, 3).map((contact) => (
+                                <Chip
+                                  key={contact.id}
+                                  label={`${contact.name} (${contact.phone})`}
+                                  size="small"
+                                  variant="outlined"
+                                  onDelete={() => handleContactSelect(contact)}
+                                />
+                              ))}
+                              {selectedContacts.length > 3 && (
+                                <Chip
+                                  label={`+${selectedContacts.length - 3} more`}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                          </Paper>
+                        )}
+
+                        {/* Contact List */}
+                        <Paper sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider' }}>
+                          {getFilteredContacts().length > 0 ? (
+                            <>
+                              {/* Select All Option */}
+                              <ListItemButton
+                                onClick={handleSelectAllContacts}
+                                sx={{ borderBottom: '1px solid', borderColor: 'divider' }}
+                              >
+                                <ListItemIcon>
+                                  <Checkbox
+                                    checked={selectedContacts.length === getFilteredContacts().length}
+                                    indeterminate={
+                                      selectedContacts.length > 0 && selectedContacts.length < getFilteredContacts().length
+                                    }
+                                  />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      Select All ({getFilteredContacts().length} contacts)
+                                    </Typography>
+                                  }
+                                />
+                              </ListItemButton>
+
+                              {/* Contact Items */}
+                              {getFilteredContacts().map((contact) => (
+                                <ListItemButton
+                                  key={contact.id}
+                                  onClick={() => handleContactSelect(contact)}
+                                  sx={{
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider',
+                                    '&:last-child': { borderBottom: 'none' }
+                                  }}
+                                >
+                                  <ListItemIcon>
+                                    <Checkbox checked={selectedContacts.some(c => c.id === contact.id)} />
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primary={
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                          {contact.name}
+                                        </Typography>
+                                        <Chip
+                                          label={contact.type || 'Contact'}
+                                          size="small"
+                                          sx={{
+                                            bgcolor: contact.type === 'deal' ? '#9333ea20' :
+                                                     contact.type === 'investor' ? '#2196F320' :
+                                                     contact.type === 'broker' ? '#FF980020' : '#9E9E9E20',
+                                            color: contact.type === 'deal' ? '#9333ea' :
+                                                   contact.type === 'investor' ? '#2196F3' :
+                                                   contact.type === 'broker' ? '#FF9800' : '#9E9E9E'
+                                          }}
+                                        />
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Box>
+                                        <Typography variant="caption" color="text.secondary">
+                                          {contact.phone} • {contact.company}
+                                        </Typography>
+                                      </Box>
+                                    }
+                                  />
+                                </ListItemButton>
+                              ))}
+                            </>
+                          ) : (
+                            <Box sx={{ p: 3, textAlign: 'center' }}>
+                              <ContactPhoneIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                              <Typography variant="body2" color="text.secondary">
+                                {contactSearchQuery ? 'No contacts match your search' : 'No contacts with phone numbers found'}
+                              </Typography>
+                              {!contactSearchQuery && (
+                                <Button
+                                  size="small"
+                                  onClick={fetchContacts}
+                                  sx={{ mt: 1 }}
+                                >
+                                  Refresh Contacts
+                                </Button>
+                              )}
+                            </Box>
+                          )}
+                        </Paper>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Voice Selection */}
+              <Box sx={{ maxWidth: 500, mx: 'auto', mb: 4 }}>
                 <FormControl fullWidth sx={{ mb: 2 }}>
                   <InputLabel>Voice Profile (Optional)</InputLabel>
                   <Select
@@ -1547,14 +1926,16 @@ export default function VoiceCalls() {
                   sx={{ mb: 2 }}
                 />
               </Box>
+              </Box>
 
               {/* Call Button */}
+              <Box sx={{ textAlign: 'center' }}>
               <Button
                 variant="contained"
                 size="large"
                 startIcon={isLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <CallIcon />}
                 onClick={handleStartCall}
-                disabled={!phoneNumber.trim() || isLoading}
+                disabled={(inputMode === 'manual' ? !phoneNumber.trim() : selectedContacts.length === 0) || isLoading}
                 sx={{
                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: 'white',
@@ -1579,8 +1960,14 @@ export default function VoiceCalls() {
                   transition: 'all 0.3s ease'
                 }}
               >
-                {isLoading ? 'Initiating Call...' : 'Start Live Call'}
+{isLoading
+                  ? (selectedContacts.length > 1 ? 'Creating Campaign...' : 'Initiating Call...')
+                  : (inputMode === 'contacts' && selectedContacts.length > 1
+                      ? `Start Campaign (${selectedContacts.length} contacts)`
+                      : 'Start Live Call')
+                }
               </Button>
+              </Box>
 
               <Typography variant="body2" sx={{
                 display: 'block',
@@ -1590,7 +1977,6 @@ export default function VoiceCalls() {
               }}>
                 🤖 AI agent will handle live conversations with prospects automatically
               </Typography>
-            </Box>
           </Paper>
 
           {/* Real-time Call Monitor */}

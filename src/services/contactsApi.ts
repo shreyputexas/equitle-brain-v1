@@ -71,7 +71,7 @@ class ContactsApiService {
 
       const response = await axios.get<any>(`/api/firebase/contacts?${params.toString()}`);
       // Handle the nested response structure from firebase API
-      const contacts = response.data?.data?.contacts || response.data?.data || [];
+      const contacts = response.data?.data?.contacts || response.data?.data || response.data?.contacts || [];
       return {
         contacts,
         total: contacts.length

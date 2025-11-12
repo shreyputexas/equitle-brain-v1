@@ -297,22 +297,16 @@ const LinkedInOutreach: React.FC<LinkedInOutreachProps> = ({ onMessageGenerated 
           p.id === profile.id ? { ...p, status: 'generating' as const } : p
         ));
 
-        const response = await fetch('/api/linkedin-outreach/generate-message', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            linkedinProfileData: {
-              rawLinkedInText: profile.rawLinkedInText,
-              websiteUrl: profile.websiteUrl,
-              callPreference: globalCallPreference,
-              outreachType: globalOutreachType
-            }
-          })
+        const response = await axios.post('/api/linkedin-outreach/generate-message', {
+          linkedinProfileData: {
+            rawLinkedInText: profile.rawLinkedInText,
+            websiteUrl: profile.websiteUrl,
+            callPreference: globalCallPreference,
+            outreachType: globalOutreachType
+          }
         });
 
-        const result = await response.json();
+        const result = response.data;
 
         if (result.success) {
           setBulkProfiles(prev => prev.map(p => 

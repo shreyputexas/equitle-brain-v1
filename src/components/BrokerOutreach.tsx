@@ -310,25 +310,19 @@ const BrokerOutreach: React.FC = () => {
           callPreference: globalCallPreference
         });
 
-        const response = await fetch('/api/broker-outreach/generate-message', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await axios.post('/api/broker-outreach/generate-message', {
+          brokerData: {
+            rawLinkedInText: profile.rawLinkedInText,
+            websiteUrl: profile.websiteUrl,
+            callPreference: globalCallPreference
           },
-          body: JSON.stringify({
-            brokerData: {
-              rawLinkedInText: profile.rawLinkedInText,
-              websiteUrl: profile.websiteUrl,
-              callPreference: globalCallPreference
-            },
-            thesis: selectedThesis,
-            searcherProfile: selectedProfile
-          })
+          thesis: selectedThesis,
+          searcherProfile: selectedProfile
         });
 
         console.log(`📡 Response status for broker ${profile.id}:`, response.status);
 
-        const result = await response.json();
+        const result = response.data;
 
         console.log(`📦 Response data for broker ${profile.id}:`, result);
 

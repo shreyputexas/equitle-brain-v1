@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from '../lib/axios';
 import integrationService from '../services/integrationService';
 import { db } from '../lib/firebase';
 import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, orderBy, Timestamp, getDoc } from 'firebase/firestore';
@@ -853,26 +854,16 @@ const MyThesis: React.FC = () => {
       console.log('Using template:', templateValue, '(frontend value:', selectedIndustryTemplate, ')');
 
       // Call the basic document generation API
-      const response = await fetch('/api/one-pager/generate-basic-document', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          thesisData,
-          selectedIndustry: industryToUse,
-          template: templateValue
-        })
+      const response = await axios.post('/api/one-pager/generate-basic-document', {
+        thesisData,
+        selectedIndustry: industryToUse,
+        template: templateValue
+      }, {
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to generate industry research');
-      }
-
       // Get the file blob
-      const blob = await response.blob();
+      const blob = response.data;
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
