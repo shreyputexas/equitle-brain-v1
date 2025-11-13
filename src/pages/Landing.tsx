@@ -374,7 +374,7 @@ export default function Landing() {
                   borderRadius: '12px 12px 0 0'
                 }}
               >
-                <source src="/autoplay_website.mp4" type="video/mp4" />
+                <source src={import.meta.env.VITE_VIDEO_URL || "/autoplay_website.mp4"} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </Box>
