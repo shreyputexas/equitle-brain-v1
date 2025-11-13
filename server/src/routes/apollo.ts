@@ -450,12 +450,22 @@ router.post('/webhook/phone-numbers', async (req, res) => {
         const personId = person.id;
         if (personId && person.phone_numbers && person.phone_numbers.length > 0) {
           const { OptimizedEnrichmentService } = require('../services/optimizedEnrichment.service');
+          const { ContactsActivitiesFirestoreService } = require('../services/contactsActivities.firestore.service');
           const enrichmentRequest = OptimizedEnrichmentService.getEnrichmentRequest(personId);
           
-          if (enrichmentRequest && enrichmentRequest.contactId) {
-            // Update Firestore contact with phone numbers and LinkedIn URL
+          logger.info('🔍 [WEBHOOK] Processing webhook for person', {
+            personId,
+            hasEnrichmentRequest: !!enrichmentRequest,
+            hasContactId: !!(enrichmentRequest?.contactId),
+            hasUserId: !!(enrichmentRequest?.userId),
+            phoneCount: person.phone_numbers.length
+          });
+
+          let contactUpdated = false;
+          
+          // Try enrichment request first (preferred method)
+          if (enrichmentRequest && enrichmentRequest.contactId && enrichmentRequest.userId) {
             try {
-              const { ContactsActivitiesFirestoreService } = require('../services/contactsActivities.firestore.service');
               const bestPhone = person.phone_numbers[0]?.sanitized_number || person.phone_numbers[0]?.sanitizedNumber;
 
               const updateData: any = {};
@@ -481,19 +491,83 @@ router.post('/webhook/phone-numbers', async (req, res) => {
                   updateData
                 );
 
-                logger.info('✅ [WEBHOOK] Updated Firestore contact with enriched data', {
+                logger.info('✅ [WEBHOOK] Updated Firestore contact via enrichment request', {
                   contactId: enrichmentRequest.contactId,
                   personId,
+                  userId: enrichmentRequest.userId,
                   updates: updateData
                 });
+                contactUpdated = true;
               }
             } catch (updateError: any) {
-              logger.error('Failed to update Firestore contact from webhook', {
+              logger.error('Failed to update Firestore contact from webhook (enrichment request method)', {
                 error: updateError.message,
                 contactId: enrichmentRequest.contactId,
-                personId
+                personId,
+                userId: enrichmentRequest.userId
               });
             }
+          }
+          
+          // Fallback: Try to find contact by Apollo person ID if enrichment request not found or missing contactId
+          if (!contactUpdated && enrichmentRequest?.userId) {
+            try {
+              const contactResult = await ContactsActivitiesFirestoreService.findContactByApolloPersonId(
+                enrichmentRequest.userId,
+                personId
+              );
+
+              if (contactResult?.contact) {
+                const bestPhone = person.phone_numbers[0]?.sanitized_number || person.phone_numbers[0]?.sanitizedNumber;
+                const updateData: any = {};
+
+                if (bestPhone) {
+                  updateData.phone = bestPhone;
+                  updateData.phoneNumberStatus = 'available';
+                }
+
+                if (person.linkedin_url) {
+                  updateData.linkedinUrl = person.linkedin_url;
+                }
+
+                if (Object.keys(updateData).length > 0) {
+                  await ContactsActivitiesFirestoreService.updateContact(
+                    enrichmentRequest.userId,
+                    contactResult.contact.id!,
+                    updateData
+                  );
+
+                  logger.info('✅ [WEBHOOK] Updated Firestore contact via Apollo person ID lookup (fallback)', {
+                    contactId: contactResult.contact.id,
+                    personId,
+                    userId: enrichmentRequest.userId,
+                    updates: updateData
+                  });
+                  contactUpdated = true;
+                }
+              } else {
+                logger.warn('⚠️ [WEBHOOK] Could not find contact by Apollo person ID', {
+                  personId,
+                  userId: enrichmentRequest.userId
+                });
+              }
+            } catch (fallbackError: any) {
+              logger.error('Failed to update Firestore contact from webhook (fallback method)', {
+                error: fallbackError.message,
+                personId,
+                userId: enrichmentRequest?.userId
+              });
+            }
+          }
+          
+          // Log if we couldn't update the contact
+          if (!contactUpdated) {
+            logger.warn('⚠️ [WEBHOOK] Could not update contact - no enrichment request or contact not found', {
+              personId,
+              hasEnrichmentRequest: !!enrichmentRequest,
+              hasContactId: !!(enrichmentRequest?.contactId),
+              hasUserId: !!(enrichmentRequest?.userId)
+            });
           }
           
           // Mark enrichment as completed

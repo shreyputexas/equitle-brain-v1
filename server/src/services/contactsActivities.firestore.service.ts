@@ -197,6 +197,32 @@ export class ContactsActivitiesFirestoreService {
     }
   }
 
+  // Find contact by Apollo person ID (for webhook matching)
+  static async findContactByApolloPersonId(userId: string, apolloPersonId: string) {
+    try {
+      const snapshot = await FirestoreHelpers.getUserCollection(userId, 'contacts')
+        .where('metadata.apolloPersonId', '==', apolloPersonId)
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const contactDoc = snapshot.docs[0];
+      const contactData = { id: contactDoc.id, ...contactDoc.data() };
+
+      logger.info('Found contact by Apollo person ID', { userId, apolloPersonId, contactId: contactDoc.id });
+      return {
+        contact: contactData
+      };
+    } catch (error: any) {
+      logger.error('Error finding contact by Apollo person ID:', error);
+      // Don't throw - return null if not found
+      return null;
+    }
+  }
+
   // Create new contact
   static async createContact(userId: string, contactData: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) {
     try {

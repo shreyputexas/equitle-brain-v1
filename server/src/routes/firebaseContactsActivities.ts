@@ -407,6 +407,15 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
             updateData.notes = enrichedContact.notes || existingContact.notes;
           }
 
+          // Store Apollo person ID in metadata if available and not already stored
+          if (enrichedContact.id) {
+            const existingMetadata = existingContact.metadata || {};
+            updateData.metadata = {
+              ...existingMetadata,
+              apolloPersonId: enrichedContact.id
+            };
+          }
+
           savedContact = await ContactsActivitiesFirestoreService.updateContact(userId, existingContact.id, updateData);
           logger.info(`✅ Updated existing contact: ${enrichedContact.name}`);
         } else {
@@ -445,6 +454,14 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
           if (enrichedContact.company) contactData.company = enrichedContact.company;
           if (enrichedContact.website) contactData.website = enrichedContact.website;
           if (enrichedContact.notes) contactData.notes = enrichedContact.notes;
+
+          // Store Apollo person ID in metadata for webhook matching
+          if (enrichedContact.id) {
+            contactData.metadata = {
+              ...(contactData.metadata || {}),
+              apolloPersonId: enrichedContact.id
+            };
+          }
 
           logger.info(`Creating contact with data:`, contactData);
           savedContact = await ContactsActivitiesFirestoreService.createContact(userId, contactData);
