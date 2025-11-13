@@ -373,6 +373,13 @@ export default function Landing() {
                   objectFit: 'cover',
                   borderRadius: '12px 12px 0 0'
                 }}
+                onError={(e) => {
+                  console.error('Video failed to load:', e);
+                  console.log('Video URL:', import.meta.env.VITE_VIDEO_URL || "/autoplay_website.mp4");
+                }}
+                onLoadStart={() => {
+                  console.log('Video loading started:', import.meta.env.VITE_VIDEO_URL || "/autoplay_website.mp4");
+                }}
               >
                 <source src={import.meta.env.VITE_VIDEO_URL || "/autoplay_website.mp4"} type="video/mp4" />
                 Your browser does not support the video tag.
@@ -402,12 +409,14 @@ export default function Landing() {
             </Typography>
           </Box>
 
-          <Grid container spacing={4} justifyContent="center">
+          <Grid container spacing={4} justifyContent="center" alignItems="stretch">
             {useCases.map((useCase, index) => (
-              <Grid item xs={12} md={3} key={index}>
+              <Grid item xs={12} md={3} key={index} sx={{ display: 'flex' }}>
                 <Card
                   sx={{
                     height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
                     p: 4,
                     textAlign: 'center',
                     background: 'rgba(255, 255, 255, 0.05)',
@@ -504,7 +513,7 @@ export default function Landing() {
                     {useCase.description}
                   </Typography>
                   
-                  <List sx={{ mb: 3, textAlign: 'left' }}>
+                  <List sx={{ mb: 3, textAlign: 'left', flexGrow: 1 }}>
                     {useCase.features.map((feature, idx) => (
                       <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
                         <ListItemIcon sx={{ minWidth: 32 }}>
@@ -528,7 +537,7 @@ export default function Landing() {
                     variant="outlined"
                     endIcon={<ArrowForwardIcon />}
                     sx={{ 
-                      mt: 2,
+                      mt: 'auto',
                       backgroundColor: '#FFFFFF',
                       color: '#000000',
                       borderColor: '#FFFFFF',
