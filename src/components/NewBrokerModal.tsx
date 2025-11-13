@@ -165,7 +165,10 @@ export default function NewBrokerModal({ open, onClose, onSuccess }: NewBrokerMo
       const contacts = response.contacts || [];
       const brokerContacts = contacts.filter((contact: any) => {
         const tags = contact.tags || [];
-        return tags.includes('broker') || tags.includes('brokers');
+        return tags.some((tag: string) => {
+          const lowerTag = tag.toLowerCase();
+          return lowerTag === 'broker' || lowerTag === 'brokers';
+        });
       });
       setExistingBrokers(brokerContacts);
     } catch (err) {

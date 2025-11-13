@@ -142,11 +142,12 @@ export default function NewDealModal({ open, onClose, onSuccess }: NewDealModalP
     try {
       setContactsLoading(true);
       console.log('Fetching contacts...');
-      const response = await contactsApi.getContacts();
+      const response = await contactsApi.getContacts({ limit: 1000 });
       console.log('Contacts response:', response);
-      // Filter to only show contacts tagged as "deal"
+      // Filter to only show contacts tagged as "deal" (case-insensitive)
       const dealContacts = (response.contacts || []).filter((contact: any) =>
-        contact.tags && Array.isArray(contact.tags) && contact.tags.includes('deal')
+        contact.tags && Array.isArray(contact.tags) &&
+        contact.tags.some((tag: string) => tag.toLowerCase() === 'deal')
       );
       // Transform contacts to include isPrimary field
       const transformedContacts = dealContacts.map((contact: any) => ({

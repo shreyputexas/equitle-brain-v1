@@ -65,3 +65,7 @@ server/secrets/serviceAccountKey.json
 .env.development
 .env.production
 .env.test
+
+# Large video files
+public/autoplay_website.mp4
+*.mp4

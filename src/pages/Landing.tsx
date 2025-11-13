@@ -358,12 +358,25 @@ export default function Landing() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 2
+                zIndex: 2,
+                overflow: 'hidden'
               }}
             >
-              <Typography variant="h6" sx={{ color: '#FFFFFF', textAlign: 'center' }}>
-                Demo Video Placeholder
-              </Typography>
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: '12px 12px 0 0'
+                }}
+              >
+                <source src="/autoplay_website.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </Box>
           </Box>
         </Container>

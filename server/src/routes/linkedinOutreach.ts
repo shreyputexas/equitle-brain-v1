@@ -671,10 +671,10 @@ Please extract and return ONLY a simple JSON object with these exact fields (use
 
 EXAMPLES OF GOOD vs BAD EXTRACTION:
 ❌ BAD: "experience in SaaS and growth marketing"
-GOOD GOOD: "VP of Growth at Slack where she scaled user acquisition from 1M to 10M users through innovative referral programs and product-led growth strategies"
+✅ GOOD: "VP of Growth at Slack where she scaled user acquisition from 1M to 10M users through innovative referral programs and product-led growth strategies"
 
 ❌ BAD: "background in finance"
-GOOD GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
+✅ GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
 
 IMPORTANT:
 - If any information is not available or unclear, use "Not specified" for that field.
