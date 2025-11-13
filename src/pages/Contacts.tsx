@@ -134,7 +134,9 @@ const Contacts: React.FC = () => {
     const pollInterval = setInterval(async () => {
       try {
         // Fetch updated contact data
-        const response = await axios.get<any>('/api/firebase/contacts');
+        const response = await axios.get<any>('/api/firebase/contacts', {
+          params: { limit: 1000 }
+        });
         const contactsList = response.data?.data?.contacts || response.data?.data || [];
 
         // Check if any of the fetching contacts now have phone numbers
@@ -167,7 +169,9 @@ const Contacts: React.FC = () => {
     setError(null);
     try {
       console.log('Fetching contacts from /api/firebase/contacts...');
-      const response = await axios.get<any>('/api/firebase/contacts');
+      const response = await axios.get<any>('/api/firebase/contacts', {
+        params: { limit: 1000 }
+      });
       console.log('Contacts response:', response);
       // Map contacts and determine type from tags
       const contactsList = response.data?.data?.contacts || response.data?.data || [];
