@@ -84,9 +84,15 @@ const getUserProfileInfo = async (req: express.Request): Promise<{ name: string;
 
     if (profiles && profiles.length > 0) {
       const profile = profiles[0]; // Use first profile
+      // Use the full title if the profile title is just "Founder"
+      let fullTitle = profile.title;
+      if (fullTitle === 'Founder') {
+        fullTitle = 'Founder & CEO, Equitle';
+      }
+
       const userInfo = {
         name: profile.name || 'Shariq Hafizi',
-        title: profile.title || 'Search Fund Professional'
+        title: fullTitle || 'Founder & CEO, Equitle'
       };
       console.log('✅ LinkedIn Outreach - Using user profile:', userInfo);
       return userInfo;
@@ -133,7 +139,15 @@ router.post('/generate-message', firebaseAuthMiddleware, async (req, res) => {
     console.log('🔍 LinkedIn Outreach - User profile retrieved for signature:', userProfile);
 
     // Extract LinkedIn data from raw text using AI
+    console.log('🔍 LinkedIn Outreach - Raw LinkedIn text length:', linkedinProfileData.rawLinkedInText?.length || 0);
+    console.log('🔍 LinkedIn Outreach - Raw LinkedIn text preview:', linkedinProfileData.rawLinkedInText?.substring(0, 200) + '...');
     const extractedLinkedInData = await extractLinkedInData(linkedinProfileData.rawLinkedInText);
+    console.log('🔍 LinkedIn Outreach - Extracted LinkedIn data:', {
+      contactName: extractedLinkedInData.contactName,
+      specificCompanies: extractedLinkedInData.specificCompanies,
+      specificRoles: extractedLinkedInData.specificRoles,
+      achievements: extractedLinkedInData.achievements
+    });
 
     // Add form data to extracted data
     extractedLinkedInData.callPreference = linkedinProfileData.callPreference;
@@ -516,6 +530,7 @@ CRITICAL INSTRUCTIONS:
 - Do NOT generalize (e.g., avoid "experience in SaaS" - instead say "VP of Engineering at Stripe, scaling payment infrastructure")
 - Include specific accomplishments, revenue numbers, team sizes, growth metrics when available
 - Preserve exact company names, job titles, and quantifiable results
+- ENSURE THE JSON IS VALID - use proper escaping for quotes and special characters
 
 Please extract and return ONLY a JSON object with these exact fields:
 {
@@ -539,8 +554,8 @@ EXAMPLES OF GOOD vs BAD EXTRACTION:
 ❌ BAD: "background in finance"
 ✅ GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
 
-If any information is not available or unclear, use "Not specified" for that field.
-Return ONLY the JSON object, no other text.`;
+IMPORTANT: If any information is not available or unclear, use "Not specified" for that field.
+CRITICAL: Return ONLY valid JSON - escape quotes with backslashes and ensure all arrays/objects are properly formatted.`;
 
     const aiResponse = await openaiService.generateResponse(
       extractionPrompt,
@@ -548,40 +563,68 @@ Return ONLY the JSON object, no other text.`;
       ''
     );
 
-    // Parse the AI response
+    console.log('🔍 LinkedIn data extraction response length:', aiResponse.length);
+    console.log('🔍 LinkedIn data extraction response preview:', aiResponse.substring(0, 500) + '...');
+
+    // Try to clean up the JSON before parsing
+    let jsonString = aiResponse;
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const extractedData = JSON.parse(jsonMatch[0]);
-      return {
-        contactName: extractedData.contactName || 'Not specified',
-        interest: extractedData.interest || 'Not specified',
-        aboutMe: extractedData.aboutMe || 'Not specified',
-        experience: extractedData.experience || 'Not specified',
-        specificCompanies: extractedData.specificCompanies || 'Not specified',
-        specificRoles: extractedData.specificRoles || 'Not specified',
-        achievements: extractedData.achievements || 'Not specified',
-        skills: extractedData.skills || 'Not specified',
-        latestPost: extractedData.latestPost || 'Not specified',
-        education: extractedData.education || 'Not specified',
-        location: extractedData.location || 'Not specified',
-        callPreference: '',
-        outreachType: ''
-      };
+      jsonString = jsonMatch[0];
     }
 
-    // Fallback if JSON parsing fails
+    // Try to parse the JSON with better error handling
+    let extractedData;
+    try {
+      extractedData = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('Initial JSON parse failed, attempting to fix:', parseError);
+      console.log('Problematic JSON string:', jsonString);
+
+      // Try to fix common JSON issues
+      let fixedJsonString = jsonString
+        .replace(/[\r\n]+/g, ' ') // Remove newlines
+        .replace(/,\s*}/g, '}') // Remove trailing commas before }
+        .replace(/,\s*]/g, ']') // Remove trailing commas before ]
+        .replace(/([^\\])"/g, '$1\\"') // Escape unescaped quotes (basic attempt)
+        .replace(/^"/g, '\\"'); // Escape quote at start
+
+      try {
+        extractedData = JSON.parse(fixedJsonString);
+        console.log('✅ Successfully fixed and parsed JSON');
+      } catch (secondError) {
+        console.error('Secondary JSON parse also failed:', secondError);
+        // Return default values if all parsing attempts fail
+        return {
+          contactName: 'Not specified',
+          interest: 'Not specified',
+          aboutMe: 'Not specified',
+          experience: 'Not specified',
+          specificCompanies: 'Not specified',
+          specificRoles: 'Not specified',
+          achievements: 'Not specified',
+          skills: 'Not specified',
+          latestPost: 'Not specified',
+          education: 'Not specified',
+          location: 'Not specified',
+          callPreference: '',
+          outreachType: ''
+        };
+      }
+    }
+
     return {
-      contactName: 'Not specified',
-      interest: 'Not specified',
-      aboutMe: 'Not specified',
-      experience: 'Not specified',
-      specificCompanies: 'Not specified',
-      specificRoles: 'Not specified',
-      achievements: 'Not specified',
-      skills: 'Not specified',
-      latestPost: 'Not specified',
-      education: 'Not specified',
-      location: 'Not specified',
+      contactName: extractedData.contactName || 'Not specified',
+      interest: extractedData.interest || 'Not specified',
+      aboutMe: extractedData.aboutMe || 'Not specified',
+      experience: extractedData.experience || 'Not specified',
+      specificCompanies: extractedData.specificCompanies || 'Not specified',
+      specificRoles: extractedData.specificRoles || 'Not specified',
+      achievements: extractedData.achievements || 'Not specified',
+      skills: extractedData.skills || 'Not specified',
+      latestPost: extractedData.latestPost || 'Not specified',
+      education: extractedData.education || 'Not specified',
+      location: extractedData.location || 'Not specified',
       callPreference: '',
       outreachType: ''
     };
