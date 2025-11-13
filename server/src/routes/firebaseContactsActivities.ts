@@ -429,6 +429,21 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
           logger.info(`Creating contact with data:`, contactData);
           savedContact = await ContactsActivitiesFirestoreService.createContact(userId, contactData);
           logger.info(`✅ Created new contact: ${enrichedContact.name} with tags: ${contactData.tags.join(', ')}`);
+
+          // Update enrichment request mapping if this contact has an Apollo person ID and is waiting for phone numbers
+          if (enrichedContact.id && contactData.phoneNumberStatus === 'fetching') {
+            const { OptimizedEnrichmentService } = require('../services/optimizedEnrichment.service');
+            const enrichmentRequest = OptimizedEnrichmentService.getEnrichmentRequest(enrichedContact.id);
+            if (enrichmentRequest && !enrichmentRequest.contactId) {
+              // Update the enrichment request with the newly created contact ID
+              enrichmentRequest.contactId = savedContact.id;
+              logger.info('✅ Updated enrichment request with contact ID', {
+                apolloPersonId: enrichedContact.id,
+                contactId: savedContact.id,
+                contactName: enrichedContact.name
+              });
+            }
+          }
         }
         savedContacts.push(savedContact);
         logger.info(`Successfully processed contact: ${enrichedContact.name}`);
