@@ -556,7 +556,7 @@ EXAMPLES OF GOOD vs BAD EXTRACTION:
 
 IMPORTANT:
 - If any information is not available or unclear, use "Not specified" for that field.
-- Return ONLY the JSON object - NO markdown code blocks, NO ```json```, NO explanations
+- Return ONLY the JSON object - NO markdown code blocks, NO \`\`\`json\`\`\`, NO explanations
 - Ensure all strings are properly escaped and valid JSON format
 - Use simple strings only, NO nested arrays or objects`;
 
