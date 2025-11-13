@@ -94,7 +94,7 @@ const getUserProfileInfo = async (req: express.Request): Promise<{ name: string;
         name: profile.name || 'Shariq Hafizi',
         title: fullTitle || 'Founder & CEO, Equitle'
       };
-      console.log('✅ LinkedIn Outreach - Using user profile:', userInfo);
+      console.log('GOOD LinkedIn Outreach - Using user profile:', userInfo);
       return userInfo;
     }
 
@@ -157,25 +157,25 @@ router.post('/generate-message', firebaseAuthMiddleware, async (req, res) => {
     const contactName = linkedinProfileData.contactName || extractedLinkedInData.contactName || 'there';
     const contactEmail = linkedinProfileData.contactEmail;
 
-    // Check if website URL is provided
+    // Always generate a LinkedIn-based message first as the primary approach
+    console.log(`📄 [${clientIp}] Generating LinkedIn-based message...`);
+
+    // Check if website URL is provided for optional enhancement
     if (linkedinProfileData.websiteUrl && linkedinProfileData.websiteUrl.trim() !== '') {
       // Validate URL format
       try {
         new URL(linkedinProfileData.websiteUrl);
+        console.log(`🌐 [${clientIp}] Website URL provided: ${linkedinProfileData.websiteUrl} - Will try to enhance with website data...`);
+
+        // Try to scrape website and enhance the message, but fall back to LinkedIn-only if it fails
+        tryWebsiteEnhancedMessage(linkedinProfileData.websiteUrl, extractedLinkedInData, res, startTime, clientIp, contactName, userProfile);
       } catch (e) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid URL format'
-        });
+        console.log(`⚠️ [${clientIp}] Invalid URL format, using LinkedIn-only approach: ${linkedinProfileData.websiteUrl}`);
+        generateMessageWithoutCompanyInfo(extractedLinkedInData, res, startTime, clientIp, contactName, userProfile);
       }
-
-      console.log(`🌐 [${clientIp}] Website URL provided: ${linkedinProfileData.websiteUrl} - Running scraper...`);
-
-      // Scrape the website and generate message with company info
-      scrapeAndGenerateMessage(linkedinProfileData.websiteUrl, extractedLinkedInData, res, startTime, clientIp, contactName, userProfile);
     } else {
-      // No website URL - generate message without company info
-      console.log(`📄 [${clientIp}] No website URL provided - Generating message without company data`);
+      // No website URL - generate message with LinkedIn data only
+      console.log(`📄 [${clientIp}] No website URL provided - Generating LinkedIn-only message`);
       generateMessageWithoutCompanyInfo(extractedLinkedInData, res, startTime, clientIp, contactName, userProfile);
     }
 
@@ -274,6 +274,96 @@ else:
   });
 }
 
+async function tryWebsiteEnhancedMessage(websiteUrl: string, linkedinData: LinkedInData, res: express.Response, startTime: number, clientIp: string, contactName: string, userProfile: { name: string; title: string; } | null) {
+  try {
+    console.log(`🌐 [${clientIp}] Attempting to enhance message with website data from: ${websiteUrl}`);
+
+    const scraperPath = path.join(__dirname, '../../../website_scraper.py');
+    const scraperDir = path.dirname(scraperPath);
+
+    const scrapeCode = `
+import sys
+import json
+import os
+sys.path.insert(0, '${scraperDir}')
+os.chdir('${scraperDir}')
+from website_scraper import WebsiteScraper
+
+scraper = WebsiteScraper()
+company_info = scraper.scrape_website_with_crawl('${websiteUrl}')
+
+if company_info:
+    from dataclasses import asdict
+    print(json.dumps(asdict(company_info)))
+else:
+    print(json.dumps({'error': 'Failed to scrape website'}))
+`;
+
+    // Execute website scraper with timeout
+    const scraper = spawn('python3', ['-c', scrapeCode]);
+    let scraperOutput = '';
+    let scraperError = '';
+
+    // Set timeout for scraper
+    const timeout = setTimeout(() => {
+      console.log(`⏰ [${clientIp}] Website scraper timeout, falling back to LinkedIn-only message`);
+      scraper.kill('SIGTERM');
+      generateMessageWithoutCompanyInfo(linkedinData, res, startTime, clientIp, contactName, userProfile);
+    }, 30000); // 30 second timeout
+
+    scraper.stdout.on('data', (data) => {
+      scraperOutput += data.toString();
+    });
+
+    scraper.stderr.on('data', (data) => {
+      scraperError += data.toString();
+    });
+
+    scraper.on('close', async (code) => {
+      clearTimeout(timeout);
+
+      console.log(`🐍 [${clientIp}] Python scraper exit code: ${code}`);
+
+      // If scraper failed, fall back to LinkedIn-only message
+      if (code !== 0) {
+        console.log(`❌ [${clientIp}] Website scraper failed (exit code ${code}), falling back to LinkedIn-only message`);
+        console.error(`❌ [${clientIp}] Scraper error:`, scraperError);
+        return generateMessageWithoutCompanyInfo(linkedinData, res, startTime, clientIp, contactName, userProfile);
+      }
+
+      try {
+        // Parse scraper output
+        const lines = scraperOutput.trim().split('\n');
+        const jsonLine = lines[lines.length - 1];
+        const companyInfo = JSON.parse(jsonLine);
+
+        if (companyInfo.error) {
+          console.log(`⚠️ [${clientIp}] Website scraping returned error, falling back to LinkedIn-only message`);
+          return generateMessageWithoutCompanyInfo(linkedinData, res, startTime, clientIp, contactName, userProfile);
+        }
+
+        console.log(`GOOD [${clientIp}] Website data successfully retrieved, generating enhanced message`);
+        // Generate enhanced message with company info
+        generatePersonalizedMessage(companyInfo, linkedinData, res, startTime, clientIp, contactName, userProfile);
+
+      } catch (parseError) {
+        console.error(`❌ [${clientIp}] Error parsing scraper output, falling back to LinkedIn-only message:`, parseError);
+        generateMessageWithoutCompanyInfo(linkedinData, res, startTime, clientIp, contactName, userProfile);
+      }
+    });
+
+    scraper.on('error', (error) => {
+      clearTimeout(timeout);
+      console.error(`❌ [${clientIp}] Scraper process error, falling back to LinkedIn-only message:`, error);
+      generateMessageWithoutCompanyInfo(linkedinData, res, startTime, clientIp, contactName, userProfile);
+    });
+
+  } catch (error) {
+    console.error(`❌ [${clientIp}] Error in tryWebsiteEnhancedMessage, falling back to LinkedIn-only message:`, error);
+    generateMessageWithoutCompanyInfo(linkedinData, res, startTime, clientIp, contactName, userProfile);
+  }
+}
+
 async function generateMessageWithoutCompanyInfo(linkedinData: LinkedInData, res: express.Response, startTime: number, clientIp: string, contactName: string, userProfile: { name: string; title: string; } | null) {
   try {
     let prompt = '';
@@ -306,10 +396,10 @@ CRITICAL PERSONALIZATION REQUIREMENTS:
 
 EXAMPLES OF SPECIFIC vs GENERIC:
 ❌ AVOID: "your experience in SaaS and growth marketing"
-✅ USE: "your role as VP of Growth at Slack where you scaled user acquisition from 1M to 10M users"
+GOOD USE: "your role as VP of Growth at Slack where you scaled user acquisition from 1M to 10M users"
 
 ❌ AVOID: "your background in finance"
-✅ USE: "your experience as Managing Director at Goldman Sachs leading the $2B technology investment fund"
+GOOD USE: "your experience as Managing Director at Goldman Sachs leading the $2B technology investment fund"
 
 TASK:
 Create a highly personalized acquisition-focused outreach message that:
@@ -356,10 +446,10 @@ CRITICAL PERSONALIZATION REQUIREMENTS:
 
 EXAMPLES OF SPECIFIC vs GENERIC:
 ❌ AVOID: "your entrepreneurial experience"
-✅ USE: "your journey building Airbnb from a simple idea to a $75B company serving 1B+ guests"
+GOOD USE: "your journey building Airbnb from a simple idea to a $75B company serving 1B+ guests"
 
 ❌ AVOID: "your startup background"
-✅ USE: "how you led Stripe through their Series A to $95B valuation, scaling from 50 to 3,000+ employees"
+GOOD USE: "how you led Stripe through their Series A to $95B valuation, scaling from 50 to 3,000+ employees"
 
 TASK:
 Create a highly personalized entrepreneurial journey-focused outreach message that:
@@ -407,10 +497,10 @@ CRITICAL PERSONALIZATION REQUIREMENTS:
 
 EXAMPLES OF SPECIFIC vs GENERIC:
 ❌ AVOID: "your experience in technology"
-✅ USE: "your role as CTO at Tesla where you led the development of the Model S autopilot system"
+GOOD USE: "your role as CTO at Tesla where you led the development of the Model S autopilot system"
 
 ❌ AVOID: "your background in consulting"
-✅ USE: "your work as Partner at McKinsey leading digital transformation projects for Fortune 500 companies"
+GOOD USE: "your work as Partner at McKinsey leading digital transformation projects for Fortune 500 companies"
 
 TASK:
 Create a highly personalized business outreach message that:
@@ -442,7 +532,7 @@ Make the message feel personal and show that you've researched their specific ba
         ''
       );
 
-      console.log(`✅ [${clientIp}] OpenAI response received:`, aiResponse.substring(0, 200) + '...');
+      console.log(`GOOD [${clientIp}] OpenAI response received:`, aiResponse.substring(0, 200) + '...');
 
       // Parse the AI response
       let aiMessage;
@@ -467,7 +557,7 @@ Make the message feel personal and show that you've researched their specific ba
       }
 
       const duration = Date.now() - startTime;
-      console.log(`📧 [${clientIp}] Generated message: "${aiMessage.subject}" (${duration}ms)`);
+      console.log(`[EMAIL] [${clientIp}] Generated message: "${aiMessage.subject}" (${duration}ms)`);
 
       res.json({
         success: true,
@@ -549,14 +639,14 @@ Please extract and return ONLY a simple JSON object with these exact fields (use
 
 EXAMPLES OF GOOD vs BAD EXTRACTION:
 ❌ BAD: "experience in SaaS and growth marketing"
-✅ GOOD: "VP of Growth at Slack where she scaled user acquisition from 1M to 10M users through innovative referral programs and product-led growth strategies"
+GOOD GOOD: "VP of Growth at Slack where she scaled user acquisition from 1M to 10M users through innovative referral programs and product-led growth strategies"
 
 ❌ BAD: "background in finance"
-✅ GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
+GOOD GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
 
 IMPORTANT:
 - If any information is not available or unclear, use "Not specified" for that field.
-- Return ONLY the JSON object - NO markdown code blocks, NO \`\`\`json\`\`\`, NO explanations
+- Return ONLY the JSON object - NO markdown code blocks, NO json backticks, NO explanations
 - Ensure all strings are properly escaped and valid JSON format
 - Use simple strings only, NO nested arrays or objects`;
 
@@ -567,7 +657,7 @@ IMPORTANT:
     );
 
     console.log('🔍 LinkedIn data extraction response length:', aiResponse.length);
-    console.log('🔍 LinkedIn data extraction response preview:', aiResponse.substring(0, 500) + '...');
+    console.log('🔍 LinkedIn `data extraction response preview:', aiResponse.substring(0, 500) + '...');
 
     // Try to clean up the JSON before parsing
     let jsonString = aiResponse;
@@ -600,7 +690,7 @@ IMPORTANT:
 
       try {
         extractedData = JSON.parse(fixedJsonString);
-        console.log('✅ Successfully fixed and parsed JSON');
+        console.log('GOOD Successfully fixed and parsed JSON');
       } catch (secondError) {
         console.error('Secondary JSON parse also failed:', secondError);
         // Return default values if all parsing attempts fail
@@ -695,7 +785,7 @@ CRITICAL PERSONALIZATION REQUIREMENTS:
 
 EXAMPLES OF SPECIFIC vs GENERIC:
 ❌ AVOID: "your experience in the tech industry and your company"
-✅ USE: "your role as CTO at ${companyInfo.company_name} where you've built the AI-powered platform serving 50,000+ customers"
+GOOD USE: "your role as CTO at ${companyInfo.company_name} where you've built the AI-powered platform serving 50,000+ customers"
 
 TASK:
 Create a highly personalized acquisition-focused outreach message that:
@@ -800,7 +890,7 @@ Make the message feel personal and authentic. Show that you understand their bus
         ''
       );
 
-      console.log(`✅ [${clientIp}] OpenAI response received:`, aiResponse.substring(0, 200) + '...');
+      console.log(`GOOD [${clientIp}] OpenAI response received:`, aiResponse.substring(0, 200) + '...');
 
       // Parse the AI response
       let aiMessage;
@@ -825,7 +915,7 @@ Make the message feel personal and authentic. Show that you understand their bus
       }
 
       const duration = Date.now() - startTime;
-      console.log(`📧 [${clientIp}] Generated message: "${aiMessage.subject}" (${duration}ms)`);
+      console.log(`[EMAIL] [${clientIp}] Generated message: "${aiMessage.subject}" (${duration}ms)`);
 
       res.json({
         success: true,

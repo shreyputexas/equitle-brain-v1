@@ -110,14 +110,57 @@ const Contacts: React.FC = () => {
 
   useEffect(() => {
     fetchContacts();
-    
+
     // Auto-refresh disabled - use manual refresh button instead
     // const intervalId = setInterval(() => {
     //   fetchContacts();
     // }, 10000);
-    
+
     // return () => clearInterval(intervalId);
   }, []);
+
+  // Polling for phone number updates when contacts are in 'fetching' status
+  useEffect(() => {
+    const contactsWithFetchingPhones = contacts.filter(
+      contact => contact.phoneNumberStatus === 'fetching'
+    );
+
+    if (contactsWithFetchingPhones.length === 0) {
+      return; // No contacts waiting for phone numbers
+    }
+
+    console.log(`${contactsWithFetchingPhones.length} contacts waiting for phone numbers, polling for updates...`);
+
+    const pollInterval = setInterval(async () => {
+      try {
+        // Fetch updated contact data
+        const response = await axios.get<any>('/api/firebase/contacts');
+        const contactsList = response.data?.data?.contacts || response.data?.data || [];
+
+        // Check if any of the fetching contacts now have phone numbers
+        let hasUpdates = false;
+
+        contactsWithFetchingPhones.forEach(fetchingContact => {
+          const updatedContact = contactsList.find((c: any) => c.id === fetchingContact.id);
+          if (updatedContact && (updatedContact.phone || updatedContact.phoneNumberStatus !== 'fetching')) {
+            hasUpdates = true;
+          }
+        });
+
+        if (hasUpdates) {
+          console.log('Phone number updates detected, refreshing contacts...');
+          fetchContacts(); // This will automatically clear the polling when contacts update
+        }
+      } catch (error) {
+        console.error('Error polling for phone updates:', error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    // Cleanup interval when effect re-runs or component unmounts
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [contacts]); // Re-run when contacts change
 
   const fetchContacts = async () => {
     setLoading(true);
