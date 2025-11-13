@@ -16,7 +16,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "postinstall": "npm run build:server"
+    "postinstall": "npm run build:server && pip3 install -r requirements.txt || echo 'Warning: Python dependencies installation failed'"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

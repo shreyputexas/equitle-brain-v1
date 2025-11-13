@@ -378,16 +378,36 @@ router.post('/contacts/bulk-save', firebaseAuthMiddleware, async (req, res) => {
         if (existingContacts.length > 0) {
           // Update existing contact
           const existingContact = existingContacts[0];
-          savedContact = await ContactsActivitiesFirestoreService.updateContact(userId, existingContact.id, {
-            email: enrichedContact.email || existingContact.email,
-            phone: enrichedContact.phone || existingContact.phone,
-            linkedinUrl: enrichedContact.linkedin_url || existingContact.linkedinUrl,
-            title: enrichedContact.title || existingContact.title,
-            company: enrichedContact.company || existingContact.company,
-            website: enrichedContact.website || existingContact.website,
-            notes: enrichedContact.notes || existingContact.notes,
+
+          // Build update data, filtering out undefined values
+          const updateData: any = {
             tags: [...new Set([...(existingContact.tags || []), finalContactType, ...(enrichedContact.tags || [])])],
-          });
+          };
+
+          // Only add fields that have actual values (not undefined)
+          if (enrichedContact.email || existingContact.email) {
+            updateData.email = enrichedContact.email || existingContact.email;
+          }
+          if (enrichedContact.phone || existingContact.phone) {
+            updateData.phone = enrichedContact.phone || existingContact.phone;
+          }
+          if (enrichedContact.linkedin_url || existingContact.linkedinUrl) {
+            updateData.linkedinUrl = enrichedContact.linkedin_url || existingContact.linkedinUrl;
+          }
+          if (enrichedContact.title || existingContact.title) {
+            updateData.title = enrichedContact.title || existingContact.title;
+          }
+          if (enrichedContact.company || existingContact.company) {
+            updateData.company = enrichedContact.company || existingContact.company;
+          }
+          if (enrichedContact.website || existingContact.website) {
+            updateData.website = enrichedContact.website || existingContact.website;
+          }
+          if (enrichedContact.notes || existingContact.notes) {
+            updateData.notes = enrichedContact.notes || existingContact.notes;
+          }
+
+          savedContact = await ContactsActivitiesFirestoreService.updateContact(userId, existingContact.id, updateData);
           logger.info(`✅ Updated existing contact: ${enrichedContact.name}`);
         } else {
           // Create new contact

@@ -203,18 +203,34 @@ async function scrapeAndGenerateMessage(websiteUrl: string, linkedinData: Linked
 import sys
 import json
 import os
-sys.path.insert(0, '${scraperDir}')
-os.chdir('${scraperDir}')
-from website_scraper import WebsiteScraper
 
-scraper = WebsiteScraper()
-company_info = scraper.scrape_website_with_crawl('${websiteUrl}')
+# Add the scraper directory to Python path
+scraper_dir = r'${scraperDir}'
+if scraper_dir not in sys.path:
+    sys.path.insert(0, scraper_dir)
 
-if company_info:
-    from dataclasses import asdict
-    print(json.dumps(asdict(company_info)))
-else:
-    print(json.dumps({'error': 'Failed to scrape website'}))
+# Change to the scraper directory
+try:
+    os.chdir(scraper_dir)
+except Exception as e:
+    print(json.dumps({'error': f'Failed to change directory: {str(e)}'}))
+    sys.exit(1)
+
+# Import with explicit error handling
+try:
+    from website_scraper import WebsiteScraper
+    scraper = WebsiteScraper()
+    company_info = scraper.scrape_website_with_crawl('${websiteUrl}')
+
+    if company_info:
+        from dataclasses import asdict
+        print(json.dumps(asdict(company_info)))
+    else:
+        print(json.dumps({'error': 'Failed to scrape website'}))
+except ImportError as e:
+    print(json.dumps({'error': f'Import error: {str(e)}'}))
+except Exception as e:
+    print(json.dumps({'error': f'Scraper error: {str(e)}'}))
 `;
 
   // Execute website scraper (use python3 on macOS)
@@ -285,18 +301,34 @@ async function tryWebsiteEnhancedMessage(websiteUrl: string, linkedinData: Linke
 import sys
 import json
 import os
-sys.path.insert(0, '${scraperDir}')
-os.chdir('${scraperDir}')
-from website_scraper import WebsiteScraper
 
-scraper = WebsiteScraper()
-company_info = scraper.scrape_website_with_crawl('${websiteUrl}')
+# Add the scraper directory to Python path
+scraper_dir = r'${scraperDir}'
+if scraper_dir not in sys.path:
+    sys.path.insert(0, scraper_dir)
 
-if company_info:
-    from dataclasses import asdict
-    print(json.dumps(asdict(company_info)))
-else:
-    print(json.dumps({'error': 'Failed to scrape website'}))
+# Change to the scraper directory
+try:
+    os.chdir(scraper_dir)
+except Exception as e:
+    print(json.dumps({'error': f'Failed to change directory: {str(e)}'}))
+    sys.exit(1)
+
+# Import with explicit error handling
+try:
+    from website_scraper import WebsiteScraper
+    scraper = WebsiteScraper()
+    company_info = scraper.scrape_website_with_crawl('${websiteUrl}')
+
+    if company_info:
+        from dataclasses import asdict
+        print(json.dumps(asdict(company_info)))
+    else:
+        print(json.dumps({'error': 'Failed to scrape website'}))
+except ImportError as e:
+    print(json.dumps({'error': f'Import error: {str(e)}'}))
+except Exception as e:
+    print(json.dumps({'error': f'Scraper error: {str(e)}'}))
 `;
 
     // Execute website scraper with timeout
