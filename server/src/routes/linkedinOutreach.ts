@@ -532,19 +532,19 @@ CRITICAL INSTRUCTIONS:
 - Preserve exact company names, job titles, and quantifiable results
 - ENSURE THE JSON IS VALID - use proper escaping for quotes and special characters
 
-Please extract and return ONLY a JSON object with these exact fields:
+Please extract and return ONLY a simple JSON object with these exact fields (use SIMPLE STRINGS only, NO nested arrays or objects):
 {
-  "contactName": "The person's full name (first and last name)",
-  "interest": "What the person is passionate about professionally based on their profile",
-  "aboutMe": "Their about/summary section content verbatim",
-  "experience": "Complete work experience with specific companies, roles, and timeframes",
-  "specificCompanies": "List of specific company names they've worked at (e.g., 'Google, Microsoft, Stripe')",
-  "specificRoles": "List of specific job titles they've held (e.g., 'VP Engineering, Senior Product Manager, Founder')",
-  "achievements": "Specific accomplishments with numbers/metrics when available (e.g., 'Scaled team from 5 to 50 engineers', 'Increased revenue by 300%', 'Led $10M funding round')",
-  "skills": "Specific technical skills, expertise areas, or industry knowledge mentioned",
-  "latestPost": "Their most recent LinkedIn post or update content",
-  "education": "Educational background including specific schools, degrees, and any notable achievements",
-  "location": "Their current city, state/country"
+  "contactName": "Person's full name",
+  "interest": "What they are passionate about professionally",
+  "aboutMe": "Brief summary of their about section",
+  "experience": "Work experience summary with companies and roles",
+  "specificCompanies": "Company names separated by commas",
+  "specificRoles": "Job titles separated by commas",
+  "achievements": "Key accomplishments with numbers when available",
+  "skills": "Skills and expertise areas",
+  "latestPost": "Recent post content if available",
+  "education": "Education background",
+  "location": "Current location"
 }
 
 EXAMPLES OF GOOD vs BAD EXTRACTION:
@@ -554,8 +554,11 @@ EXAMPLES OF GOOD vs BAD EXTRACTION:
 ❌ BAD: "background in finance"
 ✅ GOOD: "Managing Director at Goldman Sachs leading the $2B technology investment fund, previously Investment Banking Analyst covering fintech deals worth $500M+"
 
-IMPORTANT: If any information is not available or unclear, use "Not specified" for that field.
-CRITICAL: Return ONLY valid JSON - escape quotes with backslashes and ensure all arrays/objects are properly formatted.`;
+IMPORTANT:
+- If any information is not available or unclear, use "Not specified" for that field.
+- Return ONLY the JSON object - NO markdown code blocks, NO ```json```, NO explanations
+- Ensure all strings are properly escaped and valid JSON format
+- Use simple strings only, NO nested arrays or objects`;
 
     const aiResponse = await openaiService.generateResponse(
       extractionPrompt,
@@ -568,7 +571,12 @@ CRITICAL: Return ONLY valid JSON - escape quotes with backslashes and ensure all
 
     // Try to clean up the JSON before parsing
     let jsonString = aiResponse;
-    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+
+    // First, remove markdown code blocks if present
+    jsonString = jsonString.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+
+    // Then extract the JSON object
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       jsonString = jsonMatch[0];
     }
@@ -586,8 +594,9 @@ CRITICAL: Return ONLY valid JSON - escape quotes with backslashes and ensure all
         .replace(/[\r\n]+/g, ' ') // Remove newlines
         .replace(/,\s*}/g, '}') // Remove trailing commas before }
         .replace(/,\s*]/g, ']') // Remove trailing commas before ]
-        .replace(/([^\\])"/g, '$1\\"') // Escape unescaped quotes (basic attempt)
-        .replace(/^"/g, '\\"'); // Escape quote at start
+        .replace(/\}\s*\]/g, '}]') // Fix spacing issues
+        .replace(/\[\s*\{/g, '[{') // Fix array formatting
+        .trim(); // Remove extra whitespace
 
       try {
         extractedData = JSON.parse(fixedJsonString);
