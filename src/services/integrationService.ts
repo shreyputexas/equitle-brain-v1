@@ -225,20 +225,52 @@ class IntegrationService {
 
   async connectMicrosoft(types: string[]): Promise<{ authUrl: string }> {
     try {
+      console.log('Initiating Microsoft OAuth connection with types:', types);
+
+      const headers = await this.getAuthHeaders();
+      console.log('Auth headers prepared, making request to:', getApiUrl('integrations/microsoft/connect'));
+
       const response = await axios.post(
         getApiUrl('integrations/microsoft/connect'),
         { types },
-        { headers: await this.getAuthHeaders() }
+        { headers }
       );
+
+      console.log('Microsoft OAuth response received:', response.data);
+
       // Handle both response formats
       const data = response.data as any;
       if (data.success && data.data) {
         return data.data;
       }
       return data;
-    } catch (error) {
-      console.error('Error connecting to Microsoft:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('Error connecting to Microsoft:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      if (error.response?.status === 500) {
+        const errorMessage = error.response?.data?.error || error.message;
+        if (errorMessage.includes('not properly configured')) {
+          throw new Error('Microsoft integration is not configured on the server. Please contact support.');
+        }
+        if (errorMessage.includes('Client ID not configured')) {
+          throw new Error('Microsoft app configuration is missing. Please contact support.');
+        }
+        throw new Error(`Server error: ${errorMessage}`);
+      }
+
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+
+      throw new Error('Failed to initiate Microsoft connection. Please ensure the backend server is running.');
     }
   }
 

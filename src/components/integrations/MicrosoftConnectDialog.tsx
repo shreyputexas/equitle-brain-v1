@@ -40,6 +40,7 @@ const MicrosoftConnectDialog: React.FC<MicrosoftConnectDialogProps> = ({
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['profile']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const serviceOptions = [
     {
@@ -97,21 +98,50 @@ const MicrosoftConnectDialog: React.FC<MicrosoftConnectDialogProps> = ({
     setError(null);
 
     try {
+      console.log('Starting Microsoft connection process with services:', selectedTypes);
+
       const { authUrl } = await integrationService.connectMicrosoft(selectedTypes);
-      
+
+      console.log('Microsoft auth URL received, redirecting...');
+
+      // Store selected types in sessionStorage for potential retry
+      sessionStorage.setItem('microsoftSelectedTypes', JSON.stringify(selectedTypes));
+
       // Redirect directly to Microsoft OAuth (same window)
       window.location.href = authUrl;
 
     } catch (err) {
       console.error('Microsoft connection error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to connect to Microsoft');
+
+      let errorMessage = 'Failed to connect to Microsoft';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
+      // Provide specific error messages for common issues
+      if (errorMessage.includes('Authentication required')) {
+        errorMessage = 'Your session has expired. Please refresh the page and try again.';
+      } else if (errorMessage.includes('not configured')) {
+        errorMessage = 'Microsoft integration is currently unavailable. Please try again later or contact support.';
+      } else if (errorMessage.includes('server is running')) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection and try again.';
+      }
+
+      setError(errorMessage);
       setLoading(false);
+      setRetryCount(prev => prev + 1);
     }
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    handleConnect();
   };
 
   const handleClose = () => {
     if (!loading) {
       setError(null);
+      setRetryCount(0);
       onClose();
     }
   };
@@ -150,8 +180,27 @@ const MicrosoftConnectDialog: React.FC<MicrosoftConnectDialogProps> = ({
         </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            action={
+              retryCount > 0 && retryCount < 3 && !loading ? (
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={handleRetry}
+                >
+                  Retry
+                </Button>
+              ) : null
+            }
+          >
             {error}
+            {retryCount >= 3 && (
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                If the problem persists, please contact support.
+              </Typography>
+            )}
           </Alert>
         )}
 

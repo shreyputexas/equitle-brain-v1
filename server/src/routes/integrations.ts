@@ -44,28 +44,62 @@ async function ensureValidGoogleAccessToken(integration: { expiresAt?: Date | nu
 // Helper function to ensure valid access token for Microsoft integrations
 async function ensureValidMicrosoftAccessToken(integration: { expiresAt?: Date | null; refreshToken?: string; accessToken: string; id: string }) {
   if (!integration.accessToken) {
-    throw new Error('No access token available');
+    logger.error(`Microsoft integration ${integration.id} has no access token`);
+    throw new Error('No access token available for Microsoft integration');
   }
 
-  // Check if token is expired
-  const isExpired = integration.expiresAt && integration.expiresAt.getTime() < Date.now();
-  
-  if (isExpired) {
-    logger.warn(`Microsoft access token is expired for integration ${integration.id}`, {
-      expiresAt: integration.expiresAt,
-      timeSinceExpiry: integration.expiresAt ? (Date.now() - integration.expiresAt.getTime()) / 1000 : 'unknown'
-    });
-    
-    // For now, still try to use the expired token - this will help us see the exact error
-    logger.info('Attempting to use expired token to get detailed error information');
-  }
+  // Check if token is expired or expiring soon
+  const now = Date.now();
+  const fiveMinutesInMs = 5 * 60 * 1000;
+  const isExpired = integration.expiresAt && integration.expiresAt.getTime() < now;
+  const isExpiringSoon = integration.expiresAt && integration.expiresAt.getTime() < (now + fiveMinutesInMs);
 
-  logger.info(`Using Microsoft access token for integration ${integration.id}`, {
+  logger.info(`Microsoft token validation for integration ${integration.id}`, {
     hasRefreshToken: !!integration.refreshToken,
     expiresAt: integration.expiresAt,
-    isExpired: isExpired,
-    timeUntilExpiry: integration.expiresAt ? (integration.expiresAt.getTime() - Date.now()) / 1000 : 'unknown'
+    isExpired: !!isExpired,
+    isExpiringSoon: !!isExpiringSoon,
+    timeUntilExpiry: integration.expiresAt ? (integration.expiresAt.getTime() - now) / 1000 : 'unknown'
   });
+
+  // If token is expired or expiring soon, try to refresh it
+  if ((isExpired || isExpiringSoon) && integration.refreshToken) {
+    try {
+      logger.info(`Refreshing Microsoft access token for integration ${integration.id}`);
+      const refreshedTokens = await MicrosoftAuthService.refreshAccessToken(integration.refreshToken);
+
+      // Update the integration with new tokens
+      await IntegrationsFirestoreService.refreshToken(integration.id, {
+        access_token: refreshedTokens.access_token,
+        refresh_token: refreshedTokens.refresh_token || integration.refreshToken,
+        expires_in: refreshedTokens.expires_in,
+        token_type: refreshedTokens.token_type,
+        scope: refreshedTokens.scope
+      });
+
+      logger.info(`Successfully refreshed Microsoft access token for integration ${integration.id}`);
+      return refreshedTokens.access_token;
+    } catch (error) {
+      logger.error(`Failed to refresh Microsoft access token for integration ${integration.id}:`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        hasRefreshToken: !!integration.refreshToken
+      });
+
+      // If refresh fails but we have an access token, try using it anyway
+      if (!isExpired) {
+        logger.warn('Token refresh failed but current token is not yet expired, continuing with current token');
+        return integration.accessToken;
+      }
+
+      throw new Error(`Failed to refresh Microsoft access token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // If token is expired and we have no refresh token, throw error
+  if (isExpired && !integration.refreshToken) {
+    logger.error(`Microsoft integration ${integration.id} has expired token and no refresh token`);
+    throw new Error('Microsoft access token has expired and cannot be refreshed. Please reconnect your Microsoft account.');
+  }
 
   return integration.accessToken;
 }
@@ -110,6 +144,35 @@ router.get('/test', async (req, res) => {
 // Test endpoint to check Microsoft integration status (NO AUTH REQUIRED - debug endpoint)
 router.get('/microsoft/test', async (req, res) => {
   try {
+    // Check Microsoft environment variables
+    const hasClientId = !!process.env.MICROSOFT_CLIENT_ID;
+    const hasClientSecret = !!process.env.MICROSOFT_CLIENT_SECRET;
+    const hasRedirectUri = !!process.env.MICROSOFT_REDIRECT_URI;
+    const hasTenantId = !!process.env.MICROSOFT_TENANT_ID;
+
+    const environmentCheck = {
+      hasClientId,
+      hasClientSecret,
+      hasRedirectUri,
+      hasTenantId,
+      clientId: hasClientId ? `${process.env.MICROSOFT_CLIENT_ID?.substring(0, 8)}...` : 'MISSING',
+      redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'MISSING',
+      tenantId: process.env.MICROSOFT_TENANT_ID || 'MISSING',
+      isConfigured: hasClientId && hasClientSecret && hasRedirectUri
+    };
+
+    // Test URL generation
+    let testAuthUrl: string | null = null;
+    let scopeTest: string[] = [];
+    try {
+      if (environmentCheck.isConfigured) {
+        scopeTest = MicrosoftAuthService.getScopes(['profile', 'outlook']);
+        testAuthUrl = MicrosoftAuthService.getAuthUrl(['profile', 'outlook'], 'test-user');
+      }
+    } catch (error) {
+      logger.error('Error generating test Microsoft auth URL:', error);
+    }
+
     // Get all Microsoft integrations
     const integrations = await IntegrationsFirestoreService.findMany({
       userId: 'all', // Get all users' Microsoft integrations for testing
@@ -119,6 +182,14 @@ router.get('/microsoft/test', async (req, res) => {
 
     res.json({
       success: true,
+      environment: environmentCheck,
+      testData: {
+        testScopes: scopeTest,
+        testAuthUrl: testAuthUrl ? testAuthUrl.substring(0, 100) + '...' : null,
+        message: environmentCheck.isConfigured
+          ? 'Microsoft integration environment is properly configured'
+          : 'Microsoft integration is missing required environment variables'
+      },
       integrations: integrations.map(integration => ({
         id: integration.id,
         userId: integration.userId,
@@ -798,24 +869,59 @@ router.post('/microsoft/connect', auth, async (req, res) => {
     const { types } = req.body; // ['profile', 'onedrive', 'outlook', 'teams']
     const userId = (req as FirebaseAuthRequest).userId;
 
+    logger.info('Microsoft OAuth connect request initiated', {
+      userId,
+      types,
+      bodyReceived: !!req.body,
+      hasTypes: !!types
+    });
+
     if (!userId) {
+      logger.error('Microsoft OAuth: User not authenticated', { userId, headers: req.headers.authorization });
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
     if (!types || !Array.isArray(types)) {
+      logger.error('Microsoft OAuth: Invalid types parameter', { types, bodyKeys: Object.keys(req.body || {}) });
       return res.status(400).json({
         success: false,
         error: 'Types array is required'
       });
     }
 
+    // Check Microsoft environment variables
+    const hasClientId = !!process.env.MICROSOFT_CLIENT_ID;
+    const hasClientSecret = !!process.env.MICROSOFT_CLIENT_SECRET;
+    const hasRedirectUri = !!process.env.MICROSOFT_REDIRECT_URI;
+
+    logger.info('Microsoft OAuth environment check', {
+      hasClientId,
+      hasClientSecret,
+      hasRedirectUri,
+      clientId: hasClientId ? `${process.env.MICROSOFT_CLIENT_ID?.substring(0, 8)}...` : 'MISSING',
+      redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'MISSING'
+    });
+
+    if (!hasClientId || !hasClientSecret || !hasRedirectUri) {
+      logger.error('Microsoft OAuth: Missing required environment variables', {
+        hasClientId, hasClientSecret, hasRedirectUri
+      });
+      return res.status(500).json({
+        success: false,
+        error: 'Microsoft OAuth not properly configured on server'
+      });
+    }
+
     logger.info('Microsoft OAuth connect request', { userId, types });
-    
+
     const scopes = MicrosoftAuthService.getScopes(types);
     logger.info('Generated Microsoft scopes', { scopes });
-    
+
     const authUrl = MicrosoftAuthService.getAuthUrl(types, userId);
-    logger.info('Generated Microsoft auth URL', { authUrl });
+    logger.info('Generated Microsoft auth URL', {
+      authUrl: authUrl.substring(0, 100) + '...',
+      urlLength: authUrl.length
+    });
 
     res.json({
       success: true,
@@ -829,12 +935,18 @@ router.post('/microsoft/connect', auth, async (req, res) => {
     logger.error('Error initiating Microsoft OAuth:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'UnknownError',
       userId: (req as any).userId || (req as any).user?.id || (req as any).user?.uid,
-      types: req.body?.types
+      types: req.body?.types,
+      requestHeaders: {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent'],
+        authorization: !!req.headers.authorization
+      }
     });
-    res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to initiate Microsoft OAuth flow' 
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to initiate Microsoft OAuth flow'
     });
   }
 });
